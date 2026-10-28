@@ -2,7 +2,6 @@
   "name": "nsyu-business-system",
   "version": "1.0.0",
   "private": true,
-  "main": "api/index.ts",
   "scripts": {
     "build": "cd web && npm install && npm run build",
     "web:dev": "cd web && npm run dev",
