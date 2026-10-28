@@ -1,32 +1,20 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="./docs/favicon.png" />
+    <link rel="icon" type="image/png" href="./favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NSYU Business - Redirecting</title>
-    <script>
-      (function() {
-        var path = window.location.pathname || '';
-        var search = window.location.search || '';
-        var hash = window.location.hash || '';
-        var repo = '/nsyu';
-        
-        // If the path contains /docs, stay in docs
-        if (path.indexOf(repo + '/docs') === 0) {
-          window.location.replace(repo + '/docs/index.html' + search + hash);
-        } else {
-          window.location.replace(repo + '/docs/' + search + hash);
-        }
-      })();
-    </script>
-    <meta http-equiv="refresh" content="0; url=./docs/" />
+    <title>NSYU Business</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="./assets/index-C9TQv4rc.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CTP0OM8O.css">
   </head>
-  <body style="margin:0; background:#0B0F19; color:#fff; font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh;">
-    <div style="text-align:center; padding:32px;">
-      <h2 style="font-size:22px; font-weight:600; margin:0 0 12px; color:#F8FAFC;">Redirecting to NSYU Business...</h2>
-      <a href="./docs/" style="color:#60A5FA; text-decoration:none; font-weight:500;">Click here if you are not automatically redirected</a>
-    </div>
+  <body>
+    <div id="root"></div>
   </body>
 </html>
-

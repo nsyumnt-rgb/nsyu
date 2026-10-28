@@ -1,12 +1,30 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../store/authStore";
 
+export const DEFAULT_CLOUD_API_URL = "https://nsyu-backend-api.onrender.com/api";
+export const DEFAULT_LOCAL_API_URL = "http://localhost:5000/api";
+
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
+    const isGithubPages = window.location.hostname.includes("github.io");
+    const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
     const saved = localStorage.getItem("nsyu_api_url");
-    if (saved && saved.trim()) return saved.trim();
+
+    if (saved && saved.trim()) {
+      // If user opened GitHub Pages on phone or laptop but localStorage still has old localhost URL,
+      // reset it to the 24/7 cloud backend URL so they never see localhost connection errors
+      if (isGithubPages && (saved.includes("localhost") || saved.includes("127.0.0.1"))) {
+        localStorage.removeItem("nsyu_api_url");
+        return import.meta.env.VITE_API_URL || DEFAULT_CLOUD_API_URL;
+      }
+      return saved.trim();
+    }
+
+    if (isLocalhost) {
+      return import.meta.env.VITE_API_URL || DEFAULT_LOCAL_API_URL;
+    }
   }
-  return import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  return import.meta.env.VITE_API_URL || DEFAULT_CLOUD_API_URL;
 }
 
 export function setApiBaseUrl(url: string) {

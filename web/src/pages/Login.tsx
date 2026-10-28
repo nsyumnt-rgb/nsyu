@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { login as loginApi } from "../api/auth";
 import { switchShop } from "../api/shops";
-import { apiErrorMessage, getApiBaseUrl, setApiBaseUrl } from "../api/client";
+import { apiErrorMessage, getApiBaseUrl, setApiBaseUrl, DEFAULT_CLOUD_API_URL, DEFAULT_LOCAL_API_URL } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 
 export default function Login() {
@@ -91,7 +91,11 @@ export default function Login() {
     } catch (err: any) {
       const baseErr = apiErrorMessage(err, "Invalid email or password. Please try again.");
       if (err.message && err.message.toLowerCase().includes("network error")) {
-        setError(`Cannot reach API at ${apiUrl}. Please verify backend server is running.`);
+        if (apiUrl.includes("localhost") || apiUrl.includes("127.0.0.1")) {
+          setError(`Cannot reach local server at ${apiUrl}. If you do not want to run localhost on your laptop, switch to "24/7 Cloud (Render)" above.`);
+        } else {
+          setError(`Connecting to Cloud API (${apiUrl}). Free-tier cloud servers take 30-40s to wake up on first request. Please click "Test" above and retry in a moment.`);
+        }
         setShowApiConfig(true);
       } else {
         setError(baseErr);
@@ -249,22 +253,30 @@ export default function Login() {
                         ? "bg-emerald-500 shadow-xs shadow-emerald-500"
                         : apiStatus === "checking"
                         ? "bg-amber-400 animate-pulse"
-                        : "bg-rose-500"
+                        : "bg-blue-400"
                     }`}
                   />
                   <div className="min-w-0">
                     <div className="font-semibold text-slate-700 text-[11px] truncate flex items-center gap-1.5">
-                      <span>Server:</span>
-                      <span className="font-mono text-[10px] text-slate-500 truncate">{apiUrl}</span>
+                      <span>API Server:</span>
+                      <span className="font-mono text-[10px] text-blue-600 truncate">{apiUrl}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400">{statusMsg || "Checking status..."}</div>
+                    <div className="text-[10px] text-slate-500">
+                      {apiStatus === "online"
+                        ? statusMsg || "Cloud Database Connected"
+                        : apiStatus === "checking"
+                        ? "Connecting to backend..."
+                        : apiUrl.includes("render.com")
+                        ? "Render Cloud Backend (Click Test to wake up)"
+                        : statusMsg || "Click Test to check"}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
                   <button
                     type="button"
                     onClick={() => checkHealth(apiUrl)}
-                    className="px-2 py-1 text-[10px] font-medium text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs"
+                    className="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs transition-colors"
                     title="Test connection to backend"
                   >
                     Test
@@ -272,22 +284,52 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowApiConfig(!showApiConfig)}
-                    className="px-2 py-1 text-[10px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg"
+                    className="px-2 py-1 text-[11px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
                   >
-                    {showApiConfig ? "Close" : "Change"}
+                    {showApiConfig ? "Hide" : "Settings"}
                   </button>
                 </div>
               </div>
 
               {showApiConfig && (
-                <div className="mt-2 p-3 bg-blue-50/60 rounded-xl border border-blue-200 text-xs space-y-2">
-                  <label className="block text-[11px] font-semibold text-slate-700">API Server Endpoint</label>
+                <div className="mt-2 p-3 bg-blue-50/60 rounded-xl border border-blue-200 text-xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-slate-700">Backend Server Mode</label>
+                    <span className="text-[10px] text-slate-500">24/7 Cloud or Local</span>
+                  </div>
+
+                  {/* Preset quick buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveApiUrl(DEFAULT_CLOUD_API_URL)}
+                      className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 ${
+                        apiUrl === DEFAULT_CLOUD_API_URL
+                          ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      ☁️ 24/7 Cloud (Render)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveApiUrl(DEFAULT_LOCAL_API_URL)}
+                      className={`py-1.5 px-2.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center justify-center gap-1 ${
+                        apiUrl === DEFAULT_LOCAL_API_URL
+                          ? "bg-slate-700 text-white border-slate-700 shadow-xs"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      💻 Localhost
+                    </button>
+                  </div>
+
                   <div className="flex gap-1.5">
                     <input
                       type="text"
                       value={apiUrl}
                       onChange={(e) => setApiUrl(e.target.value)}
-                      placeholder="http://localhost:5000/api"
+                      placeholder="https://nsyu-backend-api.onrender.com/api"
                       className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono focus:outline-none focus:border-blue-500"
                     />
                     <button
@@ -299,8 +341,8 @@ export default function Login() {
                     </button>
                   </div>
                   <div className="text-[10px] text-slate-500 leading-tight">
-                    • Default local: <code className="bg-white px-1 py-0.5 rounded border border-slate-200">http://localhost:5000/api</code><br />
-                    • If testing from phone: use your PC's Wi-Fi IP (e.g. <code className="bg-white px-1 py-0.5 rounded border border-slate-200">http://192.168.X.X:5000/api</code>).
+                    • <strong>24/7 Cloud Backend</strong>: Runs continuously in the cloud even if your laptop is closed/turned off.<br />
+                    • Connects directly to Supabase PostgreSQL (<code className="bg-white px-1 py-0.5 rounded border border-slate-200">aws-0-ap-south-1.pooler.supabase.com</code>).
                   </div>
                 </div>
               )}
