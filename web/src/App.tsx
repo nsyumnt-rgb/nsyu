@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import RequireAuth from "./components/RequireAuth";
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -39,7 +39,7 @@ import PayrollDetail from "./pages/details/PayrollDetail";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/app" replace />} />
         <Route path="/login" element={<Login />} />
@@ -86,6 +86,6 @@ export default function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
