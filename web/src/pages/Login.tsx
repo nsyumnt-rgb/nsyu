@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { login as loginApi } from "../api/auth";
 import { switchShop } from "../api/shops";
-import { apiErrorMessage } from "../api/client";
+import { apiErrorMessage, getApiBaseUrl, setApiBaseUrl } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 
 export default function Login() {
@@ -11,28 +11,65 @@ export default function Login() {
   const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
 
-  const [selectedShopId, setSelectedShopId] = useState("1");
-  const [email, setEmail] = useState("owner@nsy.com");
+  const [selectedShopId, setSelectedShopId] = useState("");
+  const [email, setEmail] = useState("demo.owner@nsyu.local");
   const [password, setPassword] = useState("Demo@12345");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Available shops for selection
+  // API Backend URL configuration & connection testing
+  const [apiUrl, setApiUrl] = useState(getApiBaseUrl());
+  const [showApiConfig, setShowApiConfig] = useState(false);
+  const [apiStatus, setApiStatus] = useState<"checking" | "online" | "offline" | null>(null);
+  const [statusMsg, setStatusMsg] = useState("");
+
+  const checkHealth = async (testUrl?: string) => {
+    const target = (testUrl || apiUrl).trim().replace(/\/$/, "");
+    setApiStatus("checking");
+    setStatusMsg("Checking connection...");
+    try {
+      const healthEndpoint = target.endsWith("/api") ? `${target}/health` : `${target}/api/health`;
+      const res = await fetch(healthEndpoint, { method: "GET" });
+      if (res.ok) {
+        const json = await res.json().catch(() => null);
+        setApiStatus("online");
+        setStatusMsg(json?.database ? `Connected (${json.database})` : "API Online");
+      } else {
+        setApiStatus("offline");
+        setStatusMsg(`API returned status ${res.status}`);
+      }
+    } catch {
+      setApiStatus("offline");
+      setStatusMsg("Unable to reach backend");
+    }
+  };
+
+  useEffect(() => {
+    checkHealth(apiUrl);
+  }, []);
+
+  const handleSaveApiUrl = (newUrl: string) => {
+    setApiBaseUrl(newUrl);
+    setApiUrl(newUrl);
+    checkHealth(newUrl);
+  };
+
+  // Real shops from Supabase PostgreSQL database
   const shops = [
-    { id: "1", name: "Main Shop - Electronics", code: "MS-01" },
-    { id: "2", name: "Branch Shop 1 - Mobile", code: "BS-01" },
-    { id: "3", name: "Branch Shop 2 - Tech Hub", code: "BS-02" },
+    { id: "", name: "Auto (Assigned Primary Shop)" },
+    { id: "3", name: "NSYU Main Store (NSYU-MAIN)" },
+    { id: "1", name: "NSYU (NSYU)" },
   ];
 
-  // Demo accounts for 1-click testing
+  // Verified accounts seeded in existing Supabase database
   const demoAccounts = [
     {
       role: "Owner",
-      email: "owner@nsy.com",
+      email: "demo.owner@nsyu.local",
       password: "Demo@12345",
-      shopId: "1",
+      shopId: "3",
       iconColor: "bg-purple-100 text-purple-600",
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -43,9 +80,9 @@ export default function Login() {
     },
     {
       role: "Manager",
-      email: "manager@nsy.com",
-      password: "Demo@12345",
-      shopId: "1",
+      email: "manager@nsyu.local",
+      password: "Manager@12345",
+      shopId: "3",
       iconColor: "bg-blue-100 text-blue-600",
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -56,9 +93,9 @@ export default function Login() {
     },
     {
       role: "Sales",
-      email: "sales@nsy.com",
-      password: "Demo@12345",
-      shopId: "1",
+      email: "sales@nsyu.local",
+      password: "Sales@12345",
+      shopId: "3",
       iconColor: "bg-emerald-100 text-emerald-600",
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -69,17 +106,16 @@ export default function Login() {
       ),
     },
     {
-      role: "Employee",
-      email: "employee@nsy.com",
-      password: "Demo@12345",
-      shopId: "1",
+      role: "Inventory",
+      email: "inventory@nsyu.local",
+      password: "Inventory@12345",
+      shopId: "3",
       iconColor: "bg-amber-100 text-amber-600",
       icon: (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+          <line x1="12" y1="22.08" x2="12" y2="12" />
         </svg>
       ),
     },
@@ -107,7 +143,7 @@ export default function Login() {
       }
 
       // If user specifically picked a shop different from default
-      if (selectedShopId && (!(data as any).shop || Number(selectedShopId) !== (data as any).shop.id)) {
+      if (selectedShopId && selectedShopId !== "" && (!(data as any).shop || Number(selectedShopId) !== (data as any).shop.id)) {
         try {
           const switchRes = await switchShop(Number(selectedShopId));
           const switchedData = switchRes.data.data!;
@@ -119,8 +155,14 @@ export default function Login() {
       }
 
       navigate("/app");
-    } catch (err) {
-      setError(apiErrorMessage(err, "Invalid email or password. Please try again."));
+    } catch (err: any) {
+      const baseErr = apiErrorMessage(err, "Invalid email or password. Please try again.");
+      if (err.message && err.message.toLowerCase().includes("network error")) {
+        setError(`Cannot reach API at ${apiUrl}. Please check your backend connection.`);
+        setShowApiConfig(true);
+      } else {
+        setError(baseErr);
+      }
     } finally {
       setLoading(false);
     }
@@ -138,15 +180,14 @@ export default function Login() {
             <div className="space-y-6">
               {/* Brand Logo */}
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30">
-                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" />
-                  </svg>
-                </div>
+                <img
+                  src="./nsyu_logo.png"
+                  alt="NSYU Logo"
+                  className="w-12 h-12 object-contain rounded-xl drop-shadow-md"
+                />
                 <div>
-                  <div className="font-bold text-xl text-slate-900 tracking-tight leading-tight">NSY Business</div>
-                  <div className="text-[11px] font-medium text-slate-500">Multi-Shop Management</div>
+                  <div className="font-bold text-xl text-slate-900 tracking-tight leading-tight">NSYU Business</div>
+                  <div className="text-[11px] font-semibold text-blue-600 tracking-wider">INNOVATE · INSPIRE · IMPACT</div>
                 </div>
               </div>
 
@@ -321,20 +362,86 @@ export default function Login() {
               
               {/* Header Branding */}
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/25 mx-auto">
-                  <svg className="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                    <polyline points="9 22 9 12 15 12 15 22" />
-                  </svg>
+                <img
+                  src="./nsyu_logo.png"
+                  alt="NSYU Logo"
+                  className="w-16 h-16 object-contain mx-auto drop-shadow-md"
+                />
+                <div className="font-bold text-base text-slate-900 tracking-tight">NSYU Business</div>
+                <div className="text-[10px] font-semibold text-blue-600 tracking-widest uppercase -mt-1">
+                  INNOVATE · INSPIRE · IMPACT
                 </div>
-                <div className="font-bold text-base text-slate-900 tracking-tight">NSY Business</div>
-                <div className="text-[11px] font-medium text-slate-400 -mt-1">Multi-Shop Management</div>
                 
                 <div className="pt-2">
-                  <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
-                  <p className="text-xs text-slate-500 mt-0.5">Sign in to your account to continue</p>
+                  <h2 className="text-2xl font-bold text-slate-900">Sign In</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Access your inventory, sales & shop operations</p>
                 </div>
               </div>
+
+              {/* API Server Indicator & Settings */}
+              <div className="mt-4 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      apiStatus === "online"
+                        ? "bg-emerald-500 shadow-xs shadow-emerald-500"
+                        : apiStatus === "checking"
+                        ? "bg-amber-400 animate-pulse"
+                        : "bg-rose-500"
+                    }`}
+                  />
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-700 text-[11px] truncate flex items-center gap-1.5">
+                      <span>Server:</span>
+                      <span className="font-mono text-[10px] text-slate-500 truncate">{apiUrl}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">{statusMsg || "Checking status..."}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <button
+                    type="button"
+                    onClick={() => checkHealth(apiUrl)}
+                    className="px-2 py-1 text-[10px] font-medium text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs"
+                    title="Test connection to backend"
+                  >
+                    Test
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowApiConfig(!showApiConfig)}
+                    className="px-2 py-1 text-[10px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg"
+                  >
+                    {showApiConfig ? "Close" : "Change"}
+                  </button>
+                </div>
+              </div>
+
+              {showApiConfig && (
+                <div className="mt-2 p-3 bg-blue-50/60 rounded-xl border border-blue-200 text-xs space-y-2">
+                  <label className="block text-[11px] font-semibold text-slate-700">API Server Endpoint</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
+                      placeholder="http://localhost:5000/api"
+                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-mono focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveApiUrl(apiUrl)}
+                      className="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-xs shrink-0"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <div className="text-[10px] text-slate-500 leading-tight">
+                    • Default local: <code className="bg-white px-1 py-0.5 rounded border border-slate-200">http://localhost:5000/api</code><br />
+                    • If on mobile: use your PC's Wi-Fi IP (e.g. <code className="bg-white px-1 py-0.5 rounded border border-slate-200">http://192.168.X.X:5000/api</code>).
+                  </div>
+                </div>
+              )}
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-xs">
@@ -479,7 +586,7 @@ export default function Login() {
 
               {/* Demo Accounts Quick-Fill Section */}
               <div className="space-y-2">
-                <div className="text-[11px] font-semibold text-slate-600">Demo Accounts (for testing)</div>
+                <div className="text-[11px] font-semibold text-slate-600">Quick Sign-In (Verified Roles)</div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {demoAccounts.map((acc) => (
                     <button

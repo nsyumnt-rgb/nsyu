@@ -14,6 +14,7 @@ exports.DEMO_OWNER = {
 };
 exports.DEMO_SHOPS = [
     { name: "NSYU Main Store", code: "NSYU-MAIN", address: "Ghaziabad, Uttar Pradesh", phone: "9810000001" },
+    { name: "NSYU Branch Store", code: "NSYU-BRANCH", address: "Noida, Sector 18, Uttar Pradesh", phone: "9810000002" },
 ];
 exports.DEMO_EMPLOYEES = [
     {

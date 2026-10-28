@@ -1,11 +1,25 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "../store/authStore";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const saved = localStorage.getItem("nsyu_api_url");
+    if (saved && saved.trim()) return saved.trim();
+  }
+  return import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+}
 
-export const api = axios.create({ baseURL: BASE_URL });
+export function setApiBaseUrl(url: string) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("nsyu_api_url", url.trim());
+    api.defaults.baseURL = url.trim();
+  }
+}
+
+export const api = axios.create({ baseURL: getApiBaseUrl() });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  config.baseURL = getApiBaseUrl();
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers = config.headers ?? {};
@@ -22,7 +36,8 @@ async function performRefresh(): Promise<string | null> {
   const refreshToken = useAuthStore.getState().refreshToken;
   if (!refreshToken) return null;
   try {
-    const res = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
+    const currentBase = getApiBaseUrl();
+    const res = await axios.post(`${currentBase}/auth/refresh`, { refreshToken });
     const newAccessToken: string = res.data?.data?.accessToken;
     if (newAccessToken) {
       // Refreshing intentionally drops shop/role context (backend
