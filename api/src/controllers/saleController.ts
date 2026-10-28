@@ -1,0 +1,809 @@
+import { Request, Response } from "express";
+import { Op } from "sequelize";
+import {
+  sequelize,
+  Sale,
+  SaleItem,
+  Product,
+  Customer,
+  Payment,
+  EMIPlan,
+  EMIInstallment,
+  SaleReturn,
+  SaleReturnItem,
+  Shop,
+} from "../models";
+import { PAYMENT_METHODS, PaymentMethod } from "../models/Sale";
+import { recordStockMovement } from "../utils/inventory";
+import { recordLedgerEntry, reverseLedgerEntry } from "../utils/ledger";
+import { nextInvoiceNumber } from "../utils/invoice";
+import { buildEmiSchedule, refreshInstallmentStatuses } from "../utils/emi";
+import { logAudit } from "../utils/audit";
+import { streamBillPdf } from "../utils/pdf";
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function actorFromReq(req: Request) {
+  return {
+    actorType: (req.auth!.isOwner ? "owner" : "employee") as "owner" | "employee",
+    actorId: req.auth!.isOwner ? req.auth!.ownerId : req.auth!.employeeId!,
+  };
+}
+
+const saleIncludes = [
+  { model: SaleItem, as: "items" },
+  { model: Customer, as: "customer" },
+  { model: Shop, as: "shop" },
+  { model: Payment, as: "payments" },
+  { model: EMIPlan, as: "emiPlan", include: [{ model: EMIInstallment, as: "installments" }] },
+  { model: SaleReturn, as: "returns", include: [{ model: SaleReturnItem, as: "items" }] },
+];
+
+/**
+ * SALES FLOW: Customer -> Shop -> Product -> Cart -> Discount -> Tax
+ * -> Payment -> Bill -> Inventory Update -> Ledger Update.
+ *
+ * Body:
+ * {
+ *   customerId?: number,                 // existing customer
+ *   customer?: { name, phone?, email?, address? },  // OR create inline
+ *   items: [{ productId, quantity, rate?, discountPercent?, taxPercent? }],
+ *   billDiscount?: number,               // additional flat discount applied on top of line discounts
+ *   paymentMethod: "cash"|"upi"|"bank_transfer"|"card"|"cheque"|"other",
+ *   paidAmount?: number,                 // amount received now (0 = fully on credit, unless isEmi)
+ *   transactionId?: string,
+ *   notes?: string,
+ *   isEmi?: boolean,
+ *   emi?: { downPayment, numberOfInstallments, interestPercent?, lateFeePercent?, startDate? }
+ * }
+ *
+ * Everything below runs inside ONE DB transaction: if inventory is
+ * insufficient for any line, or anything else fails, nothing is
+ * written — bill, stock, and ledger can never end up out of sync.
+ */
+export async function createSale(req: Request, res: Response) {
+  const {
+    customerId,
+    customer: newCustomerInput,
+    items,
+    billDiscount,
+    paymentMethod,
+    paidAmount,
+    transactionId,
+    notes,
+    isEmi,
+    emi,
+  } = req.body;
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: "items must be a non-empty array" });
+  }
+  if (!paymentMethod || !PAYMENT_METHODS.includes(paymentMethod)) {
+    return res.status(400).json({ success: false, message: `paymentMethod must be one of: ${PAYMENT_METHODS.join(", ")}` });
+  }
+  if (!customerId && !newCustomerInput?.name) {
+    return res.status(400).json({ success: false, message: "customerId or customer.name is required" });
+  }
+  if (isEmi && (!emi || !emi.numberOfInstallments || Number(emi.numberOfInstallments) < 1)) {
+    return res.status(400).json({ success: false, message: "emi.numberOfInstallments is required when isEmi is true" });
+  }
+
+  const ownerId = req.auth!.ownerId;
+  const shopId = req.auth!.shopId!;
+  const { actorType, actorId } = actorFromReq(req);
+
+  try {
+    const result = await sequelize.transaction(async (t) => {
+      // 1. Customer
+      let customer: Customer;
+      if (customerId) {
+        const found = await Customer.findOne({ where: { id: customerId, owner_id: ownerId }, transaction: t });
+        if (!found) throw Object.assign(new Error("Customer not found"), { status: 404 });
+        customer = found;
+      } else {
+        customer = await Customer.create(
+          {
+            owner_id: ownerId,
+            name: newCustomerInput.name,
+            phone: newCustomerInput.phone ?? null,
+            email: newCustomerInput.email ?? null,
+            address: newCustomerInput.address ?? null,
+          },
+          { transaction: t }
+        );
+      }
+
+      // 2. Price the cart (Product -> Cart -> Discount -> Tax)
+      let subtotal = 0;
+      let totalDiscount = 0;
+      let totalTax = 0;
+      let grandTotal = 0;
+      const pricedItems: any[] = [];
+
+      for (const raw of items) {
+        const { productId, quantity } = raw;
+        if (!productId || !quantity || Number(quantity) <= 0) {
+          throw Object.assign(new Error("Each item needs a valid productId and positive quantity"), { status: 400 });
+        }
+        const product = await Product.findOne({ where: { id: productId, owner_id: ownerId }, transaction: t });
+        if (!product) throw Object.assign(new Error(`Product ${productId} not found`), { status: 404 });
+
+        const qty = Number(quantity);
+        const rate = raw.rate !== undefined ? Number(raw.rate) : Number(product.selling_price);
+        const discountPercent = raw.discountPercent !== undefined ? Number(raw.discountPercent) : Number(product.discount);
+        const taxPercent = raw.taxPercent !== undefined ? Number(raw.taxPercent) : Number(product.tax_percent);
+
+        const lineSubtotal = round2(rate * qty);
+        const lineDiscountAmount = round2((lineSubtotal * discountPercent) / 100);
+        const afterDiscount = round2(lineSubtotal - lineDiscountAmount);
+        const lineTaxAmount = round2((afterDiscount * taxPercent) / 100);
+        const lineTotal = round2(afterDiscount + lineTaxAmount);
+
+        subtotal = round2(subtotal + lineSubtotal);
+        totalDiscount = round2(totalDiscount + lineDiscountAmount);
+        totalTax = round2(totalTax + lineTaxAmount);
+        grandTotal = round2(grandTotal + lineTotal);
+
+        pricedItems.push({
+          product,
+          quantity: qty,
+          rate,
+          discountPercent,
+          discountAmount: lineDiscountAmount,
+          taxPercent,
+          taxAmount: lineTaxAmount,
+          totalAmount: lineTotal,
+        });
+      }
+
+      const extraDiscount = round2(Number(billDiscount) || 0);
+      totalDiscount = round2(totalDiscount + extraDiscount);
+      const totalAmount = Math.max(0, round2(grandTotal - extraDiscount));
+
+      // 3. EMI split (down payment now, rest financed) vs regular partial payment
+      let downPayment = 0;
+      if (isEmi) {
+        downPayment = round2(Number(emi.downPayment) || 0);
+        if (downPayment < 0 || downPayment > totalAmount) {
+          throw Object.assign(new Error("emi.downPayment must be between 0 and the total amount"), { status: 400 });
+        }
+      }
+      const initialPaid = isEmi ? downPayment : round2(Math.min(Number(paidAmount) || 0, totalAmount));
+      const dueAmount = round2(totalAmount - initialPaid);
+
+      let status: Sale["status"] = "unpaid";
+      if (initialPaid >= totalAmount && totalAmount > 0) status = "paid";
+      else if (initialPaid > 0) status = "partially_paid";
+
+      // 4. Invoice number + Sale header
+      const invoiceNumber = await nextInvoiceNumber({ ownerId, shopId, transaction: t });
+
+      const sale = await Sale.create(
+        {
+          owner_id: ownerId,
+          shop_id: shopId,
+          customer_id: customer.id,
+          invoice_number: invoiceNumber,
+          invoice_date: new Date(),
+          subtotal,
+          discount_amount: totalDiscount,
+          tax_amount: totalTax,
+          total_amount: totalAmount,
+          paid_amount: initialPaid,
+          due_amount: dueAmount,
+          payment_method: paymentMethod as PaymentMethod,
+          is_emi: Boolean(isEmi),
+          status,
+          notes: notes ?? null,
+          actor_type: actorType,
+          actor_id: actorId,
+        },
+        { transaction: t }
+      );
+
+      // 5. Sale items + Inventory Update (one stock movement per line)
+      for (const pi of pricedItems) {
+        await SaleItem.create(
+          {
+            sale_id: sale.id,
+            product_id: pi.product.id,
+            product_name: pi.product.name,
+            sku: pi.product.sku,
+            quantity: pi.quantity,
+            rate: pi.rate,
+            discount_percent: pi.discountPercent,
+            discount_amount: pi.discountAmount,
+            tax_percent: pi.taxPercent,
+            tax_amount: pi.taxAmount,
+            total_amount: pi.totalAmount,
+          },
+          { transaction: t }
+        );
+
+        await recordStockMovement({
+          ownerId,
+          shopId,
+          productId: pi.product.id,
+          type: "sale",
+          quantity: pi.quantity,
+          actorType,
+          actorId,
+          referenceType: "Sale",
+          referenceId: sale.id,
+          notes: `Sale ${invoiceNumber}`,
+          externalTransaction: t,
+        });
+      }
+
+      // 6. Ledger Update — the sale always posts a debit for the full amount
+      await recordLedgerEntry({
+        ownerId,
+        shopId,
+        customerId: customer.id,
+        entryType: "debit",
+        amount: totalAmount,
+        referenceType: "Sale",
+        referenceId: sale.id,
+        description: `Sale ${invoiceNumber}`,
+        actorType,
+        actorId,
+        entryDate: sale.invoice_date,
+        externalTransaction: t,
+      });
+
+      // 7. Payment received now (cash sale amount, or EMI down payment)
+      let initialPayment: Payment | null = null;
+      if (initialPaid > 0) {
+        initialPayment = await Payment.create(
+          {
+            owner_id: ownerId,
+            shop_id: shopId,
+            customer_id: customer.id,
+            sale_id: sale.id,
+            type: isEmi ? "down_payment" : "sale_payment",
+            amount: initialPaid,
+            method: paymentMethod as PaymentMethod,
+            transaction_id: transactionId ?? null,
+            payment_date: new Date(),
+            actor_type: actorType,
+            actor_id: actorId,
+          },
+          { transaction: t }
+        );
+
+        await recordLedgerEntry({
+          ownerId,
+          shopId,
+          customerId: customer.id,
+          entryType: "credit",
+          amount: initialPaid,
+          referenceType: "Payment",
+          referenceId: initialPayment.id,
+          description: isEmi ? `Down payment for ${invoiceNumber}` : `Payment for ${invoiceNumber}`,
+          actorType,
+          actorId,
+          externalTransaction: t,
+        });
+      }
+
+      // 7b. Excess payment applied towards previous outstanding balance
+      const excessPaid = !isEmi && Number(paidAmount) > totalAmount ? round2(Number(paidAmount) - totalAmount) : 0;
+      if (excessPaid > 0) {
+        const excessPayment = await Payment.create(
+          {
+            owner_id: ownerId,
+            shop_id: shopId,
+            customer_id: customer.id,
+            sale_id: sale.id,
+            type: "sale_payment",
+            amount: excessPaid,
+            method: paymentMethod as PaymentMethod,
+            transaction_id: transactionId ?? null,
+            payment_date: new Date(),
+            actor_type: actorType,
+            actor_id: actorId,
+            notes: `Payment towards previous balance with ${invoiceNumber}`,
+          },
+          { transaction: t }
+        );
+
+        await recordLedgerEntry({
+          ownerId,
+          shopId,
+          customerId: customer.id,
+          entryType: "credit",
+          amount: excessPaid,
+          referenceType: "Payment",
+          referenceId: excessPayment.id,
+          description: `Payment towards previous balance with ${invoiceNumber}`,
+          actorType,
+          actorId,
+          externalTransaction: t,
+        });
+      }
+
+      // 8. EMI plan + installment schedule
+      let emiPlan: EMIPlan | null = null;
+      if (isEmi) {
+        const financedAmount = round2(totalAmount - downPayment);
+        const interestPercent = Number(emi.interestPercent) || 0;
+        const lateFeePercent = Number(emi.lateFeePercent) || 0;
+        const startDate = emi.startDate ? new Date(emi.startDate) : new Date();
+        const numberOfInstallments = Number(emi.numberOfInstallments);
+
+        const schedule = buildEmiSchedule({
+          financedAmount,
+          interestPercent,
+          numberOfInstallments,
+          startDate,
+        });
+
+        emiPlan = await EMIPlan.create(
+          {
+            owner_id: ownerId,
+            shop_id: shopId,
+            sale_id: sale.id,
+            customer_id: customer.id,
+            total_amount: totalAmount,
+            down_payment: downPayment,
+            financed_amount: financedAmount,
+            interest_percent: interestPercent,
+            interest_amount: schedule.interestAmount,
+            payable_amount: schedule.payableAmount,
+            number_of_installments: numberOfInstallments,
+            emi_amount: schedule.emiAmount,
+            start_date: startDate,
+            late_fee_percent: lateFeePercent,
+            outstanding_amount: schedule.payableAmount,
+            actor_type: actorType,
+            actor_id: actorId,
+          },
+          { transaction: t }
+        );
+
+        for (const inst of schedule.installments) {
+          await EMIInstallment.create(
+            {
+              emi_plan_id: emiPlan.id,
+              installment_number: inst.installmentNumber,
+              due_date: inst.dueDate,
+              expected_amount: inst.expectedAmount,
+              remaining_amount: inst.expectedAmount,
+            },
+            { transaction: t }
+          );
+        }
+
+        // Sale's outstanding due mirrors the EMI plan's outstanding (financed) amount
+        sale.due_amount = schedule.payableAmount;
+        sale.status = "partially_paid";
+        await sale.save({ transaction: t });
+      }
+
+      await logAudit({
+        req,
+        module: "sales",
+        action: "create",
+        entityType: "Sale",
+        entityId: sale.id,
+        details: { invoiceNumber, totalAmount, paidAmount: initialPaid, isEmi: Boolean(isEmi) },
+      });
+
+      return sale.id;
+    });
+
+    const sale = await Sale.findByPk(result, { include: saleIncludes });
+    return res.status(201).json({ success: true, data: sale });
+  } catch (err: any) {
+    return res.status(err.status || 500).json({ success: false, message: err.message });
+  }
+}
+
+export async function listSales(req: Request, res: Response) {
+  const { customerId, status, from, to, isEmi, shopId: queryShopId, allShops } = req.query;
+  const ownerId = req.auth!.ownerId;
+  let targetShopId: number | undefined = req.auth!.shopId ?? undefined;
+
+  if (req.auth!.isOwner) {
+    if (allShops === "true") {
+      targetShopId = undefined;
+    } else if (queryShopId) {
+      targetShopId = Number(queryShopId);
+    }
+  }
+
+  const where: any = { owner_id: ownerId };
+  if (targetShopId) where.shop_id = targetShopId;
+  if (customerId) where.customer_id = customerId;
+  if (status) where.status = status;
+  if (isEmi !== undefined) where.is_emi = isEmi === "true";
+  if (from || to) {
+    where.invoice_date = {};
+    if (from) where.invoice_date[Op.gte] = new Date(String(from));
+    if (to) where.invoice_date[Op.lte] = new Date(String(to));
+  }
+
+  const sales = await Sale.findAll({
+    where,
+    include: [
+      { model: Customer, as: "customer", attributes: ["id", "name", "phone"] },
+      { model: Shop, as: "shop", attributes: ["id", "name", "code"] },
+      { model: SaleItem, as: "items" },
+    ],
+    order: [["created_at", "DESC"]],
+    limit: Number(req.query.limit) || 100,
+  });
+
+  return res.json({ success: true, data: sales });
+}
+
+export async function getSale(req: Request, res: Response) {
+  const param = String(req.params.saleId).trim();
+  const isNumeric = /^\d+$/.test(param);
+  const where: any = { owner_id: req.auth!.ownerId };
+  if (isNumeric) {
+    where.id = Number(param);
+  } else {
+    where.invoice_number = param;
+  }
+
+  if (!req.auth!.isOwner) {
+    where.shop_id = req.auth!.shopId;
+  }
+  const sale = await Sale.findOne({
+    where,
+    include: saleIncludes,
+  });
+  if (!sale) return res.status(404).json({ success: false, message: "Sale invoice not found" });
+
+  if ((sale as any).emiPlan?.installments) {
+    await refreshInstallmentStatuses((sale as any).emiPlan.installments);
+  }
+
+  return res.json({ success: true, data: sale });
+}
+
+/** Record a later (partial or final) payment against an existing sale's due balance. */
+export async function recordSalePayment(req: Request, res: Response) {
+  const { amount, method, transactionId, notes, paymentDate } = req.body;
+  if (!amount || Number(amount) <= 0) return res.status(400).json({ success: false, message: "amount must be positive" });
+  if (!method || !PAYMENT_METHODS.includes(method)) {
+    return res.status(400).json({ success: false, message: `method must be one of: ${PAYMENT_METHODS.join(", ")}` });
+  }
+
+  const ownerId = req.auth!.ownerId;
+  const shopId = req.auth!.shopId!;
+  const { actorType, actorId } = actorFromReq(req);
+
+  try {
+    const result = await sequelize.transaction(async (t) => {
+      const where: any = { id: req.params.saleId, owner_id: ownerId };
+      if (!req.auth!.isOwner) {
+        where.shop_id = shopId;
+      }
+      const sale = await Sale.findOne({
+        where,
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      if (!sale) throw Object.assign(new Error("Sale not found"), { status: 404 });
+      if (sale.status === "cancelled") throw Object.assign(new Error("Cannot pay a cancelled sale"), { status: 400 });
+      if (sale.is_emi) {
+        throw Object.assign(
+          new Error("This sale is on EMI — pay individual installments via /api/emi/installments/:id/pay"),
+          { status: 400 }
+        );
+      }
+
+      const payAmount = round2(Math.min(Number(amount), Number(sale.due_amount)));
+      if (payAmount <= 0) throw Object.assign(new Error("Sale has no outstanding due amount"), { status: 400 });
+
+      // Always attribute payment and ledger to the actual shop of the sale
+      const targetShopId = sale.shop_id;
+
+      const payment = await Payment.create(
+        {
+          owner_id: ownerId,
+          shop_id: targetShopId,
+          customer_id: sale.customer_id,
+          sale_id: sale.id,
+          type: "sale_payment",
+          amount: payAmount,
+          method: method as PaymentMethod,
+          transaction_id: transactionId ?? null,
+          payment_date: paymentDate ? new Date(paymentDate) : new Date(),
+          notes: notes ?? null,
+          actor_type: actorType,
+          actor_id: actorId,
+        },
+        { transaction: t }
+      );
+
+      await recordLedgerEntry({
+        ownerId,
+        shopId: targetShopId,
+        customerId: sale.customer_id,
+        entryType: "credit",
+        amount: payAmount,
+        referenceType: "Payment",
+        referenceId: payment.id,
+        description: `Payment for ${sale.invoice_number}`,
+        actorType,
+        actorId,
+        externalTransaction: t,
+      });
+
+      sale.paid_amount = round2(Number(sale.paid_amount) + payAmount);
+      sale.due_amount = round2(Number(sale.due_amount) - payAmount);
+      sale.status = sale.due_amount <= 0 ? "paid" : "partially_paid";
+      await sale.save({ transaction: t });
+
+      await logAudit({
+        req,
+        module: "billing",
+        action: "payment",
+        entityType: "Sale",
+        entityId: sale.id,
+        details: { amount: payAmount, method },
+      });
+
+      return payment.id;
+    });
+
+    const payment = await Payment.findByPk(result, { include: [{ model: Sale, as: "sale" }] });
+    return res.status(201).json({ success: true, data: payment });
+  } catch (err: any) {
+    return res.status(err.status || 500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * CANCELLATION: never deletes anything. Reverses each line's stock
+ * (customer_return, net of anything already returned), closes out
+ * the outstanding ledger debit, and flips status to "cancelled".
+ * Payments already received stay on record — the customer ends up
+ * with a shop-credit balance for that amount, which the owner can
+ * settle with a separate refund Payment if cash actually changes hands.
+ */
+export async function cancelSale(req: Request, res: Response) {
+  const { reason } = req.body;
+  const ownerId = req.auth!.ownerId;
+  const shopId = req.auth!.shopId!;
+  const { actorType, actorId } = actorFromReq(req);
+
+  try {
+    await sequelize.transaction(async (t) => {
+      const where: any = { id: req.params.saleId, owner_id: ownerId };
+      if (!req.auth!.isOwner) {
+        where.shop_id = shopId;
+      }
+      const sale = await Sale.findOne({
+        where,
+        include: [{ model: SaleItem, as: "items" }, { model: EMIPlan, as: "emiPlan" }],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      if (!sale) throw Object.assign(new Error("Sale not found"), { status: 404 });
+      if (sale.status === "cancelled") throw Object.assign(new Error("Sale is already cancelled"), { status: 400 });
+
+      const targetShopId = sale.shop_id; // Stock and ledger stay with the original shop
+
+      for (const item of (sale as any).items as SaleItem[]) {
+        const outstandingQty = item.quantity - item.returned_quantity;
+        if (outstandingQty > 0) {
+          await recordStockMovement({
+            ownerId,
+            shopId: targetShopId,
+            productId: item.product_id,
+            type: "customer_return",
+            quantity: outstandingQty,
+            actorType,
+            actorId,
+            referenceType: "SaleCancellation",
+            referenceId: sale.id,
+            notes: `Cancelled sale ${sale.invoice_number}`,
+            externalTransaction: t,
+          });
+        }
+      }
+
+      if (Number(sale.due_amount) > 0) {
+        await recordLedgerEntry({
+          ownerId,
+          shopId: targetShopId,
+          customerId: sale.customer_id,
+          entryType: "credit",
+          amount: Number(sale.due_amount),
+          referenceType: "SaleCancellation",
+          referenceId: sale.id,
+          description: `Cancellation of ${sale.invoice_number}`,
+          actorType,
+          actorId,
+          externalTransaction: t,
+        });
+      }
+
+      if ((sale as any).emiPlan) {
+        const plan = (sale as any).emiPlan as EMIPlan;
+        plan.status = "cancelled";
+        plan.cancel_reason = reason ?? "Sale cancelled";
+        plan.outstanding_amount = 0;
+        await plan.save({ transaction: t });
+        await EMIInstallment.update(
+          { status: "Cancelled" },
+          { where: { emi_plan_id: plan.id, status: ["Upcoming", "Due", "Overdue", "Partially Paid"] }, transaction: t }
+        );
+      }
+
+      sale.due_amount = 0;
+      sale.status = "cancelled";
+      sale.cancel_reason = reason ?? null;
+      await sale.save({ transaction: t });
+
+      await logAudit({ req, module: "sales", action: "cancel", entityType: "Sale", entityId: sale.id, details: { reason } });
+    });
+
+    const sale = await Sale.findByPk(req.params.saleId, { include: saleIncludes });
+    return res.json({ success: true, data: sale });
+  } catch (err: any) {
+    return res.status(err.status || 500).json({ success: false, message: err.message });
+  }
+}
+
+/**
+ * RETURNS: partial or full product return. Restocks inventory,
+ * credits the customer ledger for the refund amount, and marks each
+ * returned line's returned_quantity so it can't be double-returned.
+ * Body: { items: [{ saleItemId, quantity, reason? }], reason? }
+ */
+export async function returnSale(req: Request, res: Response) {
+  const { items, reason } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: "items must be a non-empty array" });
+  }
+
+  const ownerId = req.auth!.ownerId;
+  const shopId = req.auth!.shopId!;
+  const { actorType, actorId } = actorFromReq(req);
+
+  try {
+    const result = await sequelize.transaction(async (t) => {
+      const where: any = { id: req.params.saleId, owner_id: ownerId };
+      if (!req.auth!.isOwner) {
+        where.shop_id = shopId;
+      }
+      const sale = await Sale.findOne({
+        where,
+        include: [{ model: SaleItem, as: "items" }],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      if (!sale) throw Object.assign(new Error("Sale not found"), { status: 404 });
+      if (sale.status === "cancelled") throw Object.assign(new Error("Cannot return items on a cancelled sale"), { status: 400 });
+
+      const targetShopId = sale.shop_id; // Stock and ledger stay with original shop
+
+      const saleReturn = await SaleReturn.create(
+        {
+          owner_id: ownerId,
+          shop_id: targetShopId,
+          sale_id: sale.id,
+          customer_id: sale.customer_id,
+          return_date: new Date(),
+          reason: reason ?? null,
+          refund_amount: 0,
+          actor_type: actorType,
+          actor_id: actorId,
+        },
+        { transaction: t }
+      );
+
+      let totalRefund = 0;
+      const saleItems = (sale as any).items as SaleItem[];
+
+      for (const line of items) {
+        const saleItem = saleItems.find((si) => si.id === Number(line.saleItemId));
+        if (!saleItem) throw Object.assign(new Error(`Sale item ${line.saleItemId} not found on this sale`), { status: 404 });
+
+        const returnQty = Number(line.quantity);
+        const availableQty = saleItem.quantity - saleItem.returned_quantity;
+        if (!returnQty || returnQty <= 0 || returnQty > availableQty) {
+          throw Object.assign(
+            new Error(`Invalid return quantity for ${saleItem.product_name}: available ${availableQty}`),
+            { status: 400 }
+          );
+        }
+
+        const perUnitTotal = round2(Number(saleItem.total_amount) / saleItem.quantity);
+        const refundAmount = round2(perUnitTotal * returnQty);
+        totalRefund = round2(totalRefund + refundAmount);
+
+        await SaleReturnItem.create(
+          {
+            sale_return_id: saleReturn.id,
+            sale_item_id: saleItem.id,
+            product_id: saleItem.product_id,
+            quantity: returnQty,
+            rate: saleItem.rate,
+            refund_amount: refundAmount,
+          },
+          { transaction: t }
+        );
+
+        saleItem.returned_quantity += returnQty;
+        await saleItem.save({ transaction: t });
+
+        await recordStockMovement({
+          ownerId,
+          shopId: targetShopId,
+          productId: saleItem.product_id,
+          type: "customer_return",
+          quantity: returnQty,
+          actorType,
+          actorId,
+          referenceType: "SaleReturn",
+          referenceId: saleReturn.id,
+          notes: `Return against ${sale.invoice_number}`,
+          externalTransaction: t,
+        });
+      }
+
+      saleReturn.refund_amount = totalRefund;
+      await saleReturn.save({ transaction: t });
+
+      await recordLedgerEntry({
+        ownerId,
+        shopId: targetShopId,
+        customerId: sale.customer_id,
+        entryType: "credit",
+        amount: totalRefund,
+        referenceType: "SaleReturn",
+        referenceId: saleReturn.id,
+        description: `Return against ${sale.invoice_number}`,
+        actorType,
+        actorId,
+        externalTransaction: t,
+      });
+
+      sale.total_amount = round2(Number(sale.total_amount) - totalRefund);
+      sale.due_amount = Math.max(0, round2(Number(sale.due_amount) - totalRefund));
+      const allReturned = saleItems.every((si) => si.returned_quantity >= si.quantity);
+      sale.status = allReturned ? "returned" : "partially_returned";
+      await sale.save({ transaction: t });
+
+      await logAudit({
+        req,
+        module: "sales",
+        action: "return",
+        entityType: "SaleReturn",
+        entityId: saleReturn.id,
+        details: { saleId: sale.id, refundAmount: totalRefund },
+      });
+
+      return saleReturn.id;
+    });
+
+    const saleReturn = await SaleReturn.findByPk(result, { include: [{ model: SaleReturnItem, as: "items" }] });
+    return res.status(201).json({ success: true, data: saleReturn });
+  } catch (err: any) {
+    return res.status(err.status || 500).json({ success: false, message: err.message });
+  }
+}
+
+/** Streams a printable/downloadable PDF invoice for the given sale. */
+export async function downloadBillPdf(req: Request, res: Response) {
+  const where: any = { id: req.params.saleId, owner_id: req.auth!.ownerId };
+  if (!req.auth!.isOwner) {
+    where.shop_id = req.auth!.shopId;
+  }
+  const sale = await Sale.findOne({
+    where,
+    include: saleIncludes,
+  });
+  if (!sale) return res.status(404).json({ success: false, message: "Sale not found" });
+
+  streamBillPdf(res, sale.toJSON());
+}
+

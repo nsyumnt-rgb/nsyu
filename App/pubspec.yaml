@@ -1,0 +1,40 @@
+name: nsyu_catalog_app
+description: NSYU Mobile Accessories — catalog + billing app, data fetched from Google Sheets.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  provider: ^6.1.2       # simple state management
+  http: ^1.2.1           # fetch the Google Sheet CSV
+  csv: ^6.0.0            # parse CSV into rows
+  intl: ^0.19.0          # date formatting
+  pdf: ^3.11.0           # build the bill PDF
+  printing: ^5.13.1      # print / share / save the PDF
+  path_provider: ^2.1.3
+  shared_preferences: ^2.2.3   # local storage for saved bills / ledger
+  googleapis_auth: ^1.6.0      # service-account auth to WRITE to Google Sheets
+  uuid: ^4.4.0                 # generate unique IDs
+  googleapis: ^13.1.0          # Google APIs (Drive, Sheets, etc.)
+  file_picker: ^8.1.2          # let the owner pick a .xlsx file from the device
+  excel: ^4.0.6                # parse .xlsx files (pure Dart, no native plugin)
+  url_launcher: ^6.3.1         # Call / WhatsApp buttons on the ledger detail screen
+  share_plus: ^10.1.4          # "Share Ledger" text summary
+  flutter_contacts: ^1.1.9+2   # "Select from Contacts" on Add Customer
+  supabase_flutter: ^2.8.0     # Official Supabase Flutter client
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/nsyu_logo.png
+    - assets/service_account/nsyu_service_account.json
