@@ -8,10 +8,16 @@ dotenv.config();
  * Supports SQLite (for tests), DATABASE_URL connection string,
  * PostgreSQL (e.g. Supabase), or MySQL (default).
  */
-const envDialect = process.env.DB_DIALECT || (process.env.DB_PORT === "5432" || process.env.DB_HOST?.includes("supabase") || process.env.DATABASE_URL?.startsWith("postgres") ? "postgres" : "mysql");
+const envDialect = process.env.DB_DIALECT || (process.env.DB_PORT === "5432" || process.env.DB_HOST?.includes("supabase") || process.env.DATABASE_URL?.startsWith("postgres") ? "postgres" : "postgres");
 const dialect: Dialect = (process.env.TEST_DIALECT as Dialect) || (envDialect as Dialect);
 const isSqlite = dialect === "sqlite";
-const isPostgres = dialect === "postgres" || Boolean(process.env.DATABASE_URL?.startsWith("postgres"));
+const isPostgres = true;
+
+const DB_HOST = process.env.DB_HOST || "aws-0-ap-south-1.pooler.supabase.com";
+const DB_USER = process.env.DB_USER || "postgres.lggjtxzannywecuvwqbl";
+const DB_PASS = process.env.DB_PASS || "Nsyu@8800503662";
+const DB_NAME = process.env.DB_NAME || "postgres";
+const DB_PORT = Number(process.env.DB_PORT) || 5432;
 
 export const sequelize = isSqlite
   ? new Sequelize({
@@ -45,24 +51,22 @@ export const sequelize = isSqlite
       },
     })
   : new Sequelize(
-      process.env.DB_NAME || (isPostgres ? "postgres" : "nsyu_business"),
-      process.env.DB_USER || (isPostgres ? "postgres" : "root"),
-      process.env.DB_PASS || "",
+      DB_NAME,
+      DB_USER,
+      DB_PASS,
       {
-        host: process.env.DB_HOST || "localhost",
-        port: Number(process.env.DB_PORT) || (isPostgres ? 5432 : 3306),
-        dialect,
+        host: DB_HOST,
+        port: DB_PORT,
+        dialect: "postgres",
         logging: false,
-        dialectOptions: isPostgres
-          ? {
-              ssl: process.env.DB_SSL === "false"
-                ? false
-                : {
-                    require: true,
-                    rejectUnauthorized: false,
-                  },
-            }
-          : undefined,
+        dialectOptions: {
+          ssl: process.env.DB_SSL === "false"
+            ? false
+            : {
+                require: true,
+                rejectUnauthorized: false,
+              },
+        },
         define: {
           underscored: true, // created_at / updated_at, owner_id / shop_id etc.
           timestamps: true,

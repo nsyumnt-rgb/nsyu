@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: nsyu-backend-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: api
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: DB_DIALECT
+        value: postgres
+      - key: DB_HOST
+        value: aws-0-ap-south-1.pooler.supabase.com
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: postgres
+      - key: DB_USER
+        value: postgres.lggjtxzannywecuvwqbl
+      - key: DB_PASS
+        value: Nsyu@8800503662
+      - key: JWT_ACCESS_SECRET
+        value: 138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9
+      - key: JWT_REFRESH_SECRET
+        value: 138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9

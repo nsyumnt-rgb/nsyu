@@ -2,8 +2,8 @@ import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 
-const ACCESS_SECRET: Secret = process.env.JWT_ACCESS_SECRET as string;
-const REFRESH_SECRET: Secret = process.env.JWT_REFRESH_SECRET as string;
+const ACCESS_SECRET: Secret = (process.env.JWT_ACCESS_SECRET || "138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9") as string;
+const REFRESH_SECRET: Secret = (process.env.JWT_REFRESH_SECRET || "138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9") as string;
 const ACCESS_EXPIRES = (process.env.JWT_ACCESS_EXPIRES || "15m") as SignOptions["expiresIn"];
 const REFRESH_EXPIRES = (process.env.JWT_REFRESH_EXPIRES || "30d") as SignOptions["expiresIn"];
 

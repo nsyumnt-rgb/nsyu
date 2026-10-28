@@ -11,8 +11,8 @@ exports.refreshExpiryDate = refreshExpiryDate;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+const ACCESS_SECRET = (process.env.JWT_ACCESS_SECRET || "138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9");
+const REFRESH_SECRET = (process.env.JWT_REFRESH_SECRET || "138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9");
 const ACCESS_EXPIRES = (process.env.JWT_ACCESS_EXPIRES || "15m");
 const REFRESH_EXPIRES = (process.env.JWT_REFRESH_EXPIRES || "30d");
 function signAccessToken(payload) {
