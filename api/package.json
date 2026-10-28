@@ -15,6 +15,16 @@
     "seed:reset": "ts-node src/seed/reset.ts"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.11",
+    "@types/node": "^20.14.9",
+    "@types/pdfkit": "^0.13.4",
+    "@types/pg": "^8.23.1",
+    "@types/uuid": "^9.0.8",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -30,28 +40,18 @@
     "pg-hstore": "^2.3.4",
     "postgres": "^3.4.9",
     "sequelize": "^6.37.3",
+    "typescript": "^5.5.3",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
     "@types/jest": "^29.5.14",
-    "@types/jsonwebtoken": "^9.0.6",
-    "@types/morgan": "^1.9.9",
-    "@types/multer": "^1.4.11",
-    "@types/node": "^20.14.9",
-    "@types/pdfkit": "^0.13.4",
-    "@types/pg": "^8.23.1",
     "@types/supertest": "^6.0.3",
-    "@types/uuid": "^9.0.8",
     "better-sqlite3": "^11.10.0",
     "jest": "^29.7.0",
     "sqlite3": "^5.1.7",
     "supertest": "^6.3.4",
     "ts-jest": "^29.4.12",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.5.3"
+    "ts-node-dev": "^2.0.0"
   }
 }

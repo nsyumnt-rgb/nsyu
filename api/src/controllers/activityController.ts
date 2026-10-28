@@ -45,9 +45,9 @@ export async function listActivityLogs(req: Request, res: Response) {
       shopIds.size > 0 ? Shop.findAll({ where: { id: Array.from(shopIds) }, attributes: ["id", "name", "code"] }) : [],
     ]);
 
-    const ownerMap = new Map(owners.map((o) => [o.id, o.name]));
-    const employeeMap = new Map(employees.map((e) => [e.id, e.name]));
-    const shopMap = new Map(shops.map((s) => [s.id, s.name]));
+    const ownerMap = new Map<any, any>(owners.map((o: any) => [o.id, o.name] as [any, any]));
+    const employeeMap = new Map<any, any>(employees.map((e: any) => [e.id, e.name] as [any, any]));
+    const shopMap = new Map<any, any>(shops.map((s: any) => [s.id, s.name] as [any, any]));
 
     const enriched = logs.map((log) => {
       const actorName =
