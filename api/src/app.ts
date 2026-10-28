@@ -65,7 +65,7 @@ if (process.env.NODE_ENV !== "test") {
 // Serves product images uploaded via multer (see middleware/upload.ts)
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-app.get(["/health", "/api/health"], async (_req, res) => {
+app.get(["/", "/api", "/health", "/api/health"], async (_req, res) => {
   try {
     await sequelize.authenticate();
     return res.json({
