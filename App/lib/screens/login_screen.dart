@@ -116,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: urlCtrl,
                     decoration: InputDecoration(
-                      hintText: 'http://localhost:5000/api',
+                      hintText: 'https://nsyu-backend-api.onrender.com/api',
                       hintStyle: const TextStyle(fontSize: 12),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -126,7 +126,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
+                    runSpacing: 4,
                     children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.cloud_done_rounded, size: 14, color: Color(0xFF1D4ED8)),
+                        label: const Text('24/7 Cloud (Render)', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                        onPressed: () => setDialogState(() => urlCtrl.text = 'https://nsyu-backend-api.onrender.com/api'),
+                      ),
                       ActionChip(
                         label: const Text('localhost:5000', style: TextStyle(fontSize: 10.5)),
                         onPressed: () => setDialogState(() => urlCtrl.text = 'http://localhost:5000/api'),

@@ -18,14 +18,11 @@ class SupabaseConfig {
     defaultValue: String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
   );
 
+  /// Live 24/7 Cloud API URL hosted on Render
+  static const String liveCloudApiUrl = 'https://nsyu-backend-api.onrender.com/api';
+
   /// Default API base URL connected to the Supabase PostgreSQL database
-  static String get defaultApiUrl {
-    if (kIsWeb) return 'http://localhost:5000/api';
-    try {
-      if (Platform.isAndroid) return 'http://10.0.2.2:5000/api';
-    } catch (_) {}
-    return 'http://localhost:5000/api';
-  }
+  static String get defaultApiUrl => liveCloudApiUrl;
 
   static const String _prefApiUrlKey = 'nsyu_supabase_api_url';
   static const String _prefSupabaseUrlKey = 'nsyu_supabase_url';
@@ -70,7 +67,18 @@ class SupabaseConfig {
   /// Loads persisted configuration from SharedPreferences and initializes Supabase client if key exists
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _apiUrl = prefs.getString(_prefApiUrlKey) ?? defaultApiUrl;
+    final savedApiUrl = prefs.getString(_prefApiUrlKey);
+    // If the saved URL is empty, localhost, or android emulator 10.0.2.2,
+    // automatically migrate to the 24/7 live cloud backend URL on Render!
+    if (savedApiUrl == null ||
+        savedApiUrl.isEmpty ||
+        savedApiUrl.contains('localhost') ||
+        savedApiUrl.contains('10.0.2.2')) {
+      _apiUrl = liveCloudApiUrl;
+      await prefs.setString(_prefApiUrlKey, _apiUrl);
+    } else {
+      _apiUrl = savedApiUrl;
+    }
     _supabaseUrl = prefs.getString(_prefSupabaseUrlKey) ?? defaultSupabaseUrl;
     _publishableKey = prefs.getString(_prefAnonKey) ?? defaultPublishableKey;
     _authToken = prefs.getString(_prefTokenKey);
