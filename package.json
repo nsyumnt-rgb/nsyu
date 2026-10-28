@@ -1,0 +1,10 @@
+{
+  "name": "nsyu-business-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd web && npm install && npm run build",
+    "web:dev": "cd web && npm run dev",
+    "api:start": "cd api && npm run start"
+  }
+}

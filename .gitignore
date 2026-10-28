@@ -36,3 +36,4 @@ Thumbs.db
 # Keep .env.example if present, ignore actual secrets
 api/.env.local
 web/.env.local
+
