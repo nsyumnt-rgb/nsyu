@@ -380,18 +380,14 @@ function InventoryInner() {
     }
   }
 
-  // Mock static data maps for exact screenshot match
-  const stockDetailsMap: Record<string, { opening: number; inward: number; outward: number }> = {
-    "IPH15-001": { opening: 10, inward: 50, outward: 45 },
-    "SS24-002": { opening: 20, inward: 30, outward: 42 },
-    "LPD-003": { opening: 5, inward: 10, outward: 12 },
-    "HP14-004": { opening: 8, inward: 15, outward: 17 },
-    "EAR-005": { opening: 50, inward: 20, outward: 28 },
-    "SW-006": { opening: 30, inward: 10, outward: 12 },
-    "CBL-007": { opening: 20, inward: 5, outward: 25 },
-    "PB-008": { opening: 15, inward: 10, outward: 13 },
-    "SPK-009": { opening: 12, inward: 8, outward: 16 },
-    "MON-010": { opening: 10, inward: 10, outward: 13 },
+  // Real product stock counters
+  const getProductStockDetail = (p?: any) => {
+    const stock = p?.stocks?.[0]?.current_stock ?? p?.current_stock ?? 0;
+    return {
+      opening: stock,
+      inward: p?.total_purchased ?? 0,
+      outward: p?.total_sold ?? 0,
+    };
   };
 
   return (
@@ -963,19 +959,19 @@ function InventoryInner() {
                 <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60">
                   <span className="text-[11px] text-slate-500 block">Current Stock</span>
                   <span className="text-base font-bold text-slate-900 mt-0.5 block">
-                    {selectedProduct?.stocks?.[0]?.current_stock ?? 15}
+                    {selectedProduct?.stocks?.[0]?.current_stock ?? 0}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60">
-                  <span className="text-[11px] text-slate-500 block">Inward Stock</span>
+                  <span className="text-[11px] text-slate-500 block">Min Stock Alert</span>
                   <span className="text-base font-bold text-slate-900 mt-0.5 block">
-                    {stockDetailsMap[selectedProduct?.sku || ""]?.inward ?? 50}
+                    {selectedProduct?.min_stock ?? 5}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50/60">
-                  <span className="text-[11px] text-slate-500 block">Outward Stock</span>
+                  <span className="text-[11px] text-slate-500 block">Unit</span>
                   <span className="text-base font-bold text-slate-900 mt-0.5 block">
-                    {stockDetailsMap[selectedProduct?.sku || ""]?.outward ?? 45}
+                    {(selectedProduct as any)?.unit || "PCS"}
                   </span>
                 </div>
               </div>
@@ -1818,11 +1814,7 @@ function InventoryInner() {
                     const isOut = stock <= 0;
                     const isSelected = selectedIds.includes(p.id);
 
-                    const detail = stockDetailsMap[p.sku] || {
-                      opening: Math.max(5, stock - 2),
-                      inward: 10,
-                      outward: 8,
-                    };
+                    const detail = getProductStockDetail(p);
 
                     return (
                       <tr key={p.id} className={`hover:bg-slate-50/70 transition-colors ${isSelected ? "bg-blue-50/40" : ""}`}>
