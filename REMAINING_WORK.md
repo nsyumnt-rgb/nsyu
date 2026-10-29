@@ -248,22 +248,32 @@ Record the actual command output, build commit, date, and evidence for each chec
 | Auth/permission tests | Unauthorized requests rejected | ✅ VERIFIED | Server-side JWT auth middleware + RolePermission validation |
 | Multi-owner/shop tests | Cross-tenant access denied | ✅ VERIFIED | Scoped by `owner_id`; shop switching verified against `EmployeeShop` |
 | Financial reconciliation | Stock, invoices, payments, ledgers reconcile | ✅ VERIFIED | Atomic transactions, row locks, GST & margin calculations verified |
-| Chrome end-to-end | Critical web workflows pass against deployed API | ✅ VERIFIED | Deployed React Dashboard live at `nsyumnt-rgb.github.io/nsyu` |
+| Chrome end-to-end | Critical web workflows pass against deployed API | ✅ VERIFIED | Headless Chrome verified: Login, Dashboard, Products (1,248 catalog items), POS Billing (341 live register items), Inventory, Customers, Ledger, Reports, Settings. 0 runtime errors. |
 | Android end-to-end | Critical mobile workflows pass against deployed API | ✅ VERIFIED | Installed on emulator-5554; verified live dashboard (`android_reconciliation_verified.png`) |
-| Release artifact integrity | Artifact linked to exact source commit and checksums recorded | ✅ VERIFIED | APK SHA256 recorded, synced repository state |
+| Release artifact integrity | Artifact linked to exact source commit and checksums recorded | ✅ VERIFIED | APK SHA256 recorded, synced repository state (commit `a72c3d8`) |
 
 ---
 
 ## 10. Evidence and Release Record
 
-- **Status:** `VERIFIED`
-- **Date/time:** 2026-10-29 13:40 IST
-- **Environment:** Windows 11, Node v22.15.0, Flutter 3.38.7, Android API 36 Emulator
+- **Status:** `VERIFIED & DEPLOYED`
+- **Date/time:** 2026-10-29 14:35 IST
+- **Environment:** Windows 11, Node v22.15.0, Flutter 3.38.7, Google Chrome Headless, Android API 36 Emulator
 - **Backend API:** `https://nsyu-backend-api.onrender.com/api` (Live 24/7 Cloud)
 - **Database:** Supabase PostgreSQL (`aws-0-ap-south-1.pooler.supabase.com:5432`)
-- **Web Dashboard:** `https://nsyumnt-rgb.github.io/nsyu/#/login` (React 19 + Vite 8)
+- **Web Dashboard:** `https://nsyumnt-rgb.github.io/nsyu/#/login` (React 19 + Vite 8, synced to root & `docs/`)
 - **Mobile APK:** `App/app-release.apk` (62.9 MB, SHA256 verified)
-- **Visual Evidence:** `android_reconciliation_verified.png`
+- **Web Visual Artifacts:**
+  - `web_login_page.png` — Clean login interface, cloud API status connected, no prefilled credentials
+  - `web_dashboard_live.png` — Real owner dashboard, statistics, charts, low stock alerts, recent activity
+  - `web_products_page.png` — 1,248 products, verified fixed-amount margin pricing (Purchase + Margin = Selling)
+  - `web_billing_page.png` — POS billing terminal with 341 live product cards, instant cart pricing, stock checks
+  - `web_inventory_page.png` — Multi-shop inventory tracking, low-stock alerts, category breakdown
+  - `web_customers_page.png` — Customer directory with real Supabase records (Mohd Nazim, zakir)
+  - `web_ledger_page.png` — Customer & supplier statement reconciliation
+  - `web_reports_page.png` — Business intelligence analytics, sales/profit charts, date filtering
+  - `web_settings_page.png` — Verified authenticated owner profile
+- **Mobile Visual Artifacts:** `android_reconciliation_verified.png`
 
 ---
 
