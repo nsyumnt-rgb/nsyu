@@ -5,14 +5,11 @@ import 'package:provider/provider.dart';
 import '../models/bill_item.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
-import '../models/saved_bill.dart';
 import '../providers/bills_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../services/bill_pdf_service.dart';
-import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/customer_provider.dart';
-import '../widgets/editable_qty_input.dart';
 import '../navigation/app_navigation.dart';
 import 'customer_picker_screen.dart';
 
@@ -79,7 +76,6 @@ class _BillScreenState extends State<BillScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<CatalogProvider>();
     final customer = provider.selectedCustomer;
-    final dateFmt = DateFormat('dd MMM yyyy, hh:mm a');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
@@ -442,15 +438,21 @@ class _BillScreenState extends State<BillScreen> {
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFF0F172A)),
           ),
           const SizedBox(height: 12),
-          _summaryLine('Items (${provider.billItems.length})', '₹ ${_money.format(provider.finalBillTotal)}'),
+          _summaryLine('Subtotal (${provider.billItems.length} items)', '₹ ${_money.format(provider.billSubtotal)}'),
+          if (provider.billDiscount > 0) ...[
+            const SizedBox(height: 6),
+            _summaryLine('Discount', '- ₹ ${_money.format(provider.billDiscount)}', valueColor: const Color(0xFF16A34A)),
+          ],
+          if (provider.billTax > 0) ...[
+            const SizedBox(height: 6),
+            _summaryLine('Tax / GST', '+ ₹ ${_money.format(provider.billTax)}'),
+          ],
           const SizedBox(height: 6),
-          _summaryLine('Previous Outstanding', '₹ ${_money.format(provider.previousOutstanding)}'),
-          const SizedBox(height: 8),
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
-          const SizedBox(height: 8),
-          _summaryLine('Total Amount', '₹ ${_money.format(provider.finalBillTotal)}'),
-          const SizedBox(height: 6),
-          _summaryLine('Previous Due', '₹ ${_money.format(provider.previousOutstanding)}'),
+          _summaryLine('Bill Total', '₹ ${_money.format(provider.finalBillTotal)}'),
+          if (provider.previousOutstanding > 0) ...[
+            const SizedBox(height: 6),
+            _summaryLine('Previous Outstanding', '₹ ${_money.format(provider.previousOutstanding)}', valueColor: const Color(0xFFDC2626)),
+          ],
           const SizedBox(height: 8),
           const Divider(height: 1, color: Color(0xFFE2E8F0)),
           const SizedBox(height: 8),
@@ -465,7 +467,7 @@ class _BillScreenState extends State<BillScreen> {
     );
   }
 
-  Widget _summaryLine(String label, String value, {bool isBold = false, double fontSize = 13}) {
+  Widget _summaryLine(String label, String value, {bool isBold = false, double fontSize = 13, Color? valueColor}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -482,7 +484,7 @@ class _BillScreenState extends State<BillScreen> {
           style: TextStyle(
             fontSize: fontSize,
             fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-            color: const Color(0xFF0F172A),
+            color: valueColor ?? const Color(0xFF0F172A),
           ),
         ),
       ],
@@ -908,14 +910,16 @@ class _BillScreenState extends State<BillScreen> {
   void _showAddNewProductDialog(BuildContext context, CatalogProvider provider) {
     final nameCtrl = TextEditingController();
     final skuCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
+    final purchaseCtrl = TextEditingController();
+    final marginCtrl = TextEditingController();
     final stockCtrl = TextEditingController(text: '10');
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => Padding(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
         padding: EdgeInsets.fromLTRB(18, 16, 18, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -945,19 +949,46 @@ class _BillScreenState extends State<BillScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
-                    controller: priceCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Selling Price *', prefixText: '₹ '),
+                    controller: stockCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Opening Stock', hintText: 'e.g. 50'),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: stockCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Opening Stock', hintText: 'e.g. 50'),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: purchaseCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Purchase Price *', prefixText: '₹ '),
+                    onChanged: (_) => setSheetState(() {}),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: marginCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Margin (₹)', prefixText: '₹ '),
+                    onChanged: (_) => setSheetState(() {}),
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 6),
+            Builder(builder: (_) {
+              final purchase = double.tryParse(purchaseCtrl.text) ?? 0.0;
+              final margin = double.tryParse(marginCtrl.text) ?? 0.0;
+              final selling = purchase + margin;
+              if (selling <= 0) return const SizedBox.shrink();
+              return Text(
+                'Selling Price = ₹${selling.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+              );
+            }),
             const SizedBox(height: 18),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -968,12 +999,13 @@ class _BillScreenState extends State<BillScreen> {
               ),
               onPressed: () async {
                 final name = nameCtrl.text.trim();
-                final price = double.tryParse(priceCtrl.text.trim()) ?? 0.0;
+                final purchase = double.tryParse(purchaseCtrl.text.trim()) ?? 0.0;
+                final margin = double.tryParse(marginCtrl.text.trim()) ?? 0.0;
                 final sku = skuCtrl.text.trim().isNotEmpty ? skuCtrl.text.trim() : 'NSYU-${DateTime.now().millisecondsSinceEpoch % 10000}';
                 final stock = int.tryParse(stockCtrl.text.trim()) ?? 0;
 
-                if (name.isEmpty || price <= 0) {
-                  showAppSnackBar(context, 'Please enter product name and valid price', isError: true);
+                if (name.isEmpty || purchase <= 0) {
+                  showAppSnackBar(context, 'Please enter product name and purchase price', isError: true);
                   return;
                 }
 
@@ -984,14 +1016,15 @@ class _BillScreenState extends State<BillScreen> {
                   final err = await provider.addProduct(
                     code: sku,
                     desc: name,
-                    purchase: price * 0.8,
-                    marginPrice: price * 0.2,
+                    purchase: purchase,
+                    marginPrice: margin,
                     stock: stock,
                   );
                   if (err == null) {
+                    final sellingPrice = purchase + margin;
                     final created = provider.filteredProducts.firstWhere(
                       (p) => p.code == sku,
-                      orElse: () => Product(sno: 1, code: sku, desc: name, spec: '', pkg: 1, category: 'General', purchase: price * 0.8, marginPrice: price * 0.2, sellingPrice: price, stock: stock),
+                      orElse: () => Product(sno: 1, code: sku, desc: name, spec: '', pkg: 1, category: 'General', purchase: purchase, marginPrice: margin, sellingPrice: sellingPrice, stock: stock),
                     );
                     provider.addToBill(created);
                     if (context.mounted) {
@@ -1008,6 +1041,7 @@ class _BillScreenState extends State<BillScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1132,12 +1166,18 @@ class _BillScreenState extends State<BillScreen> {
               final code = barcodeCtrl.text.trim();
               Navigator.pop(ctx);
               if (code.isNotEmpty) {
-                final match = provider.filteredProducts.firstWhere(
-                  (p) => p.code.toLowerCase() == code.toLowerCase(),
-                  orElse: () => provider.filteredProducts.first,
+                final match = provider.filteredProducts.cast<Product?>().firstWhere(
+                  (p) =>
+                      p!.code.toLowerCase() == code.toLowerCase() ||
+                      (p.barcode != null && p.barcode!.toLowerCase() == code.toLowerCase()),
+                  orElse: () => null,
                 );
-                provider.addToBill(match);
-                showAppSnackBar(context, 'Added ${match.desc} to bill!');
+                if (match != null) {
+                  provider.addToBill(match);
+                  showAppSnackBar(context, 'Added ${match.desc} to bill!');
+                } else {
+                  showAppSnackBar(context, 'No product found for "$code"', isError: true);
+                }
               }
             },
             child: const Text('Add to Bill'),
@@ -1155,11 +1195,41 @@ class _BillScreenState extends State<BillScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              leading: const Icon(Icons.discount_outlined, color: Color(0xFF1D4ED8)),
+              title: const Text('Edit Discount'),
+              subtitle: provider.billDiscount > 0
+                  ? Text('Currently: ₹ ${_money.format(provider.billDiscount)}', style: const TextStyle(fontSize: 12))
+                  : null,
+              onTap: () {
+                Navigator.pop(ctx);
+                _editDiscount(context, provider);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long_outlined, color: Color(0xFF1D4ED8)),
+              title: const Text('Edit Tax / GST'),
+              subtitle: provider.billTax > 0
+                  ? Text('Currently: ₹ ${_money.format(provider.billTax)}', style: const TextStyle(fontSize: 12))
+                  : null,
+              onTap: () {
+                Navigator.pop(ctx);
+                _editTax(context, provider);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.share_outlined),
               title: const Text('Share Bill via WhatsApp / PDF'),
               onTap: () {
                 Navigator.pop(ctx);
                 BillPdfService.shareBill(provider.toPdfData());
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_circle_outline, color: Color(0xFF16A34A)),
+              title: const Text('Add New Product to Bill', style: TextStyle(color: Color(0xFF16A34A))),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showAddNewProductDialog(context, provider);
               },
             ),
             ListTile(
@@ -1188,6 +1258,9 @@ class _BillScreenState extends State<BillScreen> {
 
     setState(() => _saving = true);
 
+    // Capture provider references before any async gap (avoids BuildContext-across-async lint)
+    final billsProvider = context.read<BillsProvider>();
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1198,11 +1271,12 @@ class _BillScreenState extends State<BillScreen> {
       final pdfData = provider.toPdfData();
       final savedFiles = await BillPdfService.saveBillFiles(pdfData);
 
+      if (!mounted) return;
+
       final billRecord = provider.toSavedBill();
       billRecord.pdfPath = savedFiles.pdfPath;
       billRecord.imagePath = savedFiles.imagePath;
 
-      final billsProvider = context.read<BillsProvider>();
       await billsProvider.addBill(
         billRecord,
         customerId: provider.selectedCustomer?.id,

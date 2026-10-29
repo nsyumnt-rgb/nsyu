@@ -1,131 +1,198 @@
-# NSY Business Management System — Multiple-Shop Implementation Status
-
-## 1. Audit & Defect Summary
-
-Prior to this implementation, several architectural gaps and multiple-shop security vulnerabilities existed:
-1. **IPv6 Connection Timeout**: Supabase direct database connection `db.lggjtxzannywecuvwqbl.supabase.co:5432` has only an `AAAA` IPv6 record, causing socket timeouts (`ETIMEDOUT`) on standard IPv4 networks.
-   - *Fix*: Configured the Supabase connection pooler `aws-0-ap-south-1.pooler.supabase.com:5432` with user `postgres.lggjtxzannywecuvwqbl` over SSL.
-2. **Missing PostgreSQL Dialect Support**: The Sequelize connection was defaulting to MySQL in certain files and lacked the `pg` and `pg-hstore` packages.
-   - *Fix*: Installed `pg`, `pg-hstore`, and `@types/pg`; added dynamic dialect resolution supporting `DATABASE_URL` and SSL.
-3. **Cross-Shop Insecure Direct Object References (IDOR)**:
-   - In `saleController`, `purchaseController`, `emiController`, `paymentController`, `payrollController`: queries for individual records (`findByPk` or `findOne({ where: { id, owner_id } })`) checked only `owner_id`. If an owner had Shop A and Shop B, an employee assigned only to Shop A could read, pay, or cancel invoices, purchases, and payroll records belonging to Shop B.
-   - *Fix*: Enforced `where.shop_id = req.auth.shopId` for all non-owners; owners default to their currently selected active shop or can pass `allShops=true` for consolidated access.
-4. **Incorrect Shop Attribution on Financial/Stock Reversals**:
-   - In cancellations and payments, transactions were referencing `req.auth.shopId` instead of the original record's `shop_id`. If an owner switched shop context, reversals would incorrectly post to the currently selected shop.
-   - *Fix*: Explicitly attributed payments, ledger debits/credits, and inventory movements to `record.shop_id`.
-5. **Shop Deletion Protection Missing**:
-   - `deleteShop` allowed hard deletion of shops without checking for existing sales, purchases, or ledger entries, which would cause foreign-key errors or orphaned financial records.
-   - *Fix*: Implemented deletion integrity validation blocking deletion if any financial, sales, inventory, or payroll records exist, requiring safe deactivation instead.
-6. **Frontend Routing & Stale Context Drops**:
-   - `Topbar.tsx` forced `navigate("/app")` whenever the active shop was switched, kicking users off whatever page they were browsing.
-   - `Products.tsx` and `Inventory.tsx` used `useEffect(..., [])` without `shopId` in the dependency array, displaying stale inventory data from the previous shop until a full browser reload.
-   - *Fix*: Removed `navigate("/app")` on switch; added `[shopId]` to `useEffect` dependency arrays across all module pages.
-7. **Scaffolded Frontend Modules**:
-   - Sales, Billing, Purchase, Customers, Suppliers, Payments, Ledger, EMI, Attendance, Payroll, and Reports were placeholders (`ModuleScaffold`).
-   - *Fix*: Built full production frontend pages and corresponding TypeScript API clients for all 11 modules.
+# NSYU Business Management System — Remaining Work
+_Last Updated: 2026-10-29 — Session 2_
 
 ---
 
-## 2. Completed / Pending Checklist
+## ✅ COMPLETED (Previous Sessions)
 
-### Core Architecture & Database
-- [x] Working Supabase PostgreSQL connection via connection pooler with SSL.
-- [x] Zero destructive schema migrations executed against live Supabase data.
-- [x] All 45 models synchronized and operational.
-- [x] Transaction atomicity (`sequelize.transaction`) for multi-step financial & stock operations.
-- [x] Decimal-safe monetary arithmetic (`round2`).
-
-### Owner & Shop Management
-- [x] Shop listing, creation, and detail retrieval (`GET /api/shops`, `POST /api/shops`, `GET /api/shops/:shopId`).
-- [x] Shop update and status toggling (`PUT /api/shops/:shopId`, `PATCH /api/shops/:shopId/status`).
-- [x] Safe deletion check: prevents deletion if sales, purchases, inventory, payroll, or EMI exist (`DELETE /api/shops/:shopId`).
-- [x] Shop switching with JWT reissue (`POST /api/shops/switch`).
-- [x] Employee restriction to authorized assigned shops (cross-shop access blocked with HTTP 403).
-- [x] Deactivated shop switching blocked for employees.
-
-### Shop-Wise Business Logic Modules
-- [x] **Products**: Catalog records shared across shops; independent per-shop stock and min_stock levels.
-- [x] **Inventory**: Direct stock movements (purchase, customer return, damage, adjustment) and 2-phase atomic inter-shop transfers (`POST /api/inventory/transfer`).
-- [x] **Purchases**: Inward purchase bills, automatic receiving shop stock-in, and supplier ledger entries.
-- [x] **Sales & Billing**: POS billing terminal, invoice generation, automatic stock deduction, payment methods (Cash, UPI, Card, Bank), and PDF downloads.
-- [x] **Customers**: Central customer directory, credit limits, phone search, and balance tracking.
-- [x] **Suppliers**: Central supplier directory and accounts payable tracking.
-- [x] **Payments**: Customer receipts and supplier payments with PDF receipt streaming and voiding.
-- [x] **Customer & Supplier Ledgers**: Running account statements calculating both `currentBalance` (global) and `shopBalance` (shop-specific).
-- [x] **EMI / Installments**: Installment schedules, due collections view, auto late fee calculation, and payments.
-- [x] **Employees & Roles**: Owner-managed employees, per-shop role assignments, and permission grids.
-- [x] **Attendance**: Employee punch-in/out working hours tracking and manager attendance marking.
-- [x] **Payroll**: Preview calculations from real attendance & incentives, payroll finalization, and salary disbursements.
-- [x] **Reports & Dashboard**: Live BI reports (Sales, Purchases, P&L, Inventory Valuation, Collections, Shop Performance) with shop-specific vs. `allShops=true` consolidated views.
+### Deployment & Infrastructure
+- [x] Fixed GitHub Pages 404 — web build in `/docs` and root — commit `2215956`
+- [x] Fixed `moduleResolution: node10` deprecation (TypeScript 5.9 / Node 26) — commit `943002e`
+- [x] Fixed `@types/*` not installed on Render (moved to `dependencies`) — commit `962ef48`
+- [x] Fixed `Map` tuple type error in `activityController.ts` — commit `c7a79d7`
+- [x] Gradle 9.7.1 → 8.14.3 (incompatible with AGP 8.x) — commit `0b96f55`
+- [x] `flutter build apk --release` ✅ — 62.8 MB APK
+- [x] Flutter app connected to Render cloud backend (`defaultApiUrl`)
+- [x] "24/7 Cloud (Render)" preset chip in login settings dialog
+- [x] Backend live at `https://nsyu-backend-api.onrender.com/api`
+- [x] 340 real products loading in emulator from Supabase ✅
 
 ---
 
-## 3. Verification Summary
+## ✅ COMPLETED (This Session — 2026-10-29)
 
-1. **Automated Unit & Integration Tests**:
-   - `tests/multishop_comprehensive.test.ts`: 5/5 PASSED
-   - `tests/isolation.test.ts`: 6/6 PASSED
-   - `tests/permissions.test.ts`: 8/8 PASSED
-2. **Build Validations**:
-   - Backend `api/`: `npm run build` compiled with 0 errors.
-   - Frontend `web/`: `npm run build` bundled with Vite with 0 errors.
-3. **Live Supabase PostgreSQL API Verification**:
-   - Verified live authenticated queries for Owner (`demo.owner@nsyu.local`) and Manager (`manager@nsyu.local`).
-   - Verified shop switching between Shop 1 (NSYU Main Store) and Shop 2 (NSYU Branch Store).
-   - Verified shop-specific sales (Shop 1: ₹40,790) vs consolidated sales (All Shops: ₹49,066).
-   - Verified unauthorized cross-shop switch blocked with HTTP 403.
+### Phase 1 — Baseline Inspection
+- [x] `flutter pub get` — SUCCESS (0 errors)
+- [x] `flutter analyze` — 124 issues, 0 errors (all warnings/infos)
+- [x] Full architecture inspection: 27 screens, 8 providers, 15+ services
+- [x] Product pricing architecture verified — CORRECT (marginPrice in ₹)
+- [x] Bill workflow verified — Catalog → Cart → Bill → Supabase WORKING
+- [x] Bill discount default = 0.0 — VERIFIED PASS
+
+### Bug Fixes Applied to `bill_screen.dart`
+- [x] **B1 FIXED** — Barcode scan `orElse: () => first` replaced with null-safe lookup + error snackbar
+- [x] **B2 FIXED** — `use_build_context_synchronously`: `billsProvider` read before first `await`; `if (!mounted) return` added after `saveBillFiles`
+- [x] **B3 FIXED** — Hardcoded 80/20 purchase/margin split removed; quick-add dialog now has proper Purchase Price + Margin (₹) fields with live Selling Price preview
+- [x] **B4 FIXED** — Bill Summary card duplicate rows removed; now shows clean: Subtotal → Discount (if > 0) → Tax (if > 0) → Bill Total → Previous Outstanding (if > 0) → Grand Total
+- [x] **B5 FIXED** — Discount + Tax dialogs now reachable from More (⋮) menu in BillScreen
+- [x] **B5b FIXED** — "Add New Product to Bill" also wired into More menu
+- [x] Removed unused imports: `saved_bill.dart`, `supabase_service.dart`, `editable_qty_input.dart` from `bill_screen.dart`
+- [x] Unused import `bill_screen.dart` removed from `bills_list_screen.dart`
+
+### Bug Fixes Applied to `ledger_screen.dart`
+- [x] **B6 FIXED** — "from Google Sheets" text updated to "from Supabase"
+- [x] **B6b FIXED** — Tooltip "Sync from Google Sheets" → "Sync from Supabase"
 
 ---
 
-## 4. Reference Mapping, Clickable Links & Record Detail Navigation System
+## 🔴 REMAINING — HIGH PRIORITY
 
-### Core Architecture Implemented
-- **Universal Reference Resolver (`GET /api/reference/resolve?ref=...`)**:
-  - Intelligently parses and resolves any reference string (`INV-...`, `PUR-...`, `PAY-...`, `TRF-...`, `MOV-...`, `SKU`, customer phone/name, employee email/name) to its canonical route and database record.
-  - Strictly scoped by `owner_id` to prevent multi-tenant data exposure.
-- **Universal Frontend Component (`ReferenceLink.tsx`)**:
-  - Types: `sale`, `purchase`, `payment`, `transfer`, `movement`, `product`, `customer`, `supplier`, `employee`, `emi`, `payroll`, `auto`.
-  - Prevents table row click conflicts via `e.stopPropagation()`.
-  - Uses accessible semantic markup and `#2563EB` hover underline styling.
-- **Global Search in Topbar**:
-  - Debounced live reference search in `Topbar.tsx` querying `/api/reference/resolve`.
-  - Interactive autocomplete dropdown showing title, route, and entity type badge.
-- **11 Dedicated Record Detail Pages (`web/src/pages/details/`)**:
-  - `/app/sales/:id`: Full invoice breakdown, line items, customer profile link, SKU links, payments receipts table, EMI schedule link, PDF print/download.
-  - `/app/purchase/:id`: Vendor purchase bill, supplier profile link, line items, PDF print/download.
-  - `/app/payments/:id`: Payment voucher/receipt, customer/supplier link, linked invoice link, cancellation action.
-  - `/app/inventory/transfers/:id`: Inter-shop transfer route visualizer, product SKU link, inventory movement audit trail.
-  - `/app/inventory/movements/:id`: Inventory transaction impact card, product SKU link, shop badge, actor info.
-  - `/app/customers/:id`: Customer 360 profile, sales invoices tab, ledger tab, EMI plans tab.
-  - `/app/suppliers/:id`: Supplier profile, purchase bills tab, ledger tab.
-  - `/app/products/:id`: Product master catalog, SKU, shop-wise stock breakdown table, supplier link.
-  - `/app/employees/:id`: Employee master profile, assigned shops/roles, attendance logs, payroll runs.
-  - `/app/emi/:id`: EMI loan schedule, customer link, invoice link, installment schedule table with inline payment action.
-  - `/app/payroll/:id`: Salary voucher, employee link, gross earnings, deduction breakdown, salary disbursement log.
-- **Flexible Backend Parameter Support**:
-  - All detail endpoints support direct lookup by numeric primary key ID as well as human-readable reference strings (e.g. `/api/sales/INV-NSYUMAIN-000001` or `/api/sales/1`, `/api/products/IPH15-001` or `/api/products/21`, `/api/customers/9810000010` or `/api/customers/1`), ensuring full browser reload and direct link shareability.
-- **Multi-Owner & Multi-Shop Authorization**:
-  - All detail endpoints strictly enforce `owner_id` scoping.
-  - Employees are restricted to authorized assigned shops; cross-owner and unauthorized queries return HTTP 401/403/404.
+### Phase 2 — Product Pricing (Remaining)
+- [ ] **Add Product dialog in `catalog_screen.dart`** — currently takes Purchase + Selling Price, computes margin as `sell - buy`. Should add a **Margin (₹)** field that auto-computes Selling Price (same pattern as quick-add fix done above)
+- [ ] **Add Product dialog in `home_screen.dart`** — same fix needed
+- [ ] **Product Detail screen** — verify margin edit saves correctly to Supabase (test with real product)
 
-### Reference Links Integrated Across Modules:
-- [x] **Sales Page (`Sales.tsx`)**: Invoices, customer names, view actions.
-- [x] **Purchase Page (`Purchase.tsx`)**: Purchase bills, supplier names, view actions.
-- [x] **Payments Page (`Payments.tsx`)**: Receipt numbers, customer names, invoice references, supplier names, purchase references.
-- [x] **Customer & Supplier Ledgers (`Ledger.tsx`)**: Sale invoices, purchase bills, payment receipts.
-- [x] **EMI Page (`EMI.tsx`)**: EMI plan IDs, customer names, sale invoice numbers.
-- [x] **Inventory Page (`Inventory.tsx`)**: Stock movement IDs, product SKUs, transfer numbers.
-- [x] **Dashboard (`Dashboard.tsx`)**: Recent sales invoices, customer names, recent purchase bill numbers, supplier names, low-stock product SKUs.
-- [x] **Customer Directory (`Customers.tsx`)**: Customer names, view profile links.
-- [x] **Supplier Directory (`Suppliers.tsx`)**: Supplier names, view profile links.
-- [x] **Product Catalog (`Products.tsx`)**: Product names, SKU numbers.
-- [x] **Employee Directory (`Employees.tsx`)**: Employee names, view profile links.
-- [x] **Payroll (`Payroll.tsx`)**: Payroll period IDs, employee names, voucher links.
-- [x] **Attendance (`Attendance.tsx`)**: Employee names linked to employee profiles.
+### Phase 3 — GST Settings
+- [ ] **Tax entry is flat ₹ amount** — needs to support GST % rate that auto-calculates from bill subtotal
+- [ ] Add GST % field in Bill Summary (e.g. "GST 18% = ₹ X.XX") that auto-computes
+- [ ] Consider per-product GST rate field in product model (requires DB schema check — do NOT migrate without authorization)
 
-### Verification Status:
-- [x] Universal Reference Resolver API: 100% Verified
-- [x] 11 Detail Endpoints (Numeric & Reference queries): 100% Verified
-- [x] 404 & IDOR Authorization Protections: 100% Verified
-- [x] Backend Build (`npm run build` in `api`): Exited with 0 errors
-- [x] Frontend Build (`npm run build` in `web`): Exited with 0 errors
+### Phase 5 — Catalog → Cart → Bill Workflow (Polish)
+- [ ] **Stock validation** — warn user if qty added to bill exceeds available stock (currently no check)
+- [ ] **Catalog screen** — `_showAddProductDialog` also uses Purchase + Selling, add Margin field
+- [ ] **Bill screen "View Products" sheet** — `_showViewProductsSheet` declared but not wired to any button — add a "Browse Products" button in BillScreen search area
+
+### Phase 6 — Ledger Audit
+- [ ] Test "Receive Payment" flow end-to-end (tap customer → collect payment → verify in Supabase)
+- [ ] Verify `fetchCustomerOutstanding()` returns real balance from DB
+- [ ] Verify `createBill()` in Supabase creates actual sale record
+
+### Phase 7 — Icon-based Action Buttons
+- [ ] **Catalog product card** — popup menu items have no leading icons (View Details, Add to Bill, Add to Order)
+- [ ] **Bills list** — row-level icons for View, Share, Mark Paid
+- [ ] **Orders screen** — row-level icons for View, Mark Delivered, Cancel
+
+### Phase 8 — Global Feedback
+- [ ] **BillsListScreen** — no loading indicator while syncing from Supabase; add sync spinner in AppBar
+- [ ] **Orders screen** — add loading state during sync
+- [ ] Remove `print()` calls from production code:
+  - `bills_provider.dart` lines 90, 126, 182
+  - `orders_provider.dart` lines 62, 81
+  - `supabase_service.dart` lines 411, 545
+
+---
+
+## 🟡 REMAINING — MEDIUM PRIORITY
+
+### Phase 9 — All-Screen & Navigation Audit
+- [ ] `_openInlineEditCustomer` in `bill_screen.dart` — declared but unreachable (keep or remove)
+- [ ] `_pickPaymentDateTime` in `bill_screen.dart` — declared but unreachable (keep or remove)
+- [ ] `_editItemRate` in `bill_screen.dart` — declared but unreachable (long-press on item?)
+- [ ] `_showViewProductsSheet` in `bill_screen.dart` — wire to "Browse" button or remove
+- [ ] `_openEditDialog` in `customer_picker_screen.dart` — declared but unreachable
+- [ ] Home screen "customers_ledger_detail_screen" import unused — remove
+- [ ] `customer_ledger_detail_screen.dart` — unused fields `_error`, `_selectedType`, `_transactionTypes`
+
+### Code Quality
+- [ ] Replace all `withOpacity()` calls with `.withValues(alpha: ...)` (~15 occurrences)
+- [ ] Replace `MaterialStateProperty` → `WidgetStateProperty` in `app_theme.dart`
+- [ ] Replace `MaterialState` → `WidgetState` in `app_theme.dart`
+- [ ] Fix `invalid_null_aware_operator` in `saved_bill.dart` (lines 205, 209)
+- [ ] Remove unused `_dateFmt` field from `bills_provider.dart`, `orders_provider.dart`, `payments_provider.dart`
+- [ ] Fix `Table.fromTextArray` deprecated → `TableHelper.fromTextArray()` in `payment_pdf_service.dart`
+- [ ] Fix `value` deprecated → `initialValue` in `collect_payment_screen.dart`
+
+---
+
+## 🟢 REMAINING — LOW PRIORITY
+
+### Phase 10 — Real Supabase Data & Security
+- [ ] Verify RLS is enabled and working (do NOT disable)
+- [ ] Verify no credentials in APK bundle (check `flutter build apk --release` output)
+- [ ] Test offline behaviour — does app handle network errors gracefully?
+
+### Phase 11 — Testing
+- [ ] Run `flutter test` — check if any unit tests exist
+- [ ] Manual test: Create bill → verify in Supabase bills table
+- [ ] Manual test: Collect payment → verify in payments table
+- [ ] Manual test: Add product → verify in products table
+- [ ] Manual test: Login with wrong credentials → verify error shown
+- [ ] Manual test: Barcode scan with unknown code → verify error snackbar (B1 fix)
+
+### Phase 12 — Chrome & Android Validation
+- [ ] `flutter build web --release` — verify no `localhost` URLs in bundle
+- [ ] `flutter build apk --release` — rebuild after all fixes
+- [ ] Install APK on emulator — smoke test all 5 tabs
+- [ ] Verify web app loads at `https://nsyumnt-rgb.github.io/nsyu/#/login`
+
+### Phase 13 — Database Safety
+- [ ] Run `flutter build apk --release --obfuscate --split-debug-info=build/debug-info`
+- [ ] Verify no hardcoded credentials in APK
+
+### Phase 14 — Final Report
+- [ ] Write evidence-based PASS/FAIL/BLOCKED report for all 14 phases
+- [ ] Capture emulator screenshots for each major screen
+- [ ] Document all commits in this session
+
+---
+
+## KNOWN ISSUES (Not Yet Fixed)
+
+| ID | Issue | File | Severity | Status |
+|----|-------|------|----------|--------|
+| W1 | `withOpacity` deprecated (15 places) | Multiple | Low | Open |
+| W2 | `MaterialStateProperty` deprecated | app_theme.dart | Low | Open |
+| W3 | `print()` in production code (8 places) | Multiple | Low | Open |
+| W4 | Unused declared methods in bill_screen | bill_screen.dart | Low | Open |
+| W5 | Unused imports in home_screen, customer_ledger | Multiple | Low | Open |
+| W6 | `Table.fromTextArray` deprecated | payment_pdf_service.dart | Low | Open |
+| W7 | GST % based calculation not implemented | bill_screen.dart | Medium | Open |
+| W8 | Stock validation in cart not implemented | catalog_provider.dart | Medium | Open |
+
+---
+
+## ARCHITECTURE REFERENCE
+
+```
+Flutter App (App/)
+├── main.dart                    → app entry, MultiProvider setup
+├── config/
+│   ├── supabase_config.dart     → API URL, auth token storage
+│   └── google_oauth_config.dart → Google OAuth (unused for now)
+├── models/                      → Product, BillItem, SavedBill, Customer, etc.
+├── providers/                   → State management (ChangeNotifier)
+│   ├── catalog_provider.dart    → Products + Bill cart + Order cart
+│   ├── bills_provider.dart      → Bill history, Supabase sync
+│   ├── customer_provider.dart   → Customer list
+│   ├── auth_provider.dart       → Login state, shop name, permissions
+│   └── ...
+├── services/
+│   ├── supabase_service.dart    → ALL API calls to backend
+│   └── bill_pdf_service.dart   → PDF generation + sharing
+├── screens/                     → 27 screens
+└── theme/app_theme.dart        → AppColors, showAppSnackBar()
+```
+
+**Backend** (`api/` → Render.com):
+- Node.js + Express + Sequelize
+- PostgreSQL via Supabase
+- JWT authentication
+- Live at: `https://nsyu-backend-api.onrender.com/api`
+
+**Database**: Supabase PostgreSQL
+- `aws-0-ap-south-1.pooler.supabase.com`
+- 340+ real products, real bills, real customers
+
+**Web Frontend** (`web/` → GitHub Pages):
+- React + Vite + TypeScript
+- Live at: `https://nsyumnt-rgb.github.io/nsyu/#/login`
+
+---
+
+## NEXT SESSION START CHECKLIST
+
+1. Run `cd App; flutter analyze --no-pub` — verify issue count
+2. Check `git status` — commit any uncommitted fixes
+3. Start emulator: `flutter emulators --launch Pixel_9_Pro_API_36`
+4. Run app: `flutter run -d emulator-5554`
+5. Continue from Phase 3 — GST % calculation

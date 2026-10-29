@@ -58,7 +58,7 @@ class _LedgerScreenState extends State<LedgerScreen> with SingleTickerProviderSt
       context,
       bills.syncError ??
           'Ledger synced — ${bills.totalPartyCount} parties, '
-              '${bills.totalBillsCount} bills from Google Sheets',
+              '${bills.totalBillsCount} bills from Supabase',
       isError: bills.syncError != null,
     );
   }
@@ -89,7 +89,7 @@ class _LedgerScreenState extends State<LedgerScreen> with SingleTickerProviderSt
         title: const Text('Ledger'),
         actions: [
           IconButton(
-            tooltip: 'Sync from Google Sheets',
+            tooltip: 'Sync from Supabase',
             icon: bills.syncing
                 ? const SizedBox(
                     width: 18,
