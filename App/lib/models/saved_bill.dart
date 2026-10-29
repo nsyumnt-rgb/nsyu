@@ -115,6 +115,12 @@ class SavedBill {
   /// Current bill total
   double get total => finalBillTotal;
 
+  /// Whether this bill has been completely paid
+  bool get isPaid => status == BillStatus.paid;
+
+  /// Due amount remaining
+  double get dueAmount => due;
+
   /// Total Amount Payable = Previous Outstanding + Final Bill Total
   double get totalAmountPayable => previousOutstanding + finalBillTotal;
 

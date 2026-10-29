@@ -73,7 +73,13 @@ class AppNavigation {
   }
 
   /// Opens the Customer Ledger / Profile screen
-  static void openCustomerProfile(BuildContext context, {Customer? customer, String? customerName, String? mobile}) {
+  static void openCustomerProfile(
+    BuildContext context, {
+    Customer? customer,
+    String? customerName,
+    String? mobile,
+    String initialTab = 'Ledger',
+  }) {
     final name = customer?.name ?? customerName ?? 'Customer';
     final cust = customer ??
         Customer(
@@ -88,6 +94,7 @@ class AppNavigation {
         builder: (_) => CustomerLedgerDetailScreen(
           partyName: name,
           customer: cust,
+          initialTab: initialTab,
         ),
       ),
     );

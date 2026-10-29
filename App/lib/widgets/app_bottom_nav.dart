@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'more_menu_sheet.dart';
 
-import '../providers/visibility_provider.dart';
-import '../theme/app_theme.dart';
-
+/// 4-Tab Bottom Navigation Bar matching Reference Images 1, 4, 5, 8
+/// Tabs: Ledger (0), Bill (1), Catalog/Inventory (2), More (3)
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -14,77 +13,50 @@ class AppBottomNav extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _allDestinations = [
-    (0, Icons.home_outlined, Icons.home_rounded, 'Home'),
-    (1, Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Catalog'),
-    (2, Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Billing'),
-    (3, Icons.shopping_bag_outlined, Icons.shopping_bag_rounded, 'Orders'),
-    (4, Icons.more_horiz_rounded, Icons.menu_rounded, 'More'),
+  static const _destinations = [
+    (0, Icons.menu_book_outlined, Icons.menu_book_rounded, 'Ledger'),
+    (1, Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Bill'),
+    (2, Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Catalog'),
+    (3, Icons.menu_rounded, Icons.menu_rounded, 'More'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final visibility = context.watch<VisibilityProvider>();
-    final visibleIndices = visibility.visibleNavDestinations;
-
-    // Filter to only visible destinations
-    final items = _allDestinations
-        .where((d) => visibleIndices.contains(d.$1))
-        .toList();
-
-    final count = items.length;
-    final activePos = items.indexWhere((d) => d.$1 == currentIndex);
-
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.navy.withOpacity(0.08),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
           ),
         ],
       ),
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 62,
-          child: Stack(
+          height: 64,
+          child: Row(
             children: [
-              if (activePos != -1 && count > 1)
-                AnimatedAlign(
-                  duration: const Duration(milliseconds: 260),
-                  curve: Curves.easeOutCubic,
-                  alignment: Alignment(-1 + activePos * (2 / (count - 1)), 0),
-                  child: FractionallySizedBox(
-                    widthFactor: 1 / count,
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.navy.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
+              for (final d in _destinations)
+                Expanded(
+                  child: _NavItem(
+                    icon: d.$2,
+                    activeIcon: d.$3,
+                    label: d.$4,
+                    active: currentIndex == d.$1,
+                    onTap: () {
+                      if (d.$1 == 3) {
+                        // More tab opens the bottom sheet matching Image 4
+                        MoreMenuSheet.show(context, onNavigate: onTap);
+                      } else {
+                        onTap(d.$1);
+                      }
+                    },
                   ),
                 ),
-              Row(
-                children: [
-                  for (final item in items)
-                    Expanded(
-                      child: _NavItem(
-                        icon: item.$2,
-                        activeIcon: item.$3,
-                        label: item.$4,
-                        active: item.$1 == currentIndex,
-                        onTap: () => onTap(item.$1),
-                      ),
-                    ),
-                ],
-              ),
             ],
           ),
         ),
@@ -110,30 +82,40 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.navy : AppColors.muted;
+    const activeColor = Color(0xFF16A34A); // Vibrant green matching Image 1
+    const inactiveColor = Color(0xFF64748B);
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedScale(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutBack,
-            scale: active ? 1.15 : 1.0,
-            child: Icon(active ? activeIcon : icon, color: color, size: 22),
+      borderRadius: BorderRadius.circular(20),
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFFE8F5E9) : Colors.transparent, // green capsule pill matching Image 1
+            borderRadius: BorderRadius.circular(20),
           ),
-          const SizedBox(height: 3),
-          AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            ),
-            child: Text(label),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                active ? activeIcon : icon,
+                color: active ? activeColor : inactiveColor,
+                size: 22,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                  color: active ? activeColor : inactiveColor,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
