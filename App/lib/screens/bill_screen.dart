@@ -833,27 +833,112 @@ class _BillScreenState extends State<BillScreen> {
   }
 
   void _editTax(BuildContext context, CatalogProvider provider) {
+    bool usePercent = false;
     final ctrl = TextEditingController(text: provider.billTax.toStringAsFixed(2));
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Tax / GST'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(prefixText: '₹ ', labelText: 'Tax Amount'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final val = double.tryParse(ctrl.text.trim()) ?? 0.0;
-              provider.setBillTax(val);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Apply'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.receipt_long_outlined, color: Color(0xFF1D4ED8), size: 20),
+              SizedBox(width: 8),
+              Text('Tax / GST'),
+            ],
           ),
-        ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Toggle: flat ₹ or %
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Flat (₹)'),
+                    selected: !usePercent,
+                    onSelected: (_) {
+                      setDialogState(() {
+                        usePercent = false;
+                        ctrl.clear();
+                      });
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  ChoiceChip(
+                    label: const Text('% of Subtotal'),
+                    selected: usePercent,
+                    onSelected: (_) {
+                      setDialogState(() {
+                        usePercent = true;
+                        ctrl.clear();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: ctrl,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  prefixText: usePercent ? '' : '₹ ',
+                  suffixText: usePercent ? '%' : '',
+                  labelText: usePercent ? 'GST Rate (%)' : 'Tax Amount (₹)',
+                  border: const OutlineInputBorder(),
+                ),
+                onChanged: (_) => setDialogState(() {}),
+              ),
+              if (usePercent) ...[
+                const SizedBox(height: 8),
+                Builder(builder: (_) {
+                  final pct = double.tryParse(ctrl.text) ?? 0.0;
+                  final computed = provider.billSubtotal * pct / 100;
+                  if (computed <= 0) return const SizedBox.shrink();
+                  return Text(
+                    'Tax amount = ₹${computed.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+                  );
+                }),
+              ],
+              // Common GST rates quick-pick
+              const SizedBox(height: 10),
+              if (usePercent)
+                Wrap(
+                  spacing: 8,
+                  children: [5, 12, 18, 28].map((pct) => ActionChip(
+                    label: Text('$pct%'),
+                    onPressed: () => setDialogState(() => ctrl.text = pct.toString()),
+                  )).toList(),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () {
+                provider.setBillTax(0);
+                Navigator.pop(ctx);
+              },
+              child: const Text('Clear', style: TextStyle(color: Color(0xFFDC2626))),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                double val;
+                if (usePercent) {
+                  final pct = double.tryParse(ctrl.text.trim()) ?? 0.0;
+                  val = provider.billSubtotal * pct / 100;
+                } else {
+                  val = double.tryParse(ctrl.text.trim()) ?? 0.0;
+                }
+                provider.setBillTax(val);
+                Navigator.pop(ctx);
+              },
+              child: const Text('Apply'),
+            ),
+          ],
+        ),
       ),
     );
   }

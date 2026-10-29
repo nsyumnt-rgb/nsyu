@@ -113,12 +113,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final nameCtrl = TextEditingController();
     final catCtrl = TextEditingController(text: 'General');
     final buyCtrl = TextEditingController();
-    final sellCtrl = TextEditingController();
+    final marginCtrl = TextEditingController();
     final stockCtrl = TextEditingController(text: '50');
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Add Product', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
         content: SingleChildScrollView(
@@ -131,9 +132,33 @@ class _CatalogScreenState extends State<CatalogScreen> {
               const SizedBox(height: 10),
               TextField(controller: catCtrl, decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              TextField(controller: buyCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Purchase Price (₹) *', border: OutlineInputBorder())),
+              TextField(
+                controller: buyCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Purchase Price (₹) *', prefixText: '₹ ', border: OutlineInputBorder()),
+                onChanged: (_) => setDialogState(() {}),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: sellCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Selling Price (₹) *', border: OutlineInputBorder())),
+              TextField(
+                controller: marginCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Margin (₹)', prefixText: '₹ ', border: OutlineInputBorder()),
+                onChanged: (_) => setDialogState(() {}),
+              ),
+              const SizedBox(height: 6),
+              Builder(builder: (_) {
+                final buy = double.tryParse(buyCtrl.text) ?? 0.0;
+                final margin = double.tryParse(marginCtrl.text) ?? 0.0;
+                final selling = buy + margin;
+                if (selling <= 0) return const SizedBox.shrink();
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Selling Price = ₹${selling.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                  ),
+                );
+              }),
               const SizedBox(height: 10),
               TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Opening Stock', border: OutlineInputBorder())),
             ],
@@ -144,15 +169,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ElevatedButton(
             onPressed: () async {
               final buy = double.tryParse(buyCtrl.text.trim()) ?? 0.0;
-              final sell = double.tryParse(sellCtrl.text.trim()) ?? 0.0;
+              final margin = double.tryParse(marginCtrl.text.trim()) ?? 0.0;
               final stock = int.tryParse(stockCtrl.text.trim()) ?? 0;
-              if (skuCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty) return;
+              if (skuCtrl.text.trim().isEmpty || nameCtrl.text.trim().isEmpty || buy <= 0) return;
               await catalog.addProduct(
                 code: skuCtrl.text.trim(),
                 desc: nameCtrl.text.trim(),
                 category: catCtrl.text.trim(),
                 purchase: buy,
-                marginPrice: (sell - buy) > 0 ? (sell - buy) : 0,
+                marginPrice: margin,
                 stock: stock,
               );
               if (ctx.mounted) Navigator.pop(ctx);
@@ -161,6 +186,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             child: const Text('Save Product'),
           ),
         ],
+      ),
       ),
     );
   }
