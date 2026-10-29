@@ -39,7 +39,13 @@ function BillingInner() {
   const [savedModalSale, setSavedModalSale] = useState<Sale | null>(null);
   const [failureReason, setFailureReason] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[] | null>(null);
-  const [toast, setToast] = useState<{ type: ToastProps["type"]; title: string; subtitle?: string } | null>(null);
+  const [toast, setToast] = useState<{
+    type: ToastProps["type"];
+    title: string;
+    subtitle?: string;
+    actionLabel?: string;
+    onAction?: () => void;
+  } | null>(null);
 
   // Recent bills filter & search
   const [billListTab, setBillListTab] = useState<"all" | "paid" | "pending" | "cancelled">("all");
@@ -104,6 +110,15 @@ function BillingInner() {
     } else {
       setCart([...cart, { product: p, quantity: 1, unitPrice: Number(p.selling_price) }]);
     }
+    setToast({
+      type: "success",
+      title: `Added "${p.name}" to Bill`,
+      subtitle: `Rate: ₹${Number(p.selling_price).toFixed(2)}`,
+      actionLabel: "View Bill",
+      onAction: () => {
+        document.getElementById("billing-cart-panel")?.scrollIntoView({ behavior: "smooth" });
+      },
+    });
   }
 
   function updateQuantity(idx: number, delta: number) {
@@ -354,7 +369,7 @@ function BillingInner() {
 
         {/* Right Column: Cart & Summary */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 space-y-4">
+          <div id="billing-cart-panel" className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 space-y-4 scroll-mt-20">
             {/* Customer Select Header */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -684,6 +699,8 @@ function BillingInner() {
           type={toast.type}
           title={toast.title}
           subtitle={toast.subtitle}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
           onClose={() => setToast(null)}
         />
       )}

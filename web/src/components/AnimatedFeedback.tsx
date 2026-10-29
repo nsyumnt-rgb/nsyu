@@ -403,12 +403,14 @@ export interface ToastProps {
   type: "success" | "error" | "warning" | "info";
   title: string;
   subtitle?: string;
+  actionLabel?: string;
+  onAction?: () => void;
   onClose: () => void;
 }
 
-export function ToastNotification({ type, title, subtitle, onClose }: ToastProps) {
+export function ToastNotification({ type, title, subtitle, actionLabel, onAction, onClose }: ToastProps) {
   useEffect(() => {
-    const timer = setTimeout(onClose, 4000);
+    const timer = setTimeout(onClose, 3000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
@@ -453,25 +455,43 @@ export function ToastNotification({ type, title, subtitle, onClose }: ToastProps
   }[type];
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 animate-scale-up max-w-sm w-full">
+    <div className="fixed bottom-6 right-4 left-4 sm:left-auto sm:right-6 z-50 animate-scale-up max-w-sm w-full">
       <div className={`p-4 rounded-2xl shadow-xl flex items-center justify-between gap-3 relative overflow-hidden ${config.bg}`}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {config.icon}
-          <div>
-            <div className="font-bold text-xs">{title}</div>
-            {subtitle && <div className="text-[11px] opacity-90 font-mono mt-0.5">{subtitle}</div>}
+          <div className="min-w-0">
+            <div className="font-bold text-xs truncate">{title}</div>
+            {subtitle && <div className="text-[11px] opacity-90 font-mono mt-0.5 truncate">{subtitle}</div>}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-black/10 transition-colors"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {actionLabel && onAction && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onAction();
+              }}
+              className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white/20 hover:bg-white/30 text-white transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>{actionLabel}</span>
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-black/10 transition-colors cursor-pointer"
+            aria-label="Dismiss toast"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
         {/* Countdown line */}
         <div className="absolute bottom-0 left-0 h-1 bg-white/30 animate-toast-countdown" />
       </div>

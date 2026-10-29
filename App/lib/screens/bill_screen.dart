@@ -43,6 +43,11 @@ class _BillScreenState extends State<BillScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    });
     final provider = context.read<CatalogProvider>();
     if (provider.paymentReceived > 0) {
       _paymentReceivedCtrl.text = provider.paymentReceived.toStringAsFixed(2);
@@ -53,6 +58,12 @@ class _BillScreenState extends State<BillScreen> {
     if (!_paymentModes.contains(_selectedPaymentMode)) {
       _selectedPaymentMode = 'UPI';
     }
+  }
+
+  @override
+  void deactivate() {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    super.deactivate();
   }
 
   @override
@@ -105,7 +116,7 @@ class _BillScreenState extends State<BillScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 100),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -130,7 +141,7 @@ class _BillScreenState extends State<BillScreen> {
           ],
         ),
       ),
-      bottomSheet: _buildBottomActionBar(context, provider),
+      bottomNavigationBar: _buildBottomActionBar(context, provider),
     );
   }
 
@@ -711,6 +722,7 @@ class _BillScreenState extends State<BillScreen> {
       ),
       child: SafeArea(
         top: false,
+        bottom: true,
         child: SizedBox(
           width: double.infinity,
           height: 48,

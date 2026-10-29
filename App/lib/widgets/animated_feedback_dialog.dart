@@ -968,6 +968,116 @@ class AppToast {
     _showToast(context, title: title, subtitle: subtitle, color: const Color(0xFF2563EB), icon: Icons.info_rounded);
   }
 
+  /// Specialized Toast matching reference: "Added [Product] to Bill - View Bill"
+  /// Automatically dismisses after ~3 seconds, clear close button, and instant navigation
+  static void showAddedToBill(
+    BuildContext context, {
+    required String productName,
+    int? quantity,
+    required VoidCallback onViewBill,
+  }) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        duration: const Duration(seconds: 3),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF334155)),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black38,
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF16A34A),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Added $productName to Bill',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (quantity != null)
+                      Text(
+                        'Total in bill: $quantity item${quantity > 1 ? 's' : ''}',
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  messenger.hideCurrentSnackBar();
+                  onViewBill();
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View Bill',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      SizedBox(width: 3),
+                      Icon(Icons.arrow_forward_ios, size: 10, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.close, color: Colors.white60, size: 18),
+                onPressed: () => messenger.hideCurrentSnackBar(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   static void _showToast(
     BuildContext context, {
     required String title,
@@ -983,7 +1093,7 @@ class AppToast {
         elevation: 0,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        duration: const Duration(seconds: 4),
+        duration: const Duration(seconds: 3),
         content: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(

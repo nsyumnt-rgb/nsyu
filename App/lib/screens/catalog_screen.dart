@@ -5,6 +5,7 @@ import '../models/product.dart';
 import '../navigation/app_navigation.dart';
 import '../providers/catalog_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/animated_feedback_dialog.dart';
 import '../widgets/app_bottom_nav.dart';
 import '../widgets/skeleton_loader.dart';
 import '../utils/category_icon_helper.dart';
@@ -731,8 +732,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           AppNavigation.openProductDetails(context, product: product);
                         } else if (val == 'add_bill') {
                           provider.addToBill(product);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Added ${product.desc} to Bill'), duration: const Duration(seconds: 1)),
+                          final count = provider.billItemFor(product.code)?.qty ?? 1;
+                          AppToast.showAddedToBill(
+                            context,
+                            productName: product.desc,
+                            quantity: count,
+                            onViewBill: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const BillScreen()),
+                              );
+                            },
                           );
                         } else if (val == 'add_order') {
                           provider.addToOrder(product);

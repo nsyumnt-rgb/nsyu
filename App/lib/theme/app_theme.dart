@@ -348,6 +348,8 @@ void showAppSnackBar(
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       duration: duration,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       backgroundColor: isError ? AppColors.red : AppColors.billGreen,
       content: Row(
         children: [
@@ -358,7 +360,7 @@ void showAppSnackBar(
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(message, style: const TextStyle(color: Colors.white)),
+            child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

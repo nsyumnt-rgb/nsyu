@@ -9,6 +9,7 @@ import '../providers/visibility_provider.dart';
 import '../screens/bill_screen.dart';
 import '../screens/order_cart_screen.dart';
 import '../utils/category_icon_helper.dart';
+import 'animated_feedback_dialog.dart';
 
 /// Product card matching the catalog screenshot:
 /// - Tap card -> opens ProductDetailScreen
@@ -30,14 +31,10 @@ class ProductCard extends StatelessWidget {
   void _handleAddToCart(BuildContext context, CatalogProvider provider) {
     // Validate stock
     if (product.stock <= 0) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${product.desc} is currently out of stock'),
-          backgroundColor: const Color(0xFFDC2626),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-        ),
+      AppToast.showError(
+        context,
+        title: 'Product Out of Stock',
+        subtitle: '${product.desc} is currently out of stock.',
       );
       return;
     }
@@ -49,51 +46,42 @@ class ProductCard extends StatelessWidget {
       // Direct add to active Bill
       final existing = provider.billItemFor(product.code);
       if (existing != null && product.stock > 0 && existing.qty >= product.stock) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Cannot exceed available stock (${product.stock})'),
-            backgroundColor: const Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppToast.showWarning(
+          context,
+          title: 'Stock Limit Reached',
+          subtitle: 'Cannot exceed available stock (${product.stock})',
         );
         return;
       }
       provider.addToBill(product);
       final count = provider.billItemFor(product.code)?.qty ?? 1;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Added to Bill (Qty: $count)'),
-          backgroundColor: const Color(0xFF1D4ED8),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-          action: SnackBarAction(
-            label: 'View Bill',
-            textColor: Colors.white,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BillScreen()),
-              );
-            },
-          ),
-        ),
+      AppToast.showAddedToBill(
+        context,
+        productName: product.desc,
+        quantity: count,
+        onViewBill: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const BillScreen()),
+          );
+        },
       );
     } else if (hasActiveOrder && !hasActiveBill) {
       // Direct add to active Order
       provider.addToOrder(product);
       final count = provider.orderItemFor(product.code)?.qty ?? 1;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Added to Order (Qty: $count)'),
           backgroundColor: const Color(0xFF0D9488),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 3),
           action: SnackBarAction(
             label: 'View Order',
             textColor: Colors.white,
             onPressed: () {
+              messenger.hideCurrentSnackBar();
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const OrderCartScreen()),
               );
@@ -157,36 +145,34 @@ class ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   onTap: () {
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).clearSnackBars();
                     if (product.stock <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${product.desc} is out of stock')),
+                      AppToast.showError(
+                        context,
+                        title: 'Out of Stock',
+                        subtitle: '${product.desc} is out of stock.',
                       );
                       return;
                     }
                     final existing = provider.billItemFor(product.code);
                     if (existing != null && product.stock > 0 && existing.qty >= product.stock) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Cannot exceed available stock (${product.stock})')),
+                      AppToast.showWarning(
+                        context,
+                        title: 'Stock Limit Reached',
+                        subtitle: 'Cannot exceed available stock (${product.stock})',
                       );
                       return;
                     }
                     provider.addToBill(product);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text('Added to Bill'),
-                        backgroundColor: const Color(0xFF1D4ED8),
-                        behavior: SnackBarBehavior.floating,
-                        action: SnackBarAction(
-                          label: 'Open Bill',
-                          textColor: Colors.white,
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const BillScreen()),
-                            );
-                          },
-                        ),
-                      ),
+                    final count = provider.billItemFor(product.code)?.qty ?? 1;
+                    AppToast.showAddedToBill(
+                      context,
+                      productName: product.desc,
+                      quantity: count,
+                      onViewBill: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BillScreen()),
+                        );
+                      },
                     );
                   },
                   child: Padding(

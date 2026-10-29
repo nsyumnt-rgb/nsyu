@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/catalog_provider.dart';
 import '../utils/category_icon_helper.dart';
+import '../widgets/animated_feedback_dialog.dart';
 import 'bill_screen.dart';
 import 'inventory_screen.dart';
 import 'order_cart_screen.dart';
@@ -454,33 +455,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     if (p.stock <= 0) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${p.desc} is currently out of stock')),
+                      AppToast.showError(
+                        context,
+                        title: 'Product Out of Stock',
+                        subtitle: '${p.desc} is currently out of stock.',
                       );
                       return;
                     }
                     final existing = provider.billItemFor(p.code);
                     if (existing != null && p.stock > 0 && existing.qty >= p.stock) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Cannot exceed available stock (${p.stock})')),
+                      AppToast.showWarning(
+                        context,
+                        title: 'Stock Limit Reached',
+                        subtitle: 'Cannot exceed available stock (${p.stock})',
                       );
                       return;
                     }
                     provider.addToBill(p);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Added ${p.desc} to Bill'),
-                        backgroundColor: const Color(0xFF1D4ED8),
-                        action: SnackBarAction(
-                          label: 'View Bill',
-                          textColor: Colors.white,
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const BillScreen()),
-                            );
-                          },
-                        ),
-                      ),
+                    final count = provider.billItemFor(p.code)?.qty ?? 1;
+                    AppToast.showAddedToBill(
+                      context,
+                      productName: p.desc,
+                      quantity: count,
+                      onViewBill: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const BillScreen()),
+                        );
+                      },
                     );
                   },
                   icon: const Icon(Icons.receipt_long, size: 18),
