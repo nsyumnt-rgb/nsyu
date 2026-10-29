@@ -11,7 +11,7 @@ import '../models/saved_bill.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/payments_provider.dart';
-import '../services/google_drive_file_service.dart';
+
 import '../services/payment_pdf_service.dart';
 import '../theme/app_theme.dart';
 
@@ -25,6 +25,7 @@ class CollectPaymentScreen extends StatefulWidget {
 
 class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
   int _step = 0;
+  bool _isSubmitting = false;
   LedgerParty? _selectedParty;
   Customer? _selectedCustomer;
 
@@ -102,13 +103,16 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-              onPressed: _confirmPayment, child: const Text('Confirm')),
+              onPressed: _isSubmitting ? null : _confirmPayment,
+              child: _isSubmitting ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Confirm')),
         ],
       ),
     );
   }
 
   Future<void> _confirmPayment() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
     final payments = context.read<PaymentsProvider>();
     final outstandingBefore = _selectedParty!.totalDue;
     final payment = Payment(
@@ -128,7 +132,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
       // Also refresh the bills provider to update outstanding balances
       context
           .read<BillsProvider>()
-          .syncFromDrive(withPayments: [...payments.payments, payment]);
+          .syncFromSupabase();
       Navigator.of(context).pop();
       showAppSnackBar(context,
           'Payment of ₹${_money.format(payment.amount)} recorded successfully!');
@@ -362,29 +366,6 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                     } catch (e) {
                       if (!mounted) return;
                       showAppSnackBar(context, 'Download failed: $e',
-                          isError: true);
-                    }
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.cloud_upload_outlined),
-                  title: const Text('Save to Google Drive'),
-                  onTap: () async {
-                    Navigator.of(ctx).pop();
-                    showAppSnackBar(context, 'Uploading to Google Drive...');
-                    try {
-                      final driveService = GoogleDriveFileService();
-                      await driveService.uploadPaymentReceipt(
-                        date: payment.date,
-                        paymentId: payment.id,
-                        pdfFile: pdfFile,
-                      );
-                      if (!mounted) return;
-                      showAppSnackBar(context,
-                          'Receipt successfully uploaded to Google Drive.');
-                    } catch (e) {
-                      if (!mounted) return;
-                      showAppSnackBar(context, 'Upload to Drive failed: $e',
                           isError: true);
                     }
                   },

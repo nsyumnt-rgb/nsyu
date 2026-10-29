@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:excel/excel.dart' as xls;
 
-import 'drive_sheet_ids.dart';
-import 'google_sheets_write_service.dart';
+import '../models/product.dart';
+import 'supabase_service.dart';
 
 /// One row parsed out of the supplier's Excel file.
 class ImportedProductRow {
@@ -24,11 +24,11 @@ class ImportedProductRow {
   });
 }
 
-/// One planned change to the live Product Google Sheet.
+/// One planned change to the live Product catalog.
 class ProductUpdate {
   final String code;
   final String desc;
-  final int rowNumber; // 1-based, in the live sheet
+  final int rowNumber; // 1-based index
   final double oldPurchase;
   final double newPurchase;
   final double oldMarginPrice;
@@ -74,7 +74,7 @@ class ProductAdd {
 }
 
 /// Full diff between an imported Excel file and what's currently live in
-/// the Product Google Sheet.
+/// the Supabase PostgreSQL database.
 class ImportPlan {
   final List<ProductUpdate> priceChanges;
   final List<ProductAdd> newProducts;
@@ -90,13 +90,11 @@ class ImportPlan {
 }
 
 class ExcelImportService {
-  final GoogleSheetsWriteService _sheets;
-  // If Margin Price is missing on a live or newly-added row, treat it as 0
-  // — no percentage guesswork, just plain Purchase Price + Margin Price.
+  final SupabaseService _supabase;
   static const double _defaultMarginPrice = 0;
 
-  ExcelImportService({GoogleSheetsWriteService? sheets})
-      : _sheets = sheets ?? GoogleSheetsWriteService();
+  ExcelImportService({SupabaseService? supabase})
+      : _supabase = supabase ?? SupabaseService();
 
   static String _norm(dynamic v) => v
       .toString()
@@ -138,8 +136,7 @@ class ExcelImportService {
     final sheet = book.tables.values.reduce((a, b) => a.rows.length >= b.rows.length ? a : b);
 
     // Find the header row: scan the first ~6 rows for one containing both
-    // a "code"-like and a "description"-like column (same heuristic used
-    // for the live Google Sheet, since both files share the same layout).
+    // a "code"-like and a "description"-like column.
     var headerRowIndex = -1;
     var col = <String, int>{};
     for (var i = 0; i < sheet.rows.length && i < 6; i++) {
@@ -186,8 +183,7 @@ class ExcelImportService {
       final code = _asString(cellAt(codeCol));
       final desc = _asString(cellAt(descCol));
 
-      // A category banner row: description present, but no code — every
-      // other row either has both or neither.
+      // A category banner row: description present, but no code
       if (code.isEmpty && desc.isNotEmpty) {
         currentCategory = desc;
         continue;
@@ -206,68 +202,16 @@ class ExcelImportService {
     return rows;
   }
 
-  /// Compares [imported] rows against what's currently live in the Product
-  /// Google Sheet and builds a plan of exactly what would change — nothing
-  /// is written to the sheet until [applyPlan] is called.
+  /// Compares [imported] rows against what's currently live in the Supabase
+  /// PostgreSQL database and builds a plan of changes.
   Future<ImportPlan> buildPlan(List<ImportedProductRow> imported) async {
-    final liveRows =
-        await _sheets.readRows(DriveSheetIds.product, DriveSheetIds.productTab);
-    if (liveRows.isEmpty) {
-      throw const FormatException('The live Product sheet appears to be empty.');
-    }
+    final liveProducts = await _supabase.fetchProducts();
 
-    var headerRowIndex = 0;
-    for (var i = 0; i < liveRows.length && i < 6; i++) {
-      final normalized = liveRows[i].map(_norm).toList();
-      final hasCode = normalized.any((c) => c.contains('code'));
-      final hasDesc = normalized.any((c) => c.contains('description') || c.contains('product'));
-      if (hasCode && hasDesc) {
-        headerRowIndex = i;
-        break;
+    final liveByCode = <String, Product>{};
+    for (final p in liveProducts) {
+      if (p.code.isNotEmpty) {
+        liveByCode[p.code.trim().toLowerCase()] = p;
       }
-    }
-    final header = liveRows[headerRowIndex].map(_norm).toList();
-    final col = <String, int>{};
-    for (var i = 0; i < header.length; i++) {
-      col[header[i]] = i;
-    }
-    int? findCol(List<String> names) {
-      for (final n in names) {
-        if (col.containsKey(n)) return col[n];
-      }
-      return null;
-    }
-
-    final codeCol = findCol(['code no.', 'code no', 'code', 'item code', 'product code']);
-    final descCol = findCol(['product description', 'description']);
-    final specCol = findCol(['voltage/amp/type', 'spec', 'specification']);
-    final pkgCol = findCol(['std.pkg.', 'std pkg', 'pkg']);
-    final priceCol = findCol(['price \n(incl. gst)', 'price (incl. gst)', 'price', 'purchase']);
-    final marginCol = findCol(['margin price', 'margin (₹)', 'margin rs', 'margin']);
-    final sellingCol = findCol(['selling price', 'selling', 'sl-price', 'sl price', 'slprice']);
-
-    if (codeCol == null || priceCol == null) {
-      throw const FormatException(
-          'Could not find Code / Price columns in the live Product sheet.');
-    }
-
-    // code -> (rowNumber 1-based, desc, spec, pkg, purchase, margin price)
-    final liveByCode = <String, _LiveProduct>{};
-    for (var i = headerRowIndex + 1; i < liveRows.length; i++) {
-      final row = liveRows[i];
-      final code = codeCol < row.length ? row[codeCol].toString().trim() : '';
-      if (code.isEmpty) continue;
-      liveByCode[code] = _LiveProduct(
-        rowNumber: i + 1,
-        desc: descCol != null && descCol < row.length ? row[descCol].toString().trim() : '',
-        spec: specCol != null && specCol < row.length ? row[specCol].toString().trim() : '',
-        pkg: pkgCol != null && pkgCol < row.length ? row[pkgCol].toString().trim() : '',
-        purchase: priceCol < row.length ? _asDouble(row[priceCol]) : 0,
-        marginPrice: marginCol != null && marginCol < row.length
-            ? _asDouble(row[marginCol])
-            : _defaultMarginPrice,
-        sellingPrice: sellingCol != null && sellingCol < row.length ? _asDouble(row[sellingCol]) : 0,
-      );
     }
 
     final updates = <ProductUpdate>[];
@@ -275,7 +219,7 @@ class ExcelImportService {
     var unchanged = 0;
 
     for (final r in imported) {
-      final live = liveByCode[r.code];
+      final live = liveByCode[r.code.trim().toLowerCase()];
       if (live == null) {
         const marginPrice = _defaultMarginPrice;
         adds.add(ProductAdd(
@@ -292,21 +236,19 @@ class ExcelImportService {
       }
 
       final priceChanged = (r.purchase - live.purchase).abs() > 0.005;
-      final descChanged = r.desc.isNotEmpty && r.desc != live.desc;
+      final descChanged = r.desc.isNotEmpty && r.desc.trim().toLowerCase() != live.desc.trim().toLowerCase();
       if (!priceChanged && !descChanged) {
         unchanged++;
         continue;
       }
 
-      // Preserve whatever Margin Price is already set for this product —
-      // only the purchase price (and the selling price it drives) moves.
       final marginPrice = live.marginPrice;
       final newSelling = priceChanged ? r.purchase + marginPrice : live.sellingPrice;
 
       updates.add(ProductUpdate(
         code: r.code,
         desc: r.desc.isEmpty ? live.desc : r.desc,
-        rowNumber: live.rowNumber,
+        rowNumber: live.sno,
         oldPurchase: live.purchase,
         newPurchase: r.purchase,
         oldMarginPrice: marginPrice,
@@ -314,70 +256,42 @@ class ExcelImportService {
         descChanged: descChanged,
         newDesc: r.desc.isEmpty ? live.desc : r.desc,
         newSpec: r.spec.isEmpty ? live.spec : r.spec,
-        newPkg: r.pkg.isEmpty ? live.pkg : r.pkg,
+        newPkg: r.pkg.isEmpty ? live.pkg.toString() : r.pkg,
       ));
     }
 
     return ImportPlan(priceChanges: updates, newProducts: adds, unchangedCount: unchanged);
   }
 
-  /// Writes everything in [plan] to the live Product Google Sheet: one
-  /// batched call for all the changed cells across every updated row, plus
-  /// one call to append every brand-new product (grouped under an
-  /// "Imported" category banner).
+  /// Applies [plan] directly to Supabase PostgreSQL database.
   Future<void> applyPlan(ImportPlan plan) async {
-    if (plan.priceChanges.isNotEmpty) {
-      final cellUpdates = <String, List<dynamic>>{};
-      for (final u in plan.priceChanges) {
-        cellUpdates['G${u.rowNumber}'] = [u.newPurchase];
-        cellUpdates['J${u.rowNumber}'] = [u.newSellingPrice];
-        if (u.descChanged) {
-          cellUpdates['C${u.rowNumber}'] = [u.newDesc];
-          cellUpdates['D${u.rowNumber}'] = [u.newSpec];
-          cellUpdates['E${u.rowNumber}'] = [u.newPkg];
-        }
+    for (final u in plan.priceChanges) {
+      try {
+        await _supabase.updateMarginPrice(
+          productCode: u.code,
+          purchase: u.newPurchase,
+          newMarginPrice: u.oldMarginPrice,
+        );
+      } catch (e) {
+        // Continue processing other products
       }
-      await _sheets.batchUpdateCells(
-        DriveSheetIds.product,
-        DriveSheetIds.productTab,
-        cellUpdates,
-      );
     }
 
-    if (plan.newProducts.isNotEmpty) {
-      final rows = <List<dynamic>>[
-        [null, null, 'IMPORTED — NEW PRODUCTS', null, null, null, null, null, null, null],
-        for (final p in plan.newProducts)
-          [
-            null, // S.No — left blank, sheet already has its own numbering
-            p.code,
-            p.desc,
-            p.spec,
-            p.pkg,
-            null, // REQ. QTY.
-            p.purchase,
-            null, // TOTAL
-            p.marginPrice,
-            p.sellingPrice,
-          ],
-      ];
-      await _sheets.appendRows(DriveSheetIds.product, DriveSheetIds.productTab, rows);
+    for (final p in plan.newProducts) {
+      try {
+        await _supabase.addProduct(
+          code: p.code,
+          desc: p.desc,
+          spec: p.spec,
+          category: p.category,
+          pkg: int.tryParse(p.pkg) ?? 1,
+          purchase: p.purchase,
+          marginPrice: p.marginPrice,
+          sellingPrice: p.sellingPrice,
+        );
+      } catch (e) {
+        // Continue processing other products
+      }
     }
   }
-}
-
-class _LiveProduct {
-  final int rowNumber;
-  final String desc, spec, pkg;
-  final double purchase, marginPrice, sellingPrice;
-
-  _LiveProduct({
-    required this.rowNumber,
-    required this.desc,
-    required this.spec,
-    required this.pkg,
-    required this.purchase,
-    required this.marginPrice,
-    required this.sellingPrice,
-  });
 }

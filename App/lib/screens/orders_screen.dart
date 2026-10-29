@@ -40,7 +40,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final orders = context.read<OrdersProvider>();
       if (!orders.loaded) await orders.load();
-      if (!orders.syncing) orders.syncFromDrive();
+      if (!orders.syncing) orders.syncFromSupabase();
     });
   }
 
@@ -85,7 +85,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D4ED8)),
                   )
                 : const Icon(Icons.sync_rounded, color: Color(0xFF0F172A), size: 22),
-            onPressed: orders.syncing ? null : () => orders.syncFromDrive(),
+            onPressed: orders.syncing ? null : () => orders.syncFromSupabase(),
           ),
           Padding(
             padding: const EdgeInsets.only(right: 14),

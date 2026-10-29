@@ -36,27 +36,28 @@ const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: false })); // allow <img> tags to load /uploads from the frontend's origin
 
-// Enable Private Network Access & CORS for GitHub Pages (https://nsyumnt-rgb.github.io) & local dev
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  } else {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-  }
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Access-Control-Request-Private-Network");
-  if (req.headers["access-control-request-private-network"]) {
-    res.setHeader("Access-Control-Allow-Private-Network", "true");
-  }
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(204);
-  }
-  next();
-});
+const allowedOrigins = [
+  "https://nsyumnt-rgb.github.io",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://localhost:8080",
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim()) : [])
+];
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    // Mobile apps and curl/server-to-server requests have no origin
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed for this origin"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
 app.use(express.json());
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev")); // quiet during automated tests (see tests/env.ts) — keeps CI output readable
@@ -72,16 +73,13 @@ app.get(["/", "/api", "/health", "/api/health"], async (_req, res) => {
       success: true,
       message: "NSYU Business API is running",
       status: "connected",
-      database: "Supabase PostgreSQL",
-      host: process.env.DB_HOST,
-      dialect: process.env.DB_DIALECT || "postgres",
     });
   } catch (err: any) {
+    console.error("Database health check failed:", err.message);
     return res.status(503).json({
       success: false,
-      message: "Database connection failed",
+      message: "Database service unavailable",
       status: "disconnected",
-      error: err.message,
     });
   }
 });

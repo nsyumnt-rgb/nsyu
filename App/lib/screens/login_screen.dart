@@ -15,8 +15,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _identifierCtrl = TextEditingController(text: 'nsyu.mnt@gmail.com');
-  final _passwordCtrl = TextEditingController(text: 'Nsyu@12345');
+  final _identifierCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
 
   bool _obscurePassword = true;
   bool _rememberMe = true;
@@ -96,12 +96,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Supabase Database (Active)',
+                          'Backend & Database (Active)',
                           style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: Color(0xFF0F172A)),
                         ),
                         const SizedBox(height: 2),
                         const Text(
-                          'Host: aws-0-ap-south-1.pooler.supabase.com:5432\nPort: 5000 (Backend API)',
+                          'Cloud Architecture: Supabase PostgreSQL\nService: Node.js / Express API',
                           style: TextStyle(fontSize: 11.5, color: Color(0xFF475569)),
                         ),
                       ],

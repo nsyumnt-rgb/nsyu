@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final catalogProvider = context.read<CatalogProvider>();
       final customerProvider = context.read<CustomerProvider>();
       if (!billsProvider.loaded) await billsProvider.load();
-      if (!billsProvider.syncing) billsProvider.syncFromDrive();
+      if (!billsProvider.syncing) billsProvider.syncFromSupabase();
       if (catalogProvider.status == LoadStatus.idle) {
         catalogProvider.loadProducts();
       }

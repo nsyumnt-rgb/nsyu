@@ -74,7 +74,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
   @override
   Widget build(BuildContext context) {
     const supportPhone = '8800503662';
-    const supportEmail = 'demo.owner@nsyu.local';
+    const supportEmail = 'nsyu.mnt@gmail.com';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),

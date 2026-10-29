@@ -36,7 +36,7 @@ class _LedgerScreenState extends State<LedgerScreen> with SingleTickerProviderSt
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final bills = context.read<BillsProvider>();
       if (!bills.loaded) await bills.load();
-      if (!bills.syncing) await bills.syncFromDrive();
+      if (!bills.syncing) await bills.syncFromSupabase();
       if (!mounted) return;
       if (bills.syncError != null) {
         showAppSnackBar(
@@ -49,10 +49,10 @@ class _LedgerScreenState extends State<LedgerScreen> with SingleTickerProviderSt
     });
   }
 
-  Future<void> _syncFromDrive(BuildContext context) async {
+  Future<void> _syncFromSupabase(BuildContext context) async {
     final bills = context.read<BillsProvider>();
     if (bills.syncing) return;
-    await bills.syncFromDrive();
+    await bills.syncFromSupabase();
     if (!context.mounted) return;
     showAppSnackBar(
       context,
@@ -97,7 +97,7 @@ class _LedgerScreenState extends State<LedgerScreen> with SingleTickerProviderSt
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
                 : const Icon(Icons.cloud_sync_outlined),
-            onPressed: bills.syncing ? null : () => _syncFromDrive(context),
+            onPressed: bills.syncing ? null : () => _syncFromSupabase(context),
           ),
         ],
         bottom: TabBar(

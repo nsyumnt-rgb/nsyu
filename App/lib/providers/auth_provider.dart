@@ -23,17 +23,16 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoggedIn = false;
   bool loaded = false;
 
-  String _userName = 'NSYU';
-  String _userEmail = 'nsyu.mnt@gmail.com';
-  final String _password = 'Nsyu@12345';
+  String _userName = '';
+  String _userEmail = '';
   String _roleName = 'Owner';
   String _accountType = 'owner';
   int _shopId = 1;
-  String _shopName = 'NSYU';
-  String _shopCode = 'NSYU';
-  String _shopAddress = 'Jasola Vihar, New Delhi, India - 110025';
-  String _shopPhone = '+918800503662';
-  String _shopEmail = 'nsyu.mnt@gmail.com';
+  String _shopName = '';
+  String _shopCode = '';
+  String _shopAddress = '';
+  String _shopPhone = '';
+  String _shopEmail = '';
   String _shopLogo = '';
   Map<String, bool> _fieldPermissions = {};
   bool _loadingProfile = false;
@@ -43,7 +42,6 @@ class AuthProvider extends ChangeNotifier {
   bool get hasAccount => _registeredMobile != null && _registeredMobile!.isNotEmpty;
   String get userName => _userName;
   String get userEmail => _userEmail;
-  String get password => _password;
   String get roleName => _roleName;
   String get accountType => _accountType;
   int get shopId => _shopId;
@@ -79,21 +77,16 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _registeredMobile = prefs.getString(_mobileKey);
 
-    if (_registeredMobile == null || _registeredMobile!.isEmpty) {
-      _registeredMobile = '8800503662';
-      await prefs.setString(_mobileKey, _registeredMobile!);
-    }
-
     _isLoggedIn = prefs.getBool(_loggedInKey) ?? false;
-    _userName = prefs.getString(_userNameKey) ?? 'NSYU';
-    _userEmail = prefs.getString(_userEmailKey) ?? 'nsyu.mnt@gmail.com';
+    _userName = prefs.getString(_userNameKey) ?? '';
+    _userEmail = prefs.getString(_userEmailKey) ?? '';
     _roleName = prefs.getString(_roleNameKey) ?? 'Owner';
     _accountType = prefs.getString(_accountTypeKey) ?? 'owner';
-    _shopName = prefs.getString(_shopNameKey) ?? 'NSYU';
-    _shopCode = prefs.getString(_shopCodeKey) ?? 'NSYU';
-    _shopAddress = prefs.getString(_shopAddressKey) ?? 'Ghaziabad, Uttar Pradesh';
-    _shopPhone = prefs.getString(_shopPhoneKey) ?? '9810000001';
-    _shopEmail = prefs.getString(_shopEmailKey) ?? 'nsyu.mnt@gmail.com';
+    _shopName = prefs.getString(_shopNameKey) ?? '';
+    _shopCode = prefs.getString(_shopCodeKey) ?? '';
+    _shopAddress = prefs.getString(_shopAddressKey) ?? '';
+    _shopPhone = prefs.getString(_shopPhoneKey) ?? '';
+    _shopEmail = prefs.getString(_shopEmailKey) ?? '';
     _shopLogo = prefs.getString(_shopLogoKey) ?? '';
 
     loaded = true;
@@ -251,8 +244,24 @@ class AuthProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _isLoggedIn = false;
     await prefs.setBool(_loggedInKey, false);
+    await prefs.remove(_userNameKey);
+    await prefs.remove(_userEmailKey);
+    await prefs.remove(_shopNameKey);
+    await prefs.remove(_shopCodeKey);
+    await prefs.remove(_shopAddressKey);
+    await prefs.remove(_shopPhoneKey);
+    await prefs.remove(_shopEmailKey);
+    await prefs.remove(_shopLogoKey);
     await SupabaseConfig.clearAuth();
     _fieldPermissions.clear();
+    _userName = '';
+    _userEmail = '';
+    _shopName = '';
+    _shopCode = '';
+    _shopAddress = '';
+    _shopPhone = '';
+    _shopEmail = '';
+    _shopLogo = '';
     notifyListeners();
   }
 }

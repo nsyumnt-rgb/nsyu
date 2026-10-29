@@ -12,8 +12,8 @@ export default function Login() {
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
 
   const [selectedShopId, setSelectedShopId] = useState("1");
-  const [email, setEmail] = useState("nsyu.mnt@gmail.com");
-  const [password, setPassword] = useState("Nsyu@12345");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -399,7 +399,7 @@ export default function Login() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="nsyu.mnt@gmail.com"
+                      placeholder="name@business.com"
                       className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white font-medium text-slate-800 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>

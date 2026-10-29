@@ -52,14 +52,18 @@ class SupabaseService {
   }
 
   /// Ensures authentication with the Supabase database backend
-  Future<String?> ensureAuth({bool force = false, String mobile = 'nsyu.mnt@gmail.com', String password = 'Nsyu@12345'}) async {
+  Future<String?> ensureAuth({bool force = false, String? mobile, String? password}) async {
     if (!force && SupabaseConfig.authToken != null && SupabaseConfig.authToken!.isNotEmpty) {
+      return SupabaseConfig.authToken;
+    }
+
+    if (mobile == null || password == null || mobile.trim().isEmpty || password.trim().isEmpty) {
       return SupabaseConfig.authToken;
     }
 
     try {
       final url = Uri.parse('${SupabaseConfig.apiUrl}/auth/login');
-      final email = mobile.contains('@') ? mobile.trim() : 'nsyu.mnt@gmail.com';
+      final email = mobile.trim();
       final res = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -644,8 +648,8 @@ class SupabaseService {
         final data = jsonDecode(res.body)['data'] ?? {};
         return AppSettings(
           company: data['name']?.toString() ?? 'NSYU Mobile Accessories',
-          phone: data['phone']?.toString() ?? '9810000001',
-          email: data['email']?.toString() ?? 'demo.owner@nsyu.local',
+          phone: data['phone']?.toString() ?? '',
+          email: data['email']?.toString() ?? '',
           logo: data['logo']?.toString() ?? '',
           terms: 'Thank you for your business! Goods once sold cannot be returned.',
         );
