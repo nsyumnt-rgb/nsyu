@@ -180,7 +180,7 @@ ThemeData _buildTheme(Brightness brightness) {
       color: card,
       elevation: 2,
       surfaceTintColor: Colors.transparent,
-      shadowColor: (isDark ? Colors.black : AppColors.navy).withOpacity(isDark ? 0.4 : 0.08),
+      shadowColor: (isDark ? Colors.black : AppColors.navy).withValues(alpha: isDark ? 0.4 : 0.08),
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -194,10 +194,10 @@ ThemeData _buildTheme(Brightness brightness) {
       style: ElevatedButton.styleFrom(
         backgroundColor: primary,
         foregroundColor: onPrimary,
-        disabledBackgroundColor: primary.withOpacity(0.4),
-        disabledForegroundColor: onPrimary.withOpacity(0.7),
+        disabledBackgroundColor: primary.withValues(alpha: 0.4),
+        disabledForegroundColor: onPrimary.withValues(alpha: 0.7),
         elevation: 1,
-        shadowColor: primary.withOpacity(0.35),
+        shadowColor: primary.withValues(alpha: 0.35),
         minimumSize: const Size(64, 48),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -208,8 +208,8 @@ ThemeData _buildTheme(Brightness brightness) {
           borderRadius: BorderRadius.circular(12),
         ),
       ).copyWith(
-        elevation: MaterialStateProperty.resolveWith(
-          (states) => states.contains(MaterialState.pressed) ? 0 : 1,
+        elevation: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.pressed) ? 0 : 1,
         ),
       ),
     ),

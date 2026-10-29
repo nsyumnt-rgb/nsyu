@@ -467,20 +467,20 @@ class CatalogProvider extends ChangeNotifier {
   /// app sessions don't collide.
   String _generateBillNumber() {
     final now = DateTime.now();
-    final stamp = '${now.year % 100}${_2(now.month)}${_2(now.day)}-'
-        '${_2(now.hour)}${_2(now.minute)}';
+    final stamp = '${now.year % 100}${_pad2(now.month)}${_pad2(now.day)}-'
+        '${_pad2(now.hour)}${_pad2(now.minute)}';
     return 'INV-$stamp-$_billCounter';
   }
 
   /// Same idea as [_generateBillNumber] but prefixed ORD- for orders.
   String _generateOrderNumber() {
     final now = DateTime.now();
-    final stamp = '${now.year % 100}${_2(now.month)}${_2(now.day)}-'
-        '${_2(now.hour)}${_2(now.minute)}';
+    final stamp = '${now.year % 100}${_pad2(now.month)}${_pad2(now.day)}-'
+        '${_pad2(now.hour)}${_pad2(now.minute)}';
     return 'ORD-$stamp-$_orderCounter';
   }
 
-  String _2(int n) => n.toString().padLeft(2, '0');
+  String _pad2(int n) => n.toString().padLeft(2, '0');
 
   /// Converts the current cart into the generic shape [BillPdfService]
   /// builds invoices from.

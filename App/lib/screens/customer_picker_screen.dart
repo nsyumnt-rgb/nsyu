@@ -319,7 +319,14 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(width: 6),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF64748B)),
+                                    tooltip: 'Edit customer',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    onPressed: () => _openEditDialog(context, c),
+                                  ),
+                                  const SizedBox(width: 4),
                                   const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
                                 ],
                               ),
@@ -495,8 +502,8 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.person_add, color: Color(0xFF1D4ED8), size: 22),
                       SizedBox(width: 8),
                       Text('Add New Customer', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),

@@ -47,8 +47,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.qr_code_scanner, color: Color(0xFF1D4ED8)),
             SizedBox(width: 8),
             Text('Scan / Enter Barcode'),
@@ -434,10 +434,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
         _controls(context, provider),
 
         if (products.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60, horizontal: 24),
             child: Column(
-              children: const [
+              children: [
                 Icon(Icons.search_off_rounded, size: 40, color: Color(0xFFCBD5E1)),
                 SizedBox(height: 12),
                 Text('No products found', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
@@ -742,9 +742,36 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         }
                       },
                       itemBuilder: (ctx) => [
-                        const PopupMenuItem(value: 'details', child: Text('View Details')),
-                        const PopupMenuItem(value: 'add_bill', child: Text('Add to Bill')),
-                        const PopupMenuItem(value: 'add_order', child: Text('Add to Order')),
+                        const PopupMenuItem(
+                          value: 'details',
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 18, color: Color(0xFF1D4ED8)),
+                              SizedBox(width: 10),
+                              Text('View Details'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'add_bill',
+                          child: Row(
+                            children: [
+                              Icon(Icons.receipt_long_outlined, size: 18, color: Color(0xFF16A34A)),
+                              SizedBox(width: 10),
+                              Text('Add to Bill'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'add_order',
+                          child: Row(
+                            children: [
+                              Icon(Icons.shopping_bag_outlined, size: 18, color: Color(0xFF0D9488)),
+                              SizedBox(width: 10),
+                              Text('Add to Order'),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 18),

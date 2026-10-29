@@ -155,9 +155,20 @@ class _BillScreenState extends State<BillScreen> {
               hintText: 'Search product by name, code or barcode...',
               hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
               prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.document_scanner_outlined, color: Color(0xFF64748B), size: 20),
-                onPressed: () => _showScanBarcodeDialog(context, provider),
+              suffixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.list_alt_rounded, color: Color(0xFF64748B), size: 20),
+                    tooltip: 'Browse Products',
+                    onPressed: () => _showViewProductsSheet(context, provider),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.document_scanner_outlined, color: Color(0xFF64748B), size: 20),
+                    tooltip: 'Scan Barcode',
+                    onPressed: () => _showScanBarcodeDialog(context, provider),
+                  ),
+                ],
               ),
               border: InputBorder.none,
               isDense: true,
@@ -257,6 +268,12 @@ class _BillScreenState extends State<BillScreen> {
               ],
             ),
           ),
+          if (customer != null)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF1D4ED8)),
+              tooltip: 'Edit customer info',
+              onPressed: () => _openInlineEditCustomer(context, provider, customer),
+            ),
           TextButton(
             onPressed: () => _editCustomer(context, provider),
             style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
@@ -279,8 +296,8 @@ class _BillScreenState extends State<BillScreen> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-        child: Column(
-          children: const [
+        child: const Column(
+          children: [
             Icon(Icons.receipt_long_outlined, size: 36, color: Color(0xFFCBD5E1)),
             SizedBox(height: 8),
             Text('No products in bill', style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
@@ -342,9 +359,20 @@ class _BillScreenState extends State<BillScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      '₹ ${_money.format(item.price)}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                    InkWell(
+                      onTap: () => _editItemRate(context, provider, item),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '₹ ${_money.format(item.price)}',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.edit_outlined, size: 12, color: Color(0xFF94A3B8)),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     // Stepper pill [-] Qty [+]
@@ -374,7 +402,12 @@ class _BillScreenState extends State<BillScreen> {
                             ),
                           ),
                           InkWell(
-                            onTap: () => provider.changeQty(item.code, 1),
+                            onTap: () {
+                              if (item.availableStock > 0 && item.qty >= item.availableStock) {
+                                showAppSnackBar(context, 'Notice: Exceeding recorded stock (${item.availableStock} in stock)', isError: true);
+                              }
+                              provider.changeQty(item.code, 1);
+                            },
                             child: const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 6),
                               child: Icon(Icons.add, size: 14, color: Color(0xFF475569)),
@@ -577,50 +610,83 @@ class _BillScreenState extends State<BillScreen> {
     );
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Payment Received', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Amount Received (₹)',
-                prefixText: '₹ ',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Payment Received', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                OutlinedButton(
-                  onPressed: () => ctrl.text = provider.totalAmountPayable.toStringAsFixed(2),
-                  child: const Text('Full Amount'),
+                TextField(
+                  controller: ctrl,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Amount Received (₹)',
+                    prefixText: '₹ ',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                OutlinedButton(
-                  onPressed: () => ctrl.text = '0.00',
-                  child: const Text('Clear'),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => ctrl.text = provider.totalAmountPayable.toStringAsFixed(2),
+                      child: const Text('Full Amount'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => ctrl.text = '0.00',
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text('Payment Mode', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  children: _paymentModes.map((m) => ChoiceChip(
+                    label: Text(m, style: const TextStyle(fontSize: 12)),
+                    selected: _selectedPaymentMode == m,
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() => _selectedPaymentMode = m);
+                        setDialogState(() {});
+                      }
+                    },
+                  )).toList(),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today, size: 15),
+                  label: Text(
+                    DateFormat('dd MMM yyyy, hh:mm a').format(_paymentDateTime),
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                  onPressed: () async {
+                    await _pickPaymentDateTime(context);
+                    setDialogState(() {});
+                  },
                 ),
               ],
             ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final val = double.tryParse(ctrl.text.trim()) ?? 0.0;
+                provider.setPaymentReceived(val);
+                Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D4ED8), foregroundColor: Colors.white),
+              child: const Text('Apply'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final val = double.tryParse(ctrl.text.trim()) ?? 0.0;
-              provider.setPaymentReceived(val);
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D4ED8), foregroundColor: Colors.white),
-            child: const Text('Apply'),
-          ),
-        ],
       ),
     );
   }
@@ -1224,8 +1290,8 @@ class _BillScreenState extends State<BillScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.qr_code_scanner, color: AppColors.steelBlue),
             SizedBox(width: 8),
             Text('Scan / Enter Barcode'),
@@ -1383,8 +1449,8 @@ class _BillScreenState extends State<BillScreen> {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: Row(
-              children: const [
+            title: const Row(
+              children: [
                 Icon(Icons.check_circle, color: AppColors.billGreen),
                 SizedBox(width: 8),
                 Text('Bill Created Successfully'),

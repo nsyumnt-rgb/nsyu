@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 
 import '../models/payment.dart';
 import '../services/supabase_service.dart';
@@ -10,7 +9,6 @@ class PaymentsProvider with ChangeNotifier {
   bool _loaded = false;
   bool _syncing = false;
   String? _syncError;
-  static final _dateFmt = DateFormat('yyyy-MM-dd');
 
   List<Payment> get payments => _payments;
   bool get loaded => _loaded;

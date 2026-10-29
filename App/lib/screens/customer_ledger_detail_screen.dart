@@ -6,13 +6,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/customer.dart';
 import '../models/customer_ledger_entry.dart';
-import '../models/saved_bill.dart';
-import '../models/saved_payment.dart';
 import '../providers/bills_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/customer_provider.dart';
-import '../services/bill_pdf_service.dart';
-import '../services/payment_receipt_pdf_service.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
 import '../navigation/app_navigation.dart';
@@ -39,22 +35,13 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
 
   Customer? _customer;
   bool _loading = false;
-  String? _error;
   List<CustomerLedgerEntry> _backendEntries = [];
   double _currentBalance = 0.0;
   double _totalDebit = 0.0;
   double _totalCredit = 0.0;
 
   DateTimeRange? _selectedDateRange;
-  String _selectedType = 'All Transactions';
   String _ledgerFilterTab = 'All'; // All, Bills, Payments, Orders
-
-  final List<String> _transactionTypes = [
-    'All Transactions',
-    'Bills / Sales',
-    'Payments',
-    'Opening Balance',
-  ];
 
   @override
   void initState() {
@@ -69,11 +56,11 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
 
     setState(() {
       _loading = true;
-      _error = null;
     });
 
     try {
       final res = await _supabaseService.fetchCustomerLedger(custId, allShops: true);
+      if (!mounted) return;
       setState(() {
         _currentBalance = res['currentBalance'] ?? 0.0;
         _totalDebit = res['totalDebit'] ?? 0.0;
@@ -81,9 +68,9 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
         _backendEntries = (res['entries'] as List<CustomerLedgerEntry>?) ?? [];
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
-        _error = e.toString();
         _loading = false;
       });
     }
@@ -411,8 +398,8 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
-        child: Column(
-          children: const [
+        child: const Column(
+          children: [
             Icon(Icons.history_toggle_off, size: 40, color: Color(0xFFCBD5E1)),
             SizedBox(height: 10),
             Text('No transactions found', style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
@@ -551,7 +538,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         );
       }).toList(),

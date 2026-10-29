@@ -10,7 +10,6 @@ import '../providers/bills_provider.dart';
 import '../services/bill_pdf_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_bottom_nav.dart';
-import 'bill_screen.dart';
 
 class BillsListScreen extends StatefulWidget {
   final ValueChanged<int> onNavigate;
@@ -45,6 +44,19 @@ class _BillsListScreenState extends State<BillsListScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bills'),
+        actions: [
+          IconButton(
+            tooltip: 'Sync from Supabase',
+            icon: bills.syncing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.sync_rounded),
+            onPressed: bills.syncing ? null : () => bills.syncFromSupabase(),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           labelColor: Colors.white,
@@ -164,7 +176,7 @@ class _BillsListScreenState extends State<BillsListScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.receipt_long_outlined, size: 40, color: AppColors.muted.withOpacity(0.5)),
+              Icon(Icons.receipt_long_outlined, size: 40, color: AppColors.muted.withValues(alpha: 0.5)),
               const SizedBox(height: 12),
               const Text('No bills here yet', style: AppTextStyles.body),
               const SizedBox(height: 4),
@@ -226,7 +238,7 @@ class _BillsListScreenState extends State<BillsListScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -237,6 +249,7 @@ class _BillsListScreenState extends State<BillsListScreen>
           ],
         ),
         onTap: () => AppNavigation.openBillDetails(context, bill: b),
+        onLongPress: () => _openBillSheet(context, bills, b),
       ),
     );
   }
@@ -268,7 +281,7 @@ class _BillsListScreenState extends State<BillsListScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.steelBlue.withOpacity(0.1),
+                        color: AppColors.steelBlue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

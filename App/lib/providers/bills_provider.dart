@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 
 import '../models/saved_bill.dart';
 import '../models/saved_payment.dart';
@@ -11,7 +10,6 @@ class BillsProvider extends ChangeNotifier {
   final BillsStoreService _store = BillsStoreService();
   final PaymentsStoreService _paymentsStore = PaymentsStoreService();
   final SupabaseService _supabaseService = SupabaseService();
-  static final _dateFmt = DateFormat('yyyy-MM-dd');
 
   String? lastDriveSyncError;
   String? lastDrivePdfSyncError;
@@ -87,7 +85,7 @@ class BillsProvider extends ChangeNotifier {
   }) async {
     bills.insert(0, bill);
     await _store.saveBills(bills);
-    print('✅ Bill Created: ${bill.billNumber}');
+    debugPrint('✅ Bill Created: ${bill.billNumber}');
     notifyListeners();
     try {
       final backendBill = await _supabaseService.createBill(
@@ -123,7 +121,7 @@ class BillsProvider extends ChangeNotifier {
     target.status = status;
     target.paidAmount = status == BillStatus.paid ? target.total : 0;
 
-    print('🔄 Bill Status Updated: ${target.billNumber} -> ${status.label}');
+    debugPrint('🔄 Bill Status Updated: ${target.billNumber} -> ${status.label}');
     await _store.saveBills(bills);
     notifyListeners();
     try {
@@ -179,7 +177,7 @@ class BillsProvider extends ChangeNotifier {
     await _store.saveBills(bills);
     notifyListeners();
 
-    print('💸 Payment Recorded for Bill: ${bill.billNumber} '
+    debugPrint('💸 Payment Recorded for Bill: ${bill.billNumber} '
         '(₹$amount collected, ₹${bill.due} still due)');
 
     try {

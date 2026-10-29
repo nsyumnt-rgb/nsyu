@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import '../config/supabase_config.dart';
 import '../models/app_settings.dart';
@@ -408,7 +409,7 @@ class SupabaseService {
 
     final res = await _postWithRetry(url, payload);
     if (res.statusCode >= 300) {
-      print('⚠️ Notice: Could not sync bill to backend (${res.statusCode}): ${res.body}');
+      debugPrint('⚠️ Notice: Could not sync bill to backend (${res.statusCode}): ${res.body}');
       return bill;
     }
 
@@ -542,7 +543,7 @@ class SupabaseService {
 
     final res = await http.post(url, headers: _headers, body: jsonEncode(payload));
     if (res.statusCode >= 300) {
-      print('⚠️ Notice: Could not sync payment to Supabase (${res.statusCode}): ${res.body}');
+      debugPrint('⚠️ Notice: Could not sync payment to Supabase (${res.statusCode}): ${res.body}');
     }
     return payment;
   }

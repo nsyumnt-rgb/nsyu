@@ -80,7 +80,7 @@ class PaymentPdfService {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text('RECEIVED FROM:',
-            style: pw.TextStyle(color: PdfColors.grey600, fontSize: 10)),
+            style: const pw.TextStyle(color: PdfColors.grey600, fontSize: 10)),
         pw.Text(payment.customerName,
             style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
         pw.SizedBox(height: 8),
@@ -96,7 +96,7 @@ class PaymentPdfService {
   }
 
   pw.Widget _paymentDetails(Payment payment) {
-    return pw.Table.fromTextArray(
+    return pw.TableHelper.fromTextArray(
       border: pw.TableBorder.all(color: PdfColors.grey300),
       headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),

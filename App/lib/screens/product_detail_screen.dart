@@ -86,7 +86,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   IconData _getCategoryIcon(Product p) {
-    final d = (p.desc + ' ' + p.category + ' ' + p.code).toLowerCase();
+    final d = '  '.toLowerCase();
     if (d.contains('earphone') || d.contains('headphone')) return Icons.headphones_rounded;
     if (d.contains('charger') || d.contains('chg')) return Icons.power_rounded;
     if (d.contains('cable') || d.contains('cbl')) return Icons.cable_rounded;
@@ -102,7 +102,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Color _getCategoryColor(Product p) {
-    final d = (p.desc + ' ' + p.category + ' ' + p.code).toLowerCase();
+    final d = '  '.toLowerCase();
     if (d.contains('earphone')) return const Color(0xFF2563EB);
     if (d.contains('charger')) return const Color(0xFFD97706);
     if (d.contains('cable')) return const Color(0xFF475569);
@@ -201,7 +201,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               border: Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
+                  color: Colors.black.withValues(alpha: 0.02),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -212,9 +212,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.08),
+                  color: color.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: color.withOpacity(0.2)),
+                  border: Border.all(color: color.withValues(alpha: 0.2)),
                 ),
                 child: Icon(icon, size: 56, color: color),
               ),

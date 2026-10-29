@@ -76,6 +76,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
           style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w700, fontSize: 18),
         ),
         actions: [
+          IconButton(
+            tooltip: 'Sync Orders',
+            icon: orders.syncing
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D4ED8)),
+                  )
+                : const Icon(Icons.sync_rounded, color: Color(0xFF0F172A), size: 22),
+            onPressed: orders.syncing ? null : () => orders.syncFromDrive(),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 14),
             child: InkWell(
@@ -242,7 +253,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.shopping_bag_outlined,
-                  size: 40, color: AppColors.muted.withOpacity(0.5)),
+                  size: 40, color: AppColors.muted.withValues(alpha: 0.5)),
               const SizedBox(height: 12),
               const Text('No orders here yet', style: AppTextStyles.body),
               const SizedBox(height: 4),

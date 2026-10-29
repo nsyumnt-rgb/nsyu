@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:intl/intl.dart';
 
 import '../models/saved_order.dart';
 import '../services/orders_store_service.dart';
@@ -8,7 +7,6 @@ import '../services/supabase_service.dart';
 class OrdersProvider extends ChangeNotifier {
   final OrdersStoreService _store = OrdersStoreService();
   final SupabaseService _supabaseService = SupabaseService();
-  static final _dateFmt = DateFormat('yyyy-MM-dd');
 
   String? lastDriveSyncError;
   bool syncing = false;
@@ -59,7 +57,7 @@ class OrdersProvider extends ChangeNotifier {
   Future<void> addOrder(SavedOrder order) async {
     orders.insert(0, order);
     await _store.saveOrders(orders);
-    print('✅ Order Created: ${order.orderNumber}');
+    debugPrint('✅ Order Created: ${order.orderNumber}');
     notifyListeners();
     try {
       await _supabaseService.createOrder(order);
@@ -78,7 +76,7 @@ class OrdersProvider extends ChangeNotifier {
     }
     if (target == null) return;
     target.status = status;
-    print('🔄 Order Status Updated: ${target.orderNumber} -> ${status.label}');
+    debugPrint('🔄 Order Status Updated: ${target.orderNumber} -> ${status.label}');
     await _store.saveOrders(orders);
     notifyListeners();
     try {

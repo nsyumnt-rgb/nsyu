@@ -202,11 +202,11 @@ class SavedBill {
     String custName = 'Walk-in Customer';
     String custPhone = '';
     if (j['customer'] is Map) {
-      final name = j['customer']['name']?.toString()?.trim();
+      final name = j['customer']['name']?.toString().trim();
       if (name != null && name.isNotEmpty) {
         custName = name;
       }
-      custPhone = j['customer']['phone']?.toString()?.trim() ?? '';
+      custPhone = j['customer']['phone']?.toString().trim() ?? '';
     } else if (j['customer_name'] != null && j['customer_name'].toString().trim().isNotEmpty) {
       custName = j['customer_name'].toString().trim();
     } else if (j['customerName'] != null && j['customerName'].toString().trim().isNotEmpty) {

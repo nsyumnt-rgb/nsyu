@@ -25,7 +25,7 @@ class AuthProvider extends ChangeNotifier {
 
   String _userName = 'NSYU';
   String _userEmail = 'nsyu.mnt@gmail.com';
-  String _password = 'Nsyu@12345';
+  final String _password = 'Nsyu@12345';
   String _roleName = 'Owner';
   String _accountType = 'owner';
   int _shopId = 1;

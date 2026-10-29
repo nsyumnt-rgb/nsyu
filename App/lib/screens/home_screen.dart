@@ -35,7 +35,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _selectedPeriod = 'Today'; // Today, This Week, This Month
-  String _chartPeriod = 'This Week';
+  final String _chartPeriod = 'This Week';
 
   @override
   void initState() {
@@ -598,10 +598,10 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Y axis
-          Column(
+          const Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Text('30K', style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8))),
               Text('20K', style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8))),
               Text('10K', style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8))),

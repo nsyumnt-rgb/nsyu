@@ -656,7 +656,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 _checkingConnection
                                     ? 'Connecting to Supabase...'
                                     : (_isConnected == true
-                                        ? 'Supabase PostgreSQL Connected (Port 5000)'
+                                        ? (_connectionDetails.isNotEmpty ? _connectionDetails : 'Supabase PostgreSQL Connected')
                                         : 'Backend Offline — Tap to Configure (${SupabaseConfig.apiUrl})'),
                                 style: TextStyle(
                                   fontSize: 11.5,

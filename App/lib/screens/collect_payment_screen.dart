@@ -226,7 +226,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<PaymentMethod>(
-            value: _method,
+            initialValue: _method,
             decoration: const InputDecoration(labelText: 'Payment Method'),
             items: PaymentMethod.values
                 .map((m) => DropdownMenuItem(value: m, child: Text(m.label)))
@@ -354,11 +354,13 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                         final newPath =
                             '${downloadsDir.path}/${pdfFile.path.split('/').last}';
                         await pdfFile.copy(newPath);
+                        if (!mounted) return;
                         showAppSnackBar(context, 'Receipt saved to Downloads');
                       } else {
                         throw Exception('Could not access Downloads folder.');
                       }
                     } catch (e) {
+                      if (!mounted) return;
                       showAppSnackBar(context, 'Download failed: $e',
                           isError: true);
                     }
@@ -377,9 +379,11 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                         paymentId: payment.id,
                         pdfFile: pdfFile,
                       );
+                      if (!mounted) return;
                       showAppSnackBar(context,
                           'Receipt successfully uploaded to Google Drive.');
                     } catch (e) {
+                      if (!mounted) return;
                       showAppSnackBar(context, 'Upload to Drive failed: $e',
                           isError: true);
                     }
