@@ -1,0 +1,2149 @@
+NSYU
+Business Management System
+Deep Business Requirements, Ownership Model,Multi-Shop Access, Permissions & Operational Workflows
+Prepared for NSYU, PTL and MLT
+Version 2.0 | 29 October 2026
+Updated and consolidated edition
+Document Control
+Field
+Details
+Purpose
+Define NSYU company operations, PTL/MLT workspaces, multiple shops, user assignments, permissions, the 17 sidebar modules, product sales, installments, people management and application services.
+Audience
+Business owner, product owner, frontend/backend developers, QA and deployment administrators.
+Status
+Target requirements/design. This document does not independently certify the live website's implementation.
+Target architecture
+React + TypeScript + Vite web; Flutter Android/iOS; Node.js + Express + TypeScript API; Sequelize; PostgreSQL/Supabase PostgreSQL.
+Core principle
+One user identity may be assigned to multiple shops and, if explicitly allowed, multiple owner workspaces. Permissions are checked separately for each scope.
+Wording
+MUST = confirmed or essential; SHOULD = recommended default pending a decision. D-nn refers to the decision register (Appendix E); rule IDs (for example PRD-01) are used for traceability.
+Version history
+Version
+Date
+Summary
+1.0
+29 October 2026
+Initial requirements, ownership model, multi-shop access and workflows, with appended sidebar menu, real owner/shop/login mapping, acceptance checklist and implementation priorities.
+2.0
+29 October 2026
+Consolidated edition. Merged the duplicated sections and fixed numbering; added detailed specifications for every one of the 17 modules, EMI, People and Admin modules, cross-cutting rules, extended data model, API catalogue, NFRs, risks, glossary and a 25-item decision register with recommended defaults.
+What changed in version 2.0
+Structure: the sidebar, owner/shop mapping, acceptance checklist and priority sections that were appended after the Final Summary (and restarted numbering at 7) are merged into the main body; there is now one numbering sequence.
+Business modules: each of Products, Inventory, Purchase, Sales, Billing, Customers, Suppliers, Payments, Customer Ledger and EMI / Installments now has key data, lifecycle, numbered rules and worked examples (Section 8).
+People and Admin: Employees, Attendance, Salary / Payroll, Shops, Roles & Permissions, Reports and Settings are specified (Sections 9 and 10).
+Cross-cutting rules: money and rounding, dates, document numbering, immutability, idempotency, concurrency, approvals and error handling (Section 12).
+Technical: expanded data model and constraints, endpoint catalogue for every module, security controls, non-functional requirements, risks, permission codes and glossary.
+Tests: the original acceptance tests are kept and extended to cover the new modules.
+Open points: gaps found while consolidating are recorded as decisions with defaults, for example the missing service modules in the sidebar (D-19) and the MLTS/MTLS spelling (D-09).
+Security note
+Passwords were supplied in the request and are intentionally omitted from this document. Change any real password shared in chat. Never include passwords, database credentials, service-role keys or private keys in public documents, source code or frontend/mobile bundles.
+Contents
+1. Executive Summary and Business Context
+2. Business Structure and Account Map
+3. Roles and Responsibility Boundaries
+4. Login, Authentication and Workspace Selection
+5. Multi-Shop Assignments and Permission Model
+6. Sidebar Menu Structure and Navigation
+7. Detailed User Journeys
+8. Business Modules (Products to EMI / Installments)
+9. People Modules (Employees, Attendance, Salary / Payroll)
+10. Admin Modules (Shops, Roles & Permissions, Reports, Settings)
+11. Application / Software Service Workflow
+12. Cross-Cutting Business Rules
+13. Data Model and Tenant Isolation
+14. API and Frontend Architecture
+15. Security, Audit and Reliability
+16. Reports and Dashboards
+17. Non-Functional Requirements
+18. Acceptance Tests and Edge Cases
+19. Implementation Plan and Release Checklist
+20. Risks and Mitigations
+Appendices: A Permission matrix | B Scenarios | C Permission codes | D Glossary | E Decisions to confirm
+Final Summary
+1. Executive Summary and Business Context
+NSYU is the parent company. It sells physical products and provides application/software services. PTL and MLT are separate owner workspaces within the business-management application. Each owner manages their own shops, staff, products, sales, customers, payments, reports and permissions. A user may be assigned to multiple shops; a separate login for every shop is not required.
+The system must distinguish company-level administration, owner/workspace administration and shop-level operations. URLs such as /PTL or /mlt are navigation routes, not security boundaries. The API must authenticate the user and authorize every protected request.
+1.1 Business goals
+Manage product sales and application services in one business system.
+Allow each owner to create and manage multiple shops.
+Allow one user to be assigned to one or more shops, with independent permissions per shop.
+Allow owners to control menus and actions: View, Create, Edit, Delete, Approve and Export.
+Keep PTL and MLT data isolated unless a specific company-level role is authorized.
+Keep stock, invoices, payments, ledgers, installments and payroll consistent and auditable.
+Use PostgreSQL/Supabase through the backend as the authoritative business database.
+Give React web and Flutter Android/iOS clients exactly the same business rules through one API.
+1.2 Scope
+In scope
+Not specified in the brief (requires a decision before it is built)
+All 17 confirmed sidebar modules (BUSINESS, PEOPLE, ADMIN)
+Company, owner/workspace and shop hierarchy
+User identities, shop assignments, roles and action permissions
+Product sales, purchases, stock, billing, payments, ledgers and EMI
+Employees, attendance and payroll
+Application/software service sales and delivery
+Reports, audit trail, security and release criteria
+Online payment-gateway integration
+GST e-invoicing / return-filing integration and accounting-software export
+SMS / WhatsApp / email notification delivery (see D-23)
+Offline-first mobile operation (see D-24)
+Biometric or geo-fenced attendance devices (see D-18)
+Separate sidebar modules for enquiries, quotations and projects (see D-19)
+1.3 Assumptions and constraints
+Currency is Indian Rupee (₹). Default time zone is Asia/Kolkata (IST).
+The target stack is React + TypeScript + Vite (web), Flutter (Android/iOS), Node.js + Express + TypeScript (API), Sequelize (ORM) and PostgreSQL/Supabase PostgreSQL.
+This document describes target requirements. It does not certify what the live website currently implements; compare with existing models, migrations and routes before changing anything.
+Existing working APIs, models and UI patterns should be extended compatibly rather than rewritten.
+1.4 How to read requirement wording
+MUST marks a requirement that is confirmed in the owner's brief or is essential for security, financial integrity or tenant isolation.
+SHOULD marks a recommended default that is sensible but still open to a business decision.
+D-nn references point to the decision register in Appendix E. Where a decision is open, the document states the recommended default so development can proceed and be changed cheaply later.
+Rule IDs such as PRD-01 or EMI-03 are stable identifiers for traceability between requirements, API checks and acceptance tests.
+2. Business Structure and Account Map
+2.1 Company entry points
+Entity
+Details
+Access rule
+NSYU Company
+Products + application/software services; login route https://nsyumnt-rgb.github.io/nsyu/#/login
+Company-level access only as explicitly configured.
+PTL route
+https://nsyumnt-rgb.github.io/nsyu/PTL#/login
+Frontend entry for PTL; backend must verify PTL membership.
+MLT route
+https://nsyumnt-rgb.github.io/nsyu/mlt#/login
+Frontend entry for MLT; backend must verify MLT membership.
+2.2 Confirmed owner, shop and login mapping
+The mapping below uses the real workspace and shop labels. These labels MUST be used in user-facing screens, test cases and seed/demo configuration; generic labels such as Owner 1, Owner 2 or Shop 1 are not to be shown to users.
+Workspace / owner
+Owner login
+Shop
+Shop admin login
+Access rule
+PTL
+owner1@gmail.com
+PTLS
+adminShop1@gmail.com
+PTL owner sees all PTL shops; this admin sees only assigned shops.
+PTL
+owner1@gmail.com
+RTLS
+adminShop2@gmail.com
+PTL owner sees all PTL shops; this admin sees only assigned shops.
+MLT
+owner2@gmail.com
+MLTS
+adminShop3@gmail.com
+MLT owner sees all MLT shops; this admin sees only assigned shops.
+MLT
+owner2@gmail.com
+MTLS
+adminShop4@gmail.com
+MLT owner sees all MLT shops; this admin sees only assigned shops.
+NSYU (company)
+nsyu.mnt@gmail.com
+—
+—
+Company login. Cross-workspace visibility must be defined, granted explicitly and tested; it is not assumed.
+These are the supplied initial mappings. Store assignments in the database and validate them in the API; never infer access from email text, URL or shop name. Confirm the spelling of the MLT shop codes MLTS and MTLS (D-09) before they are seeded, because shop codes may become invoice prefixes.
+2.3 Owner capabilities
+The PTL owner signs in with owner1@gmail.com and sees PTLS, RTLS and any other shops created in PTL.
+The MLT owner signs in with owner2@gmail.com and sees MLTS, MTLS and any other shops created in MLT.
+Each owner can create additional shops within their own workspace, subject to configured limits.
+Each owner can assign users to one or multiple shops within their authorized scope.
+Each owner can manage roles, menu visibility and action permissions for users in that scope.
+One owner cannot access another owner's workspace simply by editing a URL or request parameter.
+2.4 Hierarchy
+Level
+Contains
+Isolation boundary
+Company (NSYU)
+Workspaces, company-level roles, optional shared catalogue/service definitions.
+Company roles see only what is explicitly granted and audited.
+Workspace (PTL, MLT)
+Owner, shops, users, roles, settings, customers/suppliers (per D-14), reports.
+Primary tenant boundary. Every workspace-owned row carries a workspace relationship.
+Shop (PTLS, RTLS, MLTS, MTLS …)
+Stock, purchases, sales, invoices, payments, EMI plans, attendance records.
+Secondary boundary. Users reach a shop only through an assignment.
+3. Roles and Responsibility Boundaries
+Role
+Responsibilities
+Boundary
+Company Administrator
+Company configuration, approved workspaces and shared service catalogue/reporting if authorized.
+Cross-owner visibility must be explicitly granted and audited.
+Owner
+Manage own workspace, shops, users, permissions, sales, inventory, customers, payroll and reports.
+Cannot administer another owner without company-level authority.
+Shop Admin
+Operate assigned shops and owner-approved functions.
+Only assigned shops and allowed actions.
+Manager
+Daily operations, stock, sales, EMI follow-up and selected reports.
+Restricted settings, payroll and destructive actions by default.
+Cashier
+Billing and permitted payment/installment collection.
+No unrelated shops or admin functions.
+Inventory User
+Purchases, stock movement and inventory reports.
+No financial/sales changes unless granted.
+Staff / Employee
+Only assigned menus and actions.
+No role management or other shops unless explicitly granted.
+Read-only / Auditor
+View assigned records and reports.
+No write actions unless specifically granted.
+3.1 Identity versus assignment
+A user account is the login identity; a shop assignment is a separate relationship. One email should normally map to one user identity, with multiple assignment records when needed. Each assignment can have its own role and permissions. Do not create duplicate user rows just because the user works in two shops.
+If the same person is assigned to both PTL and MLT, allow this only if business policy explicitly permits it (D-02). Keep separate assignment and permission scopes and show the active workspace clearly. Otherwise reject cross-owner assignments.
+3.2 User, employee and login are different things
+A user can sign in. An employee is an HR record (Section 9.1). An employee may or may not have a user login, and a user (for example the owner or a company administrator) may have no employee record. When both exist they are linked one-to-one. Creating an employee MUST NOT create a login automatically; access is granted separately in Roles & Permissions.
+3.3 Separation of duties
+The person who prepares a payroll run SHOULD NOT be the person who approves it.
+The person who requests a stock adjustment above the configured threshold SHOULD NOT be the person who approves it.
+Discount overrides, invoice cancellation, EMI waivers and ledger adjustments require a separate Approve permission.
+A user MUST NOT be able to grant themselves permissions they do not already hold.
+3.4 Role templates and custom roles
+The system ships role templates (Owner, Shop Admin, Manager, Cashier, Inventory User, Read-only). Templates are seed data and read-only. Owners may create custom roles inside their own workspace by combining module/action permissions; custom roles are workspace-scoped and cannot exceed the owner's own authority. A role that is still assigned to a user cannot be deleted.
+4. Login, Authentication and Workspace Selection
+User opens the company, PTL or MLT route and submits email/password over HTTPS.
+Backend validates credentials and account status, then establishes the configured secure session/token.
+Frontend requests the current profile, allowed workspaces, shop assignments and effective permissions.
+If the user is not authorized for the requested workspace, show access denied or an authorized workspace selector.
+User selects an authorized shop; owners may have an All Shops view for consolidated reports.
+Every protected API request rechecks identity, scope and action permission on the server.
+4.1 Route is not authorization
+Changing /PTL to /mlt must not grant access. The API must not trust workspaceId or shopId sent by the browser without checking the authenticated user's assignment. Hiding a menu is a usability feature, not a security control.
+4.2 Session rules
+Logout invalidates the session according to the chosen auth strategy.
+Expired/revoked sessions return an authentication error and the client returns to login.
+Permission changes must take effect promptly; sensitive APIs must not trust stale frontend state.
+Never store plaintext passwords in browser storage, mobile storage or logs. Mobile apps store tokens only in the platform secure store (Keychain / Keystore).
+Use safe login failure messages that do not disclose whether an email exists.
+Idle timeout and maximum session age are configurable in Settings > Security; Owner and Company roles SHOULD have shorter limits.
+4.3 Account lifecycle
+Event
+Required behaviour
+Create / invite
+Owner (within own workspace) or company admin creates the identity. New users have no shop access until assigned. Invitation or temporary credential expires and forces a password change at first sign-in.
+Password reset
+Time-limited, single-use reset link or owner-initiated reset. Reset invalidates existing sessions. The response never reveals whether the email exists.
+Lockout / throttling
+Repeated failures are rate-limited per account and per IP. Lockout is temporary and audited.
+Deactivate
+Blocks login and revokes sessions immediately. Historical records and audit entries keep the user reference. Deactivation is preferred over deletion.
+Reactivate
+Allowed by an authorized owner/admin; prior assignments are restored only if the owner confirms them.
+Delete
+Allowed only for identities with no business or audit references; otherwise deactivate.
+4.4 Credential policy
+Passwords are stored only as strong salted hashes (for example Argon2id or bcrypt with an adequate cost factor).
+The system SHOULD enforce a minimum length and reject common or previously breached passwords.
+Multi-factor authentication SHOULD be available, and recommended for Owner and Company roles (D-22).
+Any real password that has been shared in chat, e-mail or documents MUST be changed. This document intentionally contains no passwords.
+4.5 Active workspace and shop context
+The selected workspace and shop are shown permanently in the application header.
+The client may remember the last-used shop for convenience, but the server validates the shop on every request using the path or payload identifier against the user's assignments.
+Switching shop clears shop-scoped client caches (lists, drafts, cart) so data from one shop is never shown under another.
+A user with exactly one assigned shop is placed in that shop automatically and sees no shop switcher.
+5. Multi-Shop Assignments and Permission Model
+5.1 Assignment rules
+A shop belongs to one owner/workspace. A user may be assigned to one or multiple shops; multiple users may be assigned to the same shop. Assignment records include the granting owner, status, role and creation/update timestamps.
+5.2 Permission layers
+Layer
+Examples
+Required enforcement
+Menu/module
+Products, Inventory, Purchase, Sales, Billing, Customers, Suppliers, Payments, Customer Ledger, EMI / Installments, Employees, Attendance, Salary / Payroll, Shops, Roles & Permissions, Reports, Settings.
+Frontend navigation plus server-side API authorization.
+Action
+View, Create, Edit, Delete (cancel/void/deactivate), Approve, Export, plus module-specific actions such as apply_discount, view_cost, collect, pay.
+Authorize every API endpoint/action.
+Data scope
+One shop, multiple assigned shops, own workspace, company scope.
+Backend derives allowed scope from assignments.
+Sensitive fields
+Cost price, margin, valuation, payroll, bank details, owner settings.
+Field-level filtering and restricted roles where needed.
+5.3 Permission codes and dependencies
+Permissions are atomic codes written module:action, for example sales:create or payroll:approve. The full catalogue is in Appendix C. The server enforces these dependencies, and the permission editor mirrors them:
+Create, Edit, Delete, Approve and Export each require View on the same module.
+Approve never implies Create or Edit; separation of duties depends on this.
+view_cost, view_sensitive and similar field-level permissions are separate from View.
+5.4 How a request is authorized
+Authenticate the token/session and load the user (must be active).
+Resolve the target shop (and therefore its workspace) from the record or path, not from a client-supplied workspace value.
+Find an active assignment of the user to that shop (or an owner/company grant that covers it).
+Resolve the role's module/action permissions plus any per-assignment overrides.
+Require the requested module:action to be allowed; otherwise return a safe authorization error.
+Apply field-level filtering on the response and re-check ownership on every referenced child record.
+5.5 Owner grants access
+Owner opens Roles & Permissions.
+Owner invites/creates a user or selects an existing identity.
+Owner assigns one or more shops within their own scope.
+Owner selects a role template or configures module/action permissions.
+Backend validates that the grantor may grant those permissions.
+System saves assignment changes and writes an audit event with before/after values.
+Subsequent requests enforce the updated access; revoked shop access is denied.
+5.6 Safe defaults
+New users have no shop access until explicitly assigned.
+New assignments use least privilege, not full access by default.
+Delete/cancel, payroll, user administration, settings, exports and financial adjustments are restricted by default.
+Owners cannot grant permissions beyond their own authority.
+Removing one shop assignment must not remove other valid assignments, but must immediately block the removed shop.
+5.7 Propagation and revocation
+Permission and assignment changes MUST take effect on the next request. Either evaluate permissions from the database on each request, or keep a per-user permission-version counter that is bumped on every change and checked against the token. Long-lived tokens that embed permissions are not acceptable for sensitive actions.
+5.8 Role templates (starting point)
+Template
+Typical scope
+Typical modules
+Owner
+All shops in own workspace
+All modules, including Shops, Roles & Permissions, Settings and consolidated reports.
+Shop Admin
+Assigned shop(s)
+Operational modules plus admin actions explicitly granted by the owner.
+Manager
+Assigned shop(s)
+Sales, Billing, Inventory, Purchase, Customers, Payments, EMI, Attendance and selected Reports; no Settings, no payroll by default.
+Cashier
+Assigned shop(s)
+Billing, Customers (select/search), Payments and EMI collection; no cost fields.
+Inventory User
+Assigned shop(s)
+Products (view), Inventory, Purchase, Suppliers and inventory reports.
+Read-only
+Assigned shop(s)
+View on explicitly assigned modules and reports.
+6. Sidebar Menu Structure and Navigation
+The web dashboard MUST use these exact group names and item labels, in this order: BUSINESS, PEOPLE, ADMIN. The same core menu is used in PTL and MLT; the available shops, data and actions depend on the signed-in user's assignments and permissions. There are 17 menu items in total.
+6.1 BUSINESS
+Menu (exact label)
+Module key
+Expected functionality
+Products
+products
+Product catalogue, SKU, category, unit, purchase price, fixed margin amount, selling price, tax configuration, status. Create, view, edit, archive. See 8.1.
+Inventory
+inventory
+Shop-wise stock, stock movements, low-stock alerts, adjustments, authorized transfers and inventory history. See 8.2.
+Purchase
+purchase
+Purchase orders/receipts, supplier invoices, received quantities, purchase costs, purchase returns and history. See 8.3.
+Sales
+sales
+Sales orders/transactions, returns and cancellations, sales status and history. See 8.4.
+Billing
+billing
+Create, view, print/export invoices; calculate subtotal/discount/tax/total; apply approved discounts; preserve invoice snapshots. See 8.5.
+Customers
+customers
+Customer profiles, contact details, status, purchase history and linked sales/dues. See 8.6.
+Suppliers
+suppliers
+Supplier profiles, purchase history, payable balances, contact details. See 8.7.
+Payments
+payments
+Customer receipts and supplier payments with method, reference, partial payments and allocations. See 8.8.
+Customer Ledger
+customer_ledger
+Opening balance, invoices, receipts, credits, adjustments and running/outstanding balance without double-counting. See 8.9.
+EMI / Installments
+emi
+Installment plans, due dates, amount due/paid, collections, overdue status and remaining balance. See 8.10.
+6.2 PEOPLE
+Menu (exact label)
+Module key
+Expected functionality
+Employees
+employees
+Employee profiles, employment details, shop/workspace assignment and role association. See 9.1.
+Attendance
+attendance
+Daily attendance, check-in/check-out where applicable, corrections with audit history, daily/monthly summaries. See 9.2.
+Salary / Payroll
+payroll
+Salary configuration, payroll periods, allowances/deductions, payment status, payroll records and payslips. See 9.3.
+6.3 ADMIN
+Menu (exact label)
+Module key
+Expected functionality
+Shops
+shops
+Create/manage shops within the owner workspace, shop details, active status; assign users to one or multiple shops. See 10.1.
+Roles & Permissions
+roles
+Assign users to shops; configure menu visibility and action-level permissions (View, Create, Edit, Delete, Approve, Export). See 10.2.
+Reports
+reports
+Permission-filtered reports for sales, purchases, inventory, payments, ledgers, EMI, employees and payroll. See 10.3 and Section 16.
+Settings
+settings
+Business profile, tax rules, invoice numbering, pricing defaults, financial settings and other approved configuration, limited by role. See 10.4.
+A Dashboard landing page and an Audit log viewer are referenced elsewhere in this document. They are not among the 17 confirmed sidebar items: treat the dashboard as the home screen shown after login, and expose audit history inside Reports (see 16.1) unless the owner decides to add a menu entry.
+6.4 Navigation and authorization requirements
+Show menu groups in this order: BUSINESS, PEOPLE, ADMIN.
+The same core navigation appears for PTL and MLT, but each owner sees only their own workspace's authorized shops and records.
+Owners configure which menus and actions each assigned user may access, within the owner's authority.
+A user assigned to one shop sees only that shop; a user assigned to multiple shops can switch only between authorized shops.
+Menu visibility is UI behaviour only. Every protected API operation must independently validate identity, workspace/shop assignment and action permission.
+A user must not gain access by changing the URL, browser storage or a submitted shop/workspace ID.
+Sensitive actions such as delete/cancel, payroll, role management and financial adjustments are restricted by default and audited.
+Use existing routes and component patterns where possible; avoid breaking working APIs, models or UI while implementing menu behaviour.
+6.5 Standard screen states and behaviour
+State / feature
+Requirement
+Loading
+Skeleton or spinner; controls that would submit duplicate requests are disabled.
+Empty
+Clear message plus the primary action if the user may create (for example "No products yet — Add product").
+Error
+Readable message from the standard error format (14.4) with a retry action; never raw stack traces or SQL errors.
+Forbidden
+A neutral "You do not have access" screen; no data fragments are leaked.
+Success
+Confirmation with the document number (for example the invoice number) and next actions such as print or record payment.
+Lists
+Server-side search, filters, sort and pagination, always scoped to the active shop (12.9).
+Forms
+Required-field and format validation on the client for convenience and again on the server as the authority.
+Destructive actions
+Confirmation dialog; reason field where required (D-10); server-side permission check; audit entry.
+No fake data
+No mock or demo data may appear as real data in production builds.
+7. Detailed User Journeys
+7.1 Owner views all shops
+Owner signs in with their owner account.
+Backend returns shops linked to that owner's workspace only.
+Dashboard offers All Shops and individual shop filters.
+All Shops aggregates only the current owner's shops; PTL and MLT figures are never accidentally combined.
+Selecting a shop scopes lists, forms, reports and write operations to that shop.
+7.2 Owner creates a shop
+Owner opens Shops > Add Shop and enters name, code, contact details and required settings.
+Backend checks the shops:create permission and validates required/unique fields.
+Backend creates the shop linked to the authenticated owner's workspace.
+System initializes settings from workspace defaults without copying private data from another shop.
+Owner assigns users and roles.
+The new shop appears only for authorized users.
+7.3 One user has multiple shops
+Example: a PTL manager is assigned PTLS and RTLS. They can switch between both. Billing Create may be enabled for PTLS but View-only for RTLS. The API must reject creating a bill in RTLS even if the user manipulates the frontend request.
+7.4 Cross-owner access
+A user can be assigned to PTL and MLT only if the business explicitly supports it (D-02). Each workspace owner controls their own assignments. The active workspace must be visible, and all data/actions must be scoped independently.
+7.5 Onboarding a new staff member
+Owner or authorized Shop Admin creates the employee record (Employees).
+If the person needs to sign in, the owner creates or invites a user identity and links it to the employee.
+Owner assigns shop(s) and a role template, then adjusts permissions per shop.
+The person signs in, sets a new password and sees only the assigned shops and menus.
+Audit shows who created the user, who granted which permissions and when.
+7.6 Offboarding or reassigning a staff member
+Owner marks the employee as resigned/terminated with an effective date (history is kept).
+Owner deactivates the user or removes the shop assignments; sessions are revoked and access is blocked on the next request.
+Open items (draft invoices, pending approvals) are reassigned or closed.
+For a shop transfer, add the new assignment first, then remove the old one; the employee's shop history records both with effective dates.
+7.7 Deactivating or closing a shop
+Owner chooses Deactivate on the shop; new sales, purchases and stock movements are blocked.
+Remaining stock is transferred to another shop of the same workspace, sold, or written off through an approved adjustment.
+Outstanding receivables, payables and active EMI plans stay visible and collectable (or are explicitly transferred).
+Historical records, reports and audit entries remain; the shop is never hard-deleted once it has transactions.
+8. Business Modules
+Each module below states its purpose, key data, lifecycle, enforceable rules and permissions. Money amounts are in ₹. Server-side validation is authoritative in every case.
+8.1 Products
+Purpose. Maintain the catalogue of physical products and (per 11) service items that can be purchased, stocked and sold.
+Key data. Stable ID, SKU/code, name, description, category, unit, product type (Physical or Service), purchase price, fixed margin amount, derived selling price, tax configuration (rate, inclusive/exclusive, tax classification code if used), reorder level, barcode (optional), status (Active, Inactive, Archived).
+ID
+Rule / requirement
+PRD-01
+Selling Price = Purchase Price + fixed Margin Amount (₹), not a percentage. Example: purchase ₹500 + margin ₹100 gives a base selling price of ₹600 before configured tax/discount. The system never silently reinterprets the margin as a percentage.
+PRD-02
+The selling price is calculated by the server whenever purchase price or margin changes and is shown read-only in the form. Overriding the price at billing is not permitted unless a separate permission is granted (D-06).
+PRD-03
+Changing purchase price or margin affects future sales only. Historical invoices and purchase lines keep their own snapshots.
+PRD-04
+SKU/code is unique within the catalogue scope (D-03) and compared case-insensitively after trimming.
+PRD-05
+Products referenced by any transaction cannot be deleted; they are archived. Archived products cannot be added to new documents but remain in history and reports.
+PRD-06
+Service-type products never hold stock and never create stock movements.
+PRD-07
+Purchase price, margin and stock valuation are sensitive fields shown only with products:view_cost (and inventory:view_cost for valuation).
+PRD-08
+Validation: name, unit and SKU required; purchase price ≥ 0; margin ≥ 0 (a negative margin is rejected unless D-06 allows it); amounts have at most two decimals.
+PRD-09
+Bulk import/export uses a validation preview before commit; export needs products:export and is audited.
+PRD-10
+Whether a new purchase at a different cost updates the product's purchase price (last cost, weighted average or manual only) is a business decision (D-12). Until decided, purchase price changes only by explicit edit.
+8.2 Inventory
+Purpose. Track stock per shop and keep a complete, immutable history of every change.
+Stock movement types. Opening balance, Purchase receipt, Sale, Sale return, Purchase return, Adjustment increase, Adjustment decrease, Transfer out, Transfer in, Cancellation reversal.
+ID
+Rule / requirement
+INV-01
+Stock is held per (shop, product). Receiving stock into PTLS never changes RTLS.
+INV-02
+Every change to quantity writes a movement record containing shop, product, signed quantity, movement type, source document, actor, timestamp and reason where applicable. Movement records are never edited or deleted.
+INV-03
+Quantity on hand cannot become negative unless the shop setting "allow negative stock" is enabled (default off, D-13). A sale that would cause negative stock is rejected and nothing is written.
+INV-04
+Manual adjustments require a reason code and inventory:edit. Adjustments above a configured quantity/value threshold need inventory:approve from a different user (D-10).
+INV-05
+Transfers are allowed only between shops of the same workspace (D-21) and follow Dispatched → Received. Stock is "in transit" between the two steps. Both shops' permissions apply (create at source, receive at destination). Cross-workspace movement is treated as a normal sale and purchase, not a transfer.
+INV-06
+A stock count (stocktake) session records counted quantity against system quantity and produces approved adjustment movements for the differences.
+INV-07
+Stock updates use row-level locking or atomic conditional updates so concurrent sales cannot oversell the same units.
+INV-08
+Low-stock indicator appears when quantity on hand ≤ product reorder level (or the shop default).
+INV-09
+Reconciliation: the stored balance MUST equal the sum of that product's movements for the shop; a scheduled check reports any mismatch.
+8.3 Purchase
+Purpose. Record purchases from suppliers, receive stock and create supplier payables.
+Lifecycle. Draft → (Ordered, optional) → Partially Received / Received (posted) → Cancelled. Payment status (Unpaid, Partly paid, Paid) is derived from Payments and does not change the document status. A Purchase Return is a separate document linked to the original.
+ID
+Rule / requirement
+PUR-01
+A purchase captures shop, supplier, supplier invoice number/date, line items (product, quantity, unit cost, discount, tax), other charges and totals. Line values are saved as snapshots.
+PUR-02
+Stock increases only when quantity is received/posted, never merely because the document was saved. Partial receipts are supported; total received cannot exceed ordered quantity unless over-receipt is explicitly allowed.
+PUR-03
+Posting creates the supplier payable and the stock movements in one database transaction; any failure leaves no partial stock or ledger entry.
+PUR-04
+The supplier invoice number is unique per supplier; a duplicate is rejected or requires explicit confirmation.
+PUR-05
+A posted purchase cannot be edited. Corrections use cancellation (only if no dependent movement makes it impossible) or a purchase return/adjustment, always with a reason and audit entry.
+PUR-06
+A purchase return reduces stock and the supplier payable (or creates supplier credit). Returned quantity cannot exceed received minus already returned, and the stock must be available.
+PUR-07
+Purchase cost fields are sensitive and visible only to roles with cost permissions.
+PUR-08
+Each purchase has a unique document number generated by the server (12.3).
+8.4 Sales
+Purpose. Record sales orders/transactions, returns and sales status. Relationship to Billing. The Sales menu is the record of the sale and its status; the Billing menu creates and prints the invoice (8.5). For a counter sale one action creates the sale and its invoice in a single transaction. Whether separate order/quotation stages are needed before invoicing is part of D-19.
+Sale status. Draft → Confirmed → Invoiced → Completed; Cancelled; Partially Returned / Returned. Payment status (Unpaid, Partly paid, Paid) is derived.
+ID
+Rule / requirement
+SAL-01
+Stock is deducted when the invoice is posted (default). If reservation at order confirmation is required, it is configured explicitly and reserved quantity is tracked separately from on-hand stock.
+SAL-02
+The server validates product status, shop stock, price, tax and discount limits. Totals sent by the client are never trusted.
+SAL-03
+A sale for a named customer is required for credit sales and EMI; whether anonymous walk-in sales are allowed for fully paid bills is configurable (D-14).
+SAL-04
+A sales return references the original invoice, cannot exceed sold minus already returned quantity, records the return reason and the stock condition (restock or damaged), and creates a credit note/refund or ledger credit (D-07). Large returns follow approval rules.
+SAL-05
+Cancellation requires sales:delete (cancel/void), a reason and, where configured, approval. It reverses stock, ledger and EMI effects and keeps the cancelled document visible with status Cancelled. Hard delete of posted sales is not allowed.
+SAL-06
+Sale date uses the shop time zone. Back-dating beyond the configured window requires a special permission and is audited.
+SAL-07
+The same submission repeated after a timeout (same idempotency key) returns the original result and creates no second sale or stock deduction.
+8.5 Billing
+Purpose. Create, view, print and export invoices with correct calculation, numbering and immutable snapshots.
+Calculation order (server). Line subtotal = quantity × unit price → line discount → taxable value → line tax → invoice-level discount (default ₹0, allocated across lines when tax depends on it) → rounding → grand total. The exact tax inclusive/exclusive and rounding method are configured and documented once (D-05).
+ID
+Rule / requirement
+BIL-01
+Subtotal, discount, tax and total are calculated by the backend. The frontend preview must use the same documented formula and shared test vectors.
+BIL-02
+Bill discount defaults to ₹0. Only users with billing:apply_discount can enter a discount, within a per-role limit; above the limit billing:approve is required (D-06).
+BIL-03
+Invoice numbers are generated by the server per shop and financial year using a transaction-safe sequence. Issued numbers have no gaps; a cancelled invoice keeps its number with status Cancelled.
+BIL-04
+On issue the invoice stores snapshots: customer name/address/tax number, shop details, and for each line the product name, SKU, unit, quantity, unit price, discount and tax. Later edits to products, customers or settings never change an issued invoice.
+BIL-05
+An issued invoice cannot be edited. Corrections are done by cancel-and-reissue or by a credit note, with reason and audit.
+BIL-06
+Printing/PDF export uses the shop's invoice template and settings. Re-prints are logged; an optional "Duplicate copy" marking can be enabled.
+BIL-07
+Split payments (for example cash + UPI) can be recorded at billing; any unpaid balance becomes receivable in the Customer Ledger.
+BIL-08
+A bill may contain product lines and service lines (D-04). Only physical product lines deduct stock; each line has its own type, price snapshot and tax configuration.
+BIL-09
+A credit sale can be converted to an EMI plan (8.10). The invoice remains the single source of the receivable; installments are a schedule for collecting it.
+BIL-10
+Invoice creation is idempotent: a retry with the same key cannot create a duplicate invoice, number, stock deduction or ledger entry.
+Step
+Example
+Expected result
+Product
+Purchase ₹500 + fixed margin ₹100.
+Base selling price ₹600 before configured tax/discount.
+Receive stock
+20 units into PTLS.
+PTLS +20; RTLS unchanged.
+Sell
+2 units at ₹600, discount ₹0.
+Subtotal ₹1,200; PTLS stock becomes 18 before other adjustments.
+Tax (illustration only)
+If an 18% exclusive tax applied.
+Tax ₹216; grand total ₹1,416. Real treatment depends on approved rules (D-05).
+Payment
+Customer pays ₹700 against a ₹1,200 invoice.
+Payment ₹700; outstanding ₹500.
+The tax figures above are arithmetic illustrations, not statements of legal tax treatment. The approved inclusive/exclusive, rounding and exemption rules decide real totals.
+8.6 Customers
+Key data. Customer code, name, type (individual/business), phone, email, address, tax registration number (optional), credit limit, opening balance, status (Active, Inactive, Blocked), notes. For EMI customers: identity and address details required by the shop's EMI policy and optional guarantor details.
+ID
+Rule / requirement
+CUS-01
+Customers are workspace-owned and may be shared by the owner's shops, with transactions and ledger always recorded per shop (recommended; D-14). A PTL customer is never visible to MLT.
+CUS-02
+Duplicate detection on phone/email/tax number warns at creation; merging duplicates is a privileged, audited action that re-points history to the surviving record.
+CUS-03
+Customers with transactions cannot be deleted; they are deactivated or blocked. A blocked customer cannot be billed.
+CUS-04
+A credit limit, if set, is checked at billing: the system warns or blocks according to setting when outstanding + new credit exceeds the limit.
+CUS-05
+The customer profile shows linked sales, outstanding dues, payments and EMI plans, filtered to the shops the viewer may access.
+CUS-06
+Personal data is shown only to roles with customers:view; exports are audited.
+8.7 Suppliers
+Key data. Supplier code, name, contact person, phone, email, address, tax registration number, payment terms, opening payable, status.
+ID
+Rule / requirement
+SUP-01
+Supplier scope follows the same decision as customers (D-14): workspace-owned records with shop-level transactions.
+SUP-02
+Supplier payable is derived from purchases, purchase returns and supplier payments; it is not typed in manually except through an approved opening balance or adjustment.
+SUP-03
+Suppliers with transactions are deactivated, not deleted.
+SUP-04
+A supplier statement shows opening balance, purchases, returns, payments and closing balance for a date range, filtered by permitted shops.
+8.8 Payments
+Types. Customer receipt, supplier payment, customer refund, supplier refund. Key data. Payment number, date, shop, party, amount, method (Cash, UPI, Card, Bank transfer, Cheque — configurable, D-16), reference/transaction number, allocations, status (Recorded, Cleared, Reversed).
+ID
+Rule / requirement
+PAY-01
+Amount must be greater than zero. A payment always belongs to one shop and one party.
+PAY-02
+Allocations to invoices/purchases cannot exceed the payment amount, and each allocation cannot exceed that document's outstanding amount.
+PAY-03
+Any unallocated amount is kept visibly as customer advance/credit (or supplier advance) and is never silently dropped or applied to the wrong document. Refunding it is a separate payment (D-16).
+PAY-04
+Payment creation is idempotent; a repeated submission cannot record the money twice.
+PAY-05
+Recorded payments cannot be edited or hard-deleted. Mistakes are fixed by a reversing entry (status Reversed) and a new payment, with reason and audit.
+PAY-06
+If cheques are supported, a bounced cheque reverses the allocation and restores the outstanding amount (D-16).
+PAY-07
+Payments appear in the ledger exactly once and are never counted again as sales revenue.
+PAY-08
+Receipts can be printed/exported; future-dated payments are rejected unless explicitly allowed.
+Step
+Example
+Expected result
+Invoice
+₹1,200 issued.
+Outstanding ₹1,200.
+Part payment
+Customer pays ₹700.
+Outstanding ₹500; invoice status Partly paid.
+Final payment
+Customer pays ₹500.
+Outstanding ₹0; invoice status Paid.
+Over-payment
+Customer pays ₹600 against ₹500 due.
+₹500 allocated; ₹100 retained as advance/credit.
+8.9 Customer Ledger
+Purpose. A traceable account of what each customer owes, built only from posted source documents. Sign convention. Positive balance = customer owes the business. Debits increase the balance; credits reduce it.
+Entry type
+Effect
+Source
+Opening balance
+Debit/credit (once)
+Approved opening-balance entry
+Invoice
+Debit
+Issued invoice
+Receipt
+Credit
+Customer payment
+Credit note / sales return
+Credit
+Return document
+EMI charge or late fee
+Debit
+Approved EMI rule
+Adjustment
+Debit or credit
+Approved adjustment with reason
+Reversal
+Opposite of the reversed entry
+Cancelled document or reversed payment
+ID
+Rule / requirement
+LED-01
+Ledger entries are append-only. Nothing is edited or deleted; corrections are new reversing entries.
+LED-02
+Every entry references its source document, shop, date, actor and (where relevant) allocation.
+LED-03
+Balance = total debits − total credits. The opening balance is posted once; reports show opening, movements and closing so carried-forward balances are not counted twice.
+LED-04
+An invoice and its payments appear once each. EMI installment collections are payments allocated to the invoice, not extra receivables.
+LED-05
+Views are available per shop and (for owners) combined across the owner's shops, never across workspaces.
+LED-06
+A daily/on-demand reconciliation check confirms ledger balance = sum of invoice outstanding + charges − unapplied credits; differences are reported.
+LED-07
+Statements can be printed/exported; export is permission-controlled and audited.
+8.10 EMI / Installments
+Purpose. Let a shop sell on installments, schedule the collections, track what is due/paid/overdue, and keep the remaining balance accurate.
+Key data. Plan number, customer, shop, linked invoice, invoice total, down payment, financed amount, interest method (None, Flat, Reducing balance — D-15), rate, number of installments, frequency (monthly by default), first due date, grace days, late-fee rule, status, schedule version. Each installment has number, due date, principal part, interest part, amount due, amount paid, status.
+Plan status. Draft → Active → Completed; Overdue (derived), Defaulted, Foreclosed, Cancelled. Installment status. Upcoming → Due → Partly paid → Paid; Overdue; Waived.
+ID
+Rule / requirement
+EMI-01
+A plan is created from an invoice for an identified customer. The down payment is recorded as a normal payment against that invoice; the financed amount is invoice total − down payment.
+EMI-02
+The server generates the schedule from the approved formula. The total of all installments equals financed amount + interest, with any rounding difference placed in the final installment. The customer-facing schedule is shown for confirmation before the plan is activated.
+EMI-03
+Collections are allocated to the oldest due installment first. Within an installment the default order is late fee → interest → principal (D-15). A collection larger than the amount due continues to the next installment or is held as advance.
+EMI-04
+An installment is Overdue when due date + grace days has passed and a balance remains. Overdue status is computed on read and/or by a scheduled job; it is never typed in manually.
+EMI-05
+Late fees apply only if configured; the server calculates them. Waiving a fee or installment needs emi:approve and a reason.
+EMI-06
+Early settlement/foreclosure computes the remaining payable using the approved rule (for example principal outstanding plus accrued interest, with or without rebate; D-15) and closes the plan when paid.
+EMI-07
+Rescheduling creates a new schedule version; the previous version is retained read-only. It needs emi:approve and is audited.
+EMI-08
+If the underlying invoice is cancelled or returned, the plan is cancelled/adjusted and the effects on ledger and payments are reversed through the standard reversal flow.
+EMI-09
+The receivable exists once (on the invoice). Installments describe how it is collected and MUST NOT be double-counted in the ledger or reports.
+EMI-10
+Due-date reminders (in-app, and SMS/WhatsApp/email if enabled; D-23) are generated only for customers the user may access.
+EMI-11
+Dashboards show due today, due this week, overdue count and amount, collections in period and remaining balance, per shop and combined for the owner.
+Item
+Example (zero-interest, illustrative)
+Result
+Invoice
+₹12,000 total.
+Receivable ₹12,000.
+Down payment
+₹3,000 paid at billing.
+Outstanding ₹9,000.
+Plan
+3 monthly installments, no interest.
+₹3,000 each on due dates 1, 2, 3 months after the first due date.
+First collection
+₹3,000 on time.
+Installment 1 Paid; remaining ₹6,000.
+Missed installment
+Installment 2 unpaid after grace days.
+Installment 2 Overdue; plan shows Overdue; appears in the overdue report.
+9. People Modules
+9.1 Employees
+Key data. Employee code, name, phone, email, address, joining date, designation, employment type, primary shop and any additional shops, linked user (optional), salary structure, status (Active, On leave, Resigned, Terminated), bank details and identity documents (sensitive).
+ID
+Rule / requirement
+EMP-01
+An employee belongs to one workspace and is assigned to at least one shop. Shop transfers are recorded with effective dates so history is preserved.
+EMP-02
+Creating an employee does not create a login. A login is granted separately and linked one-to-one (3.2).
+EMP-03
+Resignation/termination ends employment with an effective date. Records are retained; the linked user SHOULD be deactivated at the same time.
+EMP-04
+Bank details, identity numbers and salary are restricted fields shown only with employees:view_sensitive / payroll permissions.
+EMP-05
+Employee codes are unique per workspace and generated by the server.
+EMP-06
+Shop users see only employees of their assigned shops; owners see all employees in their workspace.
+9.2 Attendance
+Key data. Employee, shop, date, status (Present, Absent, Half-day, Paid leave, Unpaid leave, Weekly off, Holiday), check-in/check-out time where used, worked hours, source (manual / device / app), remarks. Capture method is open (D-18); manual entry by an authorized user is the baseline.
+ID
+Rule / requirement
+ATT-01
+One attendance status per employee per date. If an employee works at two shops on a day, the shop for that day is recorded and the day is counted once.
+ATT-02
+Future dates cannot be marked. Back-dated entries beyond the configured window need attendance:edit with a reason.
+ATT-03
+Corrections never overwrite silently: the original value, new value, reason, actor and time are kept in audit history.
+ATT-04
+Once a payroll period using the attendance is approved, those dates are locked. Unlocking needs attendance:approve and re-opens the payroll for recalculation.
+ATT-05
+Users can mark or view attendance only for employees of shops they are assigned to.
+ATT-06
+Monthly summary shows working days, present, absent, half-days, leave, holidays and (if check-in is used) late arrivals/overtime.
+ATT-07
+Holidays and weekly-off days are configured in Settings (HR) and applied automatically.
+9.3 Salary / Payroll
+Purpose. Prepare, approve and pay monthly salaries from salary structures and attendance, and issue payslips.
+Payroll period status. Draft → Calculated → Approved → Paid → Closed (locked). Components. Basic pay, allowances, overtime, deductions (advance recovery, absence, configured statutory deductions), net pay.
+ID
+Rule / requirement
+PAYR-01
+Only users with payroll permissions can view or process payroll. Shop admins do not see payroll unless explicitly granted; All Shops payroll is visible only to the owner (or authorized role).
+PAYR-02
+Calculation inputs (salary structure, attendance summary, adjustments) are stored as a snapshot with each payroll run so the result can be reproduced later.
+PAYR-03
+The preparer and approver SHOULD be different users (payroll:create vs payroll:approve).
+PAYR-04
+An approved payroll is locked. Corrections are made as adjustments in a later period or by an approved reversal, never by silent edit.
+PAYR-05
+Salary advances and loans are recorded with a recovery schedule and deducted automatically up to the configured limit.
+PAYR-06
+Statutory deductions, rates and thresholds are configured settings with effective dates; they are not hard-coded and are confirmed with the business accountant (D-17).
+PAYR-07
+Payment of salary records method, date and reference, and marks each employee's net pay Paid. Partial payment is allowed and tracked.
+PAYR-08
+Payslips are generated as PDF, viewable by authorized payroll users and by the employee (if linked to a user). Exports are audited.
+PAYR-09
+Payroll data is excluded from general reports and exports unless the user holds payroll permissions.
+Item
+Example (illustrative, calendar-day proration)
+Result
+Salary
+Basic ₹20,000 per month; 30-day month.
+Gross base ₹20,000.
+Attendance
+2 days unpaid absence.
+Paid days 28.
+Prorated basic
+₹20,000 × 28 / 30.
+₹18,666.67.
+Net pay
+Plus allowances, minus other deductions.
+Shown on payslip. The proration method (calendar vs working days) is decision D-17.
+10. Admin Modules
+10.1 Shops
+Key data. Shop name, code, address, phone, email, registration/tax details, invoice prefix, time zone, manager, status (Active, Inactive, Closed), settings overrides.
+ID
+Rule / requirement
+SHP-01
+A shop is always created inside the authenticated owner's workspace; the workspace is never taken from the request body.
+SHP-02
+Shop name/code uniqueness follows D-09. The code is immutable after the first transaction because it may be part of document numbers.
+SHP-03
+The number of shops per workspace can be limited by company configuration.
+SHP-04
+Deactivating a shop blocks new transactions but keeps all history, reports and collections. A shop with transactions can never be hard-deleted.
+SHP-05
+A new shop receives workspace default settings only; no private data (customers, prices, stock) is copied from another shop unless the owner explicitly chooses an import.
+SHP-06
+User-to-shop assignment can be managed from the shop screen or from Roles & Permissions; both use the same API and rules.
+10.2 Roles & Permissions
+Capabilities. User list and status, create/invite user, assign shops, role templates and custom roles, permission matrix per module/action, per-shop overrides, activate/deactivate, force password reset, revoke sessions, view effective permissions for a user, view audit trail of permission changes.
+ID
+Rule / requirement
+ROL-01
+Grant ceiling: a grantor can give only permissions they hold, within shops they control. Violations are rejected with an authorization error.
+ROL-02
+A workspace must always keep at least one active Owner; the last owner cannot be demoted or deactivated by themselves.
+ROL-03
+Every change to assignments, roles or permissions writes an audit event with actor, target user, shop, before and after.
+ROL-04
+Changes are effective on the next request (5.7).
+ROL-05
+The dependency rules in 5.3 are enforced by the server and reflected by the UI (for example enabling Edit also requires View).
+ROL-06
+Owners cannot create or assign company-level roles. Company roles are managed only by company administrators.
+ROL-07
+The "effective permissions" view explains for a user and shop which role/override grants or denies each action, to simplify support and audits.
+10.3 Reports
+The report catalogue, metric definitions and dashboards are in Section 16. All reports follow these rules:
+ID
+Rule / requirement
+RPT-01
+Reports are filtered on the server by the user's shop assignments and report permissions; the UI shop selector narrows the data further but never widens it.
+RPT-02
+Each report shows its scope (workspace, shop(s)), date range, time zone and generation time.
+RPT-03
+Exporting (CSV, XLSX, PDF) requires reports:export or the module's export permission and is audited.
+RPT-04
+Large reports are paginated or generated asynchronously and never expose rows from other workspaces.
+10.4 Settings
+Settings are stored in the database and read by the server business rules. Clients display them but never hold business constants of their own.
+Setting group
+Examples
+Level
+Changed by
+Business profile
+Legal/trade name, address, logo, contact, registration numbers.
+Workspace; shop override
+Owner
+Tax
+Tax rates, inclusive/exclusive default, rounding method, exemptions, effective dates.
+Workspace; shop override
+Owner (versioned)
+Invoice & numbering
+Prefix, financial-year start, number format, terms/footer, print layout, copies.
+Shop
+Owner / authorized admin
+Pricing defaults
+Discount limits per role, price rounding, whether price override is allowed.
+Workspace; shop override
+Owner
+Inventory
+Allow negative stock, default reorder level, adjustment/transfer approval thresholds.
+Shop
+Owner / authorized admin
+Payments
+Payment methods, advance handling, cheque support, future-date rule.
+Workspace
+Owner
+EMI
+Interest methods, late-fee rule, grace days, allocation order, reminder rules.
+Workspace; shop override
+Owner
+HR & payroll
+Working days, weekly off, holidays, payroll cycle, proration method, statutory components.
+Workspace
+Owner (payroll role)
+Security
+Session timeout, password rules, MFA requirement, lockout thresholds.
+Workspace
+Owner
+Notifications
+Channels and templates for invoices, EMI reminders (if enabled).
+Workspace
+Owner
+ID
+Rule / requirement
+SET-01
+Every settings change is audited with before/after values and actor.
+SET-02
+Tax and numbering changes take effect for new documents from an effective date. Existing documents are never altered.
+SET-03
+Changing invoice numbering after invoices exist requires confirmation and cannot create duplicates or reuse issued numbers.
+SET-04
+Settings pages show only groups the user may edit; others are hidden or read-only.
+11. Application / Software Service Workflow
+Software/application services are not physical stock items. They may be sold by NSYU and invoiced separately or alongside physical products if the application supports mixed invoices (D-04).
+Lead/enquiry: record customer, contact, requirements, source and assigned employee.
+Quotation: define scope, deliverables, price, taxes, validity and terms.
+Approval: record customer acceptance and internal approval where required.
+Service order/project: create ID, team, milestones, due dates and status.
+Delivery: update milestone progress, attach evidence and record approvals.
+Invoice: bill using the approved quote/order and retain price/tax snapshots.
+Payment: record partial/full payment, refund or outstanding balance against the invoice.
+Closure: close after delivery and financial checks, retaining an audit trail.
+11.1 Mixed product/service invoice
+A bill may contain a physical product and a software setup service if supported. Only physical product lines deduct stock. Service lines must not create physical inventory movement. Each line needs its own type, price snapshot and tax configuration.
+11.2 Where services live in the confirmed menu
+The confirmed 17-item sidebar has no dedicated Enquiries, Quotations or Projects module. Two options exist and the choice is open (D-19):
+Option
+How it works
+Effect
+A — Minimum (default)
+Services are Products of type Service, sold through Billing and collected through Payments/Customer Ledger. No project tracking.
+Fits the confirmed menu with no changes.
+B — Full lifecycle
+Add a Services menu group (Enquiries, Quotations, Projects) with the permissions in 11.3.
+Requires an approved addition to the sidebar and its own acceptance tests.
+This document does not change the confirmed sidebar. Option B is described so the permissions, data and tests are ready if the owner approves it.
+11.3 Suggested service permissions (Option B)
+Enquiries: View / Create / Edit / Assign.
+Quotations: View / Create / Edit / Approve / Convert to Order.
+Projects: View / Create / Update Milestones / Close.
+Service Billing: Create / Approve / Record Payment.
+Service Reports: View / Export.
+11.4 Service rules
+ID
+Rule / requirement
+SVC-01
+Service lines never change shop stock; a pure-service invoice has no stock movement.
+SVC-02
+A quotation converts to an order and then an invoice without retyping; the invoice keeps price/tax snapshots from the approved quotation.
+SVC-03
+A project cannot be closed while it has unbilled approved milestones or unresolved disputes unless an approver overrides with a reason.
+SVC-04
+Service revenue reports separate one-time services from any recurring/subscription services if those are introduced.
+12. Cross-Cutting Business Rules
+12.1 Money and quantities
+Store money as exact decimals (for example numeric(14,2)) or integer paise; never binary floating point.
+Currency is ₹ with two decimals. Rounding happens at one defined step and with one defined mode (D-05); the same rule is used by API, web and Flutter.
+Quantities allow the decimal places needed by the unit (whole numbers for pieces, up to three decimals for weight/length).
+Shared test vectors (input → expected totals) are maintained and run against API, React and Flutter calculation code.
+12.2 Dates, time and financial year
+Timestamps are stored in UTC; screens and reports display Asia/Kolkata (or the shop time zone).
+Documents also carry a business date (for example invoice date) separate from the creation timestamp.
+Financial year default is 1 April – 31 March (D-20) and drives numbering sequences and period reports.
+12.3 Document numbering
+Document
+Recommended pattern
+Rules
+Invoice
+<shop prefix>/<FY>/<6-digit> e.g. PTLS/2026-27/000001
+Per shop and FY; gapless once issued; cancelled numbers are kept.
+Purchase
+PUR/<shop>/<FY>/<6-digit>
+Unique; supplier invoice number stored separately.
+Payment / receipt
+RCT|PAY/<shop>/<FY>/<6-digit>
+Unique per shop and FY.
+Credit note / return
+CN|PR/<shop>/<FY>/<6-digit>
+Always references the original document.
+EMI plan
+EMI/<shop>/<FY>/<6-digit>
+Unique; schedule versions numbered v1, v2 …
+Employee
+EMP-<workspace>-<5-digit>
+Unique per workspace.
+Numbers are allocated inside the same database transaction that creates the document (row-locked sequence table), so concurrent requests cannot receive the same number and a rolled-back transaction does not leave a gap in issued numbers.
+12.4 Document lifecycle and immutability
+State
+Editable?
+How to change it
+Draft
+Yes
+Edit freely by authorized users; no stock/ledger effect.
+Posted / Issued
+No
+Cancel, reverse, return or credit note — each with reason, permission and audit.
+Cancelled / Reversed
+No
+Final; stays visible with its reversal entries.
+12.5 Idempotency
+Create operations for invoices, purchases, payments and EMI collections accept an idempotency key (client-generated unique value). The server stores the key with the result for a retention window; a repeat with the same key and same payload returns the original response, and a repeat with the same key but different payload is rejected.
+12.6 Concurrency
+Editable records carry a version number; an update with an outdated version is rejected with a conflict error and the user is asked to reload.
+Stock and sequence updates use row locks or atomic conditional statements inside the transaction.
+Operations that touch stock, invoice, payment and ledger run in one transaction and roll back completely on any failure.
+12.7 Confirmations, reasons and approvals
+Action
+Confirmation / reason
+Approval (default; thresholds per D-10)
+Cancel / void invoice
+Confirm + reason
+Approve if after payment or beyond the configured window
+Discount above role limit
+Reason
+billing:approve
+Stock adjustment
+Reason code
+inventory:approve above threshold
+Payment reversal
+Confirm + reason
+Approve
+Ledger adjustment
+Reason
+customer_ledger:approve
+EMI waiver / reschedule
+Reason
+emi:approve
+Payroll approval / unlock
+Confirm
+payroll:approve / attendance:approve
+Permission change
+Confirm
+Owner within own authority
+12.8 Standard error categories
+HTTP
+Meaning
+Typical cause
+400
+Validation error
+Missing/invalid field; error lists the fields.
+401
+Not authenticated
+Missing, expired or revoked session.
+403
+Not authorized
+Assigned to the shop but lacks the action permission.
+404
+Not found
+Record does not exist, or belongs to a workspace/shop the caller cannot access (avoids revealing existence).
+409
+Conflict
+Duplicate key, version conflict, insufficient stock, document already posted.
+422
+Business rule violation
+For example payment exceeds outstanding, return exceeds sold quantity.
+429
+Rate limited
+Too many requests/attempts.
+500
+Server error
+Unexpected failure; generic message to the user, details in protected logs.
+12.9 Lists, search and export
+Every list endpoint supports server-side pagination, sorting, text search and relevant filters (date range, status, party, shop).
+Shop selection scopes tables, search, filters, pagination, forms, reports and write actions consistently.
+Exports respect the same scope and permissions as the screen and are audited.
+12.10 Files and attachments
+Invoice PDFs, payslips, attachments and uploaded documents are stored in access-controlled storage. Files are served through authorized, short-lived links; they are never placed in public buckets. Upload size and type are validated and files are scanned where possible.
+12.11 Soft delete and retention
+Business records are deactivated, archived or reversed rather than physically deleted. Retention periods for financial, HR and audit data are a business/legal decision (D-11); purges, if any, are scheduled, approved and logged.
+13. Data Model and Tenant Isolation
+The following is a logical target model, not a claim that these exact tables already exist. Compare against existing models and migrations before changing the database.
+13.1 Logical entities
+Logical entity
+Important fields / relationships
+Purpose
+companies
+id, name, status
+Represents NSYU.
+workspaces
+id, company_id, code (PTL/MLT), owner_user_id, status
+Separate owner workspaces.
+shops
+id, workspace_id, name, code, prefix, timezone, status
+Each shop belongs to one workspace.
+users
+id, normalized_email, password_hash, status, permission_version
+Unique login identity; never a plaintext password.
+user_workspace_access
+user_id, workspace_id, role_id, status
+Workspace membership.
+user_shop_access
+user_id, shop_id, role_id, status, granted_by, timestamps
+Per-shop access and role.
+roles / role_permissions
+role_id, workspace_id (null for templates), module, action, allowed
+Role templates, custom roles, atomic permissions.
+products
+id, catalogue scope, sku, name, type, unit, purchase_price, margin_amount, selling_price, tax_config, status
+Product/service catalogue.
+shop_inventory
+shop_id, product_id, quantity, version
+Shop-specific stock balance.
+stock_movements
+id, shop_id, product_id, qty_delta, type, source_type/id, reason, actor, created_at
+Immutable stock history.
+stock_transfers
+id, from_shop_id, to_shop_id, status, lines
+Inter-shop transfers within a workspace.
+customers / suppliers
+id, workspace_id, code, name, contact, tax_no, credit_limit, status
+Parties (scope per D-14).
+purchases / purchase_items
+shop_id, supplier_id, number, status, qty, unit_cost snapshots
+Purchase and receipt history.
+sales / sale_items
+shop_id, customer_id, status, totals, snapshots
+Sales records.
+invoices / invoice_items
+shop_id, sale_id, number, fiscal_year, totals, line snapshots, status
+Issued invoices.
+credit_notes / returns
+shop_id, original_doc, lines, reason, status
+Sales/purchase returns.
+payments / payment_allocations
+shop_id, party, amount, method, reference, status; payment_id, document_id, amount
+Receipts, supplier payments and their allocation.
+ledger_entries
+workspace_id, shop_id, party_type/id, entry_type, debit, credit, source ref, date
+Append-only traceable balances.
+emi_plans / emi_installments
+plan: shop_id, customer_id, invoice_id, financed, method, rate, version, status; installment: no, due_date, principal, interest, due, paid, status
+Installment schedules and collections.
+employees / employee_shop_history
+workspace_id, code, user_id (opt), status; shop_id, from, to
+HR records and shop assignment history.
+attendance_records
+employee_id, shop_id, date, status, in/out, source, locked
+Daily attendance.
+salary_structures / payroll_runs / payroll_items
+structure components; run: period, status; item: employee, gross, deductions, net, paid, input snapshot
+Payroll.
+service_orders / milestones
+workspace_id, customer, owner, status, dates (Option B)
+Service delivery.
+settings
+scope (workspace/shop), key, value, effective_from, version
+Configuration.
+number_sequences
+shop_id, doc_type, fiscal_year, last_number
+Gapless numbering.
+idempotency_keys
+scope, key, request_hash, response, expires_at
+Duplicate-submission protection.
+audit_logs
+actor, workspace, shop, action, entity, entity_id, before/after, outcome, timestamp, ip
+Security/business change history.
+13.2 Data ownership rules
+Every shop-owned record must have a valid shop relationship.
+Every shop must resolve to one workspace/owner.
+Do not trust workspaceId/shopId from the browser without server-side assignment validation.
+Decide explicitly whether product/service catalogues are company-shared or workspace-specific (D-03); stock stays shop-specific.
+Use database constraints and transactions to preserve integrity.
+Scope queries in service/repository paths, not only in UI filters or controller checks.
+13.3 Constraints and indexes (recommended)
+Area
+Constraint / index
+Identity
+Unique normalized email; unique (user_id, shop_id) assignment; foreign keys with restricted delete.
+Shops
+Unique (workspace_id, code) (or global, per D-09); status check.
+Stock
+Unique (shop_id, product_id); check quantity ≥ 0 unless negative stock allowed; movements append-only.
+Documents
+Unique (shop_id, fiscal_year, number) for invoices/purchases/payments; status transitions validated; amounts ≥ 0 checks.
+Cross-tenant integrity
+Child tables carry shop_id (and workspace_id where useful) and composite foreign keys so a line cannot point to a product, customer or invoice from another workspace.
+Payments
+Sum of allocations per payment ≤ payment amount; allocation ≤ document outstanding (enforced in transaction, verified by reconciliation).
+Idempotency
+Unique (scope, key).
+Performance
+Indexes on (shop_id, date), (shop_id, status), (customer_id), (due_date) for EMI, and search columns used by lists.
+13.4 Owner isolation
+PTL requests must be scoped to PTL and the authenticated user's PTL permissions. MLT users must not access PTL records by guessing IDs. PostgreSQL row-level security (RLS) may provide defense-in-depth where appropriate, but it does not replace backend authorization. If Supabase client libraries could reach tables directly, RLS MUST be enabled on every business table; the preferred design is that clients only call the backend API.
+13.5 Catalogue decision
+Business decision (D-03): are products/services maintained centrally by NSYU and shared with PTL/MLT, or does each workspace own its catalogue? A common option is a company master catalogue with workspace/shop activation and local pricing/stock. Select and document one model before migration.
+13.6 Migration and backfill
+Inventory existing tables, columns and routes; produce a mapping to this model and note gaps.
+Back up the database and verify the restore before any structural change.
+Add workspace/shop relationships and backfill every existing record; any record that cannot be assigned unambiguously goes to a review list, not a guess.
+Run reviewed, versioned migrations (no automatic schema sync in production).
+Run reconciliation (stock = movements; ledger = invoices − receipts) before and after migration and keep the evidence.
+14. API and Frontend Architecture
+Layer
+Technology / responsibility
+Rule
+Mobile
+Flutter Android/iOS
+Uses the same API; Flutter Web is not required.
+Web
+React + TypeScript + Vite
+Routing, forms, state and permission-aware navigation.
+API
+Node.js + Express + TypeScript
+Authentication, authorization, validation, rules, transactions, audit.
+ORM
+Sequelize
+Models, associations and migrations consistent with the current project.
+Database
+PostgreSQL/Supabase PostgreSQL
+Authoritative persistent business data.
+14.1 API conventions
+JSON over HTTPS; versioned base path (for example /api/v1) so mobile apps can be supported while changing.
+Shop-scoped resources live under /api/shops/:shopId/...; workspace-scoped resources under /api/workspaces/:id/....
+Lists return items, page, pageSize, total; money as decimal strings or integer paise consistently.
+Create endpoints for invoices, purchases, payments and EMI collections accept an Idempotency-Key header.
+Mobile requests may send an app-version header so unsupported versions can be told to update.
+14.2 Endpoint catalogue (illustrative)
+Endpoint names are examples only. Inspect existing routes and extend compatibly instead of breaking working APIs. Every endpoint also performs the authorization steps in 5.4.
+Identity and access
+Endpoint
+Purpose
+Required authorization
+POST /api/auth/login
+Authenticate.
+Valid credentials, active account.
+POST /api/auth/logout
+End session.
+Valid session.
+POST /api/auth/password/reset
+Request/complete reset.
+Public, rate-limited, generic response.
+GET /api/me
+Current identity/profile.
+Valid session.
+GET /api/me/workspaces
+Allowed workspaces, shops and effective permissions.
+Caller's assignments only.
+GET /api/workspaces/:id/shops
+List workspace shops.
+Workspace/shop scope.
+POST /api/workspaces/:id/shops
+Create shop.
+shops:create
+PATCH /api/shops/:id
+Edit / activate / deactivate shop.
+shops:edit | shops:delete
+GET /api/workspaces/:id/users
+List users and assignments.
+roles:view
+PUT /api/shops/:id/users/:userId/access
+Grant/change shop access.
+roles:edit + grant-ceiling check
+DELETE /api/shops/:id/users/:userId/access
+Remove shop access.
+roles:edit
+GET/POST/PATCH /api/workspaces/:id/roles
+Roles and permission sets.
+roles:view/create/edit
+Business modules (all under /api/shops/:shopId)
+Endpoint
+Purpose
+Required authorization
+GET/POST /products, GET/PATCH /products/:id
+Catalogue list/create/view/edit/archive.
+products:view/create/edit/delete
+GET /inventory, GET /inventory/movements
+Stock and movement history.
+inventory:view
+POST /inventory/adjustments
+Stock adjustment.
+inventory:edit (+approve above threshold)
+POST /inventory/transfers, POST /inventory/transfers/:id/receive
+Dispatch and receive transfer.
+inventory:create at source / destination
+GET/POST /purchases, POST /purchases/:id/receive
+Purchases and receipt.
+purchase:view/create
+POST /purchases/:id/returns, POST /purchases/:id/cancel
+Purchase return / cancel.
+purchase:create | purchase:delete
+GET/POST /sales, GET /sales/:id
+Sales records.
+sales:view/create
+POST /sales/:id/returns, POST /sales/:id/cancel
+Sales return / cancel.
+sales:create | sales:delete (+approve)
+GET/POST /invoices, GET /invoices/:id/pdf
+Invoices and print/export.
+billing:view/create/export
+POST /invoices/:id/cancel
+Cancel invoice.
+billing:delete (+approve)
+GET/POST /customers, GET/PATCH /customers/:id
+Customers.
+customers:view/create/edit
+GET/POST /suppliers, GET/PATCH /suppliers/:id
+Suppliers.
+suppliers:view/create/edit
+GET/POST /payments, POST /payments/:id/reverse
+Receipts, supplier payments, reversal.
+payments:view/create/delete
+GET /customers/:id/ledger, POST /customers/:id/ledger/adjustments
+Customer ledger and adjustment.
+customer_ledger:view/create (+approve)
+GET/POST /emi/plans, GET /emi/plans/:id
+EMI plans and schedules.
+emi:view/create
+POST /emi/plans/:id/collections
+Collect installment.
+emi:collect
+POST /emi/plans/:id/waivers, /reschedule, /foreclose
+Waive, reschedule, settle.
+emi:approve
+GET /emi/overdue
+Overdue list.
+emi:view
+GET/POST /employees, GET/PATCH /employees/:id
+Employees.
+employees:view/create/edit
+GET/POST /attendance, PATCH /attendance/:id
+Attendance and corrections.
+attendance:view/create/edit
+GET/POST /payroll/runs, POST /payroll/runs/:id/approve, /pay
+Payroll lifecycle.
+payroll:view/create/approve/pay
+GET /reports/:type
+Report data (sales, stock, payments, ledger, EMI, payroll …).
+reports:view + module permission
+GET/PUT /settings/:group
+Settings.
+settings:view/edit
+GET /audit-logs
+Audit history.
+audit:view
+14.3 API request pattern
+Authenticate the request.
+Resolve the user's identity and the target workspace/shop context from the record or path.
+Check assignment and action permission.
+Validate payload and business rules.
+Execute related database writes transactionally (with idempotency check first).
+Record an audit event for sensitive/financial actions.
+Return only authorized fields with a consistent error format.
+14.4 Error format
+All errors use one JSON shape so web and mobile can handle them in one place:
+{ "error": { "code": "INSUFFICIENT_STOCK", "message": "Only 1 unit available", "status": 409,  "fields": { "items[0].quantity": "exceeds stock" }, "requestId": "..." } }
+14.5 Client rules
+React and Flutter use the same API contract and the same business calculations.
+No fake production data, hardcoded business credentials or mock fallback responses in production.
+The frontend hides unauthorized controls for usability; the API is authoritative.
+Show the active shop/workspace clearly; validate the selected shop server-side.
+Use idempotency keys (or equivalent duplicate-submission protection) for bills/payments, and disable submit buttons while a request is in flight.
+Never place database passwords, service-role keys or private service-account keys in web or mobile bundles; clients talk only to the backend API.
+14.6 Mobile-specific requirements
+Tokens in Keychain/Keystore; screens containing sensitive data respect OS privacy settings where practical.
+Printing/sharing invoices uses the OS share/print sheet with server-generated PDFs.
+Offline operation is not assumed (D-24). If added, queued writes must carry idempotency keys and conflicts must be resolved by the server rules.
+A minimum supported app version can be enforced from the server.
+15. Security, Audit and Reliability
+15.1 Credentials and secrets
+Store password hashes, never plaintext passwords.
+Use HTTPS for deployed clients and APIs.
+Keep secrets in environment/secret management, not source control or frontend bundles.
+Remove hardcoded database credential fallbacks; fail fast if production configuration is missing.
+Never package database passwords, service-role keys or private service-account keys in web/mobile clients.
+Rotate any key or credential that has been exposed (including any password shared in chat or documents) and review access history.
+15.2 Application security controls
+Area
+Requirement
+Input handling
+Validate and sanitise all input server-side; use parameterised queries via the ORM; never build SQL from user text.
+Output / XSS
+Escape user-supplied content in web and PDF output; use a restrictive Content-Security-Policy.
+CSRF / tokens
+If cookies are used for sessions, apply SameSite and CSRF protection; if bearer tokens are used, keep them out of long-lived browser storage where possible.
+Rate limiting
+Throttle login, password reset and write-heavy endpoints; return 429.
+Authorization tests
+Automated tests for every protected endpoint prove cross-workspace, unassigned-shop and missing-permission calls are denied.
+Files
+Validate type/size, store privately, serve through authorized short-lived links.
+Dependencies
+Automated dependency and secret scanning in CI; patch critical issues promptly.
+Privacy
+Collect only needed personal data; restrict customer, employee and payroll data by permission; log exports.
+15.3 Deployment and database
+Use an explicit CORS origin allowlist, especially when credentials are enabled.
+The public health endpoint reveals minimal status; detailed DB errors belong in protected logs.
+Use reviewed migrations for production schema changes; avoid unsafe automatic schema sync in production.
+Separate dev/test/prod configuration and verify the active database/profile at startup so production never runs on an unintended development or in-memory database.
+Back up data and test restoration before releases affecting financial records.
+15.4 Sheets/Drive retirement
+If PostgreSQL/Supabase is authoritative, Google Sheets/Drive must not remain a competing write path for products, sales, invoices, payments or ledgers. Inventory existing integrations and replace business writes with API calls. Retain file storage only for a separately approved use case; never expose a private service-account key in an app.
+15.5 Audit trail
+Record actor, timestamp, workspace, shop, action, entity, outcome and (for changes) before/after values.
+Audit permission changes, user/shop assignments, price changes, invoice cancellation, stock adjustments, payment edits/reversals, ledger adjustments, EMI waivers/reschedules, payroll approval/unlock, settings changes, exports and logins/lockouts.
+Do not log passwords, access tokens or private keys.
+Audit logs are append-only, visible only to authorized roles, and retained per D-11.
+Use reversals/adjustments for posted financial records instead of silent edits or hard deletes.
+15.6 Reliability, backup and recovery
+Automated backups with point-in-time recovery if the platform supports it; restoration is tested on a schedule, not only assumed.
+Recovery point and recovery time objectives (RPO/RTO) are defined with the business (D-11).
+Monitoring and alerts for API errors, slow queries, failed jobs (for example overdue-status or reminder jobs) and reconciliation differences.
+Structured logs with request IDs, kept free of secrets and personal data where possible.
+A documented rollback plan accompanies every release that changes financial data structures.
+16. Reports and Dashboards
+16.1 Report catalogue
+Report
+Owner view
+Shop user view
+Sales
+Combined own-workspace total and shop breakdown.
+Assigned shops only, if reports:view.
+Purchases
+Purchases by supplier, product, shop and period.
+Assigned shops only; cost fields restricted.
+Stock / inventory
+Shop-wise and combined inventory, low stock, movements, valuation.
+Assigned shops only; cost/valuation fields may be restricted.
+Payments / outstanding
+Workspace and shop-level receivables and payables, ageing.
+Authorized payment/ledger scope only.
+Customer ledger / statements
+Customers in own workspace, filtered by shop as configured.
+Assigned shop/customer scope only.
+Supplier ledger
+Supplier balances and purchase activity.
+Only if permission granted.
+EMI / installments
+Active plans, due, overdue, collections, remaining balance.
+Assigned shops and permitted modules.
+Employees / attendance
+Headcount, attendance summary, leave and absence.
+Assigned shops, if permitted.
+Payroll
+Payroll register and payslips for owner's workspace if authorized.
+Restricted HR/payroll roles only.
+Application services
+Enquiries, quotations, projects, milestones, invoices, payments (if Option B).
+Assigned projects and permitted modules.
+Tax summary
+Tax charged and tax on purchases by period and rate.
+Only if permission granted.
+Audit report
+Activity history for the owner's authorized scope.
+Only if explicitly granted.
+16.2 Metric definitions
+Combined totals must avoid double-counting payments, shared records and carried-forward balances. Label these measures distinctly everywhere:
+Measure
+Definition
+Invoice total (billed)
+Sum of grand totals of issued, non-cancelled invoices in the period, net of credit notes.
+Collections
+Sum of customer payments received in the period (by payment date), regardless of invoice date.
+Outstanding (receivable)
+Sum over invoices of total − allocated payments − credits, at the report date.
+Revenue
+Billed value excluding tax, net of returns/credit notes (recognition rules per business).
+Gross margin
+Selling value − purchase-cost snapshot of items sold (requires cost permission).
+Stock value
+Quantity on hand × valuation cost under the chosen costing method (D-12).
+Overdue EMI
+Installment balance where due date + grace days < report date.
+Reports use a consistent time zone (IST by default), the ₹ currency and one rounding rule.
+16.3 Dashboard widgets by role
+Role
+Widgets
+Owner
+All Shops / single-shop toggle; billed vs collected; outstanding; low-stock count; EMI due/overdue; top products; payroll due (if authorized).
+Shop Admin / Manager
+Today's sales and collections; low stock; pending approvals; EMI due; attendance today.
+Cashier
+Today's bills and collections; quick-create bill; installments due today.
+Inventory User
+Low stock; pending receipts; recent movements; pending transfers.
+Read-only
+Only widgets for modules they can view.
+17. Non-Functional Requirements
+Area
+Requirement (targets are starting points to confirm)
+Performance
+Typical list/search responses within about 2 seconds at expected data volumes; invoice creation within about 2 seconds under normal load; reports over large ranges run asynchronously.
+Availability
+Business-hours availability target agreed with the owner; planned maintenance outside business hours.
+Scalability
+Add shops and users per workspace without code change; indexes and pagination keep lists fast as history grows.
+Data integrity
+ACID transactions for stock, invoice, payment and ledger writes; reconciliation reports remain at zero differences.
+Usability
+Fast billing screen (keyboard/barcode friendly on web, large touch targets on mobile); clear active shop; consistent error messages.
+Accessibility
+Readable contrast, keyboard navigation, labelled form fields.
+Browser / device support
+Current Chrome, Edge, Firefox and Safari; Android and iOS versions per the mobile release plan.
+Localisation
+English by default; ₹ and Indian digit grouping; additional UI languages are a decision (D-25).
+Printing
+Invoices, receipts, statements and payslips print/export cleanly on A4 and (optionally) thermal formats.
+Observability
+Request IDs, structured logs, error tracking and alerts (15.6).
+Maintainability
+Shared calculation test vectors; automated tests for authorization and finance rules in CI.
+18. Acceptance Tests and Edge Cases
+18.1 Identity, tenancy and permissions
+ID
+Test
+Expected result
+AUTH-01
+PTL owner logs in.
+Only PTL workspace and authorized PTL shops returned.
+AUTH-02
+MLT owner logs in.
+Only MLT workspace and authorized MLT shops returned.
+AUTH-03
+PTL user requests an MLT shop ID directly.
+API denies access; no MLT data leaks.
+AUTH-04
+User changes /PTL to /mlt.
+No access gained without assignment.
+AUTH-05
+Wrong password / unknown email.
+Same generic message; attempts are throttled.
+AUTH-06
+Deactivated user with an existing session calls the API.
+Rejected on the next request.
+AUTH-07
+Company login nsyu.mnt@gmail.com requests PTL data without a grant.
+Denied; after an explicit grant only the granted fields/scope are visible and access is audited.
+SHOP-01
+PTL owner creates a third shop.
+Shop belongs to PTL and is not visible to MLT by default.
+SHOP-02
+User assigned to PTLS and RTLS.
+Both appear; per-shop permissions remain independent.
+SHOP-03
+User is removed from RTLS.
+RTLS access denied; other authorized shops still work.
+SHOP-04
+Shop deactivated.
+New transactions blocked; history, reports and collections remain.
+PERM-01
+Cashier without sales:delete calls the delete API.
+API denies it even if the UI is manipulated.
+PERM-02
+Owner grants access outside their scope.
+API rejects the grant.
+PERM-03
+Permission revoked while user is logged in.
+Next request is denied.
+PERM-04
+Edit granted without View.
+Rejected by dependency rules.
+ROL-01
+Last owner tries to demote themselves.
+Rejected.
+18.2 Products, inventory, purchase
+ID
+Test
+Expected result
+PRD-T1
+Purchase ₹500, margin ₹100.
+Selling price ₹600; margin is not treated as a percentage.
+PRD-T2
+Duplicate SKU (different case).
+Rejected.
+PRD-T3
+Archive a product used in invoices.
+Hidden from new documents; old invoices unchanged.
+PRD-T4
+User without view_cost opens a product.
+Purchase price and margin are absent from the response.
+INV-T1
+Receive 20 units into PTLS.
+PTLS +20; RTLS unchanged; one movement record.
+INV-T2
+Adjustment without reason.
+Rejected.
+INV-T3
+Adjustment above threshold by the same user who requested it.
+Needs a different approver.
+INV-T4
+Transfer PTLS → RTLS, dispatch then receive.
+In transit between steps; totals preserved; both movements recorded.
+INV-T5
+Transfer PTLS → MLTS.
+Rejected (cross-workspace).
+INV-T6
+Two concurrent sales of the last unit.
+One succeeds, one rejected; stock never negative.
+PUR-T1
+Save a purchase as draft.
+No stock or payable change until received/posted.
+PUR-T2
+Duplicate supplier invoice number.
+Rejected or explicit confirmation required.
+PUR-T3
+Purchase return larger than received.
+Rejected.
+DB-01
+Transaction fails during a sale or purchase.
+No partial stock/payment/ledger write remains.
+18.3 Sales, billing, payments, ledger
+ID
+Test
+Expected result
+SALE-01
+Sell 2 units when stock is 1.
+Sale rejected; stock unchanged.
+SALE-02
+Same bill submitted twice after a timeout.
+No duplicate invoice or stock deduction.
+SALE-03
+Invoice ₹1,200; payment ₹700.
+Outstanding ₹500 under the example assumptions.
+SALE-04
+Product price changes after a historic sale.
+Old invoice snapshot remains unchanged.
+SALE-05
+Return more than sold quantity.
+Rejected.
+SALE-06
+Cancel an invoice.
+Stock and ledger reversed; invoice remains visible as Cancelled; number not reused.
+BILL-01
+Client sends altered totals.
+Server recalculates; stored totals follow server rules.
+BILL-02
+Discount above role limit without approval.
+Rejected.
+BILL-03
+Concurrent invoice creation in one shop.
+Unique, gapless numbers.
+BILL-04
+Edit an issued invoice.
+Not allowed; cancel-and-reissue or credit note only.
+SVC-01
+Invoice contains a product and a software service.
+Only the physical product line changes stock.
+PAY-T1
+Payment exceeds invoice outstanding.
+Allocation capped; excess held as advance/credit.
+PAY-T2
+Same payment submitted twice.
+Recorded once.
+PAY-T3
+Reverse a payment.
+Reversal entry created; outstanding restored; original retained.
+LED-T1
+Invoice then receipt.
+Ledger shows each once; balance correct; no double count.
+LED-T2
+Carry-forward report for a new period.
+Opening = previous closing; totals not duplicated.
+LED-T3
+Reconciliation job.
+Ledger balance equals invoice outstanding less unapplied credits.
+18.4 EMI, people, admin
+ID
+Test
+Expected result
+EMI-T1
+₹12,000 invoice, ₹3,000 down payment, 3 equal installments (no interest).
+Three installments of ₹3,000; schedule total = financed amount.
+EMI-T2
+Schedule with rounding remainder.
+Final installment absorbs the difference; total unchanged.
+EMI-T3
+Collect more than the installment due.
+Allocated to next installment or held as advance per rule.
+EMI-T4
+Installment unpaid past grace days.
+Status Overdue; appears in overdue list and dashboard.
+EMI-T5
+Waiver without emi:approve.
+Denied.
+EMI-T6
+Reschedule an active plan.
+New schedule version; old version retained; audited.
+EMI-T7
+Cancel the underlying invoice.
+Plan cancelled/adjusted; no double-counted receivable.
+EMP-T1
+Create an employee.
+No login created; assigned to a shop.
+EMP-T2
+User without view_sensitive opens an employee.
+Bank/identity fields hidden.
+ATT-T1
+Mark a future date.
+Rejected.
+ATT-T2
+Correct attendance.
+Original, new value, reason and actor stored.
+ATT-T3
+Edit attendance in an approved payroll month.
+Blocked until unlocked by an approver.
+PAYR-T1
+Run payroll with 2 unpaid days.
+Proration follows the configured method; inputs snapshotted.
+PAYR-T2
+Preparer tries to approve own payroll.
+Rejected when separation of duties is enabled.
+PAYR-T3
+Shop admin without payroll permission calls payroll API.
+Denied.
+SET-T1
+Change tax rate with a future effective date.
+Existing invoices unchanged; new invoices use the new rate from that date.
+RPT-T1
+Owner All Shops report.
+Totals equal the sum of the owner's shops; no other workspace data.
+RPT-T2
+Export without permission.
+Denied; permitted export is audited.
+AUD-01
+Permission or invoice cancellation occurs.
+Audit event records actor and scope.
+SEC-01
+Inspect web bundle and mobile package.
+No production passwords or private service keys present.
+18.5 Menu implementation checklist
+The sidebar displays exactly BUSINESS, PEOPLE and ADMIN with the 17 specified labels in the specified order.
+Unauthorized menus are hidden or disabled according to the product UX standard.
+Direct API calls for unauthorized actions return a safe authorization error.
+PTL owner login sees PTLS and RTLS and can create additional PTL shops; MLT owner login sees MLTS and MTLS and can create additional MLT shops.
+Each shop admin sees only the shop(s) assigned to that identity; a multi-shop user can switch only among assigned shops.
+PTL data is not visible or accessible to MLT users, and vice versa, unless explicit company-level authorization allows it.
+Shop selection consistently scopes tables, search, filters, pagination, forms, reports and write actions.
+Create/Edit/Delete actions follow role permissions; destructive actions require confirmation and are audited where applicable.
+Every menu's loading, empty, error, forbidden and success states are tested; fake production data is not shown as real.
+Forms validate required fields; search, filters, pagination, navigation, exports and confirmations work where applicable.
+Purchase, stock, sales, billing, payments, ledgers and EMI remain consistent under failures and duplicate requests.
+No production workflow relies on fake frontend data or Google Sheets/Drive as the authoritative business database.
+The Android/iOS Flutter app and the React web app use the same backend business rules and permission model.
+18.6 Evidence required
+Screenshots/test logs for the owner shop selector and restricted access.
+API tests proving cross-owner and unauthorized shop-ID requests are denied.
+Tests for UI permissions and direct API authorization.
+Database checks for stock, invoice, payment, ledger and EMI consistency.
+Web/mobile build logs for the release targets.
+Redacted proof that production uses the intended PostgreSQL database.
+Backup and restore test record.
+19. Implementation Plan and Release Checklist
+19.1 Phases
+Phase
+Work
+Exit criteria
+P0 Security & data foundation
+Audit auth, secrets, CORS, health endpoint and production DB config; establish PostgreSQL as authoritative storage; move business writes off Sheets/Drive.
+No exposed secrets; production config fails safely; access-boundary tests pass.
+P1 Ownership & identity
+Verify/add workspace/shop relationships and migrate/backfill existing records; login, owner/workspace mapping, shop assignment.
+Each shop belongs to the correct owner; no ambiguous ownership.
+P2 Permissions
+User-to-shop assignments and per-scope role/action permissions; audit of permission changes.
+Multi-shop access works; unauthorized API calls fail.
+P3 Core operations
+Products, Inventory, Purchase, Sales, Billing, Customers, Suppliers, Payments, Customer Ledger, EMI / Installments APIs.
+Web/mobile use the same rules; transactional tests pass.
+P4 People & admin
+Employees, Attendance, Salary / Payroll, Shops, Roles & Permissions, Reports, Settings.
+All 17 menus functional with permission filtering.
+P5 Frontends
+Shop selector, permission-aware menus, forms, errors, session handling in React and Flutter.
+Both clients reflect API authorization.
+P6 Regression & QA
+Tenant isolation, duplicate submission, financial reconciliation, edge cases, mobile/web builds, both workspaces and all assigned-shop cases.
+All critical tests pass with evidence.
+P7 Release
+Backup, migrations, deployment, smoke tests, monitoring and rollback plan.
+Owner sign-off and release evidence recorded.
+19.2 Priority summary
+P0 — Security: remove exposed/hardcoded secrets, enforce workspace/shop/action authorization, protect production database access.
+P0 — Data integrity: PostgreSQL authoritative; migrate business writes away from Sheets/Drive where present.
+P1 — Identity and access: login, owner/workspace mapping, shop assignment, role and action permissions.
+P1 — Core operations: Products, Inventory, Purchase, Sales, Billing, Customers, Suppliers, Payments, Customer Ledger, EMI / Installments.
+P2 — People and administration: Employees, Attendance, Salary / Payroll, Shops, Roles & Permissions, Reports, Settings.
+P2 — QA and release: end-to-end tests for both workspaces, all assigned-shop cases, financial reconciliation, mobile/web builds and production configuration.
+19.3 Release blockers
+PTL can read/write MLT data, or vice versa, without approved cross-workspace access.
+A restricted action can be executed through a direct API call.
+A sale, payment or EMI collection can leave stock, invoice or ledger inconsistent.
+A production secret is committed or bundled into a client.
+The live app uses an unintended development/in-memory database.
+A financial release has no verified backup and rollback plan.
+19.4 Definition of done (per module)
+Rules in this document for the module are implemented server-side and covered by automated tests.
+Authorization tests exist for every endpoint (allowed, wrong shop, wrong workspace, missing permission).
+Web and Flutter screens show loading, empty, error, forbidden and success states.
+Audit events are written for the sensitive actions listed in 15.5.
+Reports for the module reconcile with transactional data.
+19.5 Rollout and cutover
+Deploy to a test environment with seed data using the real labels (PTL, MLT, PTLS, RTLS, MLTS, MTLS).
+Run the full acceptance suite and reconciliation reports; fix defects.
+Pilot with one workspace and shop, comparing results with existing records for an agreed period.
+Back up, migrate remaining data, run smoke tests and reconciliation.
+Release to the second workspace; keep the rollback plan available until the first period close is verified.
+20. Risks and Mitigations
+Risk
+Impact
+Mitigation
+Cross-workspace data leak (ID guessing, missing scope in a query)
+Critical
+Scope in repository layer; negative authorization tests per endpoint; optional RLS; code review checklist.
+Exposed secrets or shared passwords
+Critical
+Rotate; secret manager; secret scanning in CI; no keys in clients.
+Stock/ledger drift from partial writes or retries
+High
+Single transactions, idempotency keys, row locks, reconciliation jobs.
+Competing write paths (Sheets/Drive vs database)
+High
+Inventory integrations; retire business writes to Sheets/Drive.
+Ambiguous business rules (tax, EMI interest, returns)
+High
+Decide via register (Appendix E); isolate rules in configurable, tested modules.
+Permission model too complex for owners
+Medium
+Role templates, effective-permissions view, safe defaults.
+Web and mobile calculations diverge
+Medium
+Server authoritative; shared test vectors; same API.
+Payroll/personal data exposure
+High
+Field-level permissions, restricted reports, audited exports.
+Scope growth (services lifecycle, notifications, offline)
+Medium
+Treat as separate decisions (D-19, D-23, D-24) with their own plans.
+Data-migration errors in existing records
+High
+Backups, dry runs, review list for ambiguous ownership, before/after reconciliation.
+Appendix A. Suggested Permission Matrix
+A recommended starting matrix. "Config." means the owner decides. Owners can customize only within their authority; sensitive actions should be restricted and audited.
+Module
+Owner
+Shop Admin
+Manager
+Cashier
+Inventory User
+Read-only
+Dashboard
+All own shops
+Assigned shops
+Assigned shops
+Limited
+Limited
+View
+Products
+Full own scope
+Config.
+View/edit if granted
+Select/search
+View
+View
+Inventory
+Full own scope
+Config.
+If granted
+No by default
+Full assigned
+View
+Purchase
+Full own scope
+Config.
+If granted
+No
+Create/receive
+View if granted
+Sales
+Full own scope
+Config.
+If granted
+Create if granted
+No
+View if granted
+Billing
+Full own scope
+Config.
+If granted
+Create/collect if granted
+No
+View if granted
+Customers
+Full own scope
+Config.
+If granted
+Select/create if granted
+No
+View if granted
+Suppliers
+Full own scope
+Config.
+If granted
+No
+View/edit if granted
+View if granted
+Payments
+Full own scope
+Config.
+If granted
+Record receipt if granted
+Supplier pay if granted
+View if granted
+Customer Ledger
+Full own scope
+Config.
+If granted
+View if granted
+No
+View if granted
+EMI / Installments
+Full own scope
+Config.
+If granted
+Collect if granted
+No
+View if granted
+Employees
+Full own scope
+Restricted
+View if granted
+No
+No
+No
+Attendance
+Full own scope
+Config.
+Mark/view if granted
+No
+No
+View if granted
+Salary / Payroll
+Own scope if applicable
+Restricted
+No by default
+No
+No
+No
+Shops
+Create/manage own
+If granted
+No by default
+No
+No
+No
+Roles & Permissions
+Manage own scope
+If granted
+No by default
+No
+No
+No
+Reports / export
+Own workspace
+Assigned scope
+If granted
+No by default
+Inventory reports
+View if granted
+Settings
+Own scope
+Restricted
+No by default
+No
+No
+No
+Delete / cancel
+Restricted + audited
+Only if granted
+No by default
+No
+No
+No
+Approve
+Yes (own scope)
+If granted
+If granted
+No
+No
+No
+Appendix B. Example Scenarios
+Scenario 1 — PTL consolidated sales
+The PTL owner signs in and selects All Shops to see PTLS + RTLS totals. Selecting PTLS filters to PTLS. MLT shops never appear in the PTL selector.
+Scenario 2 — Manager assigned to two PTL shops
+The PTL owner assigns a manager to PTLS and RTLS. The manager can switch shops. If Billing Create is enabled only in PTLS, the API rejects bill creation in RTLS.
+Scenario 3 — MLT owner adds a shop
+The MLT owner creates a new MLT shop, assigns users and permissions, and the new shop remains invisible to PTL by default.
+Scenario 4 — Company reporting
+If NSYU needs reports across PTL and MLT, define a company-level permission and specify which fields are visible. Do not automatically grant cross-owner visibility to nsyu.mnt@gmail.com.
+Scenario 5 — Same user across owners
+If permitted, one identity can have separate PTL and MLT assignments. Show the active workspace and enforce separate permissions. Otherwise reject cross-owner assignment.
+Scenario 6 — Credit sale on EMI
+A cashier at PTLS bills ₹12,000, records a ₹3,000 down payment and, with approval where required, converts the balance into three monthly installments. The ledger shows one invoice debit and one down-payment credit; each installment collection is a payment allocated to the same invoice. If the second installment is missed, the plan shows Overdue and the manager sees it in the overdue list.
+Scenario 7 — Month-end payroll
+The attendance for the month is completed and corrected where needed. The payroll preparer calculates the run; the owner reviews and approves it, which locks the attendance dates. Salaries are paid, payslips are generated, and a later correction is posted as an adjustment in the next period.
+Scenario 8 — Mixed product and service bill
+A bill contains a physical device and a software setup service. On posting, only the device line reduces PTLS stock; both lines keep their own price and tax snapshots and appear in sales and service-revenue reports as appropriate.
+Appendix C. Permission Code Catalogue
+Codes are module:action. "Delete" means cancel/void/deactivate for posted or referenced records; physical deletion is not offered for them.
+Module
+Actions
+products
+view, create, edit, delete, export, view_cost
+inventory
+view, create (transfers/stock movements), edit (adjustments), approve, export, view_cost
+purchase
+view, create, edit, delete, approve, export
+sales
+view, create, edit, delete, approve, export
+billing
+view, create, edit, delete, approve, export, apply_discount
+customers
+view, create, edit, delete, export
+suppliers
+view, create, edit, delete, export
+payments
+view, create, delete (reverse), approve, export
+customer_ledger
+view, create (adjustment), approve, export
+emi
+view, create, edit, delete, collect, approve, export
+employees
+view, create, edit, delete, export, view_sensitive
+attendance
+view, create, edit, approve, export
+payroll
+view, create, edit, approve, pay, export
+shops
+view, create, edit, delete
+roles
+view, create, edit, delete (users, assignments, roles)
+reports
+view, export
+settings
+view, edit
+audit
+view, export
+Appendix D. Glossary
+Term
+Meaning
+NSYU
+The parent company: product sales and application/software services.
+Workspace
+An owner's tenant inside the application (PTL or MLT).
+Shop
+A selling location inside a workspace (PTLS, RTLS, MLTS, MTLS …).
+Assignment
+The link giving a user access to a shop with a role and permissions.
+Fixed margin amount
+A rupee amount added to purchase price to derive selling price; not a percentage.
+Snapshot
+Values copied onto a document when it is issued so later edits do not change it.
+Idempotency key
+A unique value that makes a repeated request return the original result.
+Posted / Issued
+A document that has taken effect on stock and ledgers and can no longer be edited.
+Reversal / credit note
+A new entry that cancels the effect of a posted entry, leaving history intact.
+Outstanding
+Invoice total − payments allocated − credits.
+EMI
+Equated monthly installment: a schedule for collecting a credit sale.
+RLS
+PostgreSQL row-level security, a defense-in-depth layer.
+RPO / RTO
+Maximum acceptable data loss / maximum acceptable downtime after a failure.
+Appendix E. Business Decisions to Confirm
+Until a decision is made, development should use the recommended default so the choice stays cheap to change.
+ID
+Decision
+Recommended default
+D-01
+Does the NSYU company login have cross-owner reporting access, or only company administration/service management?
+Administration only; add cross-owner reporting as a separate, audited permission if required.
+D-02
+Can the same user account be assigned to both PTL and MLT?
+No, unless the business asks; if yes, separate scopes and visible active workspace.
+D-03
+Are product/service catalogues centrally shared or owned by each workspace?
+Company master catalogue with workspace activation, local pricing and shop stock.
+D-04
+Can a single invoice contain both physical products and software services?
+Yes, with line types; only physical lines move stock.
+D-05
+Approved GST/tax treatment: inclusive vs exclusive, rounding mode and level, exemptions.
+Per-product configuration; one documented rounding step; confirm with the accountant.
+D-06
+Discount limits per role, price override, negative margins.
+No price override; discount limits per role; approval above limit; no negative margin.
+D-07
+Returns, refund and credit-note rules (time limits, partial returns, refund vs credit).
+Return against original invoice only; credit note by default; refund needs approval.
+D-08
+Invoice cancellation rules (time window, after payment, approval).
+Cancel needs reason; after payment needs approval and payment reversal.
+D-09
+Shop codes: unique globally or per workspace; confirm spelling MLTS / MTLS.
+Unique per workspace; invoice prefix unique globally.
+D-10
+Which actions need confirmation, a reason or approval, and what thresholds apply.
+As listed in 12.7; thresholds set by owner in Settings.
+D-11
+Data retention, backup frequency, RPO and RTO.
+Daily backups with point-in-time recovery; retention per legal advice; tested restores.
+D-12
+Costing method and whether purchases update product purchase price.
+Weighted average for valuation; product purchase price changes by explicit edit.
+D-13
+Is negative stock ever allowed?
+No (per-shop setting, off by default).
+D-14
+Customer/supplier master: workspace-wide or per shop; walk-in customers; credit limits.
+Workspace-wide master; walk-in allowed only for fully paid bills; credit limit warns.
+D-15
+EMI interest method, rate, late fees, grace days, allocation order, foreclosure rebate.
+Interest method set per plan from approved options; allocation oldest-first; fees configurable.
+D-16
+Payment methods, cheque handling, over-payment treatment (advance vs refund).
+Cash, UPI, Card, Bank transfer; cheque optional; excess kept as advance.
+D-17
+Payroll: proration method, statutory deductions, pay cycle, payslip content.
+Calendar-day proration; statutory items configurable; monthly cycle.
+D-18
+Attendance capture: manual only, app check-in, device or geo-fence.
+Manual entry first; app check-in later.
+D-19
+Add Enquiries/Quotations/Projects to the sidebar, or sell services only as products?
+Option A (services as products) until the owner approves Option B.
+D-20
+Financial year and document-number formats.
+1 April–31 March; patterns in 12.3.
+D-21
+Inter-shop stock transfer rules.
+Allowed within a workspace with dispatch/receive; never across workspaces.
+D-22
+MFA and password policy for Owner and Company roles.
+MFA recommended for owner/company roles; minimum length and breached-password check.
+D-23
+Notification channels (SMS, WhatsApp, email) for invoices and EMI reminders.
+In-app reminders first; external channels later.
+D-24
+Offline support in the mobile app.
+Online-only for the first release.
+D-25
+UI languages and number/date localisation.
+English with ₹ and Indian digit grouping.
+Final Summary
+The intended design is an NSYU company platform with separate PTL and MLT owner workspaces, multiple shops per owner, unique login identities, multi-shop assignments and owner-controlled menu/action permissions. The 17-item sidebar (BUSINESS, PEOPLE, ADMIN) is the confirmed navigation for both workspaces.
+Server-side authorization must scope all business data by workspace and shop. Product sales, stock, purchases, payments, ledgers, EMI installments, attendance and payroll use the same API and the authoritative PostgreSQL/Supabase database, with transactions, idempotency, audit trails and explicit acceptance tests. Selling price follows the fixed-margin rule: purchase price + margin amount.
+Reconcile this requirements document with the existing code before implementation, settle the open decisions in Appendix E, and treat any password shared in chat as compromised until it has been changed.

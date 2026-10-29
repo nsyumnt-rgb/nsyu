@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { login as loginApi } from "../api/auth";
-import { switchShop } from "../api/shops";
 import { apiErrorMessage, getApiBaseUrl, setApiBaseUrl, DEFAULT_CLOUD_API_URL, DEFAULT_LOCAL_API_URL } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 
 export default function Login() {
   const navigate = useNavigate();
   const setSession = useAuthStore((s) => s.setSession);
-  const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
 
-  const [selectedShopId, setSelectedShopId] = useState("1");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -56,11 +53,6 @@ export default function Login() {
     checkHealth(newUrl);
   };
 
-  // Real shops from Supabase PostgreSQL database
-  const shops = [
-    { id: "1", name: "NSYU (Main Store)" },
-  ];
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -73,18 +65,6 @@ export default function Login() {
 
       if ((data as any).shop) {
         setActiveShop((data as any).shop);
-      }
-
-      // If user selected a specific shop ID different from default
-      if (selectedShopId && selectedShopId !== "" && (!(data as any).shop || Number(selectedShopId) !== (data as any).shop.id)) {
-        try {
-          const switchRes = await switchShop(Number(selectedShopId));
-          const switchedData = switchRes.data.data!;
-          setAccessToken(switchedData.accessToken, switchedData.shop.id, null, null);
-          setActiveShop(switchedData.shop);
-        } catch {
-          // Fallback to active shop from login
-        }
       }
 
       navigate("/app");
@@ -354,35 +334,6 @@ export default function Login() {
                     {error}
                   </div>
                 )}
-
-                {/* Select Shop */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Store / Shop</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                        <polyline points="9 22 9 12 15 12 15 22" />
-                      </svg>
-                    </div>
-                    <select
-                      value={selectedShopId}
-                      onChange={(e) => setSelectedShopId(e.target.value)}
-                      className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 bg-white font-medium text-slate-800 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 appearance-none cursor-pointer"
-                    >
-                      {shops.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Email Address */}
                 <div>

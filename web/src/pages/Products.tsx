@@ -161,6 +161,7 @@ function ProductsInner() {
     category_id: "",
     brand: "",
     purchase_price: "",
+    margin_amount: "",
     selling_price: "",
     mrp: "",
     min_stock: "5",
@@ -168,6 +169,28 @@ function ProductsInner() {
   });
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  function handlePurchasePriceChange(val: string) {
+    const pPrice = parseFloat(val) || 0;
+    const margin = parseFloat(form.margin_amount) || 0;
+    const calcSelling = pPrice > 0 || margin > 0 ? (pPrice + margin).toFixed(2) : "";
+    setForm((prev) => ({
+      ...prev,
+      purchase_price: val,
+      selling_price: calcSelling || prev.selling_price,
+    }));
+  }
+
+  function handleMarginChange(val: string) {
+    const pPrice = parseFloat(form.purchase_price) || 0;
+    const margin = parseFloat(val) || 0;
+    const calcSelling = (pPrice + margin).toFixed(2);
+    setForm((prev) => ({
+      ...prev,
+      margin_amount: val,
+      selling_price: calcSelling,
+    }));
+  }
 
   // Load Data
   function loadData() {
@@ -326,6 +349,9 @@ function ProductsInner() {
   // Open Edit Modal
   function openEdit(p: Product) {
     setActiveProduct(p);
+    const pPrice = Number(p.purchase_price || 0);
+    const sPrice = Number(p.selling_price || 0);
+    const derivedMargin = sPrice >= pPrice ? (sPrice - pPrice).toFixed(2) : "0.00";
     setForm({
       name: p.name,
       sku: p.sku,
@@ -333,6 +359,7 @@ function ProductsInner() {
       category_id: p.category_id ? String(p.category_id) : "",
       brand: p.brand || "",
       purchase_price: String(p.purchase_price || 0),
+      margin_amount: derivedMargin,
       selling_price: String(p.selling_price || 0),
       mrp: String(p.mrp || 0),
       min_stock: String(p.min_stock || 5),
@@ -377,6 +404,7 @@ function ProductsInner() {
       category_id: categories[0]?.id ? String(categories[0].id) : "",
       brand: "",
       purchase_price: "",
+      margin_amount: "",
       selling_price: "",
       mrp: "",
       min_stock: "5",
@@ -1221,7 +1249,7 @@ function ProductsInner() {
                     type="number"
                     step="0.01"
                     value={form.purchase_price}
-                    onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                    onChange={(e) => handlePurchasePriceChange(e.target.value)}
                     placeholder="0.00"
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none"
                   />
@@ -1229,8 +1257,25 @@ function ProductsInner() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Selling Price (₹) *
+                    Margin Amount (₹)
                   </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.margin_amount}
+                    onChange={(e) => handleMarginChange(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none font-medium text-emerald-700 bg-emerald-50/30"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Selling Price (₹) *
+                    </label>
+                    <span className="text-[10px] text-blue-600 font-medium">Purchase + Margin</span>
+                  </div>
                   <input
                     required
                     type="number"
@@ -1238,7 +1283,7 @@ function ProductsInner() {
                     value={form.selling_price}
                     onChange={(e) => setForm({ ...form, selling_price: e.target.value })}
                     placeholder="0.00"
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-blue-200 bg-blue-50/40 font-semibold text-blue-900 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
@@ -1371,20 +1416,34 @@ function ProductsInner() {
                     type="number"
                     step="0.01"
                     value={form.purchase_price}
-                    onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                    onChange={(e) => handlePurchasePriceChange(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Selling Price (₹)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Margin Amount (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.margin_amount}
+                    onChange={(e) => handleMarginChange(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none font-medium text-emerald-700 bg-emerald-50/30"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">Selling Price (₹)</label>
+                    <span className="text-[10px] text-blue-600 font-medium">Purchase + Margin</span>
+                  </div>
                   <input
                     required
                     type="number"
                     step="0.01"
                     value={form.selling_price}
                     onChange={(e) => setForm({ ...form, selling_price: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-blue-200 bg-blue-50/40 font-semibold text-blue-900 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
