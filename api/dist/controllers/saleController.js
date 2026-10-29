@@ -60,9 +60,19 @@ async function createSale(req, res) {
     if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, message: "items must be a non-empty array" });
     }
-    if (!paymentMethod || !Sale_1.PAYMENT_METHODS.includes(paymentMethod)) {
-        return res.status(400).json({ success: false, message: `paymentMethod must be one of: ${Sale_1.PAYMENT_METHODS.join(", ")}` });
-    }
+    // Normalize payment method to supported backend enum
+    const rawMethod = String(paymentMethod || "cash").trim().toLowerCase();
+    const normalizedPaymentMethod = (Sale_1.PAYMENT_METHODS.includes(rawMethod)
+        ? rawMethod
+        : rawMethod.includes("upi") || rawMethod.includes("gpay") || rawMethod.includes("phonepe") || rawMethod.includes("paytm")
+            ? "upi"
+            : rawMethod.includes("card")
+                ? "card"
+                : rawMethod.includes("bank") || rawMethod.includes("transfer") || rawMethod.includes("neft") || rawMethod.includes("rtgs")
+                    ? "bank_transfer"
+                    : rawMethod.includes("cheque")
+                        ? "cheque"
+                        : "cash");
     if (!customerId && !newCustomerInput?.name) {
         return res.status(400).json({ success: false, message: "customerId or customer.name is required" });
     }
@@ -70,7 +80,14 @@ async function createSale(req, res) {
         return res.status(400).json({ success: false, message: "emi.numberOfInstallments is required when isEmi is true" });
     }
     const ownerId = req.auth.ownerId;
-    const shopId = req.auth.shopId;
+    let shopId = req.auth.shopId;
+    if (!shopId && req.body.shopId) {
+        shopId = Number(req.body.shopId);
+    }
+    if (!shopId) {
+        const firstShop = await models_1.Shop.findOne({ where: { owner_id: ownerId, status: "active" }, order: [["id", "ASC"]] });
+        shopId = firstShop ? firstShop.id : 1;
+    }
     const { actorType, actorId } = actorFromReq(req);
     try {
         const result = await models_1.sequelize.transaction(async (t) => {
@@ -98,17 +115,25 @@ async function createSale(req, res) {
             let grandTotal = 0;
             const pricedItems = [];
             for (const raw of items) {
-                const { productId, quantity } = raw;
-                if (!productId || !quantity || Number(quantity) <= 0) {
+                const rawProductId = raw.productId ?? raw.product_id;
+                const rawQuantity = raw.quantity ?? raw.qty;
+                if (!rawProductId || !rawQuantity || Number(rawQuantity) <= 0) {
                     throw Object.assign(new Error("Each item needs a valid productId and positive quantity"), { status: 400 });
                 }
-                const product = await models_1.Product.findOne({ where: { id: productId, owner_id: ownerId }, transaction: t });
+                let product = await models_1.Product.findOne({ where: { id: rawProductId, owner_id: ownerId }, transaction: t });
+                if (!product && raw.sku) {
+                    product = await models_1.Product.findOne({ where: { sku: String(raw.sku).trim(), owner_id: ownerId }, transaction: t });
+                }
+                if (!product && (raw.name || raw.desc || raw.product_name)) {
+                    const searchName = String(raw.name || raw.desc || raw.product_name).trim();
+                    product = await models_1.Product.findOne({ where: { name: searchName, owner_id: ownerId }, transaction: t });
+                }
                 if (!product)
-                    throw Object.assign(new Error(`Product ${productId} not found`), { status: 404 });
-                const qty = Number(quantity);
-                const rate = raw.rate !== undefined ? Number(raw.rate) : Number(product.selling_price);
-                const discountPercent = raw.discountPercent !== undefined ? Number(raw.discountPercent) : Number(product.discount);
-                const taxPercent = raw.taxPercent !== undefined ? Number(raw.taxPercent) : Number(product.tax_percent);
+                    throw Object.assign(new Error(`Product "${rawProductId}" not found`), { status: 404 });
+                const qty = Number(rawQuantity);
+                const rate = raw.rate !== undefined ? Number(raw.rate) : (raw.unitPrice !== undefined ? Number(raw.unitPrice) : Number(product.selling_price));
+                const discountPercent = raw.discountPercent !== undefined ? Number(raw.discountPercent) : (raw.discount_percent !== undefined ? Number(raw.discount_percent) : Number(product.discount));
+                const taxPercent = raw.taxPercent !== undefined ? Number(raw.taxPercent) : (raw.tax_percent !== undefined ? Number(raw.tax_percent) : Number(product.tax_percent));
                 const lineSubtotal = round2(rate * qty);
                 const lineDiscountAmount = round2((lineSubtotal * discountPercent) / 100);
                 const afterDiscount = round2(lineSubtotal - lineDiscountAmount);
@@ -129,7 +154,8 @@ async function createSale(req, res) {
                     totalAmount: lineTotal,
                 });
             }
-            const extraDiscount = round2(Number(billDiscount) || 0);
+            const rawDiscount = billDiscount !== undefined ? billDiscount : (req.body.overallDiscount ?? 0);
+            const extraDiscount = round2(Number(rawDiscount) || 0);
             totalDiscount = round2(totalDiscount + extraDiscount);
             const totalAmount = Math.max(0, round2(grandTotal - extraDiscount));
             // 3. EMI split (down payment now, rest financed) vs regular partial payment
@@ -161,7 +187,7 @@ async function createSale(req, res) {
                 total_amount: totalAmount,
                 paid_amount: initialPaid,
                 due_amount: dueAmount,
-                payment_method: paymentMethod,
+                payment_method: normalizedPaymentMethod,
                 is_emi: Boolean(isEmi),
                 status,
                 notes: notes ?? null,
@@ -222,7 +248,7 @@ async function createSale(req, res) {
                     sale_id: sale.id,
                     type: isEmi ? "down_payment" : "sale_payment",
                     amount: initialPaid,
-                    method: paymentMethod,
+                    method: normalizedPaymentMethod,
                     transaction_id: transactionId ?? null,
                     payment_date: new Date(),
                     actor_type: actorType,
@@ -252,7 +278,7 @@ async function createSale(req, res) {
                     sale_id: sale.id,
                     type: "sale_payment",
                     amount: excessPaid,
-                    method: paymentMethod,
+                    method: normalizedPaymentMethod,
                     transaction_id: transactionId ?? null,
                     payment_date: new Date(),
                     actor_type: actorType,

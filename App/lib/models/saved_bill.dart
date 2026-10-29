@@ -27,17 +27,33 @@ extension BillStatusLabel on BillStatus {
 }
 
 class SavedBillItem {
+  final int? productId;
+  final String? sku;
   final String desc;
   final int qty;
   final double price;
 
-  SavedBillItem({required this.desc, required this.qty, required this.price});
+  SavedBillItem({
+    this.productId,
+    this.sku,
+    required this.desc,
+    required this.qty,
+    required this.price,
+  });
 
   double get amount => price * qty;
 
-  Map<String, dynamic> toJson() => {'desc': desc, 'qty': qty, 'price': price};
+  Map<String, dynamic> toJson() => {
+        'productId': productId,
+        'sku': sku,
+        'desc': desc,
+        'qty': qty,
+        'price': price,
+      };
 
   factory SavedBillItem.fromJson(Map<String, dynamic> j) => SavedBillItem(
+        productId: j['productId'] is int ? j['productId'] : int.tryParse(j['productId']?.toString() ?? ''),
+        sku: j['sku']?.toString(),
         desc: j['desc'] ?? '',
         qty: (j['qty'] ?? 0) as int,
         price: (j['price'] ?? 0).toDouble(),
@@ -47,6 +63,7 @@ class SavedBillItem {
 /// One generated bill/invoice, kept locally so it can show up on the Home
 /// dashboard, the Bills list, and the customer Ledger.
 class SavedBill {
+  final int? id;
   final String billNumber;
   final DateTime date;
   final String customerName;
@@ -74,6 +91,7 @@ class SavedBill {
   String? imagePath;
 
   SavedBill({
+    this.id,
     required this.billNumber,
     required this.date,
     required this.customerName,
@@ -157,6 +175,7 @@ class SavedBill {
       );
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'billNumber': billNumber,
         'date': date.toIso8601String(),
         'customerName': customerName,
@@ -180,6 +199,7 @@ class SavedBill {
     final localDate = safeDate.isUtc ? safeDate.toLocal() : safeDate;
 
     return SavedBill(
+      id: j['id'] is int ? j['id'] : int.tryParse(j['id']?.toString() ?? ''),
       billNumber: j['billNumber'] ?? '',
       date: localDate,
       customerName: j['customerName'] ?? '',
@@ -224,7 +244,17 @@ class SavedBill {
               'Item';
           final qty = int.tryParse(item['quantity']?.toString() ?? item['qty']?.toString() ?? '1') ?? 1;
           final price = double.tryParse(item['unit_price']?.toString() ?? item['rate']?.toString() ?? item['price']?.toString() ?? '0') ?? 0.0;
-          itemsList.add(SavedBillItem(desc: desc.toString(), qty: qty, price: price));
+          final pId = item['product_id'] is int
+              ? item['product_id']
+              : int.tryParse(item['product_id']?.toString() ?? item['productId']?.toString() ?? '');
+          final pSku = item['sku']?.toString();
+          itemsList.add(SavedBillItem(
+            productId: pId,
+            sku: pSku,
+            desc: desc.toString(),
+            qty: qty,
+            price: price,
+          ));
         }
       }
     }
@@ -255,6 +285,7 @@ class SavedBill {
     final localDate = safeDate.isUtc ? safeDate.toLocal() : safeDate;
 
     return SavedBill(
+      id: j['id'] is int ? j['id'] : int.tryParse(j['id']?.toString() ?? ''),
       billNumber: j['invoice_number']?.toString() ?? j['billNumber']?.toString() ?? '',
       date: localDate,
       customerName: custName,

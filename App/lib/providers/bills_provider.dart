@@ -77,34 +77,27 @@ class BillsProvider extends ChangeNotifier {
   /// Backward-compatible alias for UI components calling syncFromDrive()
   Future<void> syncFromDrive({List<dynamic>? withPayments}) => syncFromSupabase();
 
-  Future<void> addBill(
+  Future<SavedBill> addBill(
     SavedBill bill, {
     dynamic customerId,
     String paymentMethod = 'cash',
     double billDiscount = 0.0,
   }) async {
-    bills.insert(0, bill);
+    // 1. Authoritative persistence in PostgreSQL via backend
+    final backendBill = await _supabaseService.createBill(
+      bill,
+      customerId: customerId,
+      paymentMethod: paymentMethod,
+      billDiscount: billDiscount,
+    );
+
+    // 2. Insert into bills list only once backend confirms persistence
+    bills.removeWhere((b) => b.billNumber == backendBill.billNumber);
+    bills.insert(0, backendBill);
     await _store.saveBills(bills);
-    debugPrint('✅ Bill Created: ${bill.billNumber}');
+    debugPrint('✅ Bill Persisted & Saved: ${backendBill.billNumber}');
     notifyListeners();
-    try {
-      final backendBill = await _supabaseService.createBill(
-        bill,
-        customerId: customerId,
-        paymentMethod: paymentMethod,
-        billDiscount: billDiscount,
-      );
-      if (backendBill.billNumber != bill.billNumber && backendBill.billNumber.isNotEmpty) {
-        final idx = bills.indexOf(bill);
-        if (idx != -1) {
-          bills[idx] = backendBill;
-          await _store.saveBills(bills);
-          notifyListeners();
-        }
-      }
-    } catch (e) {
-      lastDriveSyncError = e.toString();
-    }
+    return backendBill;
   }
 
   /// Manual status override

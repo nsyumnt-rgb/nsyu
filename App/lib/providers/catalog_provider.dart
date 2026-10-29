@@ -506,7 +506,13 @@ class CatalogProvider extends ChangeNotifier {
         customerName: customerName,
         customerPhone: customerPhone,
         items: billItems
-            .map((i) => SavedBillItem(desc: i.desc, qty: i.qty, price: i.price))
+            .map((i) => SavedBillItem(
+                  productId: i.productId,
+                  sku: i.code,
+                  desc: i.desc,
+                  qty: i.qty,
+                  price: i.price,
+                ))
             .toList(),
         status: remainingOutstanding <= 0.005 && totalAmountPayable > 0
             ? BillStatus.paid

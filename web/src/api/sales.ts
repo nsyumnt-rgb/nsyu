@@ -10,6 +10,7 @@ export interface CreateSaleInput {
     discountAmount?: number;
     taxPercent?: number;
   }>;
+  billDiscount?: number;
   overallDiscount?: number;
   paidAmount?: number;
   paymentMethod?: string;
@@ -37,7 +38,7 @@ export function createSale(data: CreateSaleInput) {
 }
 
 export function recordSalePayment(saleId: number, data: { amount: number; method: string; transactionId?: string; paymentDate?: string; notes?: string }) {
-  return api.post<ApiEnvelope<any>>(`/sales/${saleId}/payment`, data);
+  return api.post<ApiEnvelope<any>>(`/sales/${saleId}/payments`, data);
 }
 
 export function cancelSale(saleId: number, reason?: string) {
@@ -45,9 +46,9 @@ export function cancelSale(saleId: number, reason?: string) {
 }
 
 export function returnSale(saleId: number, items: Array<{ saleItemId: number; quantity: number }>, reason?: string) {
-  return api.post<ApiEnvelope<any>>(`/sales/${saleId}/return`, { items, reason });
+  return api.post<ApiEnvelope<any>>(`/sales/${saleId}/returns`, { items, reason });
 }
 
 export function downloadInvoicePdf(saleId: number) {
-  return api.get(`/sales/${saleId}/pdf`, { responseType: "blob" });
+  return api.get(`/sales/${saleId}/bill/pdf`, { responseType: "blob" });
 }

@@ -1,6 +1,7 @@
 import 'product.dart';
 
 class BillItem {
+  final int? productId;
   final String code;
   final String desc;
   final String spec;
@@ -9,6 +10,7 @@ class BillItem {
   int availableStock;
 
   BillItem({
+    this.productId,
     required this.code,
     required this.desc,
     required this.spec,
@@ -18,6 +20,7 @@ class BillItem {
   });
 
   factory BillItem.fromProduct(Product p) => BillItem(
+        productId: p.sno,
         code: p.code,
         desc: p.desc,
         spec: p.spec,

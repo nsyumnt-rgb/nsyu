@@ -180,7 +180,7 @@ class Product {
     }
 
     final idVal = json['id'];
-    final snoVal = index ?? (idVal is int ? idVal : (int.tryParse(idVal?.toString() ?? '1') ?? 1));
+    final snoVal = (idVal is int ? idVal : int.tryParse(idVal?.toString() ?? '')) ?? (index ?? 1);
     final refCode = json['reference_code']?.toString() ?? json['referenceCode']?.toString();
     final barcodeVal = json['barcode']?.toString();
     final brandVal = json['brand']?.toString();

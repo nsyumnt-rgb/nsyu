@@ -11,6 +11,7 @@ import '../services/bill_pdf_service.dart';
 import '../theme/app_theme.dart';
 import '../providers/customer_provider.dart';
 import '../navigation/app_navigation.dart';
+import '../widgets/animated_feedback_dialog.dart';
 import 'customer_picker_screen.dart';
 
 class BillScreen extends StatefulWidget {
@@ -723,9 +724,9 @@ class _BillScreenState extends State<BillScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Icon(Icons.print, size: 20, color: Colors.white),
+                : const Icon(Icons.check_circle_outline, size: 20, color: Colors.white),
             label: Text(
-              _saving ? 'Saving...' : 'Save & Print Bill',
+              _saving ? 'Saving...' : 'Save Bill',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Colors.white),
             ),
             style: ElevatedButton.styleFrom(
@@ -1402,6 +1403,22 @@ class _BillScreenState extends State<BillScreen> {
   // ──────────────────────────────────────────────────────────────────────────
   Future<void> _saveAndFinish(BuildContext context, CatalogProvider provider) async {
     if (_saving) return; // Prevent duplicate bill creation on rapid taps
+
+    // Validation matching reference design
+    if (provider.billItems.isEmpty) {
+      AnimatedFeedbackDialog.showValidationWarning(
+        context: context,
+        title: 'Validation Error',
+        message: 'Please check the highlighted fields.',
+        errors: const [
+          'At least one product is required.',
+          'Quantity must be greater than 0.',
+          'Please select products from the catalogue above.',
+        ],
+      );
+      return;
+    }
+
     _syncPaymentReceived(provider);
     provider.setPaymentReference(_paymentRefCtrl.text.trim());
     provider.setPaymentRemarks(_remarksCtrl.text.trim());
@@ -1409,14 +1426,11 @@ class _BillScreenState extends State<BillScreen> {
 
     setState(() => _saving = true);
 
-    // Capture provider references before any async gap (avoids BuildContext-across-async lint)
+    // Capture provider references before any async gap
     final billsProvider = context.read<BillsProvider>();
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
+    // Show Stepped Progress Loading Dialog matching reference
+    SavingBillProgressDialog.show(context);
 
     try {
       final pdfData = provider.toPdfData();
@@ -1428,14 +1442,13 @@ class _BillScreenState extends State<BillScreen> {
       billRecord.pdfPath = savedFiles.pdfPath;
       billRecord.imagePath = savedFiles.imagePath;
 
-      await billsProvider.addBill(
+      final savedBill = await billsProvider.addBill(
         billRecord,
         customerId: provider.selectedCustomer?.id,
         paymentMethod: provider.paymentMethod,
         billDiscount: provider.billDiscount,
       );
 
-      final prevOut = provider.previousOutstanding;
       final billTot = provider.finalBillTotal;
       final paid = provider.paymentReceived;
       final remaining = provider.remainingOutstanding;
@@ -1443,63 +1456,54 @@ class _BillScreenState extends State<BillScreen> {
       provider.startNewBill();
 
       if (context.mounted) {
-        Navigator.of(context).pop(); // close loader dialog
-        Navigator.of(context).pop(); // return to bills list / catalog
+        Navigator.of(context).pop(); // close saving progress dialog
 
-        showDialog(
+        // Toast feedback
+        AppToast.showSuccess(
+          context,
+          title: 'Bill saved successfully!',
+          subtitle: 'Invoice #${savedBill.billNumber}',
+        );
+
+        // Animated Success Dialog with Confetti and Actions
+        AnimatedFeedbackDialog.showSuccess(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle, color: AppColors.billGreen),
-                SizedBox(width: 8),
-                Text('Bill Created Successfully'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Invoice: #${billRecord.billNumber}', style: const TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                Text('Previous Outstanding: ₹${_money.format(prevOut)}'),
-                Text('Bill Total: ₹${_money.format(billTot)}'),
-                Text('Payment Received: ₹${_money.format(paid)}'),
-                const Divider(),
-                Text(
-                  'Remaining Outstanding: ₹${_money.format(remaining)}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.red),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  AppNavigation.toTab(context, 1); // Return to Bills tab
-                },
-                child: const Text('Return to Bills'),
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.receipt_long, size: 16),
-                label: const Text('View Bill'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1D4ED8),
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  AppNavigation.openBillDetails(context, bill: billRecord);
-                },
-              ),
-            ],
-          ),
+          invoiceNumber: savedBill.billNumber,
+          customerName: savedBill.customerName.isNotEmpty ? savedBill.customerName : 'Walk-in Customer',
+          totalAmount: billTot,
+          paidAmount: paid,
+          dueAmount: remaining,
+          onViewBill: () {
+            Navigator.of(context).pop(); // pop bill screen
+            AppNavigation.openBillDetails(context, bill: savedBill);
+          },
+          onContinueBilling: () {
+            // New bill is already initialized in state
+          },
+          onGoToBillList: () {
+            Navigator.of(context).pop(); // pop bill screen
+            AppNavigation.toTab(context, 1); // switch to Bills tab
+          },
         );
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context).pop(); // close loader dialog
-        showAppSnackBar(context, 'Could not save bill: $e', isError: true);
+        Navigator.of(context).pop(); // close saving progress dialog
+
+        // Toast feedback
+        AppToast.showError(
+          context,
+          title: 'Failed to save bill.',
+          subtitle: 'Please try again.',
+        );
+
+        final reason = e.toString().replaceFirst('Exception: ', '');
+        AnimatedFeedbackDialog.showFailure(
+          context: context,
+          reason: reason,
+          onRetry: () => _saveAndFinish(context, provider),
+          onClose: () {},
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);

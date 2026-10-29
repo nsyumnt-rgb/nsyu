@@ -1,7 +1,5 @@
 # NSYU BUSINESS MANAGEMENT SYSTEM — MASTER ROADMAP & VERIFICATION MATRIX
-_Specification: project_instruction.docx (Version 2.0 | 29 October 2026)_
-_Last Updated: 2026-10-29_
-
+*** Read project_instruction.docx for complete details.***
 ---
 
 ## 1. Executive Summary & Architecture Status
@@ -163,3 +161,4 @@ Order and exact group titles verified in `web/src/layouts/Sidebar.tsx`:
 - [x] Web build synced to `/` and `/docs` for GitHub Pages.
 - [x] Android release APK packaged.
 - [x] Implementation report updated with full `project_instruction.docx` alignment.
+

@@ -371,21 +371,26 @@ class SupabaseService {
     } catch (_) {}
 
     final itemsPayload = bill.items.map((i) {
-      Product? matched;
-      if (prods.isNotEmpty) {
-        for (final p in prods) {
-          if (p.desc.trim().toLowerCase() == i.desc.trim().toLowerCase() ||
-              p.code.trim().toLowerCase() == i.desc.trim().toLowerCase()) {
-            matched = p;
-            break;
+      int? pId = i.productId;
+      if (pId == null || pId <= 0) {
+        if (prods.isNotEmpty) {
+          for (final p in prods) {
+            if (p.code.trim().toLowerCase() == i.sku?.trim().toLowerCase() ||
+                p.desc.trim().toLowerCase() == i.desc.trim().toLowerCase() ||
+                p.code.trim().toLowerCase() == i.desc.trim().toLowerCase()) {
+              pId = p.sno;
+              break;
+            }
           }
+          pId ??= prods.first.sno;
         }
-        matched ??= prods.first;
       }
+      pId ??= 1;
 
-      final pId = matched?.sno ?? 1;
       return {
         'productId': pId,
+        'sku': i.sku,
+        'name': i.desc,
         'quantity': i.qty,
         'rate': i.price,
         'discountPercent': 0,
@@ -413,22 +418,26 @@ class SupabaseService {
 
     final res = await _postWithRetry(url, payload);
     if (res.statusCode >= 300) {
-      debugPrint('⚠️ Notice: Could not sync bill to backend (${res.statusCode}): ${res.body}');
-      return bill;
+      String errMsg = 'Failed to save bill on server (HTTP ${res.statusCode})';
+      try {
+        final errJson = jsonDecode(res.body);
+        if (errJson['message'] != null) errMsg = errJson['message'].toString();
+      } catch (_) {}
+      debugPrint('❌ Error saving bill: $errMsg');
+      throw Exception(errMsg);
     }
 
-    try {
-      final decoded = jsonDecode(res.body);
-      final saleData = decoded['data'];
-      if (saleData is Map<String, dynamic>) {
-        final backendBill = SavedBill.fromSupabase(saleData);
-        backendBill.pdfPath = bill.pdfPath;
-        backendBill.imagePath = bill.imagePath;
-        return backendBill;
-      }
-    } catch (_) {}
+    final decoded = jsonDecode(res.body);
+    final saleData = decoded['data'];
+    if (saleData is Map<String, dynamic>) {
+      final backendBill = SavedBill.fromSupabase(saleData);
+      backendBill.pdfPath = bill.pdfPath;
+      backendBill.imagePath = bill.imagePath;
+      backendBill.previousOutstanding = bill.previousOutstanding;
+      return backendBill;
+    }
 
-    return bill;
+    throw Exception('Server returned invalid sale response');
   }
 
   /// Fetches authoritative live customer outstanding balance from backend ledger
