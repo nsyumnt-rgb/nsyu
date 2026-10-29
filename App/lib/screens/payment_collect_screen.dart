@@ -174,6 +174,7 @@ class _PaymentCollectScreenState extends State<PaymentCollectScreen> {
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
     setState(() => _saving = true);
     try {

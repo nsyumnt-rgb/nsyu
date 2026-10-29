@@ -37,11 +37,11 @@ class _LedgerScreenState extends State<LedgerScreen> with SingleTickerProviderSt
       final bills = context.read<BillsProvider>();
       if (!bills.loaded) await bills.load();
       if (!bills.syncing) await bills.syncFromDrive();
-      if (!context.mounted) return;
+      if (!mounted) return;
       if (bills.syncError != null) {
         showAppSnackBar(
           context,
-          'Could not sync ledger from Google Sheets: ${bills.syncError}',
+          'Could not sync ledger from Supabase: ${bills.syncError}',
           isError: true,
           duration: const Duration(seconds: 8),
         );

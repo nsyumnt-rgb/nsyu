@@ -192,6 +192,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
       await _excelService.applyPlan(_importPlan!);
       if (!mounted) return;
       await context.read<CatalogProvider>().loadProducts();
+      if (!mounted) return;
 
       setState(() {
         _applyingImport = false;

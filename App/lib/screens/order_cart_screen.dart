@@ -26,13 +26,12 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
   final _money = NumberFormat('#,##0.00');
   final _dateFormat = DateFormat('dd MMM yyyy');
   final _searchCtrl = TextEditingController();
-  final _remarksCtrl =
-      TextEditingController(text: 'Customer requested delivery by 31 Oct 2026.');
+  final _remarksCtrl = TextEditingController();
 
-  DateTime _orderDate = DateTime(2026, 10, 28);
-  DateTime _deliveryDate = DateTime(2026, 10, 31);
+  DateTime _orderDate = DateTime.now();
+  DateTime _deliveryDate = DateTime.now().add(const Duration(days: 3));
   String _orderStatus = 'Pending';
-  double _orderDiscount = 500.0;
+  double _orderDiscount = 0.0;
   bool _saving = false;
 
   final Map<String, int> _itemDiscounts = {}; // code -> discount percent
@@ -40,50 +39,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<CatalogProvider>();
-      // Pre-seed with reference demo products if order cart is empty
-      if (provider.orderItems.isEmpty) {
-        provider.orderItems.addAll([
-          BillItem(
-            code: 'CEM-50KG',
-            desc: 'Cement (50 Kg)',
-            spec: '',
-            price: 350.00,
-            qty: 10,
-            availableStock: 100,
-          ),
-          BillItem(
-            code: 'SR-12MM',
-            desc: 'Steel Rod (12mm)',
-            spec: '',
-            price: 650.00,
-            qty: 5,
-            availableStock: 50,
-          ),
-          BillItem(
-            code: 'SAND-UNIT',
-            desc: 'Sand (Per Unit)',
-            spec: '',
-            price: 450.00,
-            qty: 3,
-            availableStock: 200,
-          ),
-          BillItem(
-            code: 'BRICKS-1000',
-            desc: 'Bricks (Per 1000)',
-            spec: '',
-            price: 5000.00,
-            qty: 1,
-            availableStock: 20,
-          ),
-        ]);
-        if (provider.orderCustomerName.isEmpty) {
-          provider.setOrderCustomerName('Mohd Nazim');
-        }
-        setState(() {});
-      }
-    });
   }
 
   @override
@@ -110,16 +65,16 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     final name = customer?.name ??
         (provider.orderCustomerName.isNotEmpty
             ? provider.orderCustomerName
-            : 'Mohd Nazim');
-    final phone = customer?.mobile ?? '+91 98765 43210';
+            : 'Walk-in Customer');
+    final phone = customer?.mobile ?? '';
     final custId = customer != null && customer.id.isNotEmpty
         ? (customer.id.startsWith('CUST')
             ? customer.id
             : 'CUST-${customer.id.padLeft(4, '0')}')
-        : 'CUST-0001';
+        : '-';
     final address = customer != null && customer.address.isNotEmpty
         ? customer.address
-        : 'Near Main Market, Lucknow';
+        : '';
     final outstanding =
         customer?.currentBalance ?? provider.previousOutstanding;
 
@@ -1602,7 +1557,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                  'Customer: ${provider.orderCustomerName.isNotEmpty ? provider.orderCustomerName : 'Mohd Nazim'}',
+                  'Customer: ${provider.orderCustomerName.isNotEmpty ? provider.orderCustomerName : (provider.selectedCustomer?.name ?? 'Walk-in Customer')}',
                   style: const TextStyle(fontWeight: FontWeight.w700)),
               Text('Order Date: ${_dateFormat.format(_orderDate)}'),
               Text(
@@ -1688,9 +1643,9 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
         customerName: customer?.name ??
             (provider.orderCustomerName.isNotEmpty
                 ? provider.orderCustomerName
-                : 'Mohd Nazim'),
-        customerPhone: customer?.mobile ?? '+91 98765 43210',
-        customerAddress: customer?.address ?? 'Near Main Market, Lucknow',
+                : 'Walk-in Customer'),
+        customerPhone: customer?.mobile ?? '',
+        customerAddress: customer?.address ?? '',
         items: provider.orderItems
             .map((i) => SavedOrderItem(
                   desc: i.desc,

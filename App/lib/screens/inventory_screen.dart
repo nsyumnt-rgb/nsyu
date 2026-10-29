@@ -140,6 +140,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   await CategoryIconHelper.setCategoryIcon(category, def.key);
                   if (!ctx.mounted) return;
                   Navigator.pop(ctx);
+                  if (!mounted) return;
                   setState(() {});
                   showAppSnackBar(context, 'Category icon updated to ${def.label}');
                 },

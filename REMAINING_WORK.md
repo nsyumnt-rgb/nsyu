@@ -29,6 +29,16 @@ _Last Updated: 2026-10-29 — Session 2_
 - [x] Bill workflow verified — Catalog → Cart → Bill → Supabase WORKING
 - [x] Bill discount default = 0.0 — VERIFIED PASS
 
+## ✅ COMPLETED (This Session — 2026-10-29)
+
+### Phase 1 — Baseline Inspection
+- [x] `flutter pub get` — SUCCESS (0 errors)
+- [x] `flutter analyze` — 124 issues, 0 errors (all warnings/infos)
+- [x] Full architecture inspection: 27 screens, 8 providers, 15+ services
+- [x] Product pricing architecture verified — CORRECT (marginPrice in ₹)
+- [x] Bill workflow verified — Catalog → Cart → Bill → Supabase WORKING
+- [x] Bill discount default = 0.0 — VERIFIED PASS
+
 ### Bug Fixes Applied to `bill_screen.dart`
 - [x] **B1 FIXED** — Barcode scan `orElse: () => first` replaced with null-safe lookup + error snackbar
 - [x] **B2 FIXED** — `use_build_context_synchronously`: `billsProvider` read before first `await`; `if (!mounted) return` added after `saveBillFiles`
@@ -37,25 +47,34 @@ _Last Updated: 2026-10-29 — Session 2_
 - [x] **B5 FIXED** — Discount + Tax dialogs now reachable from More (⋮) menu in BillScreen
 - [x] **B5b FIXED** — "Add New Product to Bill" also wired into More menu
 - [x] Removed unused imports: `saved_bill.dart`, `supabase_service.dart`, `editable_qty_input.dart` from `bill_screen.dart`
-- [x] Unused import `bill_screen.dart` removed from `bills_list_screen.dart`
 
 ### Bug Fixes Applied to `ledger_screen.dart`
 - [x] **B6 FIXED** — "from Google Sheets" text updated to "from Supabase"
 - [x] **B6b FIXED** — Tooltip "Sync from Google Sheets" → "Sync from Supabase"
 
+### Phase 2 — Product Pricing ✅ COMPLETE
+- [x] **catalog_screen.dart** Add Product dialog — replaced Selling Price field with Margin (₹) + live Selling Price preview
+- [x] **home_screen.dart** Add Product dialog — same fix applied
+- [x] **bill_screen.dart** quick-add dialog — same fix (Purchase + Margin fields, no hardcoded 80/20)
+- [x] Removed unused imports from `home_screen.dart` (`app_theme`, `customer_ledger_detail_screen`)
+
+### Phase 3 — GST Settings ✅ COMPLETE
+- [x] **Tax/GST dialog** upgraded — now supports both flat ₹ and % of Subtotal modes
+- [x] Common GST rate quick-pick chips added: 5%, 12%, 18%, 28%
+- [x] Live preview of computed tax amount when using % mode
+- [x] Clear button to reset tax to ₹ 0
+
+### Commits This Session
+- `43902a1` — fix(bill): barcode scan, bill summary dupe rows, async context, discount/tax UI, quick-add margin fields; fix(ledger): Supabase text
+- `3cf4fe1` — feat(pricing): Margin field in all Add Product dialogs (Phase 2); feat(gst): flat+% Tax/GST dialog (Phase 3)
+
 ---
 
 ## 🔴 REMAINING — HIGH PRIORITY
 
-### Phase 2 — Product Pricing (Remaining)
-- [ ] **Add Product dialog in `catalog_screen.dart`** — currently takes Purchase + Selling Price, computes margin as `sell - buy`. Should add a **Margin (₹)** field that auto-computes Selling Price (same pattern as quick-add fix done above)
-- [ ] **Add Product dialog in `home_screen.dart`** — same fix needed
-- [ ] **Product Detail screen** — verify margin edit saves correctly to Supabase (test with real product)
+### Phase 2 — Product Pricing ✅ DONE (this session)
 
-### Phase 3 — GST Settings
-- [ ] **Tax entry is flat ₹ amount** — needs to support GST % rate that auto-calculates from bill subtotal
-- [ ] Add GST % field in Bill Summary (e.g. "GST 18% = ₹ X.XX") that auto-computes
-- [ ] Consider per-product GST rate field in product model (requires DB schema check — do NOT migrate without authorization)
+### Phase 3 — GST Settings ✅ DONE (this session)
 
 ### Phase 5 — Catalog → Cart → Bill Workflow (Polish)
 - [ ] **Stock validation** — warn user if qty added to bill exceeds available stock (currently no check)

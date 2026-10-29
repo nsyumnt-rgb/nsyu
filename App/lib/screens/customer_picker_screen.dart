@@ -289,7 +289,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                                           style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
                                         ),
                                         Text(
-                                          c.mobile.isNotEmpty ? c.mobile : '9876543210',
+                                          c.mobile.isNotEmpty ? c.mobile : '-',
                                           style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
                                         ),
                                       ],

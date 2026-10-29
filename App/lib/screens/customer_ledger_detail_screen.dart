@@ -153,10 +153,12 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
     final billsProvider = context.watch<BillsProvider>();
     final customer = _customer ?? widget.customer;
     final name = customer?.name ?? widget.partyName;
-    final phone = customer?.mobile ?? (customer?.id.isNotEmpty == true ? customer!.id : '+91 98765 43210');
+    final phone = customer?.mobile.isNotEmpty == true
+        ? customer!.mobile
+        : (customer?.id.isNotEmpty == true ? customer!.id : '-');
     final custId = customer != null && customer.id.isNotEmpty
         ? (customer.id.startsWith('CUST') ? customer.id : 'CUST-${customer.id.padLeft(4, '0')}')
-        : 'CUST-0001';
+        : '-';
 
     // Build timeline rows: prioritize backend authoritative entries, fallback to local bills/payments
     final timeline = _buildTimeline(billsProvider);
@@ -703,9 +705,9 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
             ),
             const SizedBox(height: 12),
             _detailRow('Name', cust?.name ?? widget.partyName),
-            _detailRow('ID', cust?.id ?? 'CUST-0001'),
-            _detailRow('Mobile', cust?.mobile ?? 'N/A'),
-            _detailRow('Address', cust?.address.isNotEmpty == true ? cust!.address : 'Near Main Market, Lucknow'),
+            _detailRow('ID', cust?.id.isNotEmpty == true ? cust!.id : '-'),
+            _detailRow('Mobile', cust?.mobile.isNotEmpty == true ? cust!.mobile : 'N/A'),
+            _detailRow('Address', cust?.address.isNotEmpty == true ? cust!.address : 'N/A'),
             _detailRow('Current Outstanding', '₹${_money.format(_currentBalance != 0.0 ? _currentBalance : (cust?.currentBalance ?? 0.0))}'),
             const SizedBox(height: 16),
             Row(
