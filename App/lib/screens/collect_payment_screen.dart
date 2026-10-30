@@ -32,7 +32,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
   bool _isSubmitting = false;
 
   // Calculator State
-  String _displayExpr = '2222';
+  String _displayExpr = '0';
   double? _storedValue;
   String? _pendingOp;
   bool _resetOnNextDigit = false;
@@ -161,7 +161,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
     final cust = _selectedCustomer;
     final custName = cust?.name ?? 'Customer';
     final payments = context.read<PaymentsProvider>();
-    final outstandingBefore = cust?.currentBalance ?? 4510.0;
+    final outstandingBefore = cust?.currentBalance ?? 0.0;
 
     final payment = Payment(
       customerName: custName,
@@ -172,7 +172,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
     );
 
     try {
-      final success = await payments.addPayment(payment);
+      final success = await payments.addPayment(payment, customerId: cust?.id);
       if (!mounted) return;
 
       if (success) {

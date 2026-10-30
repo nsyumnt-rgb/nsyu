@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/catalog_item.dart';
+import '../providers/catalog_provider.dart';
+import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/animated_feedback_dialog.dart';
 
 /// Edit Product & Product Details Screen matching Reference Image 11
 /// Features 1:1 layout with:
@@ -140,7 +144,9 @@ class _EditProductScreenState extends State<EditProductScreen> {
     _isAutoCalculating = false;
   }
 
-  void _onSave() {
+  bool _isSaving = false;
+
+  Future<void> _onSave() async {
     final code = _codeCtrl.text.trim();
     final name = _nameCtrl.text.trim();
 
@@ -149,32 +155,79 @@ class _EditProductScreenState extends State<EditProductScreen> {
       return;
     }
 
-    final price = double.tryParse(_priceCtrl.text.trim()) ?? 67.0;
-    final margin = _marginCtrl.text.trim().isNotEmpty ? _marginCtrl.text.trim() : '10.00';
-    final slPrice = double.tryParse(_slPriceCtrl.text.trim()) ?? (price + (double.tryParse(margin) ?? 10.0));
+    final price = double.tryParse(_priceCtrl.text.trim()) ?? 0.0;
+    if (price <= 0) {
+      showAppSnackBar(context, 'Please enter a valid Price (Incl GST)', isError: true);
+      return;
+    }
+
+    final margin = _marginCtrl.text.trim().isNotEmpty ? _marginCtrl.text.trim() : '0.00';
+    final marginVal = double.tryParse(margin) ?? 0.0;
+    final slPrice = price + marginVal;
     final stdPkg = int.tryParse(_stdPkgCtrl.text.trim()) ?? 20;
-    final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 10;
+    final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 0;
 
-    final updated = CatalogItem(
-      sNo: widget.item?.sNo ?? 1,
-      code: code,
-      name: name,
-      specs: _shortDescCtrl.text.trim(),
-      stdPkg: stdPkg,
-      qty: qty,
-      price: price,
-      margin: margin,
-      slPrice: slPrice,
-      category: _category,
-      brand: _brand,
-      unit: _unit,
-      hsnSac: _hsnSac,
-      description: _fullDescCtrl.text.trim(),
-      imageUrl: _imageUrlCtrl.text.trim(),
-      isActive: _isActive,
-    );
+    setState(() => _isSaving = true);
 
-    Navigator.pop(context, updated);
+    try {
+      final supabaseService = SupabaseService();
+      if (widget.isNew) {
+        await supabaseService.addProduct(
+          code: code,
+          desc: name,
+          spec: _shortDescCtrl.text.trim(),
+          category: _category,
+          pkg: stdPkg,
+          purchase: price,
+          marginPrice: marginVal,
+          sellingPrice: slPrice,
+          stock: qty,
+        );
+      } else {
+        await supabaseService.updateProductDetails(
+          productCode: widget.item?.code ?? code,
+          newCode: code,
+          name: name,
+          category: _category,
+          purchasePrice: price,
+          sellingPrice: slPrice,
+          stock: qty,
+          status: _isActive ? 'active' : 'inactive',
+        );
+      }
+
+      final updated = CatalogItem(
+        sNo: widget.item?.sNo ?? 1,
+        code: code,
+        name: name,
+        specs: _shortDescCtrl.text.trim(),
+        stdPkg: stdPkg,
+        qty: qty,
+        price: price,
+        margin: margin,
+        slPrice: slPrice,
+        category: _category,
+        brand: _brand,
+        unit: _unit,
+        hsnSac: _hsnSac,
+        description: _fullDescCtrl.text.trim(),
+        imageUrl: _imageUrlCtrl.text.trim(),
+        isActive: _isActive,
+      );
+
+      if (!mounted) return;
+      context.read<CatalogProvider>().loadProducts();
+      AppToast.showSuccess(
+        context,
+        title: widget.isNew ? 'Product Added' : 'Product Updated',
+        subtitle: '$name saved to database successfully.',
+      );
+      Navigator.pop(context, updated);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      showAppSnackBar(context, 'Failed to save product: $e', isError: true);
+    }
   }
 
   @override
@@ -579,12 +632,12 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 6. Pricing 3-Column Row: Price (Incl GST) *, Margin (%), SLPrice (Incl. GST) * matching Screenshot 2
+                      // 6. Pricing 2-Column Row matching Reference Screenshot 3:
+                      // Left: Price (Incl GST) * | Right: Margin (without % symbol)
                       Row(
                         children: [
                           // Price (Incl GST) *
                           Expanded(
-                            flex: 4,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -602,15 +655,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 14),
 
-                          // Margin (%) *
+                          // Margin (No % symbol, exact match to Screen 3)
                           Expanded(
-                            flex: 3,
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildFieldLabel('Margin (%)', isRequired: true),
+                                _buildFieldLabel('Margin'),
                                 const SizedBox(height: 4),
                                 SizedBox(
                                   height: 38,
@@ -619,38 +671,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                                     decoration: _inputDecoration(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-
-                          // SLPrice (Incl. GST) *
-                          Expanded(
-                            flex: 4,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildFieldLabel('SLPrice (Incl. GST)', isRequired: true),
-                                const SizedBox(height: 4),
-                                SizedBox(
-                                  height: 38,
-                                  child: TextField(
-                                    controller: _slPriceCtrl,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF15803D)),
-                                    decoration: _pricingDecoration('₹'),
-                                    onChanged: (val) {
-                                      if (_isAutoCalculating) return;
-                                      final sl = double.tryParse(val.trim()) ?? 0.0;
-                                      final p = double.tryParse(_priceCtrl.text.trim()) ?? 0.0;
-                                      if (sl >= p) {
-                                        _isAutoCalculating = true;
-                                        _marginCtrl.text = (sl - p).toStringAsFixed(2);
-                                        _isAutoCalculating = false;
-                                      }
-                                    },
                                   ),
                                 ),
                               ],
@@ -691,11 +711,17 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
-                                onPressed: _onSave,
-                                child: const Text(
-                                  'Save',
-                                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
-                                ),
+                                onPressed: _isSaving ? null : _onSave,
+                                child: _isSaving
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      )
+                                    : const Text(
+                                        'Save',
+                                        style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+                                      ),
                               ),
                             ),
                           ),

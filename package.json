@@ -3,10 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd web && npm install && npm run build && cd .. && node scripts/sync-gh-pages.js",
-    "sync:pages": "node scripts/sync-gh-pages.js",
+    "build": "cd web && npm install && npm run build",
     "web:dev": "cd web && npm run dev",
     "api:start": "cd api && npm run start"
   }
 }
-

@@ -20,20 +20,20 @@ export async function getOrderStats(req: Request, res: Response) {
   try {
     const [total, pending, processing, delivered, cancelled] = await Promise.all([
       Order.count({ where: baseWhere }),
-      Order.count({ where: { ...baseWhere, status: "pending" } }),
-      Order.count({ where: { ...baseWhere, status: "processing" } }),
-      Order.count({ where: { ...baseWhere, status: "delivered" } }),
-      Order.count({ where: { ...baseWhere, status: "cancelled" } }),
+      Order.count({ where: { ...baseWhere, status: { [Op.iLike]: "pending" } } }),
+      Order.count({ where: { ...baseWhere, status: { [Op.iLike]: "processing" } } }),
+      Order.count({ where: { ...baseWhere, status: { [Op.iLike]: "delivered" } } }),
+      Order.count({ where: { ...baseWhere, status: { [Op.iLike]: "cancelled" } } }),
     ]);
 
     return res.json({
       success: true,
       data: {
-        totalOrders: total || 1248,
-        pendingOrders: pending || 62,
-        processingOrders: processing || 48,
-        deliveredOrders: delivered || 1098,
-        cancelledOrders: cancelled || 40,
+        totalOrders: total || 0,
+        pendingOrders: pending || 0,
+        processingOrders: processing || 0,
+        deliveredOrders: delivered || 0,
+        cancelledOrders: cancelled || 0,
       },
     });
   } catch (err: any) {
@@ -235,10 +235,10 @@ export async function createOrder(req: Request, res: Response) {
       let orderNumber = customOrderNumber;
       if (!orderNumber) {
         const [counterRow] = await sequelize.query(
-          "SELECT COALESCE(MAX(id), 1248) as max_id FROM orders WHERE owner_id = :owner_id",
+          "SELECT COALESCE(MAX(id), 0) as max_id FROM orders WHERE owner_id = :owner_id",
           { replacements: { owner_id: ownerId }, transaction: t }
         );
-        const nextNum = Number((counterRow as any)?.[0]?.max_id || 1248) + 1;
+        const nextNum = Number((counterRow as any)?.[0]?.max_id || 0) + 1;
         orderNumber = `ORD-${String(nextNum).padStart(6, "0")}`;
       }
 

@@ -7,7 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/bill_item.dart';
 import '../models/customer.dart';
 import '../models/saved_bill.dart';
+import '../models/saved_order.dart';
 import '../navigation/app_navigation.dart';
+import '../providers/orders_provider.dart';
 import '../providers/bills_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../theme/app_theme.dart';
@@ -42,42 +44,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<CatalogProvider>();
-      // Seed exact 3 items from reference image if cart empty
-      if (provider.orderItems.isEmpty) {
-        _populateSampleItems(provider);
-      }
-    });
-  }
-
-  void _populateSampleItems(CatalogProvider provider) {
-    provider.orderItems.addAll([
-      BillItem(
-        code: 'ERD-TC-30',
-        desc: 'ERD TC-30 USB-A DOCK CHARGER BLK',
-        spec: '5V DC - 500mA (2.5W)',
-        price: 77.0,
-        qty: 10,
-        availableStock: 50,
-      ),
-      BillItem(
-        code: 'ERD-TC-201',
-        desc: 'ERD TC-201 USB-A DOCK CHARGER BLK 5W',
-        spec: '5V DC - 1 Amp (5W)',
-        price: 86.0,
-        qty: 5,
-        availableStock: 35,
-      ),
-      BillItem(
-        code: 'ERD-TC-222',
-        desc: 'ERD TC-222 CHARGER+USB-C VOOK WHT 20W',
-        spec: '5V DC - 3 Amp (20W)',
-        price: 252.0,
-        qty: 3,
-        availableStock: 25,
-      ),
-    ]);
   }
 
   @override
@@ -260,8 +226,49 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
 
     try {
       final cust = provider.selectedCustomer;
-      final custName = cust?.name.isNotEmpty == true ? cust!.name : 'SHARMA JI COMMUNICATION';
-      final custPhone = cust?.mobile.isNotEmpty == true ? cust!.mobile : '9876543210';
+      if (cust == null) {
+        setState(() => _saving = false);
+        showAppSnackBar(context, 'Please select a customer first.', isError: true);
+        return;
+      }
+      final custName = cust.name;
+      final custPhone = cust.mobile;
+
+      if (_documentMode == 'Order') {
+        final orderItemsList = items
+            .map((e) => SavedOrderItem(
+                  sku: e.code,
+                  desc: e.desc,
+                  qty: e.qty,
+                  price: e.price,
+                ))
+            .toList();
+
+        final order = SavedOrder(
+          id: DateTime.now().millisecondsSinceEpoch,
+          orderNumber: 'ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+          customerName: custName,
+          customerPhone: custPhone,
+          date: DateTime.now(),
+          items: orderItemsList,
+          discountAmount: discount,
+          taxAmount: 0.0,
+          totalAmount: grandTotal,
+          status: OrderStatus.pending,
+        );
+
+        final ordersProvider = context.read<OrdersProvider>();
+        await ordersProvider.addOrder(order);
+
+        if (!mounted || !context.mounted) return;
+        provider.orderItems.clear();
+        provider.billItems.clear();
+        setState(() => _saving = false);
+        showAppSnackBar(context, 'Order #${order.orderNumber} created successfully!');
+        AppNavigation.openOrderDetails(context, order: order);
+        return;
+      }
+
       final billItemsList = items
           .map((e) => SavedBillItem(
                 sku: e.code,
@@ -289,9 +296,10 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
 
       if (!mounted || !context.mounted) return;
       provider.orderItems.clear();
+      provider.billItems.clear();
       provider.clearBill();
       setState(() => _saving = false);
-      showAppSnackBar(context, '$_documentMode #${bill.billNumber} created successfully!');
+      showAppSnackBar(context, 'Bill #${bill.billNumber} created successfully!');
       AppNavigation.openBillDetails(context, bill: bill);
     } catch (e) {
       if (!mounted || !context.mounted) return;
@@ -305,15 +313,15 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     final provider = context.watch<CatalogProvider>();
     final items = provider.orderItems.isNotEmpty ? provider.orderItems : provider.billItems;
 
-    // Customer details matching screenshot
+    // Real customer from DB
     final customer = provider.selectedCustomer;
-    final customerName = customer?.name.isNotEmpty == true ? customer!.name : 'SHARMA JI COMMUNICATION';
-    final customerMobile = customer?.mobile.isNotEmpty == true ? customer!.mobile : '9876543210';
+    final customerName = customer?.name.isNotEmpty == true ? customer!.name : 'Select Customer';
+    final customerMobile = customer?.mobile.isNotEmpty == true ? customer!.mobile : 'No customer selected';
     final customerAddress = customer?.address.isNotEmpty == true
         ? customer!.address
-        : 'Shop No. 12, Main Market, Jasola, New Delhi - 110025';
+        : 'Tap "Select Customer" to choose from directory';
 
-    // Financial calculations
+    // Financial calculations dynamically from real cart
     double subtotal = 0.0;
     for (final it in items) {
       subtotal += it.price * it.qty;
@@ -347,33 +355,34 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                     onPressed: () => Navigator.of(context).pop(),
                   ),
 
-                  // Shopping cart with red badge 3
+                  // Shopping cart with dynamic count badge
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
                       const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 24),
-                      Positioned(
-                        right: -3,
-                        top: -3,
-                        child: Container(
-                          width: 17,
-                          height: 17,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${items.isNotEmpty ? items.length : 3}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
+                      if (items.isNotEmpty)
+                        Positioned(
+                          right: -3,
+                          top: -3,
+                          child: Container(
+                            width: 17,
+                            height: 17,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${items.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(width: 8),
@@ -387,7 +396,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
                       ),
                       Text(
-                        '${items.isNotEmpty ? items.length : 3} Items',
+                        '${items.length} ${items.length == 1 ? "Item" : "Items"}',
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white70),
                       ),
                     ],

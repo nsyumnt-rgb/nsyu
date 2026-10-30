@@ -7,7 +7,6 @@ import '../widgets/animated_feedback_dialog.dart';
 import '../models/catalog_item.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'edit_product_screen.dart';
-import 'order_cart_screen.dart';
 
 /// Product Catalog & Inventory Screen matching Reference Image:
 /// - Exact Forest Green Header (#006837) with Product Catalog, Barcode, + Add Product, Cart (3)
@@ -31,25 +30,44 @@ class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _qtyCtrl = TextEditingController(text: '1');
   final NumberFormat _money = NumberFormat('#,##0.00');
 
-  String _selectedCategory = 'All (125)';
+  String _selectedCategory = 'All';
   int _currentIndex = 0;
   int _selectedThumbnail = 0; // 0: White front, 1: Black front, 2: Side USB
   bool _isFavorite = false;
   bool _isTableView = false; // Toggle between Card Catalog and Spreadsheet Table
 
-  late List<_CatalogItem> _catalog;
+  List<_CatalogItem> _catalog = [];
 
   @override
   void initState() {
     super.initState();
-    _catalog = _buildSeedProducts();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<CatalogProvider>();
       if (provider.products.isEmpty) {
         provider.loadProducts();
       }
     });
+  }
+
+  List<_CatalogItem> _productsToCatalog(List<dynamic> products) {
+    if (products.isEmpty) return [];
+    return products.map((p) => _CatalogItem(
+      sNo: p.sno,
+      code: p.code,
+      name: p.desc,
+      specs: p.spec,
+      stdPkg: p.pkg,
+      qty: p.stock,
+      price: p.purchase,
+      margin: p.marginAmount.toStringAsFixed(2),
+      slPrice: p.sellingPrice,
+      category: p.category.toString().isNotEmpty ? p.category.toString() : 'General',
+      brand: p.brand ?? 'ERD',
+      unit: 'PCS',
+      hsnSac: '8504',
+      description: '${p.desc} (${p.spec}). High quality and durable components.',
+      isActive: true,
+    )).toList();
   }
 
   @override
@@ -71,18 +89,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
         if (!matches) return false;
       }
 
-      if (_selectedCategory == 'Mobile Accessories') {
-        return item.category == 'Mobile Accessories';
-      } else if (_selectedCategory == 'Chargers') {
-        return item.category == 'Chargers' || item.category == 'Mobile Accessories';
-      } else if (_selectedCategory == 'Cables') {
-        return item.category == 'Cables';
-      } else if (_selectedCategory == 'Stationery') {
-        return item.category == 'Stationery';
-      } else if (_selectedCategory == 'Others') {
-        return item.category == 'Others' || item.category == 'Computers';
+      if (_selectedCategory.startsWith('All') || _selectedCategory.isEmpty) {
+        return true;
       }
-      return true;
+      return item.category.toLowerCase() == _selectedCategory.toLowerCase();
     }).toList();
   }
 
@@ -316,6 +326,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<CatalogProvider>();
+    final dbProducts = provider.products;
+
+    if (dbProducts.isNotEmpty && (_catalog.isEmpty || _catalog.length != dbProducts.length)) {
+      _catalog = _productsToCatalog(dbProducts);
+    }
+
     final filtered = _filteredCatalog;
     final totalItems = filtered.length;
     if (_currentIndex >= totalItems && totalItems > 0) {
@@ -323,11 +340,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
     final activeItem = totalItems > 0 ? filtered[_currentIndex] : null;
 
-    final categories = ['All (125)', 'Mobile Accessories', 'Chargers', 'Cables', 'Stationery', 'Others'];
-
-    // Provider cart count
-    final cartCount = context.watch<CatalogProvider>().billCount;
-    final badgeNumber = cartCount > 0 ? cartCount : 3; // Show 3 from screenshot if cart empty
+    final dynamicCategories = <String>['All (${_catalog.length})'];
+    for (final c in provider.categories) {
+      if (c.isNotEmpty && !dynamicCategories.contains(c)) {
+        dynamicCategories.add(c);
+      }
+    }
+    if (dynamicCategories.length == 1) {
+      dynamicCategories.addAll(['Mobile Accessories', 'Chargers', 'Cables', 'Stationery', 'Others']);
+    }
+    final categories = dynamicCategories;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -392,29 +414,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             ),
                           ),
 
-                          // View Mode Toggle (Card ↔ Table)
-                          IconButton(
-                            icon: Icon(
-                              _isTableView ? Icons.view_carousel_outlined : Icons.table_chart_outlined,
-                              color: Colors.white70,
-                              size: 20,
-                            ),
-                            tooltip: _isTableView ? 'Switch to Card View' : 'Switch to Table View',
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                            onPressed: () => setState(() => _isTableView = !_isTableView),
-                          ),
-
-                          // Barcode Scanner in Header
-                          IconButton(
-                            icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 22),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
-                            onPressed: _openBarcodeDialog,
-                          ),
-                          const SizedBox(width: 4),
-
-                          // + Add Product Pill Button
+                          // + Add Product Pill Button matching Reference Screenshot 2
                           InkWell(
                             onTap: _showAddProductDialog,
                             borderRadius: BorderRadius.circular(18),
@@ -440,48 +440,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   ),
                                 ],
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-
-                          // Cart Icon with Red Badge (3)
-                          InkWell(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const OrderCartScreen()),
-                              );
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.all(6),
-                                  child: Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 24),
-                                ),
-                                Positioned(
-                                  top: 1,
-                                  right: 1,
-                                  child: Container(
-                                    width: 17,
-                                    height: 17,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFEF4444),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        '$badgeNumber',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9.5,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ],
@@ -1322,230 +1280,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // 125 SEED PRODUCTS matching screenshot exactly
-  // ──────────────────────────────────────────────────────────────────────────
-  List<_CatalogItem> _buildSeedProducts() {
-    final list = <_CatalogItem>[
-      _CatalogItem(
-        sNo: 1,
-        code: 'TC001',
-        name: 'ERD TC-30 USB-A DOCK CHARGER BLK',
-        specs: '5V DC - 500mA (2.5W)',
-        stdPkg: 20,
-        qty: 10,
-        price: 67.0,
-        margin: '10.00',
-        slPrice: 77.0,
-        category: 'Mobile Accessories',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8504',
-        description: 'ERD TC-30 USB-A Dock Charger. 5V DC - 500mA (2.5W). Suitable for mobile phones and other devices.',
-      ),
-      _CatalogItem(
-        sNo: 2,
-        code: 'TC-201B',
-        name: 'ERD TC-201 USB-A DOCK CHARGER BLK 5W',
-        specs: '5V DC - 1 Amp (5W)',
-        stdPkg: 20,
-        qty: 5,
-        price: 76.0,
-        margin: '10.00',
-        slPrice: 86.0,
-        category: 'Chargers',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8504',
-        description: 'ERD TC-201 USB-A Dock Charger Black. 5V DC - 1 Amp (5W). Compact and reliable mobile charging dock.',
-      ),
-      _CatalogItem(
-        sNo: 3,
-        code: 'TC-201',
-        name: 'ERD TC-201 USB-A DOCK CHARGER WHT 5W',
-        specs: '5V DC - 1 Amp (5W)',
-        stdPkg: 60,
-        qty: 3,
-        price: 76.0,
-        margin: '10.00',
-        slPrice: 86.0,
-        category: 'Chargers',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8504',
-        description: 'ERD TC-201 USB-A Dock Charger White. Fast 5W charging output with surge protection.',
-      ),
-      _CatalogItem(
-        sNo: 4,
-        code: 'TC-201M',
-        name: 'ERD TC-201 CHARGER+MICRO USB WHT 5W',
-        specs: '5V DC - 1 Amp (5W)',
-        stdPkg: 60,
-        qty: 2,
-        price: 116.0,
-        margin: '15.00',
-        slPrice: 131.0,
-        category: 'Chargers',
-        brand: 'ERD',
-        unit: 'SET',
-        hsnSac: '8504',
-        description: 'ERD TC-201 Charger combo pack with dedicated high durability Micro-USB charging cable.',
-      ),
-      _CatalogItem(
-        sNo: 5,
-        code: 'TC-202B',
-        name: 'ERD TC-202 USB-A DOCK CHARGER BLK 10W',
-        specs: '5V DC - 2 Amp (10W)',
-        stdPkg: 20,
-        qty: 8,
-        price: 92.0,
-        margin: '10.00',
-        slPrice: 102.0,
-        category: 'Chargers',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8504',
-        description: 'ERD TC-202 Dual Port 10W Charger Black. Smart IC overvoltage protection.',
-      ),
-      _CatalogItem(
-        sNo: 6,
-        code: 'TC-202',
-        name: 'ERD TC-202 USB-A DOCK CHARGER WHT 10W',
-        specs: '5V DC - 2 Amp (10W)',
-        stdPkg: 60,
-        qty: 4,
-        price: 92.0,
-        margin: '10.00',
-        slPrice: 102.0,
-        category: 'Chargers',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8504',
-        description: 'ERD TC-202 10W Fast Charging Wall Adapter in glossy white.',
-      ),
-      _CatalogItem(
-        sNo: 7,
-        code: 'TC-203',
-        name: 'ERD TC-203 FAST CHARGER BLK 20W',
-        specs: '5V DC - 3 Amp (20W)',
-        stdPkg: 30,
-        qty: 6,
-        price: 180.0,
-        margin: '22.00',
-        slPrice: 202.0,
-        category: 'Chargers',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8504',
-        description: 'ERD 20W Quick Charge 3.0 Adapter for Android and iOS smartphones.',
-      ),
-      _CatalogItem(
-        sNo: 8,
-        code: 'TC-203W',
-        name: 'ERD TC-203 FAST CHARGER WHT 20W',
-        specs: '5V DC - 3 Amp (20W)',
-        stdPkg: 30,
-        qty: 6,
-        price: 180.0,
-        margin: '22.00',
-        slPrice: 202.0,
-        category: 'Chargers',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8504',
-        description: 'ERD 20W Quick Charge 3.0 Adapter White. BIS certified fire-retardant body.',
-      ),
-      _CatalogItem(
-        sNo: 9,
-        code: 'CA-001',
-        name: 'USB Type-C Fast Charging Cable',
-        specs: '3A - 1 Meter',
-        stdPkg: 100,
-        qty: 10,
-        price: 120.0,
-        margin: '12.00',
-        slPrice: 132.0,
-        category: 'Cables',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8544',
-        description: 'Nylon braided high-speed 3A Type-C fast charging and 480Mbps data sync cable.',
-      ),
-      _CatalogItem(
-        sNo: 10,
-        code: 'CA-002',
-        name: 'USB Type-C Fast Charging Cable (2 Meter)',
-        specs: '3A - 2 Meter',
-        stdPkg: 50,
-        qty: 5,
-        price: 180.0,
-        margin: '18.00',
-        slPrice: 198.0,
-        category: 'Cables',
-        brand: 'ERD',
-        unit: 'PCS',
-        hsnSac: '8544',
-        description: 'Extra-long 2-meter 3A heavy-duty copper core cable for bedside and desk convenience.',
-      ),
-    ];
-
-    // Populate remaining up to 125 items to exactly match "All Products (125)"
-    for (int i = 11; i <= 125; i++) {
-      final isCable = i % 3 == 0;
-      final isStationery = i % 5 == 0;
-      final isOthers = i % 7 == 0;
-
-      String cat = 'Chargers';
-      String code = 'TC-${100 + i}';
-      String name = 'ERD TC-${100 + i} POWER ADAPTER';
-      String specs = '${(i % 4 + 1) * 5}W Multi-Port Fast Charger';
-      double p = 70.0 + (i * 2.5 % 150);
-      double m = 10.0 + (i % 15);
-
-      if (isCable) {
-        cat = 'Cables';
-        code = 'CA-${100 + i}';
-        name = 'ERD Type-C to Lightning Cable ${i % 2 == 0 ? "1M" : "1.5M"}';
-        specs = 'PD 20W Fast Charging';
-      } else if (isStationery) {
-        cat = 'Stationery';
-        code = 'ST-${200 + i}';
-        name = 'Thermal Billing Paper Roll 80mm';
-        specs = 'Grade A Thermal Paper';
-        p = 45.0;
-        m = 10.0;
-      } else if (isOthers) {
-        cat = 'Others';
-        code = 'OT-${300 + i}';
-        name = 'Mobile Phone Desktop Stand Metal';
-        specs = '360° Rotatable Aluminum Stand';
-        p = 150.0;
-        m = 35.0;
-      }
-
-      list.add(
-        _CatalogItem(
-          sNo: i,
-          code: code,
-          name: name,
-          specs: specs,
-          stdPkg: 20 + (i % 4) * 10,
-          qty: 5 + (i % 15),
-          price: p,
-          margin: m.toStringAsFixed(2),
-          slPrice: p + m,
-          category: cat,
-          brand: 'ERD',
-          unit: 'PCS',
-          hsnSac: '8504',
-          description: '$name ($specs). Built with smart protection against heat, short circuit, and voltage fluctuations.',
-        ),
-      );
-    }
-
-    return list;
-  }
 }
+
 
 // ────────────────────────────────────────────────────────────────────────────
 // PRODUCT MODEL HELPER

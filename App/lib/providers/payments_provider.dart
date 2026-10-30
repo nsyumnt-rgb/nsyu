@@ -46,7 +46,7 @@ class PaymentsProvider with ChangeNotifier {
   /// Backward-compatible alias for syncFromDrive()
   Future<void> syncFromDrive() => syncFromSupabase();
 
-  Future<bool> addPayment(Payment payment) async {
+  Future<bool> addPayment(Payment payment, {String? customerId}) async {
     _syncing = true;
     notifyListeners();
 

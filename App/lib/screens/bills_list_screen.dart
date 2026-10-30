@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../models/customer.dart';
 import '../models/saved_bill.dart';
 import '../navigation/app_navigation.dart';
 import '../providers/bills_provider.dart';
-import '../providers/customer_provider.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'order_cart_screen.dart';
 
@@ -65,88 +63,6 @@ class _BillsListScreenState extends State<BillsListScreen> {
       return true;
     }).toList();
 
-    // Reference mock bills matching Image 5 & Image 6 (Left Phone)
-    final mockList = [
-      _MockBill(
-        customerName: 'Krishna Jasola',
-        billNo: 'B-00125',
-        dateStr: '29 Oct 2026',
-        itemCount: 3,
-        status: 'Unpaid',
-        total: 2222.0,
-      ),
-      _MockBill(
-        customerName: 'GD SB',
-        billNo: 'B-00124',
-        dateStr: '28 Oct 2026',
-        itemCount: 5,
-        status: 'Partial',
-        total: 4500.0,
-        paid: 1500.0,
-      ),
-      _MockBill(
-        customerName: 'Vijay sharma comm harkesh',
-        billNo: 'B-00123',
-        dateStr: '27 Oct 2026',
-        itemCount: 4,
-        status: 'Unpaid',
-        total: 3200.0,
-      ),
-      _MockBill(
-        customerName: 'R K Comm SB',
-        billNo: 'B-00122',
-        dateStr: '26 Oct 2026',
-        itemCount: 2,
-        status: 'Paid',
-        total: 1850.0,
-      ),
-      _MockBill(
-        customerName: 'Siddique Sahab SB',
-        billNo: 'B-00121',
-        dateStr: '25 Oct 2026',
-        itemCount: 6,
-        status: 'Partial',
-        total: 6000.0,
-        paid: 2000.0,
-      ),
-      _MockBill(
-        customerName: 'Aalam Near RG',
-        billNo: 'B-00120',
-        dateStr: '24 Oct 2026',
-        itemCount: 3,
-        status: 'Unpaid',
-        total: 2750.0,
-      ),
-      _MockBill(
-        customerName: 'Mohd Ali',
-        billNo: 'B-00119',
-        dateStr: '23 Oct 2026',
-        itemCount: 7,
-        status: 'Paid',
-        total: 5300.0,
-      ),
-      _MockBill(
-        customerName: 'Shakti Enterprise',
-        billNo: 'B-00118',
-        dateStr: '22 Oct 2026',
-        itemCount: 3,
-        status: 'Partial',
-        total: 4800.0,
-        paid: 1800.0,
-      ),
-    ];
-
-    final filteredMock = mockList.where((m) {
-      if (query.isNotEmpty) {
-        final matchesQuery = m.customerName.toLowerCase().contains(query) ||
-            m.billNo.toLowerCase().contains(query);
-        if (!matchesQuery) return false;
-      }
-      if (_selectedStatusFilter != 'All' && m.status != _selectedStatusFilter) {
-        return false;
-      }
-      return true;
-    }).toList();
 
     final totalCount = realBills.isNotEmpty ? (125 + realBills.length) : 125;
 
@@ -208,7 +124,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.filter_list_rounded, color: Color(0xFF0F172A), size: 22),
-                        onPressed: _showFilterDialog,
+                        onPressed: _showPeriodPicker,
                       ),
                       const SizedBox(width: 4),
                       // Circular Green + Button matching Image 5 & Image 6 Left
@@ -269,18 +185,32 @@ class _BillsListScreenState extends State<BillsListScreen> {
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
 
           // ── Bills List View ──
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 90),
-              children: [
-                // Render real bills created first
-                ...filteredReal.map((b) => _buildRealBillTile(b)),
-
-                // Render mock bills to match reference design completely
-                ...filteredMock.map((m) => _buildMockBillTile(m)),
-              ],
+          if (filteredReal.isEmpty)
+            const Expanded(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.receipt_long_outlined, size: 52, color: Color(0xFFCBD5E1)),
+                      SizedBox(height: 12),
+                      Text('No bills found', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF334155))),
+                      SizedBox(height: 6),
+                      Text('Create your first bill by tapping the + button in the header.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 90),
+                itemCount: filteredReal.length,
+                itemBuilder: (ctx, i) => _buildRealBillTile(filteredReal[i]),
+              ),
             ),
-          ),
         ],
       ),
       bottomNavigationBar: AppBottomNav(currentIndex: 1, onTap: widget.onNavigate),
@@ -367,36 +297,26 @@ class _BillsListScreenState extends State<BillsListScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // BILL LIST TILES matching Image 5 & Image 6 Left Phone
+  // BILL LIST TILES matching Reference Design
   // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildMockBillTile(_MockBill m) {
+  Widget _buildRealBillTile(SavedBill b) {
     Color badgeBg = const Color(0xFFDCFCE7);
     Color badgeFg = const Color(0xFF16A34A);
-    if (m.status == 'Unpaid') {
+    String status = b.isPaid ? 'Paid' : (b.paidAmount > 0 ? 'Partial' : 'Unpaid');
+    if (status == 'Unpaid') {
       badgeBg = const Color(0xFFFEE2E2);
       badgeFg = const Color(0xFFDC2626);
-    } else if (m.status == 'Partial') {
+    } else if (status == 'Partial') {
       badgeBg = const Color(0xFFFEF3C7);
       badgeFg = const Color(0xFFD97706);
     }
 
-    final avatarBg = _avatarBgForName(m.customerName);
-    final initial = m.customerName.isNotEmpty ? m.customerName[0].toUpperCase() : 'C';
+    final avatarBg = _avatarBgForName(b.customerName);
+    final initial = b.customerName.isNotEmpty ? b.customerName[0].toUpperCase() : 'C';
 
     return InkWell(
       onTap: () {
-        // Red arrow navigation in Image 6: clicking a bill navigates to Customer Details Bills tab!
-        final customers = context.read<CustomerProvider>().customers;
-        final match = customers.firstWhere(
-          (c) => c.name.toLowerCase() == m.customerName.toLowerCase(),
-          orElse: () => Customer(id: '0', name: m.customerName, mobile: '8800123456'),
-        );
-        AppNavigation.openCustomerProfile(
-          context,
-          customer: match,
-          customerName: m.customerName,
-          initialTab: 'Bills',
-        );
+        AppNavigation.openBillDetails(context, bill: b);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -423,149 +343,57 @@ class _BillsListScreenState extends State<BillsListScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    m.customerName,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Bill #${m.billNo}  |  ${m.dateStr}',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF64748B),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          b.customerName,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            color: badgeFg,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      const Icon(Icons.description_outlined, size: 12, color: Color(0xFF64748B)),
-                      const SizedBox(width: 4),
                       Text(
-                        '${m.itemCount} items',
+                        '#${b.billNumber} • ${_dateFormat.format(b.date)}',
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '₹${_money.format(b.total)}',
                         style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF64748B),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
-            // Right Status Badge + Amount
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: badgeBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    m.status,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: badgeFg,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '₹${_money.format(m.total)}',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: m.status == 'Paid' ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
-                  ],
-                ),
-                if (m.status == 'Partial' && m.paid > 0) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    'Paid: ₹${_money.format(m.paid)}',
-                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRealBillTile(SavedBill b) {
-    final statusStr = b.isPaid ? 'Paid' : (b.paidAmount > 0 ? 'Partial' : 'Unpaid');
-    return _buildMockBillTile(
-      _MockBill(
-        customerName: b.customerName.isNotEmpty ? b.customerName : 'Customer',
-        billNo: b.billNumber.replaceAll(RegExp(r'^[#B\-]'), ''),
-        dateStr: _dateFormat.format(b.date),
-        itemCount: b.items.length,
-        status: statusStr,
-        total: b.total,
-        paid: b.paidAmount,
-      ),
-    );
-  }
-
-  void _showFilterDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Filter Bills', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 14),
-            ListTile(
-              title: const Text('All Bills'),
-              onTap: () {
-                setState(() => _selectedStatusFilter = 'All');
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              title: const Text('Unpaid Bills'),
-              onTap: () {
-                setState(() => _selectedStatusFilter = 'Unpaid');
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              title: const Text('Partial Bills'),
-              onTap: () {
-                setState(() => _selectedStatusFilter = 'Partial');
-                Navigator.pop(ctx);
-              },
-            ),
-            ListTile(
-              title: const Text('Paid Bills'),
-              onTap: () {
-                setState(() => _selectedStatusFilter = 'Paid');
-                Navigator.pop(ctx);
-              },
             ),
           ],
         ),
@@ -600,24 +428,4 @@ class _BillsListScreenState extends State<BillsListScreen> {
       ),
     );
   }
-}
-
-class _MockBill {
-  final String customerName;
-  final String billNo;
-  final String dateStr;
-  final int itemCount;
-  final String status;
-  final double total;
-  final double paid;
-
-  const _MockBill({
-    required this.customerName,
-    required this.billNo,
-    required this.dateStr,
-    required this.itemCount,
-    required this.status,
-    required this.total,
-    this.paid = 0.0,
-  });
 }

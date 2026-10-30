@@ -30,11 +30,11 @@ export default function Orders() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<OrderRecord | null>(null);
   const [stats, setStats] = useState<OrderStats>({
-    totalOrders: 1248,
-    pendingOrders: 62,
-    processingOrders: 48,
-    deliveredOrders: 1098,
-    cancelledOrders: 40,
+    totalOrders: 0,
+    pendingOrders: 0,
+    processingOrders: 0,
+    deliveredOrders: 0,
+    cancelledOrders: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,15 +51,19 @@ export default function Orders() {
   const [custType, setCustType] = useState<"existing" | "new">("existing");
   const [selectedCustId, setSelectedCustId] = useState<number | null>(null);
   const [newCustName, setNewCustName] = useState("");
-  const [newCustPhone, setNewCustPhone] = useState("+91 98765 43210");
-  const [newCustEmail, setNewCustEmail] = useState("rajesh@gmail.com");
-  const [newCustAddress, setNewCustAddress] = useState("123, MG Road, New Delhi");
+  const [newCustPhone, setNewCustPhone] = useState("");
+  const [newCustEmail, setNewCustEmail] = useState("");
+  const [newCustAddress, setNewCustAddress] = useState("");
 
-  const [orderDate, setOrderDate] = useState("2026-10-29");
+  const [orderDate, setOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [orderType, setOrderType] = useState("Walk-in");
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [paymentStatus, setPaymentStatus] = useState("Paid");
-  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("2026-10-31");
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    return d.toISOString().slice(0, 10);
+  });
 
   const [cartItems, setCartItems] = useState<
     Array<{
@@ -71,32 +75,7 @@ export default function Orders() {
       discountPercent: number;
       productId?: number;
     }>
-  >([
-    {
-      productName: "Mobile Charger",
-      sku: "CH-001",
-      qty: 2,
-      price: 450,
-      gstPercent: 18,
-      discountPercent: 0,
-    },
-    {
-      productName: "USB Cable",
-      sku: "USB-002",
-      qty: 1,
-      price: 250,
-      gstPercent: 18,
-      discountPercent: 0,
-    },
-    {
-      productName: "Wireless Earbuds",
-      sku: "EB-003",
-      qty: 1,
-      price: 1300,
-      gstPercent: 18,
-      discountPercent: 100,
-    },
-  ]);
+  >([]);
 
   const [productSearch, setProductSearch] = useState("");
   const [savingOrder, setSavingOrder] = useState(false);
@@ -113,7 +92,17 @@ export default function Orders() {
   function loadOrdersData() {
     setLoading(true);
     Promise.all([
-      getOrderStats().catch(() => ({ data: { data: stats } })),
+      getOrderStats().catch(() => ({
+      data: {
+        data: {
+          totalOrders: 0,
+          pendingOrders: 0,
+          processingOrders: 0,
+          deliveredOrders: 0,
+          cancelledOrders: 0,
+        },
+      },
+    })),
       getOrders({
         search: search || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
@@ -165,10 +154,10 @@ export default function Orders() {
         customer:
           custType === "new"
             ? {
-                name: newCustName || "Rajesh Kumar",
-                phone: newCustPhone,
-                email: newCustEmail,
-                address: newCustAddress,
+                name: newCustName.trim(),
+                phone: newCustPhone.trim() || undefined,
+                email: newCustEmail.trim() || undefined,
+                address: newCustAddress.trim() || undefined,
               }
             : selectedCustomerObj
             ? {
@@ -232,32 +221,37 @@ export default function Orders() {
 
   function addProductToCart(p?: Product) {
     if (p) {
-      setCartItems((prev) => [
-        ...prev,
-        {
-          productName: p.name,
-          sku: p.sku || "ITEM",
-          qty: 1,
-          price: Number(p.selling_price || 500),
-          gstPercent: 18,
-          discountPercent: 0,
-          productId: p.id,
-        },
-      ]);
+      setCartItems((prev) => {
+        const existingIdx = prev.findIndex((it) => it.productId === p.id || (p.sku && it.sku === p.sku));
+        if (existingIdx >= 0) {
+          return prev.map((it, i) => (i === existingIdx ? { ...it, qty: it.qty + 1 } : it));
+        }
+        return [
+          ...prev,
+          {
+            productName: p.name,
+            sku: p.sku || "SKU-" + p.id,
+            qty: 1,
+            price: Number(p.selling_price || 0),
+            gstPercent: 18,
+            discountPercent: 0,
+            productId: p.id,
+          },
+        ];
+      });
       setProductSearch("");
-    } else {
-      setCartItems((prev) => [
-        ...prev,
-        {
-          productName: productSearch || "Universal Adapter 30W",
-          sku: "ACC-" + Math.floor(100 + Math.random() * 900),
-          qty: 1,
-          price: 650,
-          gstPercent: 18,
-          discountPercent: 0,
-        },
-      ]);
-      setProductSearch("");
+    } else if (productSearch.trim()) {
+      const query = productSearch.toLowerCase().trim();
+      const matched = availableProducts.find(
+        (prod) =>
+          prod.name.toLowerCase().includes(query) ||
+          (prod.sku && prod.sku.toLowerCase().includes(query))
+      );
+      if (matched) {
+        addProductToCart(matched);
+      } else {
+        alert("No product found matching '" + productSearch + "'. Please choose from database products.");
+      }
     }
   }
 
@@ -977,6 +971,13 @@ export default function Orders() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
+                    {cartItems.length === 0 && (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-slate-400">
+                          Cart is empty (0 items). Search products above or select from the database to add items.
+                        </td>
+                      </tr>
+                    )}
                     {cartItems.map((item, idx) => {
                       const lineTotal = item.price * item.qty - (item.discountPercent || 0);
                       return (
@@ -1107,7 +1108,7 @@ export default function Orders() {
               <div className="flex justify-between py-1 border-b border-border/60">
                 <span className="text-slate-500">Customer</span>
                 <span className="font-bold text-slate-900">
-                  {selectedOrder.customer?.name || "Rajesh Kumar"}
+                  {selectedOrder.customer?.name || "Walk-in Customer"}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-border/60">
@@ -1276,19 +1277,19 @@ export default function Orders() {
                   Customer Information
                 </h3>
                 <div className="font-bold text-slate-900 text-sm">
-                  {selectedOrder.customer?.name || "Rajesh Kumar"}
+                  {selectedOrder.customer?.name || "Walk-in Customer"}
                 </div>
                 <div className="text-slate-600 flex items-center gap-1.5">
                   <span>📞</span>
-                  <span>{selectedOrder.customer?.phone || "+91 98765 43210"}</span>
+                  <span>{selectedOrder.customer?.phone || "—"}</span>
                 </div>
                 <div className="text-slate-600 flex items-center gap-1.5">
                   <span>✉️</span>
-                  <span>{selectedOrder.customer?.email || "rajesh@gmail.com"}</span>
+                  <span>{selectedOrder.customer?.email || "—"}</span>
                 </div>
                 <div className="text-slate-600 flex items-center gap-1.5">
                   <span>📍</span>
-                  <span>{selectedOrder.shipping_address || selectedOrder.customer?.address || "123, MG Road, New Delhi"}</span>
+                  <span>{selectedOrder.shipping_address || selectedOrder.customer?.address || "Store Pickup"}</span>
                 </div>
               </div>
 
@@ -1405,7 +1406,7 @@ export default function Orders() {
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Customer</span>
                 <span className="font-bold text-slate-900">
-                  {selectedOrder.customer?.name || "Rajesh Kumar"}
+                  {selectedOrder.customer?.name || "Walk-in Customer"}
                 </span>
               </div>
               <div>
@@ -1619,16 +1620,16 @@ export default function Orders() {
                   Bill To:
                 </div>
                 <div className="font-bold text-sm text-slate-900">
-                  {selectedOrder.customer?.name || "Rajesh Kumar"}
+                  {selectedOrder.customer?.name || "Walk-in Customer"}
                 </div>
                 <div className="text-slate-600">
-                  {selectedOrder.shipping_address || selectedOrder.customer?.address || "123, MG Road, New Delhi"}
+                  {selectedOrder.shipping_address || selectedOrder.customer?.address || "Store Pickup"}
                 </div>
                 <div className="text-slate-600 font-mono">
-                  {selectedOrder.customer?.phone || "+91 98765 43210"}
+                  {selectedOrder.customer?.phone || "—"}
                 </div>
                 <div className="text-slate-600">
-                  {selectedOrder.customer?.email || "rajesh@gmail.com"}
+                  {selectedOrder.customer?.email || "—"}
                 </div>
               </div>
 
@@ -1762,59 +1763,79 @@ export default function Orders() {
               </div>
 
               {/* Order Info & Delivery Address & Items */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border text-xs">
-                {/* Details */}
-                <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
-                  <h4 className="font-bold text-slate-800">Order Details</h4>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Order No:</span>
-                    <span className="font-mono font-bold">
-                      {selectedOrder?.order_number || "ORD-001248"}
-                    </span>
+              {selectedOrder ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border text-xs">
+                  {/* Details */}
+                  <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
+                    <h4 className="font-bold text-slate-800">Order Details</h4>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Order No:</span>
+                      <span className="font-mono font-bold text-blue-600">
+                        {selectedOrder.order_number}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Order Date:</span>
+                      <span>
+                        {new Date(selectedOrder.order_date).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Total Amount:</span>
+                      <span className="font-bold text-blue-700 font-mono">
+                        ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Payment Status:</span>
+                      <span className="text-emerald-600 font-bold">{selectedOrder.payment_status || "Paid"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Order Status:</span>
+                      <span className="text-blue-600 font-bold capitalize">{selectedOrder.status}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Order Date:</span>
-                    <span>29 Oct 2026</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Total Amount:</span>
-                    <span className="font-bold text-blue-700">₹ 12,450</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Payment Status:</span>
-                    <span className="text-emerald-600 font-bold">Paid</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Order Status:</span>
-                    <span className="text-blue-600 font-bold">Shipped</span>
-                  </div>
-                </div>
 
-                {/* Delivery Address */}
-                <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
-                  <h4 className="font-bold text-slate-800">Delivery Address</h4>
-                  <div className="font-semibold text-slate-900">Rajesh Kumar</div>
-                  <div className="text-slate-600">123, MG Road, Near Market, New Delhi</div>
-                  <div className="text-slate-600 font-mono">+91 98765 43210</div>
-                </div>
+                  {/* Delivery Address */}
+                  <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
+                    <h4 className="font-bold text-slate-800">Delivery Address</h4>
+                    <div className="font-semibold text-slate-900">
+                      {selectedOrder.customer?.name || "Walk-in Customer"}
+                    </div>
+                    <div className="text-slate-600">
+                      {selectedOrder.shipping_address || selectedOrder.customer?.address || "Store Pickup"}
+                    </div>
+                    <div className="text-slate-600 font-mono">
+                      {selectedOrder.customer?.phone || "—"}
+                    </div>
+                  </div>
 
-                {/* Items */}
-                <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
-                  <h4 className="font-bold text-slate-800">Items Ordered</h4>
-                  <div className="flex justify-between py-1 border-b border-border/50">
-                    <span>Laptop HP 15s</span>
-                    <span className="font-bold">x1</span>
-                  </div>
-                  <div className="flex justify-between py-1 border-b border-border/50">
-                    <span>Wireless Mouse</span>
-                    <span className="font-bold">x1</span>
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <span>Mechanical Keyboard</span>
-                    <span className="font-bold">x1</span>
+                  {/* Items */}
+                  <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
+                    <h4 className="font-bold text-slate-800">
+                      Items Ordered ({selectedOrder.items?.length || 0})
+                    </h4>
+                    {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                      selectedOrder.items.map((it, idx) => (
+                        <div key={it.id || idx} className="flex justify-between py-1 border-b border-border/50 last:border-0">
+                          <span className="text-slate-700">{it.product_name}</span>
+                          <span className="font-bold font-mono">x{it.quantity}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-slate-400 py-2">No items in this order.</div>
+                    )}
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="p-6 text-center text-slate-400 text-xs">
+                  No order selected. Please select an order from the Order List to view tracking details.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1911,131 +1932,125 @@ export default function Orders() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              {/* Mobile Push Notification Mock */}
-              <div className="card p-5 bg-slate-900 text-white rounded-3xl border-4 border-slate-700 shadow-xl space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">📱</span>
-                    <span className="font-bold">In-App & Mobile Push Alerts</span>
-                  </div>
-                  <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full font-mono">
-                    Live Active
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
-                        <span>✓</span> Order Confirmed
-                      </span>
-                      <span className="text-[10px] text-slate-400">2 min ago</span>
+            {selectedOrder ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                {/* Mobile Push Notification Mock */}
+                <div className="card p-5 bg-slate-900 text-white rounded-3xl border-4 border-slate-700 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-slate-800 text-xs border-b">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">📱</span>
+                      <span className="font-bold">In-App & Mobile Push Alerts</span>
                     </div>
-                    <p className="text-[11px] text-slate-300">
-                      Your order #{selectedOrder?.order_number || "ORD-001248"} has been confirmed.
-                    </p>
+                    <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full font-mono">
+                      Live Active
+                    </span>
                   </div>
 
-                  <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-blue-400 flex items-center gap-1.5">
-                        <span>📦</span> Order Processing
-                      </span>
-                      <span className="text-[10px] text-slate-400">10 min ago</span>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
+                          <span>✓</span> Order Confirmed
+                        </span>
+                        <span className="text-[10px] text-slate-400">Live</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        Your order #{selectedOrder.order_number} has been confirmed.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-300">
-                      Your order is being packaged at Main Store warehouse.
-                    </p>
-                  </div>
 
-                  <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-purple-400 flex items-center gap-1.5">
-                        <span>🚚</span> Order Shipped
-                      </span>
-                      <span className="text-[10px] text-slate-400">1 hour ago</span>
+                    <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-blue-400 flex items-center gap-1.5">
+                          <span>📦</span> Order Processing
+                        </span>
+                        <span className="text-[10px] text-slate-400">Status: {selectedOrder.status}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        Your order is being processed for {selectedOrder.customer?.name || "customer"}.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-300">
-                      Your order has been handed over to delivery partner.
-                    </p>
-                  </div>
 
-                  <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
-                        <span>🎉</span> Order Delivered
-                      </span>
-                      <span className="text-[10px] text-slate-400">1 day ago</span>
+                    <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-purple-400 flex items-center gap-1.5">
+                          <span>🚚</span> Order Status Alert
+                        </span>
+                        <span className="text-[10px] text-slate-400">Current</span>
+                      </div>
+                      <p className="text-[11px] text-slate-300">
+                        Order #{selectedOrder.order_number} is currently <span className="text-white font-bold">{selectedOrder.status}</span>.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-300">
-                      Your order has been safely delivered to Rajesh Kumar.
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Email / SMS Notification Card (Image 2 Step 9) */}
-              <div className="card p-6 bg-white border border-border shadow-md rounded-2xl space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                      ✉️
-                    </div>
-                    <div>
-                      <div className="font-bold text-xs text-slate-900">Email & SMS Notification</div>
-                      <div className="text-[10px] text-slate-400">
-                        From: NSY Business &lt;noreply@nsyu.com&gt;
+                {/* Email / SMS Notification Card (Image 2 Step 9) */}
+                <div className="card p-6 bg-white border border-border shadow-md rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-border">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                        ✉️
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-slate-900">Email & SMS Notification</div>
+                        <div className="text-[10px] text-slate-400">
+                          From: NSY Business &lt;noreply@nsyu.com&gt;
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
-                    Customer Copy
-                  </span>
-                </div>
-
-                <div className="text-xs space-y-3 leading-relaxed text-slate-700">
-                  <p>
-                    Hi <strong className="text-slate-900">{selectedOrder?.customer?.name || "Rajesh Kumar"}</strong>,
-                  </p>
-                  <p>
-                    Your order <strong className="text-blue-600 font-mono">#{selectedOrder?.order_number || "ORD-001248"}</strong> has been shipped and is on its way to your destination!
-                  </p>
-
-                  <div className="bg-slate-50 p-4 rounded-xl border border-border space-y-2">
-                    <div className="font-bold text-slate-900 text-xs">Order Details:</div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Items:</span>
-                      <span className="font-bold">{selectedOrder?.items?.length || 3} items</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Amount:</span>
-                      <span className="font-bold text-blue-700 font-mono">
-                        ₹ {Number(selectedOrder?.total_amount || 12450).toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Expected Delivery:</span>
-                      <span className="font-semibold text-slate-800">31 Oct 2026</span>
-                    </div>
+                    <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
+                      Customer Copy
+                    </span>
                   </div>
 
-                  <div className="text-center pt-2">
-                    <button
-                      onClick={() => setStep("tracking")}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-lg text-xs shadow-sm"
-                    >
-                      Track Your Order
-                    </button>
-                  </div>
+                  <div className="text-xs space-y-3 leading-relaxed text-slate-700">
+                    <p>
+                      Hi <strong className="text-slate-900">{selectedOrder.customer?.name || "Customer"}</strong>,
+                    </p>
+                    <p>
+                      Your order <strong className="text-blue-600 font-mono">#{selectedOrder.order_number}</strong> status is now <span className="font-bold text-slate-900">{selectedOrder.status}</span>!
+                    </p>
 
-                  <p className="text-[11px] text-slate-400 pt-3 border-t border-border">
-                    Thank you,<br />
-                    <strong className="text-slate-700">NSY Business Multi-Shop Management</strong>
-                  </p>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-border space-y-2">
+                      <div className="font-bold text-slate-900 text-xs">Order Details:</div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Items:</span>
+                        <span className="font-bold">{selectedOrder.items?.length || 0} items</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Amount:</span>
+                        <span className="font-bold text-blue-700 font-mono">
+                          ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Payment Status:</span>
+                        <span className="font-semibold text-emerald-600">{selectedOrder.payment_status || "Paid"}</span>
+                      </div>
+                    </div>
+
+                    <div className="text-center pt-2">
+                      <button
+                        onClick={() => setStep("tracking")}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-lg text-xs shadow-sm"
+                      >
+                        Track Your Order
+                      </button>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 pt-3 border-t border-border">
+                      Thank you,<br />
+                      <strong className="text-slate-700">NSY Business Multi-Shop Management</strong>
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="p-8 text-center text-slate-400 text-xs">
+                No order selected. Please select an order from the Order List to view notifications.
+              </div>
+            )}
           </div>
         )}
       </div>

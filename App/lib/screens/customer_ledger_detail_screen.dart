@@ -878,53 +878,19 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           ),
           const SizedBox(height: 10),
 
-          // List of bill cards matching Image 6 Right Phone
+          // Real customer bills from database
           if (customerBills.isNotEmpty)
             ...customerBills.map((b) => _buildCustomerBillCard(b))
-          else ...[
-            _buildCustomerBillMockCard(
-              billNo: 'B-00125',
-              date: '29 Oct 2026',
-              time: '10:30 AM',
-              itemCount: 3,
-              status: 'Unpaid',
-              amount: 2222.0,
+          else
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No bills found for this customer.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
+                ),
+              ),
             ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00120',
-              date: '24 Oct 2026',
-              time: '02:15 PM',
-              itemCount: 5,
-              status: 'Partial',
-              amount: 3500.0,
-              paid: 1500.0,
-              due: 2000.0,
-            ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00115',
-              date: '20 Oct 2026',
-              time: '11:20 AM',
-              itemCount: 2,
-              status: 'Paid',
-              amount: 1850.0,
-            ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00110',
-              date: '15 Oct 2026',
-              time: '04:45 PM',
-              itemCount: 4,
-              status: 'Paid',
-              amount: 2300.0,
-            ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00108',
-              date: '10 Oct 2026',
-              time: '01:10 PM',
-              itemCount: 3,
-              status: 'Paid',
-              amount: 2578.0,
-            ),
-          ],
         ],
       ),
     );

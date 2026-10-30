@@ -23,19 +23,19 @@ async function getOrderStats(req, res) {
     try {
         const [total, pending, processing, delivered, cancelled] = await Promise.all([
             models_1.Order.count({ where: baseWhere }),
-            models_1.Order.count({ where: { ...baseWhere, status: "pending" } }),
-            models_1.Order.count({ where: { ...baseWhere, status: "processing" } }),
-            models_1.Order.count({ where: { ...baseWhere, status: "delivered" } }),
-            models_1.Order.count({ where: { ...baseWhere, status: "cancelled" } }),
+            models_1.Order.count({ where: { ...baseWhere, status: { [sequelize_1.Op.iLike]: "pending" } } }),
+            models_1.Order.count({ where: { ...baseWhere, status: { [sequelize_1.Op.iLike]: "processing" } } }),
+            models_1.Order.count({ where: { ...baseWhere, status: { [sequelize_1.Op.iLike]: "delivered" } } }),
+            models_1.Order.count({ where: { ...baseWhere, status: { [sequelize_1.Op.iLike]: "cancelled" } } }),
         ]);
         return res.json({
             success: true,
             data: {
-                totalOrders: total || 1248,
-                pendingOrders: pending || 62,
-                processingOrders: processing || 48,
-                deliveredOrders: delivered || 1098,
-                cancelledOrders: cancelled || 40,
+                totalOrders: total || 0,
+                pendingOrders: pending || 0,
+                processingOrders: processing || 0,
+                deliveredOrders: delivered || 0,
+                cancelledOrders: cancelled || 0,
             },
         });
     }
@@ -202,8 +202,8 @@ async function createOrder(req, res) {
             // 3. Generate Order Number
             let orderNumber = customOrderNumber;
             if (!orderNumber) {
-                const [counterRow] = await models_1.sequelize.query("SELECT COALESCE(MAX(id), 1248) as max_id FROM orders WHERE owner_id = :owner_id", { replacements: { owner_id: ownerId }, transaction: t });
-                const nextNum = Number(counterRow?.[0]?.max_id || 1248) + 1;
+                const [counterRow] = await models_1.sequelize.query("SELECT COALESCE(MAX(id), 0) as max_id FROM orders WHERE owner_id = :owner_id", { replacements: { owner_id: ownerId }, transaction: t });
+                const nextNum = Number(counterRow?.[0]?.max_id || 0) + 1;
                 orderNumber = `ORD-${String(nextNum).padStart(6, "0")}`;
             }
             // 4. Save Order Header

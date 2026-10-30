@@ -119,59 +119,63 @@ class CatalogProvider extends ChangeNotifier {
 
   double get orderTotal => orderItems.fold(0, (s, i) => s + i.amount);
 
-  static List<Product> defaultProducts() => [
-    Product(
-      sno: 1,
-      code: 'TC001',
-      desc: 'ERD TC-30 USB-A DOCK CHARGER BLK',
-      spec: '5V DC - 500mA (2.5W)',
-      pkg: 20,
-      category: 'Chargers',
-      purchase: 67.0,
-      marginPrice: 10.0,
-      sellingPrice: 77.0,
-      stock: 20,
-    ),
-    Product(
-      sno: 2,
-      code: 'TC-201B',
-      desc: 'ERD TC-201 USB-A DOCK CHARGER BLK 5W',
-      spec: '5V DC - 1 Amp (5W)',
-      pkg: 20,
-      category: 'Chargers',
-      purchase: 76.0,
-      marginPrice: 10.0,
-      sellingPrice: 86.0,
-      stock: 15,
-    ),
-    Product(
-      sno: 3,
-      code: 'TC-201',
-      desc: 'ERD TC-201 USB-A DOCK CHARGER WHT 5W',
-      spec: '5V DC - 1 Amp (5W)',
-      pkg: 60,
-      category: 'Chargers',
-      purchase: 76.0,
-      marginPrice: 10.0,
-      sellingPrice: 86.0,
-      stock: 25,
-    ),
-  ];
+  int get totalCartCount => billItems.length + orderItems.length;
+  int get totalCartQty => billItems.fold(0, (s, i) => s + i.qty) + orderItems.fold(0, (s, i) => s + i.qty);
+
+  void addProductWithQty(Product p, int qty, {bool isOrder = false}) {
+    if (qty <= 0) return;
+    if (isOrder) {
+      final existing = orderItemFor(p.code);
+      if (existing != null) {
+        existing.qty += qty;
+      } else {
+        final item = BillItem.fromProduct(p);
+        item.qty = qty;
+        orderItems.add(item);
+      }
+    } else {
+      final existing = billItemFor(p.code);
+      if (existing != null) {
+        existing.qty += qty;
+      } else {
+        final item = BillItem.fromProduct(p);
+        item.qty = qty;
+        billItems.add(item);
+      }
+    }
+    notifyListeners();
+  }
+
+  void addCatalogItemToCart(dynamic item, int qty, {bool isOrder = false}) {
+    if (qty <= 0) return;
+    final code = item.code.toString();
+    final name = item.name.toString();
+    final specs = item.specs.toString();
+    final price = (item.slPrice as num).toDouble();
+    final list = isOrder ? orderItems : billItems;
+    final existingIndex = list.indexWhere((i) => i.code == code);
+    if (existingIndex >= 0) {
+      list[existingIndex].qty += qty;
+    } else {
+      list.add(BillItem(
+        code: code,
+        desc: name,
+        spec: specs,
+        price: price,
+        qty: qty,
+      ));
+    }
+    notifyListeners();
+  }
 
   Future<void> loadProducts() async {
     status = LoadStatus.loading;
     notifyListeners();
     try {
-      _allProducts = await _supabaseService.fetchProducts().timeout(const Duration(seconds: 2));
-      if (_allProducts.isEmpty) {
-        _allProducts = defaultProducts();
-      }
+      _allProducts = await _supabaseService.fetchProducts().timeout(const Duration(seconds: 15));
       status = LoadStatus.loaded;
     } catch (e) {
       errorMessage = e.toString();
-      if (_allProducts.isEmpty) {
-        _allProducts = defaultProducts();
-      }
       status = LoadStatus.loaded;
     }
     notifyListeners();
