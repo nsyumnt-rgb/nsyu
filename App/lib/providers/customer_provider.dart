@@ -48,12 +48,13 @@ class CustomerProvider extends ChangeNotifier {
     return null;
   }
 
-  /// Adds a new customer in Supabase PostgreSQL and persists it locally.
+  /// Adds a new customer/supplier in Supabase PostgreSQL and persists it locally.
   Future<Customer> addCustomer(
     String name,
     String mobile, {
     String address = '',
     double openingBalance = 0.0,
+    bool isSupplier = false,
   }) async {
     Customer created;
     try {
@@ -62,10 +63,11 @@ class CustomerProvider extends ChangeNotifier {
         mobile: mobile,
         address: address,
         openingBalance: openingBalance,
-      );
+      ).timeout(const Duration(seconds: 2));
+      created.isSupplier = isSupplier;
     } catch (_) {
       final nextNum = _customers.length + 1;
-      final id = 'C${nextNum.toString().padLeft(3, '0')}';
+      final id = isSupplier ? 'S${nextNum.toString().padLeft(3, '0')}' : 'C${nextNum.toString().padLeft(3, '0')}';
       created = Customer(
         id: id,
         name: name.trim(),
@@ -73,6 +75,7 @@ class CustomerProvider extends ChangeNotifier {
         address: address.trim(),
         openingBalance: openingBalance,
         currentBalance: openingBalance,
+        isSupplier: isSupplier,
       );
     }
     _customers.add(created);

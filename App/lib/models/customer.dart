@@ -7,6 +7,7 @@ class Customer {
   String address;
   double currentBalance;
   double openingBalance;
+  bool isSupplier;
 
   Customer({
     required this.id,
@@ -16,6 +17,7 @@ class Customer {
     this.address = '',
     this.currentBalance = 0.0,
     this.openingBalance = 0.0,
+    this.isSupplier = false,
   });
 
   factory Customer.fromJson(Map<String, dynamic> json) => Customer(
@@ -26,6 +28,7 @@ class Customer {
         address: json['address']?.toString() ?? '',
         currentBalance: double.tryParse(json['current_balance']?.toString() ?? json['currentBalance']?.toString() ?? '0') ?? 0.0,
         openingBalance: double.tryParse(json['opening_balance']?.toString() ?? json['openingBalance']?.toString() ?? '0') ?? 0.0,
+        isSupplier: json['is_supplier'] == true || json['isSupplier'] == true,
       );
 
   factory Customer.fromSupabase(Map<String, dynamic> json) => Customer(
@@ -36,6 +39,7 @@ class Customer {
         address: json['address']?.toString() ?? '',
         currentBalance: double.tryParse(json['current_balance']?.toString() ?? json['currentBalance']?.toString() ?? '0') ?? 0.0,
         openingBalance: double.tryParse(json['opening_balance']?.toString() ?? json['openingBalance']?.toString() ?? '0') ?? 0.0,
+        isSupplier: json['is_supplier'] == true || json['isSupplier'] == true,
       );
 
   Map<String, dynamic> toJson() => {
@@ -46,6 +50,7 @@ class Customer {
         'address': address,
         'current_balance': currentBalance,
         'opening_balance': openingBalance,
+        'is_supplier': isSupplier,
       };
 }
 

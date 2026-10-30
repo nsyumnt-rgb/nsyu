@@ -111,6 +111,96 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
+  void _openEditProductDialog(_InventoryTableItem item) {
+    final nameCtrl = TextEditingController(text: item.name);
+    final specCtrl = TextEditingController(text: item.specs);
+    final qtyCtrl = TextEditingController(text: item.qty.toString());
+    final priceCtrl = TextEditingController(text: item.price.toStringAsFixed(2));
+    final marginCtrl = TextEditingController(text: item.margin.replaceAll('%', '').trim());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final p = double.tryParse(priceCtrl.text) ?? item.price;
+          final mPercent = double.tryParse(marginCtrl.text) ?? 10.0;
+          final mAmt = p * (mPercent / 100.0);
+          final calcSlPrice = p + mAmt;
+
+          return AlertDialog(
+            title: Text('Edit ${item.code}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Description')),
+                  const SizedBox(height: 8),
+                  TextField(controller: specCtrl, decoration: const InputDecoration(labelText: 'Voltage / Amp / Specs')),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: qtyCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Quantity (Stock)'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: priceCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Purchase Price (₹)'),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: marginCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Margin %'),
+                    onChanged: (_) => setDialogState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Calculated SLPrice:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('₹${_money.format(calcSlPrice)}',
+                            style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF16A34A), fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    item.name = nameCtrl.text.trim();
+                    item.specs = specCtrl.text.trim();
+                    item.qty = int.tryParse(qtyCtrl.text) ?? item.qty;
+                    item.price = double.tryParse(priceCtrl.text) ?? item.price;
+                    final m = double.tryParse(marginCtrl.text) ?? 10.0;
+                    item.margin = '${m.toInt()}%';
+                    item.slPrice = item.price + (item.price * (m / 100.0));
+                  });
+                  Navigator.pop(ctx);
+                  showAppSnackBar(context, 'Product ${item.code} updated successfully');
+                },
+                child: const Text('Save Changes'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final categories = [
@@ -140,116 +230,220 @@ class _InventoryScreenState extends State<InventoryScreen> {
       return true;
     }).toList();
 
+    final isCompact = MediaQuery.of(context).size.width < 680;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(66),
+        preferredSize: Size.fromHeight(isCompact ? 116 : 66),
         child: Container(
           color: const Color(0xFF16A34A),
           child: SafeArea(
             bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                    onPressed: () {
-                      if (widget.onNavigate != null) {
-                        widget.onNavigate!(0);
-                      } else {
-                        Navigator.of(context).maybePop();
-                      }
-                    },
-                  ),
-
-                  // 3D Box Icon matching Image 8
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 8),
-
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text(
-                        'Inventory',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
-                      ),
-                      Text(
-                        'All Products (125)',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-
-                  // Center Search Bar matching Image 8
-                  Expanded(
-                    child: Container(
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: TextField(
-                        controller: _searchCtrl,
-                        onChanged: (v) => setState(() {}),
-                        decoration: const InputDecoration(
-                          hintText: 'Search product name, code or barcode...',
-                          hintStyle: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
-                          prefixIcon: Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(vertical: 9),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Filter Funnel Icon
-                  IconButton(
-                    icon: const Icon(Icons.filter_list_rounded, color: Colors.white, size: 22),
-                    onPressed: () {},
-                  ),
-
-                  // + Add Product White Button matching Image 8
-                  InkWell(
-                    onTap: _showAddProductDialog,
-                    borderRadius: BorderRadius.circular(18),
-                    child: Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.add, size: 16, color: Color(0xFF16A34A)),
-                          SizedBox(width: 4),
-                          Text(
-                            'Add Product',
-                            style: TextStyle(
-                              color: Color(0xFF16A34A),
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 680;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: compact
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                  onPressed: () {
+                                    if (widget.onNavigate != null) {
+                                      widget.onNavigate!(0);
+                                    } else {
+                                      Navigator.of(context).maybePop();
+                                    }
+                                  },
+                                ),
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 20),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Text(
+                                        'Inventory',
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        'All Products (125)',
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white70),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.filter_list_rounded, color: Colors.white, size: 22),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                  onPressed: () {},
+                                ),
+                                const SizedBox(width: 6),
+                                InkWell(
+                                  onTap: _showAddProductDialog,
+                                  borderRadius: BorderRadius.circular(18),
+                                  child: Container(
+                                    height: 32,
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Icon(Icons.add, size: 16, color: Color(0xFF16A34A)),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Add Product',
+                                          style: TextStyle(
+                                            color: Color(0xFF16A34A),
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                            const SizedBox(height: 6),
+                            Container(
+                              height: 38,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: TextField(
+                                controller: _searchCtrl,
+                                onChanged: (v) => setState(() {}),
+                                decoration: const InputDecoration(
+                                  hintText: 'Search product name, code or barcode...',
+                                  hintStyle: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                                  prefixIcon: Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(vertical: 9),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                              onPressed: () {
+                                if (widget.onNavigate != null) {
+                                  widget.onNavigate!(0);
+                                } else {
+                                  Navigator.of(context).maybePop();
+                                }
+                              },
+                            ),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text(
+                                  'Inventory',
+                                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white),
+                                ),
+                                Text(
+                                  'All Products (125)',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Container(
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: TextField(
+                                  controller: _searchCtrl,
+                                  onChanged: (v) => setState(() {}),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Search product name, code or barcode...',
+                                    hintStyle: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                                    prefixIcon: Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(vertical: 9),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.filter_list_rounded, color: Colors.white, size: 22),
+                              onPressed: () {},
+                            ),
+                            InkWell(
+                              onTap: _showAddProductDialog,
+                              borderRadius: BorderRadius.circular(18),
+                              child: Container(
+                                height: 36,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.add, size: 16, color: Color(0xFF16A34A)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Add Product',
+                                      style: TextStyle(
+                                        color: Color(0xFF16A34A),
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                );
+              },
             ),
           ),
         ),
@@ -482,9 +676,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             width: 40,
             child: Center(
               child: InkWell(
-                onTap: () {
-                  showAppSnackBar(context, 'Edit product ${item.code}');
-                },
+                onTap: () => _openEditProductDialog(item),
                 child: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF16A34A)),
               ),
             ),
@@ -497,15 +689,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
 class _InventoryTableItem {
   final int sNo;
-  final String code;
-  final String name;
-  final String specs;
+  String code;
+  String name;
+  String specs;
   final int stdPkg;
   int qty;
-  final double price;
-  final String margin;
-  final double slPrice;
-  final String category;
+  double price;
+  String margin;
+  double slPrice;
+  String category;
 
   _InventoryTableItem({
     required this.sNo,

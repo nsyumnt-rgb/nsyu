@@ -153,15 +153,16 @@ class _BillsListScreenState extends State<BillsListScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(_searchOpen ? 120 : 68),
+        preferredSize: Size.fromHeight(_searchOpen ? 120 : 76),
         child: Container(
           color: Colors.white,
           child: SafeArea(
             bottom: false,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
                   child: Row(
                     children: [
                       // Back arrow
@@ -433,17 +434,15 @@ class _BillsListScreenState extends State<BillsListScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Text(
-                        'Bill #${m.billNo}  |  ${m.dateStr}',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF64748B),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    'Bill #${m.billNo}  |  ${m.dateStr}',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 3),
                   Row(

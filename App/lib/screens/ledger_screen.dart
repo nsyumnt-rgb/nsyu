@@ -88,6 +88,20 @@ class _LedgerScreenState extends State<LedgerScreen> {
       if (_activeChip == 'Due Today') {
         return p.totalDue > 0;
       }
+      if (_activeChip == 'Supplier') {
+        final custMatch = customers.customers.cast<Customer?>().firstWhere(
+          (c) => c != null && c.name.toLowerCase() == p.name.toLowerCase(),
+          orElse: () => null,
+        );
+        return custMatch?.isSupplier == true;
+      }
+      if (_activeChip == 'Customer') {
+        final custMatch = customers.customers.cast<Customer?>().firstWhere(
+          (c) => c != null && c.name.toLowerCase() == p.name.toLowerCase(),
+          orElse: () => null,
+        );
+        return custMatch == null || !custMatch.isSupplier;
+      }
       return true;
     }).toList();
 
@@ -369,37 +383,46 @@ class _LedgerScreenState extends State<LedgerScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left: Net Balance + Accounts Count
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Net Balance',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.group_outlined, size: 14, color: Color(0xFF64748B)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$accountsCount Accounts',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
-                    ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Net Balance',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.group_outlined, size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        '$accountsCount Accounts',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF64748B),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
 
           // Right: Eye toggle + Amount in Red + You Get + Filter with red badge 1
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

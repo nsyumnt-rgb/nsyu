@@ -37,7 +37,7 @@ class AppBottomNav extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: SizedBox(
-          height: 64,
+          height: 66,
           child: Row(
             children: [
               for (final d in _destinations)
@@ -91,7 +91,7 @@ class _NavItem extends StatelessWidget {
       child: Center(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: active ? const Color(0xFFE8F5E9) : Colors.transparent, // green capsule pill matching Image 1
             borderRadius: BorderRadius.circular(20),

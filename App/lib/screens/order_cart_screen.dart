@@ -260,18 +260,21 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
           child: SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
+                  const SizedBox(width: 4),
                   // Shopping cart with red badge '3'
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 26),
+                      const Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 24),
                       if (items.isNotEmpty)
                         Positioned(
                           right: -5,
@@ -296,7 +299,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                         ),
                     ],
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 6),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -304,7 +307,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                       const Text(
                         'Cart',
                         style: TextStyle(
-                          fontSize: 17,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                         ),
@@ -312,7 +315,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                       Text(
                         '${items.length} Items',
                         style: const TextStyle(
-                          fontSize: 11.5,
+                          fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: Colors.white70,
                         ),
@@ -323,11 +326,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
 
                   // Mode Switcher Dropdown (Bill ▾ / Order) matching Image 7
                   Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
@@ -340,7 +343,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                               children: const [
                                 Icon(Icons.description_outlined, size: 14, color: Color(0xFF16A34A)),
                                 SizedBox(width: 4),
-                                Text('Bill', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                Text('Bill', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                               ],
                             ),
                           ),
@@ -350,7 +353,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                               children: const [
                                 Icon(Icons.shopping_bag_outlined, size: 14, color: Color(0xFF2563EB)),
                                 SizedBox(width: 4),
-                                Text('Order', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                                Text('Order', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                               ],
                             ),
                           ),
@@ -361,29 +364,30 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
 
                   // Clear Cart Outline Pill Button matching Image 7
                   InkWell(
                     onTap: items.isEmpty ? null : () => _clearCart(provider),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                     child: Container(
-                      height: 34,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: Colors.white.withOpacity(0.8), width: 1.2),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 1.2),
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: const [
-                          Icon(Icons.delete_outline, size: 15, color: Colors.white),
-                          SizedBox(width: 4),
+                          Icon(Icons.delete_outline, size: 14, color: Colors.white),
+                          SizedBox(width: 3),
                           Text(
-                            'Clear Cart',
+                            'Clear',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 11.5,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -752,123 +756,134 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     double tax,
     double grandTotal,
   ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Left Column: Terms & Conditions
-        Expanded(
-          flex: 5,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    Icon(Icons.description_outlined, size: 16, color: Color(0xFF0F172A)),
-                    SizedBox(width: 6),
-                    Text('Terms & Conditions', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text('1. Warranty as per product company rule.', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), height: 1.3)),
-                const SizedBox(height: 4),
-                const Text('2. Payment must be cleared within maximum 21 days.', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), height: 1.3)),
-                const SizedBox(height: 4),
-                const Text('3. 5% charges add per week after due date.', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), height: 1.3)),
-              ],
-            ),
+    final termsCard = Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.description_outlined, size: 16, color: Color(0xFF0F172A)),
+              SizedBox(width: 6),
+              Text('Terms & Conditions', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+            ],
           ),
-        ),
-        const SizedBox(width: 10),
+          const SizedBox(height: 8),
+          const Text('1. Warranty as per product company rule.', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), height: 1.3)),
+          const SizedBox(height: 4),
+          const Text('2. Payment must be cleared within maximum 21 days.', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), height: 1.3)),
+          const SizedBox(height: 4),
+          const Text('3. 5% charges add per week after due date.', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), height: 1.3)),
+        ],
+      ),
+    );
 
-        // Right Column: Summary Calculation Card
-        Expanded(
-          flex: 5,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                _calcRow('Sub Total', '₹${_money.format(subtotal)}'),
-                const SizedBox(height: 8),
+    final totalsCard = Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          _calcRow('Sub Total', '₹${_money.format(subtotal)}'),
+          const SizedBox(height: 8),
 
-                // Discount % row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Discount %', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 24,
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: TextField(
-                            controller: _discountPercentCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                            decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
-                            onChanged: (v) {
-                              setState(() {
-                                _discountPercent = double.tryParse(v) ?? 0.0;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF16A34A),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text('%', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 6),
-                        Text('₹${_money.format(discount)}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                      ],
+          // Discount % row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Discount %', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 24,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                _calcRow('Tax (GST)', '₹${_money.format(tax)}'),
-                const SizedBox(height: 10),
-
-                // Grand Total inside Solid Green Container matching Image 7
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF15803D),
-                    borderRadius: BorderRadius.circular(8),
+                    child: TextField(
+                      controller: _discountPercentCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
+                      onChanged: (v) {
+                        setState(() {
+                          _discountPercent = double.tryParse(v) ?? 0.0;
+                        });
+                      },
+                    ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Grand Total', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.white)),
-                      Text('₹${_money.format(grandTotal)}', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: Colors.white)),
-                    ],
+                  const SizedBox(width: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16A34A),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text('%', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Text('₹${_money.format(discount)}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          _calcRow('Tax (GST)', '₹${_money.format(tax)}'),
+          const SizedBox(height: 10),
+
+          // Grand Total inside Solid Green Container matching Image 7
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF15803D),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Grand Total', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text('₹${_money.format(grandTotal)}', style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800, color: Colors.white)),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 600) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 5, child: termsCard),
+              const SizedBox(width: 10),
+              Expanded(flex: 5, child: totalsCard),
+            ],
+          );
+        } else {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              totalsCard,
+              const SizedBox(height: 10),
+              termsCard,
+            ],
+          );
+        }
+      },
     );
   }
 
@@ -876,7 +891,14 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
       ],
     );
@@ -944,9 +966,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
             // Save as Draft
             _buildSmallIconBtn(Icons.save_outlined, 'Save as Draft', () {
               showAppSnackBar(context, 'Cart saved as draft');
@@ -1015,8 +1039,9 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildSmallIconBtn(IconData icon, String label, VoidCallback onTap) {
     return InkWell(

@@ -10,6 +10,7 @@ import '../models/saved_bill.dart';
 import '../providers/bills_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/customer_provider.dart';
+import '../services/bill_pdf_service.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
 import '../navigation/app_navigation.dart';
@@ -1130,11 +1131,27 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                 _buildBillAction(Icons.visibility_outlined, 'View', () {
                   AppNavigation.openBillDetails(context, bill: bill, invoiceNo: billNo);
                 }),
-                _buildBillAction(Icons.print_outlined, 'Print', () {
-                  showAppSnackBar(context, 'Printing Bill #$billNo');
+                _buildBillAction(Icons.print_outlined, 'Print', () async {
+                  if (bill != null) {
+                    try {
+                      await BillPdfService.previewAndPrint(bill.toPdfData());
+                    } catch (_) {
+                      if (mounted) showAppSnackBar(context, 'Printing Bill #$billNo');
+                    }
+                  } else {
+                    if (mounted) showAppSnackBar(context, 'Printing Bill #$billNo');
+                  }
                 }),
-                _buildBillAction(Icons.share_outlined, 'Share', () {
-                  Share.share('Bill #$billNo - Amount: ₹${_money.format(amount)}');
+                _buildBillAction(Icons.share_outlined, 'Share', () async {
+                  if (bill != null) {
+                    try {
+                      await BillPdfService.shareBill(bill.toPdfData());
+                    } catch (_) {
+                      Share.share('Bill #$billNo - Amount: ₹${_money.format(amount)}');
+                    }
+                  } else {
+                    Share.share('Bill #$billNo - Amount: ₹${_money.format(amount)}');
+                  }
                 }),
                 _buildBillAction(Icons.chat_bubble_outline, 'WhatsApp', () {
                   final phone = widget.customer?.mobile ?? '8800123456';

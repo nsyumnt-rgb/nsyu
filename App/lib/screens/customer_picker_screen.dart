@@ -477,6 +477,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
     final mobileCtrl = TextEditingController(text: prefillMobile);
     final addressCtrl = TextEditingController();
     final balanceCtrl = TextEditingController(text: '0.00');
+    bool isSupplier = false;
     bool saving = false;
 
     await showModalBottomSheet(
@@ -502,11 +503,12 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.person_add, color: Color(0xFF1D4ED8), size: 22),
-                      SizedBox(width: 8),
-                      Text('Add New Customer', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                      const Icon(Icons.person_add, color: Color(0xFF1D4ED8), size: 22),
+                      const SizedBox(width: 8),
+                      Text(isSupplier ? 'Add New Supplier' : 'Add New Customer',
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                     ],
                   ),
                   IconButton(
@@ -515,14 +517,45 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              // Party Type Selector (Customer / Supplier)
+              Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('Customer'),
+                    selected: !isSupplier,
+                    selectedColor: const Color(0xFFDBEAFE),
+                    labelStyle: TextStyle(
+                      color: !isSupplier ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
+                      fontWeight: !isSupplier ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    onSelected: (val) {
+                      setSheetState(() => isSupplier = !val);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Supplier'),
+                    selected: isSupplier,
+                    selectedColor: const Color(0xFFDCFCE7),
+                    labelStyle: TextStyle(
+                      color: isSupplier ? const Color(0xFF16A34A) : const Color(0xFF475569),
+                      fontWeight: isSupplier ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    onSelected: (val) {
+                      setSheetState(() => isSupplier = val);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: nameCtrl,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Customer Name *',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: isSupplier ? 'Supplier Name *' : 'Customer Name *',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -571,7 +604,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                     : () async {
                         final name = nameCtrl.text.trim();
                         if (name.isEmpty) {
-                          showAppSnackBar(context, 'Please enter customer name', isError: true);
+                          showAppSnackBar(context, 'Please enter name', isError: true);
                           return;
                         }
                         setSheetState(() => saving = true);
@@ -583,6 +616,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                             mobileCtrl.text.trim(),
                             address: addressCtrl.text.trim(),
                             openingBalance: openBal,
+                            isSupplier: isSupplier,
                           );
                           if (!context.mounted) return;
                           Navigator.pop(ctx);
@@ -593,7 +627,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                           }
                         } catch (e) {
                           setSheetState(() => saving = false);
-                          showAppSnackBar(context, 'Failed to add customer: $e', isError: true);
+                          showAppSnackBar(context, 'Failed to add party: $e', isError: true);
                         }
                       },
                 child: saving
@@ -602,7 +636,8 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                         width: 20,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
-                    : const Text('Save Customer', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    : Text(isSupplier ? 'Save Supplier' : 'Save Customer',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -727,7 +762,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                     : () async {
                         final name = nameCtrl.text.trim();
                         if (name.isEmpty) {
-                          showAppSnackBar(context, 'Please enter customer name', isError: true);
+                          showAppSnackBar(context, 'Please enter name', isError: true);
                           return;
                         }
                         setSheetState(() => saving = true);
@@ -740,11 +775,11 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                           if (!context.mounted) return;
                           context.read<CatalogProvider>().updateCustomerInfo(customer);
                           Navigator.pop(ctx);
-                          showAppSnackBar(context, 'Customer updated successfully');
+                          showAppSnackBar(context, 'Party updated successfully');
                           setState(() {});
                         } catch (e) {
                           setSheetState(() => saving = false);
-                          showAppSnackBar(context, 'Failed to update customer: $e', isError: true);
+                          showAppSnackBar(context, 'Failed to update party: $e', isError: true);
                         }
                       },
                 child: saving
@@ -754,6 +789,42 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
                     : const Text('Save Changes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFDC2626),
+                  side: const BorderSide(color: Color(0xFFFCA5A5)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.delete_outline, size: 18),
+                label: const Text('Delete Party', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                onPressed: saving
+                    ? null
+                    : () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx2) => AlertDialog(
+                            title: const Text('Delete Party?'),
+                            content: Text('Are you sure you want to delete ${customer.name}? This action cannot be undone.'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx2, false), child: const Text('Cancel')),
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx2, true),
+                                child: const Text('Delete', style: TextStyle(color: Color(0xFFDC2626))),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirm == true) {
+                          await context.read<CustomerProvider>().deleteCustomer(customer.id);
+                          if (!context.mounted) return;
+                          Navigator.pop(ctx);
+                          showAppSnackBar(context, '${customer.name} deleted successfully');
+                          setState(() {});
+                        }
+                      },
               ),
             ],
           ),

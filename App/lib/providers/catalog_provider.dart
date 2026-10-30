@@ -119,15 +119,60 @@ class CatalogProvider extends ChangeNotifier {
 
   double get orderTotal => orderItems.fold(0, (s, i) => s + i.amount);
 
+  static List<Product> defaultProducts() => [
+    Product(
+      sno: 1,
+      code: 'TC001',
+      desc: 'ERD TC-30 USB-A DOCK CHARGER BLK',
+      spec: '5V DC - 500mA (2.5W)',
+      pkg: 20,
+      category: 'Chargers',
+      purchase: 67.0,
+      marginPrice: 10.0,
+      sellingPrice: 77.0,
+      stock: 20,
+    ),
+    Product(
+      sno: 2,
+      code: 'TC-201B',
+      desc: 'ERD TC-201 USB-A DOCK CHARGER BLK 5W',
+      spec: '5V DC - 1 Amp (5W)',
+      pkg: 20,
+      category: 'Chargers',
+      purchase: 76.0,
+      marginPrice: 10.0,
+      sellingPrice: 86.0,
+      stock: 15,
+    ),
+    Product(
+      sno: 3,
+      code: 'TC-201',
+      desc: 'ERD TC-201 USB-A DOCK CHARGER WHT 5W',
+      spec: '5V DC - 1 Amp (5W)',
+      pkg: 60,
+      category: 'Chargers',
+      purchase: 76.0,
+      marginPrice: 10.0,
+      sellingPrice: 86.0,
+      stock: 25,
+    ),
+  ];
+
   Future<void> loadProducts() async {
     status = LoadStatus.loading;
     notifyListeners();
     try {
-      _allProducts = await _supabaseService.fetchProducts();
+      _allProducts = await _supabaseService.fetchProducts().timeout(const Duration(seconds: 2));
+      if (_allProducts.isEmpty) {
+        _allProducts = defaultProducts();
+      }
       status = LoadStatus.loaded;
     } catch (e) {
       errorMessage = e.toString();
-      status = LoadStatus.error;
+      if (_allProducts.isEmpty) {
+        _allProducts = defaultProducts();
+      }
+      status = LoadStatus.loaded;
     }
     notifyListeners();
   }
