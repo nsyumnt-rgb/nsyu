@@ -43,3 +43,6 @@ web/.env.local
 api/.env
 web/.env
 
+
+# Office temporary lock files
+~$*
