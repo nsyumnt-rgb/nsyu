@@ -189,6 +189,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
+
+  Widget _buildThumbnailSquare(int idx) {
+    final isSelected = _selectedThumbnail == idx;
+    return InkWell(
+      onTap: () => setState(() => _selectedThumbnail = idx),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 41,
+        height: 41,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF006837) : const Color(0xFFE2E8F0),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Center(
+          child: Transform.scale(
+            scale: 0.42,
+            child: _ChargerIllustration(thumbnailIndex: idx),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _openBarcodeDialog() {
     final ctrl = TextEditingController();
     showDialog(
@@ -350,7 +377,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Text(
-                                  'Product Catalog',
+                                  'Inventory',
                                   style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: Colors.white),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -626,22 +653,62 @@ class _InventoryScreenState extends State<InventoryScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left Column: Clean Product Image Container matching reference image
-                InkWell(
-                  onTap: () => _openFullscreenImage(item),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
+                // Left Column: Clean Product Image Container with 3 Thumbnail strip (matching Screenshot 1 panel 2)
+                SizedBox(
                   width: 135,
-                  height: 185,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  child: Column(
+                    children: [
+                      // Main Product Image with Fullscreen/Expand icon
+                      Container(
+                        width: 135,
+                        height: 135,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: _ChargerIllustration(thumbnailIndex: _selectedThumbnail),
+                            ),
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: InkWell(
+                                onTap: () => _openFullscreenImage(item),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Container(
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFFCBD5E1), width: 0.6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.crop_free,
+                                    size: 14,
+                                    color: Color(0xFF334155),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Row of 3 Thumbnails
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildThumbnailSquare(0),
+                          _buildThumbnailSquare(1),
+                          _buildThumbnailSquare(2),
+                        ],
+                      ),
+                    ],
                   ),
-                  child: const Center(
-                    child: _ChargerIllustration(thumbnailIndex: 0),
-                  ),
-                ),
                 ),
                 const SizedBox(width: 14),
 
@@ -841,13 +908,36 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── Section 3: Pricing & Margin Columns (Margin -> SLPrice -> Price) matching reference image ──
+            // ── Section 3: Pricing & Margin Columns matching Reference Image ──
+            // Order: Price (Incl. GST) [Blue] -> Margin [Dark] -> SLPrice [Green]
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 1. Margin (Left)
+                  // 1. Price (Incl. GST) (Left - Royal Blue #1D4ED8)
+                  Row(
+                    children: [
+                      const Icon(Icons.local_offer_outlined, color: Color(0xFF1E293B), size: 20),
+                      const SizedBox(width: 6),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Price\n(Incl. GST)',
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B), height: 1.15),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '₹${_money.format(item.price)}',
+                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // 2. Margin (Middle - Dark Slate)
                   Row(
                     children: [
                       const Icon(Icons.trending_up, color: Color(0xFF1E293B), size: 21),
@@ -869,7 +959,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     ],
                   ),
 
-                  // 2. SLPrice (Middle - Green)
+                  // 3. SLPrice (Right - Green #15803D)
                   Row(
                     children: [
                       const Icon(Icons.savings_outlined, color: Color(0xFF1E293B), size: 21),
@@ -885,28 +975,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           Text(
                             '₹${_money.format(item.slPrice)}',
                             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF15803D)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-
-                  // 3. Price (Incl. GST) (Right - Royal Blue)
-                  Row(
-                    children: [
-                      const Icon(Icons.local_offer_outlined, color: Color(0xFF1E293B), size: 20),
-                      const SizedBox(width: 6),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Price\r\n(Incl. GST)',
-                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B), height: 1.15),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '₹${_money.format(item.price)}',
-                            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8)),
                           ),
                         ],
                       ),
