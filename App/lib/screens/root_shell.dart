@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../navigation/app_navigation.dart';
 import 'bills_list_screen.dart';
-import 'inventory_screen.dart';
+import 'catalog_screen.dart';
 import 'ledger_screen.dart';
 
-/// Root shell hosting the 3 primary persistent tabs matching Reference Images 1, 5, 8
-/// Tab 0: Ledger (Image 1)
-/// Tab 1: Bills (Image 5 & 6)
-/// Tab 2: Inventory / Catalog (Image 8)
-/// Tab 3 (More): Handled dynamically by AppBottomNav opening MoreMenuSheet (Image 4)
+/// Root shell hosting the 3 primary persistent tabs matching Reference Images:
+/// Tab 0: Ledger
+/// Tab 1: Bills
+/// Tab 2: Catalog (Product Catalog matching Reference Image)
+/// Tab 3 (More): Handled dynamically by AppBottomNav opening MoreMenuSheet
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
 
@@ -62,7 +62,7 @@ class _RootShellState extends State<RootShell> {
         children: [
           LedgerScreen(onNavigate: _goTo),
           BillsListScreen(onNavigate: _goTo),
-          InventoryScreen(onNavigate: _goTo),
+          CatalogScreen(onNavigate: _goTo),
         ],
       ),
     );

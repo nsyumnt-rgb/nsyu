@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../screens/business_info_screen.dart';
 import '../screens/collect_payment_screen.dart';
 import '../screens/help_support_screen.dart';
+import '../screens/inventory_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/visibility_settings_screen.dart';
 import '../theme/app_theme.dart';
@@ -166,7 +167,7 @@ class MoreMenuSheet extends StatelessWidget {
                     label: 'Inventory',
                     onTap: () {
                       Navigator.pop(context);
-                      onNavigate(2); // Switch to Inventory tab
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const InventoryScreen()));
                     },
                   ),
                 ],

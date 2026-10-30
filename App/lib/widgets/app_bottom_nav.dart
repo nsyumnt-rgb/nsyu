@@ -20,7 +20,7 @@ class AppBottomNav extends StatelessWidget {
     required this.currentIndex,
     required this.onTap,
     this.isMoreOpen = false,
-    this.navMode = BottomNavMode.ledger,
+    this.navMode = BottomNavMode.catalog,
   });
 
   @override
@@ -77,7 +77,7 @@ class AppBottomNav extends StatelessWidget {
                   ),
                 ),
 
-              // Tab 2: My Plan (in ledger mode) or Inventory (in catalog mode)
+              // Tab 2: Catalog (in catalog mode) or My Plan (in ledger mode)
               if (navMode == BottomNavMode.ledger)
                 Expanded(
                   child: _NavItem(
@@ -94,7 +94,7 @@ class AppBottomNav extends StatelessWidget {
               else
                 Expanded(
                   child: _NavItem(
-                    label: 'Inventory',
+                    label: 'Catalog',
                     active: currentIndex == 2 && !isMoreOpen,
                     iconBuilder: (active, color) => Icon(
                       active ? Icons.inventory_2_rounded : Icons.inventory_2_outlined,

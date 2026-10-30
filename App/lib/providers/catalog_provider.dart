@@ -356,12 +356,14 @@ class CatalogProvider extends ChangeNotifier {
     return null;
   }
 
-  void addToOrder(Product p) {
+  void addToOrder(Product p, {int qty = 1}) {
     final existing = orderItemFor(p.code);
     if (existing != null) {
-      existing.qty += 1;
+      existing.qty += qty;
     } else {
-      orderItems.add(BillItem.fromProduct(p));
+      final item = BillItem.fromProduct(p);
+      item.qty = qty;
+      orderItems.add(item);
     }
     notifyListeners();
   }
