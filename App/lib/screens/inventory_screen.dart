@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../providers/catalog_provider.dart';
 import '../widgets/animated_feedback_dialog.dart';
+import '../models/catalog_item.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'bill_screen.dart';
+import 'edit_product_screen.dart';
 import 'order_cart_screen.dart';
 
 /// Product Catalog & Inventory Screen matching Reference Image:
@@ -148,84 +150,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  void _showAddProductDialog() {
-    final nameCtrl = TextEditingController();
-    final codeCtrl = TextEditingController();
-    final specCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-    final stockCtrl = TextEditingController(text: '10');
-    final stdPkgCtrl = TextEditingController(text: '20');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add Product to Catalog', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Product Name *', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: codeCtrl, decoration: const InputDecoration(labelText: 'SKU / Code (e.g. TC002) *', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: specCtrl, decoration: const InputDecoration(labelText: 'Voltage / Amp / Specs', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Purchase Price (Incl. GST) ₹', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: stockCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stock Qty', border: OutlineInputBorder()))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: stdPkgCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'STD P KG', border: OutlineInputBorder()))),
-                ],
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF006837), foregroundColor: Colors.white),
-            onPressed: () {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
-              final code = codeCtrl.text.trim().isNotEmpty ? codeCtrl.text.trim() : 'P-${DateTime.now().millisecondsSinceEpoch % 10000}';
-              final price = double.tryParse(priceCtrl.text.trim()) ?? 100.0;
-              final stock = int.tryParse(stockCtrl.text.trim()) ?? 10;
-              final stdPkg = int.tryParse(stdPkgCtrl.text.trim()) ?? 20;
-
-              setState(() {
-                _catalog.insert(
-                  0,
-                  _CatalogItem(
-                    sNo: _catalog.length + 1,
-                    code: code,
-                    name: name,
-                    specs: specCtrl.text.trim(),
-                    stdPkg: stdPkg,
-                    qty: stock,
-                    price: price,
-                    margin: '10.00',
-                    slPrice: price + 10.0,
-                    category: 'Mobile Accessories',
-                    brand: 'ERD',
-                    unit: 'PCS',
-                    hsnSac: '8504',
-                    description: '$name. ${specCtrl.text.trim()}. High quality mobile accessory.',
-                  ),
-                );
-                _currentIndex = 0;
-              });
-
-              Navigator.pop(ctx);
-              AppToast.showSuccess(context, title: 'Product Added', subtitle: '$name has been added to the catalog.');
-            },
-            child: const Text('Save Product'),
-          ),
-        ],
+  void _showAddProductDialog() async {
+    final newItem = await Navigator.push<CatalogItem>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const EditProductScreen(isNew: true),
       ),
     );
+    if (newItem != null) {
+      setState(() {
+        _catalog.insert(0, newItem);
+        _currentIndex = 0;
+      });
+      if (mounted) {
+        AppToast.showSuccess(context, title: 'Product Added', subtitle: '${newItem.name} added to catalog.');
+      }
+    }
   }
 
   void _openFilterSheet() {
@@ -1000,7 +940,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Price\n(Incl. GST)',
+                            'Price\r\n(Incl. GST)',
                             style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF64748B), height: 1.15),
                           ),
                           const SizedBox(height: 3),
@@ -1093,38 +1033,56 @@ class _InventoryScreenState extends State<InventoryScreen> {
             const SizedBox(height: 14),
 
             // ── Section 5: Product Description Card ──
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.description_outlined, color: Color(0xFF64748B), size: 17),
-                      SizedBox(width: 6),
-                      Text(
-                        'Product Description',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                      ),
-                      Spacer(),
-                      Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 17),
-                    ],
+            InkWell(
+              onTap: () async {
+                final updated = await Navigator.push<CatalogItem>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditProductScreen(item: item),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    item.description,
-                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569), height: 1.35),
-                  ),
-                ],
+                );
+                if (updated != null) {
+                  setState(() {
+                    _catalog[_currentIndex] = updated;
+                  });
+                  if (mounted) {
+                    AppToast.showSuccess(context, title: 'Product Updated', subtitle: '${updated.name} details saved.');
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.description_outlined, color: Color(0xFF64748B), size: 17),
+                        SizedBox(width: 6),
+                        Text(
+                          'Product Description',
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                        ),
+                        Spacer(),
+                        Icon(Icons.chevron_right, color: Color(0xFF64748B), size: 17),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      item.description,
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF475569), height: 1.35),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),
-
             // ── Section 6: Pager Navigation (<  1 of 125  >) ──
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1248,9 +1206,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     SizedBox(width: 75, child: Text('Code No.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
                     SizedBox(width: 230, child: Text('Product Description', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
                     SizedBox(width: 140, child: Text('Voltage/Amp/Type', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11))),
-                    SizedBox(width: 75, child: Center(child: Text('STD. P\nKG.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)))),
+                    SizedBox(width: 75, child: Center(child: Text('STD. P\r\nKG.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)))),
                     SizedBox(width: 60, child: Center(child: Text('QTY.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
-                    SizedBox(width: 110, child: Center(child: Text('Price\n(Incl. GST)', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)))),
+                    SizedBox(width: 110, child: Center(child: Text('Price\r\n(Incl. GST)', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)))),
                     SizedBox(width: 70, child: Center(child: Text('Margin', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
                     SizedBox(width: 90, child: Center(child: Text('SLPrice', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)))),
                     SizedBox(width: 40, child: Center(child: Icon(Icons.edit_outlined, color: Colors.white, size: 16))),
@@ -1535,39 +1493,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 // ────────────────────────────────────────────────────────────────────────────
 // PRODUCT MODEL HELPER
 // ────────────────────────────────────────────────────────────────────────────
-class _CatalogItem {
-  final int sNo;
-  String code;
-  String name;
-  String specs;
-  final int stdPkg;
-  int qty;
-  double price;
-  String margin;
-  double slPrice;
-  String category;
-  String brand;
-  String unit;
-  String hsnSac;
-  String description;
-
-  _CatalogItem({
-    required this.sNo,
-    required this.code,
-    required this.name,
-    required this.specs,
-    required this.stdPkg,
-    required this.qty,
-    required this.price,
-    required this.margin,
-    required this.slPrice,
-    required this.category,
-    required this.brand,
-    required this.unit,
-    required this.hsnSac,
-    required this.description,
-  });
-}
+typedef _CatalogItem = CatalogItem;
 
 // ────────────────────────────────────────────────────────────────────────────
 // CHARGER ILLUSTRATION WIDGET matching ERD TC-30 in Reference Image

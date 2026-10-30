@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/catalog_item.dart';
 import '../models/product.dart';
+import 'edit_product_screen.dart';
 import '../providers/catalog_provider.dart';
 import '../utils/category_icon_helper.dart';
 import '../widgets/animated_feedback_dialog.dart';
@@ -124,7 +126,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        backgroundColor: const Color(0xFF006837),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -140,10 +142,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             if (code.isNotEmpty)
               Text(
                 code,
-                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 11),
               ),
           ],
         ),
+        actions: [
+          if (p != null)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: Colors.white),
+              tooltip: 'Edit Product',
+              onPressed: () async {
+                final item = CatalogItem(
+                  sNo: p.sno,
+                  code: p.code,
+                  name: p.desc,
+                  specs: p.spec,
+                  stdPkg: p.pkg,
+                  qty: p.stock,
+                  price: p.purchase,
+                  margin: p.marginAmount.toStringAsFixed(2),
+                  slPrice: p.sellingPrice,
+                  category: p.category,
+                  brand: p.brand ?? 'ERD',
+                  unit: 'PCS',
+                  hsnSac: '8504',
+                  description: p.desc,
+                );
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EditProductScreen(item: item),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
