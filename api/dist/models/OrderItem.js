@@ -19,6 +19,8 @@ OrderItem.init({
     quantity: { type: sequelize_1.DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
     rate: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     discount_percent: { type: sequelize_1.DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
+    gst_percent: { type: sequelize_1.DataTypes.DECIMAL(5, 2), allowNull: true, defaultValue: 18.0 },
+    tax_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: true, defaultValue: 0 },
     amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
 }, {
     sequelize: database_1.default,

@@ -11,13 +11,18 @@ export interface OrderItemAttributes {
   quantity: number;
   rate: number;
   discount_percent: number;
+  gst_percent?: number | null;
+  tax_amount?: number | null;
   amount: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
 export interface OrderItemCreationAttributes
-  extends Optional<OrderItemAttributes, "id" | "product_id" | "created_at" | "updated_at"> {}
+  extends Optional<
+    OrderItemAttributes,
+    "id" | "product_id" | "gst_percent" | "tax_amount" | "created_at" | "updated_at"
+  > {}
 
 export class OrderItem extends Model<OrderItemAttributes, OrderItemCreationAttributes> implements OrderItemAttributes {
   public id!: number;
@@ -29,6 +34,8 @@ export class OrderItem extends Model<OrderItemAttributes, OrderItemCreationAttri
   public quantity!: number;
   public rate!: number;
   public discount_percent!: number;
+  public gst_percent?: number | null;
+  public tax_amount?: number | null;
   public amount!: number;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
@@ -45,6 +52,8 @@ OrderItem.init(
     quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
     rate: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     discount_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
+    gst_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: true, defaultValue: 18.0 },
+    tax_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: true, defaultValue: 0 },
     amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
   },
   {

@@ -3,9 +3,11 @@ import sequelize from "../config/database";
 
 export const ORDER_STATUSES = [
   "pending",
-  "confirmed",
+  "processing",
+  "shipped",
   "delivered",
   "cancelled",
+  "confirmed",
   "converted_to_bill",
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
@@ -22,7 +24,11 @@ export interface OrderAttributes {
   discount_amount: number;
   tax_amount: number;
   total_amount: number;
-  status: OrderStatus;
+  status: OrderStatus | string;
+  order_type?: string | null;
+  payment_method?: string | null;
+  payment_status?: string | null;
+  shipping_address?: string | null;
   remarks?: string | null;
   converted_sale_id?: number | null;
   reference_code?: string | null;
@@ -39,6 +45,10 @@ export interface OrderCreationAttributes
     | "tax_amount"
     | "total_amount"
     | "status"
+    | "order_type"
+    | "payment_method"
+    | "payment_status"
+    | "shipping_address"
     | "remarks"
     | "expected_delivery_date"
     | "converted_sale_id"
@@ -59,7 +69,11 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
   public discount_amount!: number;
   public tax_amount!: number;
   public total_amount!: number;
-  public status!: OrderStatus;
+  public status!: OrderStatus | string;
+  public order_type?: string | null;
+  public payment_method?: string | null;
+  public payment_status?: string | null;
+  public shipping_address?: string | null;
   public remarks?: string | null;
   public converted_sale_id?: number | null;
   public reference_code?: string | null;
@@ -80,7 +94,11 @@ Order.init(
     discount_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     tax_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     total_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
-    status: { type: DataTypes.ENUM(...ORDER_STATUSES), allowNull: false, defaultValue: "pending" },
+    status: { type: DataTypes.STRING(50), allowNull: false, defaultValue: "pending" },
+    order_type: { type: DataTypes.STRING(50), defaultValue: "Walk-in" },
+    payment_method: { type: DataTypes.STRING(50), defaultValue: "Cash" },
+    payment_status: { type: DataTypes.STRING(50), defaultValue: "Pending" },
+    shipping_address: { type: DataTypes.TEXT, allowNull: true },
     remarks: { type: DataTypes.TEXT, allowNull: true },
     converted_sale_id: { type: DataTypes.BIGINT, allowNull: true },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },

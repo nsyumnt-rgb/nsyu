@@ -8,9 +8,11 @@ const sequelize_1 = require("sequelize");
 const database_1 = __importDefault(require("../config/database"));
 exports.ORDER_STATUSES = [
     "pending",
-    "confirmed",
+    "processing",
+    "shipped",
     "delivered",
     "cancelled",
+    "confirmed",
     "converted_to_bill",
 ];
 class Order extends sequelize_1.Model {
@@ -28,7 +30,11 @@ Order.init({
     discount_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     tax_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     total_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
-    status: { type: sequelize_1.DataTypes.ENUM(...exports.ORDER_STATUSES), allowNull: false, defaultValue: "pending" },
+    status: { type: sequelize_1.DataTypes.STRING(50), allowNull: false, defaultValue: "pending" },
+    order_type: { type: sequelize_1.DataTypes.STRING(50), defaultValue: "Walk-in" },
+    payment_method: { type: sequelize_1.DataTypes.STRING(50), defaultValue: "Cash" },
+    payment_status: { type: sequelize_1.DataTypes.STRING(50), defaultValue: "Pending" },
+    shipping_address: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
     remarks: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
     converted_sale_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },

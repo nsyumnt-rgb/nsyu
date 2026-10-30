@@ -6,6 +6,7 @@ const permission_1 = require("../middleware/permission");
 const orderController_1 = require("../controllers/orderController");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate);
+router.get("/stats", (0, permission_1.requirePermission)("orders", "view"), orderController_1.getOrderStats);
 router.get("/", (0, permission_1.requirePermission)("orders", "view"), orderController_1.getOrders);
 router.get("/:id", (0, permission_1.requirePermission)("orders", "view"), orderController_1.getOrderById);
 router.post("/", (0, permission_1.requirePermission)("orders", "create"), orderController_1.createOrder);

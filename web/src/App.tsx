@@ -13,6 +13,7 @@ import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
 import Purchase from "./pages/Purchase";
 import Sales from "./pages/Sales";
+import Orders from "./pages/Orders";
 import Billing from "./pages/Billing";
 import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="purchase/:id" element={<PurchaseDetail />} />
             <Route path="sales" element={<Sales />} />
             <Route path="sales/:id" element={<SaleDetail />} />
+            <Route path="orders" element={<Orders />} />
             <Route path="billing" element={<Billing />} />
             <Route path="customers" element={<Customers />} />
             <Route path="customers/:id" element={<CustomerDetail />} />
