@@ -7,6 +7,8 @@ import '../models/saved_bill.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../widgets/app_bottom_nav.dart';
+import '../widgets/more_menu_sheet.dart';
+import 'collect_payment_screen.dart';
 import 'customer_ledger_detail_screen.dart';
 import 'customer_picker_screen.dart';
 
@@ -148,14 +150,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   const SizedBox(width: 12),
 
                   // NSYU ▾ and Phone Number
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: const [
+                          children: [
                             Text(
                               'NSYU',
                               style: TextStyle(
@@ -168,7 +170,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                             Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF0F172A)),
                           ],
                         ),
-                        const Text(
+                        Text(
                           '8800503662',
                           style: TextStyle(
                             fontSize: 12,
@@ -341,7 +343,21 @@ class _LedgerScreenState extends State<LedgerScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: AppBottomNav(currentIndex: 0, onTap: widget.onNavigate),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 0,
+        navMode: BottomNavMode.ledger,
+        onTap: (tab) {
+          if (tab == 0) {
+            widget.onNavigate(0);
+          } else if (tab == 1) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectPaymentScreen()));
+          } else if (tab == 2) {
+            showMyPlanSheet(context);
+          } else if (tab == 3) {
+            MoreMenuSheet.show(context, onNavigate: widget.onNavigate, navMode: BottomNavMode.ledger);
+          }
+        },
+      ),
     );
   }
 
