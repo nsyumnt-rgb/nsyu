@@ -30,8 +30,8 @@ export class RolePermission
 
 RolePermission.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    role_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    role_id: { type: DataTypes.INTEGER, allowNull: false },
     module: { type: DataTypes.ENUM(...MODULES), allowNull: false },
     can_view: { type: DataTypes.BOOLEAN, defaultValue: false },
     can_create: { type: DataTypes.BOOLEAN, defaultValue: false },

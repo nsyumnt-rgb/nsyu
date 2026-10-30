@@ -10,12 +10,12 @@ class ProductStock extends sequelize_1.Model {
 }
 exports.ProductStock = ProductStock;
 ProductStock.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    product_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    product_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     current_stock: { type: sequelize_1.DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    min_stock: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    min_stock: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
 }, {
     sequelize: database_1.default,
     modelName: "ProductStock",

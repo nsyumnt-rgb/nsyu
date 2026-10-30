@@ -83,13 +83,13 @@ export class Product
 
 Product.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
     name: { type: DataTypes.STRING(150), allowNull: false },
     sku: { type: DataTypes.STRING(60), allowNull: false },
     barcode: { type: DataTypes.STRING(60) },
-    category_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-    subcategory_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    category_id: { type: DataTypes.INTEGER, allowNull: true },
+    subcategory_id: { type: DataTypes.INTEGER, allowNull: true },
     brand: { type: DataTypes.STRING(100) },
     description: { type: DataTypes.TEXT },
     purchase_price: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
@@ -97,8 +97,8 @@ Product.init(
     mrp: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     discount: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
     tax_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
-    min_stock: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
-    supplier_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    min_stock: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    supplier_id: { type: DataTypes.INTEGER, allowNull: true },
     status: { type: DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },

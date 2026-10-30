@@ -10,15 +10,15 @@ class StockTransfer extends sequelize_1.Model {
 }
 exports.StockTransfer = StockTransfer;
 StockTransfer.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    product_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
-    from_shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    to_shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    quantity: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    product_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
+    from_shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    to_shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    quantity: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
     notes: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     transfer_no: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
     status: {
         type: sequelize_1.DataTypes.STRING(20),

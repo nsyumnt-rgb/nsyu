@@ -12,9 +12,9 @@ class SalaryConfig extends sequelize_1.Model {
 }
 exports.SalaryConfig = SalaryConfig;
 SalaryConfig.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     salary_type: { type: sequelize_1.DataTypes.ENUM(...exports.SALARY_TYPES), allowNull: false },
     basic_salary: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     allowances: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },

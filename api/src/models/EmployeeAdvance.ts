@@ -53,10 +53,10 @@ export class EmployeeAdvance
 
 EmployeeAdvance.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: DataTypes.INTEGER, allowNull: false },
     amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     outstanding_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     date: { type: DataTypes.DATE, allowNull: false },
@@ -64,7 +64,7 @@ EmployeeAdvance.init(
     method: { type: DataTypes.STRING(30), allowNull: false },
     status: { type: DataTypes.ENUM(...ADVANCE_STATUSES), allowNull: false, defaultValue: "outstanding" },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
   },
   {
     sequelize,

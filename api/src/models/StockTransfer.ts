@@ -68,15 +68,15 @@ export class StockTransfer
 
 StockTransfer.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    product_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-    from_shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    to_shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    quantity: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    product_id: { type: DataTypes.INTEGER, allowNull: true },
+    from_shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    to_shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    quantity: { type: DataTypes.INTEGER, allowNull: true },
     notes: { type: DataTypes.STRING(255), allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     transfer_no: { type: DataTypes.STRING(50), allowNull: true },
     status: {
       type: DataTypes.STRING(20),

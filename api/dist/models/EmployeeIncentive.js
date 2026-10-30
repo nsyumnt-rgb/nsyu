@@ -13,10 +13,10 @@ class EmployeeIncentive extends sequelize_1.Model {
 }
 exports.EmployeeIncentive = EmployeeIncentive;
 EmployeeIncentive.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     type: { type: sequelize_1.DataTypes.ENUM(...exports.INCENTIVE_TYPES), allowNull: false },
     basis: { type: sequelize_1.DataTypes.ENUM(...exports.INCENTIVE_BASES), allowNull: false, defaultValue: "other" },
     base_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
@@ -27,9 +27,9 @@ EmployeeIncentive.init({
     period_end: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false },
     description: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     status: { type: sequelize_1.DataTypes.ENUM(...exports.INCENTIVE_STATUSES), allowNull: false, defaultValue: "pending" },
-    payroll_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    payroll_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
 }, {
     sequelize: database_1.default,
     modelName: "EmployeeIncentive",

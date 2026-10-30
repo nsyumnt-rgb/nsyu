@@ -41,9 +41,9 @@ export class PurchaseItem
 
 PurchaseItem.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    purchase_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    product_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    purchase_id: { type: DataTypes.BIGINT, allowNull: false },
+    product_id: { type: DataTypes.INTEGER, allowNull: false },
     product_name: { type: DataTypes.STRING(150), allowNull: false },
     sku: { type: DataTypes.STRING(60), allowNull: false },
     quantity: { type: DataTypes.INTEGER, allowNull: false },

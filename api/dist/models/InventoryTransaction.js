@@ -21,18 +21,18 @@ class InventoryTransaction extends sequelize_1.Model {
 }
 exports.InventoryTransaction = InventoryTransaction;
 InventoryTransaction.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    product_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    product_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     type: { type: sequelize_1.DataTypes.ENUM(...exports.MOVEMENT_TYPES), allowNull: false },
     signed_quantity: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     balance_after: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     reference_type: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
-    reference_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    reference_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
     notes: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,

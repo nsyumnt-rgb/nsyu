@@ -69,10 +69,10 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
 
 Order.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    customer_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    customer_id: { type: DataTypes.INTEGER, allowNull: false },
     order_number: { type: DataTypes.STRING(40), allowNull: false },
     order_date: { type: DataTypes.DATE, allowNull: false },
     expected_delivery_date: { type: DataTypes.DATE, allowNull: true },
@@ -82,7 +82,7 @@ Order.init(
     total_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     status: { type: DataTypes.ENUM(...ORDER_STATUSES), allowNull: false, defaultValue: "pending" },
     remarks: { type: DataTypes.TEXT, allowNull: true },
-    converted_sale_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    converted_sale_id: { type: DataTypes.BIGINT, allowNull: true },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

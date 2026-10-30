@@ -65,16 +65,16 @@ export class Notification
 
 Notification.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: true },
     recipient_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    recipient_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    recipient_id: { type: DataTypes.INTEGER, allowNull: false },
     type: { type: DataTypes.ENUM(...NOTIFICATION_TYPES), allowNull: false },
     title: { type: DataTypes.STRING(150), allowNull: false },
     message: { type: DataTypes.STRING(500), allowNull: false },
     reference_type: { type: DataTypes.STRING(50), allowNull: true },
-    reference_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    reference_id: { type: DataTypes.BIGINT, allowNull: true },
     is_read: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
   },
   {

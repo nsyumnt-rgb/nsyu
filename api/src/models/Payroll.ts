@@ -121,10 +121,10 @@ export class Payroll extends Model<PayrollAttributes, PayrollCreationAttributes>
 
 Payroll.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: DataTypes.INTEGER, allowNull: false },
     period_start: { type: DataTypes.DATEONLY, allowNull: false },
     period_end: { type: DataTypes.DATEONLY, allowNull: false },
     salary_type: { type: DataTypes.ENUM("monthly", "weekly", "daily", "hourly", "commission"), allowNull: false },
@@ -152,7 +152,7 @@ Payroll.init(
     notes: { type: DataTypes.STRING(255), allowNull: true },
     cancel_reason: { type: DataTypes.STRING(255), allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

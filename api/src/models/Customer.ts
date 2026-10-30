@@ -54,8 +54,8 @@ export class Customer
 
 Customer.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
     name: { type: DataTypes.STRING(150), allowNull: false },
     phone: { type: DataTypes.STRING(20), allowNull: true },
     email: { type: DataTypes.STRING(150), allowNull: true },

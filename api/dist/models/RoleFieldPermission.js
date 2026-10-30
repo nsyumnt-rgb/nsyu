@@ -11,8 +11,8 @@ class RoleFieldPermission extends sequelize_1.Model {
 }
 exports.RoleFieldPermission = RoleFieldPermission;
 RoleFieldPermission.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    role_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    role_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     field: { type: sequelize_1.DataTypes.ENUM(...permissions_1.SENSITIVE_FIELDS), allowNull: false },
     allowed: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
 }, {

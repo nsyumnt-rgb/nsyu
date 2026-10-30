@@ -19,10 +19,10 @@ class Sale extends sequelize_1.Model {
 }
 exports.Sale = Sale;
 Sale.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    customer_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    customer_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     invoice_number: { type: sequelize_1.DataTypes.STRING(40), allowNull: false },
     invoice_date: { type: sequelize_1.DataTypes.DATE, allowNull: false },
     subtotal: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
@@ -37,7 +37,7 @@ Sale.init({
     notes: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     cancel_reason: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,

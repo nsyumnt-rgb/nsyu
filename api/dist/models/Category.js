@@ -10,8 +10,8 @@ class Category extends sequelize_1.Model {
 }
 exports.Category = Category;
 Category.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     name: { type: sequelize_1.DataTypes.STRING(100), allowNull: false },
     status: { type: sequelize_1.DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },

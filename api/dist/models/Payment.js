@@ -13,12 +13,12 @@ class Payment extends sequelize_1.Model {
 }
 exports.Payment = Payment;
 Payment.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    customer_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    sale_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
-    emi_installment_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    customer_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    sale_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
+    emi_installment_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     type: { type: sequelize_1.DataTypes.ENUM(...exports.PAYMENT_TYPES), allowNull: false },
     amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false },
     method: { type: sequelize_1.DataTypes.ENUM(...Sale_1.PAYMENT_METHODS), allowNull: false },
@@ -27,7 +27,7 @@ Payment.init({
     notes: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     status: { type: sequelize_1.DataTypes.ENUM(...exports.PAYMENT_STATUSES), allowNull: false, defaultValue: "completed" },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,

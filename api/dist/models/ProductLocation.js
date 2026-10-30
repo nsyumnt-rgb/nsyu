@@ -10,15 +10,15 @@ class ProductLocation extends sequelize_1.Model {
 }
 exports.ProductLocation = ProductLocation;
 ProductLocation.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    product_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    product_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     rack: { type: sequelize_1.DataTypes.STRING(50) },
     shelf: { type: sequelize_1.DataTypes.STRING(50) },
     bin: { type: sequelize_1.DataTypes.STRING(50) },
     is_current: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: true },
     set_by_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    set_by_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    set_by_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
 }, {
     sequelize: database_1.default,
     modelName: "ProductLocation",

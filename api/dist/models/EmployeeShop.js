@@ -10,10 +10,10 @@ class EmployeeShop extends sequelize_1.Model {
 }
 exports.EmployeeShop = EmployeeShop;
 EmployeeShop.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    role_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    role_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
 }, {
     sequelize: database_1.default,
     modelName: "EmployeeShop",

@@ -20,16 +20,16 @@ class Notification extends sequelize_1.Model {
 }
 exports.Notification = Notification;
 Notification.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
     recipient_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    recipient_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    recipient_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     type: { type: sequelize_1.DataTypes.ENUM(...exports.NOTIFICATION_TYPES), allowNull: false },
     title: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     message: { type: sequelize_1.DataTypes.STRING(500), allowNull: false },
     reference_type: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
-    reference_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    reference_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     is_read: { type: sequelize_1.DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
 }, {
     sequelize: database_1.default,

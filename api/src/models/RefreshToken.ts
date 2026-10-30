@@ -27,10 +27,10 @@ export class RefreshToken
 
 RefreshToken.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     token: { type: DataTypes.STRING(500), allowNull: false, unique: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
-    employee_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: true },
+    employee_id: { type: DataTypes.INTEGER, allowNull: true },
     expires_at: { type: DataTypes.DATE, allowNull: false },
     revoked: { type: DataTypes.BOOLEAN, defaultValue: false },
   },

@@ -17,10 +17,10 @@ class Order extends sequelize_1.Model {
 }
 exports.Order = Order;
 Order.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    customer_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    customer_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     order_number: { type: sequelize_1.DataTypes.STRING(40), allowNull: false },
     order_date: { type: sequelize_1.DataTypes.DATE, allowNull: false },
     expected_delivery_date: { type: sequelize_1.DataTypes.DATE, allowNull: true },
@@ -30,7 +30,7 @@ Order.init({
     total_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     status: { type: sequelize_1.DataTypes.ENUM(...exports.ORDER_STATUSES), allowNull: false, defaultValue: "pending" },
     remarks: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
-    converted_sale_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    converted_sale_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,

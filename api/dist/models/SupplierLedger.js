@@ -12,20 +12,20 @@ class SupplierLedger extends sequelize_1.Model {
 }
 exports.SupplierLedger = SupplierLedger;
 SupplierLedger.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    supplier_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    supplier_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     entry_type: { type: sequelize_1.DataTypes.ENUM(...exports.SUPPLIER_LEDGER_ENTRY_TYPES), allowNull: false },
     amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false },
     running_balance: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false },
     reference_type: { type: sequelize_1.DataTypes.STRING(50), allowNull: false },
-    reference_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    reference_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     description: { type: sequelize_1.DataTypes.STRING(255), allowNull: false },
     entry_date: { type: sequelize_1.DataTypes.DATE, allowNull: false },
     status: { type: sequelize_1.DataTypes.ENUM(...exports.SUPPLIER_LEDGER_ENTRY_STATUSES), allowNull: false, defaultValue: "active" },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,

@@ -36,9 +36,9 @@ export class OrderItem extends Model<OrderItemAttributes, OrderItemCreationAttri
 
 OrderItem.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    order_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    product_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    order_id: { type: DataTypes.BIGINT, allowNull: false },
+    product_id: { type: DataTypes.BIGINT, allowNull: true },
     product_name: { type: DataTypes.STRING(255), allowNull: false },
     sku: { type: DataTypes.STRING(100), allowNull: false },
     available_stock: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },

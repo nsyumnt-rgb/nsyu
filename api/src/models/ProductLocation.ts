@@ -43,15 +43,15 @@ export class ProductLocation
 
 ProductLocation.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    product_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    product_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
     rack: { type: DataTypes.STRING(50) },
     shelf: { type: DataTypes.STRING(50) },
     bin: { type: DataTypes.STRING(50) },
     is_current: { type: DataTypes.BOOLEAN, defaultValue: true },
     set_by_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    set_by_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    set_by_id: { type: DataTypes.INTEGER, allowNull: false },
   },
   {
     sequelize,

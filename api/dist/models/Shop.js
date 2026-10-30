@@ -10,8 +10,8 @@ class Shop extends sequelize_1.Model {
 }
 exports.Shop = Shop;
 Shop.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     name: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     code: { type: sequelize_1.DataTypes.STRING(30), allowNull: false },
     address: { type: sequelize_1.DataTypes.STRING(255) },

@@ -11,10 +11,10 @@ class LeaveRequest extends sequelize_1.Model {
 }
 exports.LeaveRequest = LeaveRequest;
 LeaveRequest.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     leave_type: { type: sequelize_1.DataTypes.STRING(50), allowNull: false },
     start_date: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false },
     end_date: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false },
@@ -23,7 +23,7 @@ LeaveRequest.init({
     is_paid: { type: sequelize_1.DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     status: { type: sequelize_1.DataTypes.ENUM(...exports.LEAVE_STATUSES), allowNull: false, defaultValue: "Pending" },
     approved_by_actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: true },
-    approved_by_actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    approved_by_actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
     decision_note: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     decided_at: { type: sequelize_1.DataTypes.DATE, allowNull: true },
 }, {

@@ -36,12 +36,12 @@ export class ProductStock
 
 ProductStock.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    product_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    product_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
     current_stock: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    min_stock: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    min_stock: { type: DataTypes.INTEGER, allowNull: true },
   },
   {
     sequelize,

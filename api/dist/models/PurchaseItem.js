@@ -10,9 +10,9 @@ class PurchaseItem extends sequelize_1.Model {
 }
 exports.PurchaseItem = PurchaseItem;
 PurchaseItem.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    purchase_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    product_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    purchase_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: false },
+    product_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     product_name: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     sku: { type: sequelize_1.DataTypes.STRING(60), allowNull: false },
     quantity: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },

@@ -79,10 +79,10 @@ export class EmployeeIncentive
 
 EmployeeIncentive.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: DataTypes.INTEGER, allowNull: false },
     type: { type: DataTypes.ENUM(...INCENTIVE_TYPES), allowNull: false },
     basis: { type: DataTypes.ENUM(...INCENTIVE_BASES), allowNull: false, defaultValue: "other" },
     base_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
@@ -93,9 +93,9 @@ EmployeeIncentive.init(
     period_end: { type: DataTypes.DATEONLY, allowNull: false },
     description: { type: DataTypes.STRING(255), allowNull: true },
     status: { type: DataTypes.ENUM(...INCENTIVE_STATUSES), allowNull: false, defaultValue: "pending" },
-    payroll_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    payroll_id: { type: DataTypes.BIGINT, allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
   },
   {
     sequelize,

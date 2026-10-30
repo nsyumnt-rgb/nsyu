@@ -66,9 +66,9 @@ export class SalaryConfig
 
 SalaryConfig.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: DataTypes.INTEGER, allowNull: false },
     salary_type: { type: DataTypes.ENUM(...SALARY_TYPES), allowNull: false },
     basic_salary: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     allowances: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },

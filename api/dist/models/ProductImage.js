@@ -10,10 +10,10 @@ class ProductImage extends sequelize_1.Model {
 }
 exports.ProductImage = ProductImage;
 ProductImage.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    product_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    product_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     url: { type: sequelize_1.DataTypes.STRING(500), allowNull: false },
     is_primary: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
-    sort_order: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, defaultValue: 0 },
+    sort_order: { type: sequelize_1.DataTypes.INTEGER, defaultValue: 0 },
 }, { sequelize: database_1.default, modelName: "ProductImage", tableName: "product_images", indexes: [{ fields: ["product_id"] }] });
 //# sourceMappingURL=ProductImage.js.map

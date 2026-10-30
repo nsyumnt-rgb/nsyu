@@ -10,8 +10,8 @@ class Customer extends sequelize_1.Model {
 }
 exports.Customer = Customer;
 Customer.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     name: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     phone: { type: sequelize_1.DataTypes.STRING(20), allowNull: true },
     email: { type: sequelize_1.DataTypes.STRING(150), allowNull: true },

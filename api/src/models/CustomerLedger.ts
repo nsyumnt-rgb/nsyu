@@ -70,20 +70,20 @@ export class CustomerLedger
 
 CustomerLedger.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    customer_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    customer_id: { type: DataTypes.INTEGER, allowNull: false },
     entry_type: { type: DataTypes.ENUM(...LEDGER_ENTRY_TYPES), allowNull: false },
     amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     running_balance: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     reference_type: { type: DataTypes.STRING(50), allowNull: false },
-    reference_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    reference_id: { type: DataTypes.BIGINT, allowNull: true },
     description: { type: DataTypes.STRING(255), allowNull: false },
     entry_date: { type: DataTypes.DATE, allowNull: false },
     status: { type: DataTypes.ENUM(...LEDGER_ENTRY_STATUSES), allowNull: false, defaultValue: "active" },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

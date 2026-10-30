@@ -97,10 +97,10 @@ export class Sale extends Model<SaleAttributes, SaleCreationAttributes> implemen
 
 Sale.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    customer_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    customer_id: { type: DataTypes.INTEGER, allowNull: false },
     invoice_number: { type: DataTypes.STRING(40), allowNull: false },
     invoice_date: { type: DataTypes.DATE, allowNull: false },
     subtotal: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
@@ -115,7 +115,7 @@ Sale.init(
     notes: { type: DataTypes.STRING(255), allowNull: true },
     cancel_reason: { type: DataTypes.STRING(255), allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

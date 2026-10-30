@@ -10,9 +10,9 @@ class OrderItem extends sequelize_1.Model {
 }
 exports.OrderItem = OrderItem;
 OrderItem.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    order_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    product_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    order_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: false },
+    product_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     product_name: { type: sequelize_1.DataTypes.STRING(255), allowNull: false },
     sku: { type: sequelize_1.DataTypes.STRING(100), allowNull: false },
     available_stock: { type: sequelize_1.DataTypes.INTEGER, allowNull: false, defaultValue: 0 },

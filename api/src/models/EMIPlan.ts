@@ -78,18 +78,18 @@ export class EMIPlan extends Model<EMIPlanAttributes, EMIPlanCreationAttributes>
 
 EMIPlan.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    sale_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    customer_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    sale_id: { type: DataTypes.BIGINT, allowNull: false },
+    customer_id: { type: DataTypes.INTEGER, allowNull: false },
     total_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     down_payment: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     financed_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     interest_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
     interest_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     payable_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
-    number_of_installments: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    number_of_installments: { type: DataTypes.INTEGER, allowNull: false },
     emi_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     start_date: { type: DataTypes.DATEONLY, allowNull: false },
     late_fee_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
@@ -97,7 +97,7 @@ EMIPlan.init(
     status: { type: DataTypes.ENUM(...EMI_PLAN_STATUSES), allowNull: false, defaultValue: "active" },
     cancel_reason: { type: DataTypes.STRING(255), allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

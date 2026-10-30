@@ -10,7 +10,7 @@ class Owner extends sequelize_1.Model {
 }
 exports.Owner = Owner;
 Owner.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     name: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     email: { type: sequelize_1.DataTypes.STRING(150), allowNull: false, unique: true },
     password: { type: sequelize_1.DataTypes.STRING(255), allowNull: false },

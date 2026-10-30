@@ -19,9 +19,9 @@ class EMIInstallment extends sequelize_1.Model {
 }
 exports.EMIInstallment = EMIInstallment;
 EMIInstallment.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    emi_plan_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    installment_number: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    emi_plan_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: false },
+    installment_number: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     due_date: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false },
     expected_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false },
     paid_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },

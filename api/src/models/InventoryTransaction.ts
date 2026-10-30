@@ -71,18 +71,18 @@ export class InventoryTransaction
 
 InventoryTransaction.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    product_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    product_id: { type: DataTypes.INTEGER, allowNull: false },
     type: { type: DataTypes.ENUM(...MOVEMENT_TYPES), allowNull: false },
     signed_quantity: { type: DataTypes.INTEGER, allowNull: false },
     balance_after: { type: DataTypes.INTEGER, allowNull: false },
     reference_type: { type: DataTypes.STRING(50), allowNull: true },
-    reference_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    reference_id: { type: DataTypes.INTEGER, allowNull: true },
     notes: { type: DataTypes.STRING(255), allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

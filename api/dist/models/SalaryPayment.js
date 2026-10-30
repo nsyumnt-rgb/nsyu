@@ -12,11 +12,11 @@ class SalaryPayment extends sequelize_1.Model {
 }
 exports.SalaryPayment = SalaryPayment;
 SalaryPayment.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    payroll_id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    payroll_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: false },
     amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false },
     method: { type: sequelize_1.DataTypes.ENUM(...exports.SALARY_PAYMENT_METHODS), allowNull: false },
     transaction_id: { type: sequelize_1.DataTypes.STRING(100), allowNull: true },
@@ -24,7 +24,7 @@ SalaryPayment.init({
     notes: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     status: { type: sequelize_1.DataTypes.ENUM(...exports.SALARY_PAYMENT_STATUSES), allowNull: false, defaultValue: "completed" },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
 }, {
     sequelize: database_1.default,
     modelName: "SalaryPayment",

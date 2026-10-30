@@ -42,17 +42,17 @@ export class PurchaseReturn
 
 PurchaseReturn.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    purchase_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    supplier_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    purchase_id: { type: DataTypes.BIGINT, allowNull: false },
+    supplier_id: { type: DataTypes.INTEGER, allowNull: false },
     return_date: { type: DataTypes.DATE, allowNull: false },
     reason: { type: DataTypes.STRING(255), allowNull: true },
     refund_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     status: { type: DataTypes.ENUM(...PURCHASE_RETURN_STATUSES), allowNull: false, defaultValue: "completed" },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {
@@ -95,10 +95,10 @@ export class PurchaseReturnItem
 
 PurchaseReturnItem.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    purchase_return_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    purchase_item_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    product_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    purchase_return_id: { type: DataTypes.BIGINT, allowNull: false },
+    purchase_item_id: { type: DataTypes.BIGINT, allowNull: false },
+    product_id: { type: DataTypes.INTEGER, allowNull: false },
     quantity: { type: DataTypes.INTEGER, allowNull: false },
     rate: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     refund_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },

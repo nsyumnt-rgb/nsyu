@@ -46,14 +46,14 @@ export class AuditLog
 AuditLog.init(
   {
     id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: DataTypes.INTEGER, allowNull: false },
     module: { type: DataTypes.STRING(50), allowNull: false },
     action: { type: DataTypes.STRING(50), allowNull: false },
     entity_type: { type: DataTypes.STRING(50), allowNull: true },
-    entity_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    entity_id: { type: DataTypes.INTEGER, allowNull: true },
     old_value: { type: DataTypes.TEXT, allowNull: true },
     new_value: { type: DataTypes.TEXT, allowNull: true },
     details: { type: DataTypes.TEXT, allowNull: true },

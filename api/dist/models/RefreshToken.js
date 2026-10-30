@@ -10,10 +10,10 @@ class RefreshToken extends sequelize_1.Model {
 }
 exports.RefreshToken = RefreshToken;
 RefreshToken.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     token: { type: sequelize_1.DataTypes.STRING(500), allowNull: false, unique: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
     expires_at: { type: sequelize_1.DataTypes.DATE, allowNull: false },
     revoked: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
 }, { sequelize: database_1.default, modelName: "RefreshToken", tableName: "refresh_tokens" });

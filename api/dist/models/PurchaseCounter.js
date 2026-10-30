@@ -10,10 +10,10 @@ class PurchaseCounter extends sequelize_1.Model {
 }
 exports.PurchaseCounter = PurchaseCounter;
 PurchaseCounter.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    last_number: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    last_number: { type: sequelize_1.DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
 }, {
     sequelize: database_1.default,
     modelName: "PurchaseCounter",

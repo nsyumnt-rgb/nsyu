@@ -25,11 +25,11 @@ export class ProductImage
 
 ProductImage.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    product_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    product_id: { type: DataTypes.INTEGER, allowNull: false },
     url: { type: DataTypes.STRING(500), allowNull: false },
     is_primary: { type: DataTypes.BOOLEAN, defaultValue: false },
-    sort_order: { type: DataTypes.INTEGER.UNSIGNED, defaultValue: 0 },
+    sort_order: { type: DataTypes.INTEGER, defaultValue: 0 },
   },
   { sequelize, modelName: "ProductImage", tableName: "product_images", indexes: [{ fields: ["product_id"] }] }
 );

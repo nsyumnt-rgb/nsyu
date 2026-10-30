@@ -10,8 +10,8 @@ class Employee extends sequelize_1.Model {
 }
 exports.Employee = Employee;
 Employee.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     name: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     email: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     password: { type: sequelize_1.DataTypes.STRING(255), allowNull: false },

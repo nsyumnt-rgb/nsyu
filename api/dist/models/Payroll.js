@@ -11,10 +11,10 @@ class Payroll extends sequelize_1.Model {
 }
 exports.Payroll = Payroll;
 Payroll.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     period_start: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false },
     period_end: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false },
     salary_type: { type: sequelize_1.DataTypes.ENUM("monthly", "weekly", "daily", "hourly", "commission"), allowNull: false },
@@ -42,7 +42,7 @@ Payroll.init({
     notes: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     cancel_reason: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,

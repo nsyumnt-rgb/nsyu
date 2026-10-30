@@ -70,10 +70,10 @@ export class Attendance
 
 Attendance.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: DataTypes.INTEGER, allowNull: false },
     date: { type: DataTypes.DATEONLY, allowNull: false },
     check_in: { type: DataTypes.DATE, allowNull: true },
     check_out: { type: DataTypes.DATE, allowNull: true },
@@ -82,7 +82,7 @@ Attendance.init(
     status: { type: DataTypes.ENUM(...ATTENDANCE_STATUSES), allowNull: false, defaultValue: "Present" },
     remarks: { type: DataTypes.STRING(255), allowNull: true },
     marked_by_actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
-    marked_by_actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    marked_by_actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

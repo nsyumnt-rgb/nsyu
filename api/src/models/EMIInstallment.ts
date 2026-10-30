@@ -68,9 +68,9 @@ export class EMIInstallment
 
 EMIInstallment.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    emi_plan_id: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },
-    installment_number: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    emi_plan_id: { type: DataTypes.BIGINT, allowNull: false },
+    installment_number: { type: DataTypes.INTEGER, allowNull: false },
     due_date: { type: DataTypes.DATEONLY, allowNull: false },
     expected_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     paid_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },

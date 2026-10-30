@@ -73,10 +73,10 @@ export class LeaveRequest
 
 LeaveRequest.init(
   {
-    id: { type: DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: DataTypes.INTEGER, allowNull: false },
     leave_type: { type: DataTypes.STRING(50), allowNull: false },
     start_date: { type: DataTypes.DATEONLY, allowNull: false },
     end_date: { type: DataTypes.DATEONLY, allowNull: false },
@@ -85,7 +85,7 @@ LeaveRequest.init(
     is_paid: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     status: { type: DataTypes.ENUM(...LEAVE_STATUSES), allowNull: false, defaultValue: "Pending" },
     approved_by_actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: true },
-    approved_by_actor_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    approved_by_actor_id: { type: DataTypes.INTEGER, allowNull: true },
     decision_note: { type: DataTypes.STRING(255), allowNull: true },
     decided_at: { type: DataTypes.DATE, allowNull: true },
   },

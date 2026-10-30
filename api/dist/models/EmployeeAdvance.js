@@ -11,10 +11,10 @@ class EmployeeAdvance extends sequelize_1.Model {
 }
 exports.EmployeeAdvance = EmployeeAdvance;
 EmployeeAdvance.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false },
     outstanding_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     date: { type: sequelize_1.DataTypes.DATE, allowNull: false },
@@ -22,7 +22,7 @@ EmployeeAdvance.init({
     method: { type: sequelize_1.DataTypes.STRING(30), allowNull: false },
     status: { type: sequelize_1.DataTypes.ENUM(...exports.ADVANCE_STATUSES), allowNull: false, defaultValue: "outstanding" },
     actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
 }, {
     sequelize: database_1.default,
     modelName: "EmployeeAdvance",

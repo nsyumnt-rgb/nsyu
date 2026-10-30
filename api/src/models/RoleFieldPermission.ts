@@ -24,8 +24,8 @@ export class RoleFieldPermission
 
 RoleFieldPermission.init(
   {
-    id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    role_id: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    role_id: { type: DataTypes.INTEGER, allowNull: false },
     field: { type: DataTypes.ENUM(...SENSITIVE_FIELDS), allowNull: false },
     allowed: { type: DataTypes.BOOLEAN, defaultValue: false },
   },

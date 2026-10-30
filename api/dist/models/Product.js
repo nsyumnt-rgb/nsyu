@@ -10,13 +10,13 @@ class Product extends sequelize_1.Model {
 }
 exports.Product = Product;
 Product.init({
-    id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     name: { type: sequelize_1.DataTypes.STRING(150), allowNull: false },
     sku: { type: sequelize_1.DataTypes.STRING(60), allowNull: false },
     barcode: { type: sequelize_1.DataTypes.STRING(60) },
-    category_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
-    subcategory_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    category_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
+    subcategory_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
     brand: { type: sequelize_1.DataTypes.STRING(100) },
     description: { type: sequelize_1.DataTypes.TEXT },
     purchase_price: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
@@ -24,8 +24,8 @@ Product.init({
     mrp: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     discount: { type: sequelize_1.DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
     tax_percent: { type: sequelize_1.DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
-    min_stock: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false, defaultValue: 0 },
-    supplier_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    min_stock: { type: sequelize_1.DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    supplier_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
     status: { type: sequelize_1.DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {

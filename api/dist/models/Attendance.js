@@ -19,10 +19,10 @@ class Attendance extends sequelize_1.Model {
 }
 exports.Attendance = Attendance;
 Attendance.init({
-    id: { type: sequelize_1.DataTypes.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true },
-    owner_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    shop_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    employee_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    id: { type: sequelize_1.DataTypes.BIGINT, autoIncrement: true, primaryKey: true },
+    owner_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    shop_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
+    employee_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     date: { type: sequelize_1.DataTypes.DATEONLY, allowNull: false },
     check_in: { type: sequelize_1.DataTypes.DATE, allowNull: true },
     check_out: { type: sequelize_1.DataTypes.DATE, allowNull: true },
@@ -31,7 +31,7 @@ Attendance.init({
     status: { type: sequelize_1.DataTypes.ENUM(...exports.ATTENDANCE_STATUSES), allowNull: false, defaultValue: "Present" },
     remarks: { type: sequelize_1.DataTypes.STRING(255), allowNull: true },
     marked_by_actor_type: { type: sequelize_1.DataTypes.ENUM("owner", "employee"), allowNull: false },
-    marked_by_actor_id: { type: sequelize_1.DataTypes.INTEGER.UNSIGNED, allowNull: false },
+    marked_by_actor_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,
