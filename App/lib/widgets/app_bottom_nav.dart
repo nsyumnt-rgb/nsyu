@@ -16,7 +16,7 @@ class AppBottomNav extends StatelessWidget {
   static const _destinations = [
     (0, Icons.menu_book_outlined, Icons.menu_book_rounded, 'Ledger'),
     (1, Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'Bill'),
-    (2, Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Catalog'),
+    (2, Icons.inventory_2_outlined, Icons.inventory_2_rounded, 'Inventory'),
     (3, Icons.menu_rounded, Icons.menu_rounded, 'More'),
   ];
 
