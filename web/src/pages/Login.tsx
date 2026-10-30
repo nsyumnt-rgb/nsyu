@@ -636,7 +636,7 @@ export default function Login() {
               </div>
               <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">APK Download Started!</h3>
               <p className="text-xs text-slate-500 mt-1">
-                <span className="font-mono font-bold text-slate-800">{apkSuccessModal.filename}</span> (v1.0.0+1 • 63.2 MB)
+                <span className="font-mono font-bold text-slate-800">{apkSuccessModal.filename}</span> (v1.0.0+2 • 62.3 MB)
               </p>
             </div>
 

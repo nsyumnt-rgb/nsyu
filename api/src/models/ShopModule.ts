@@ -46,3 +46,4 @@ ShopModule.init(
     ],
   }
 );
+

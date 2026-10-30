@@ -49,3 +49,4 @@ Permission.init(
     underscored: true,
   }
 );
+
