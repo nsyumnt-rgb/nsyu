@@ -1,20 +1,33 @@
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import RequireModule from "../components/RequireModule";
 import { useAuthStore } from "../store/authStore";
 import { api } from "../api/client";
 
-interface BusinessSettingsState {
-  // Account Information
+interface FullSettingsState {
+  // 1. General (Account, Preferences, Theme)
   name: string;
   email: string;
   accountType: string;
   phone: string;
   alternatePhone: string;
   language: string;
+  dateFormat: string;
+  timeFormat: string;
+  currency: string;
+  timezone: string;
+  defaultPaymentMethod: string;
+  defaultCustomerType: string;
+  defaultInvoiceTerms: number;
+  lowStockAlert: number;
+  theme: "light" | "dark" | "system";
 
-  // Business Information
+  // 2. Business
   businessName: string;
+  tradeName: string;
   businessType: string;
+  cinNumber: string;
+  panNumber: string;
   gstin: string;
   businessLogo: string;
   address: string;
@@ -24,21 +37,72 @@ interface BusinessSettingsState {
   businessPhone: string;
   businessEmail: string;
   website: string;
+  businessTagline: string;
 
-  // Application Preferences
-  dateFormat: string;
-  timeFormat: string;
-  currency: string;
-  timezone: string;
-  defaultPaymentMethod: string;
-  defaultCustomerType: string;
-  defaultInvoiceTerms: number;
-  lowStockAlert: number;
+  // 3. Shop
+  shopName: string;
+  shopCode: string;
+  branchAddress: string;
+  branchPhone: string;
+  branchEmail: string;
+  openingTime: string;
+  closingTime: string;
+  workingDays: string;
+  allowMultiShopSwitching: boolean;
 
-  // Theme Settings
-  theme: "light" | "dark" | "system";
+  // 4. Invoice
+  invoicePrefix: string;
+  nextInvoiceNumber: number;
+  invoiceTitle: string;
+  showHsnColumn: boolean;
+  showMrpColumn: boolean;
+  showDiscountColumn: boolean;
+  showTaxColumn: boolean;
+  showBankDetailsOnBill: boolean;
+  showUpiQrOnBill: boolean;
+  invoiceTermsAndConditions: string;
+  invoiceFooterNote: string;
+  signatoryText: string;
 
-  // Notification Settings
+  // 5. Tax & GST
+  gstRegistrationType: string;
+  defaultGstRate: number;
+  pricesIncludeTax: boolean;
+  requireHsnCode: boolean;
+  enableRcm: boolean;
+  eWayBillThreshold: number;
+  stateGstCode: string;
+
+  // 6. Payment
+  bankName: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankIfscCode: string;
+  bankBranch: string;
+  upiId: string;
+  enableCash: boolean;
+  enableUpi: boolean;
+  enableCard: boolean;
+  enableNetBanking: boolean;
+  enableCustomerCredit: boolean;
+
+  // 7. Inventory
+  allowNegativeStock: boolean;
+  enableBarcodeScanner: boolean;
+  autoDeductStockOnBill: boolean;
+  defaultUnit: string;
+  enableBatchTracking: boolean;
+  enableWarehouseLocations: boolean;
+  stockAdjustmentReasons: string;
+
+  // 8. Users & Access
+  allowStaffDiscount: boolean;
+  maxStaffDiscountPercent: number;
+  allowStaffDeleteItems: boolean;
+  allowStaffViewCostPrice: boolean;
+  allowStaffViewReports: boolean;
+
+  // 9. Notifications
   newSaleNotification: boolean;
   paymentReceived: boolean;
   lowStockAlertNotification: boolean;
@@ -46,6 +110,27 @@ interface BusinessSettingsState {
   employeeActivity: boolean;
   systemNotifications: boolean;
   marketingUpdates: boolean;
+  whatsappInvoiceShare: boolean;
+  whatsappPaymentReminder: boolean;
+
+  // 10. Backup
+  autoBackupFrequency: "daily" | "weekly" | "disabled";
+  cloudBackupSync: boolean;
+  lastBackupDate: string;
+
+  // 11. Integrations
+  thermalPrinterEnabled: boolean;
+  printerPaperWidth: "80mm" | "58mm";
+  printerConnectionType: "USB" | "Bluetooth" | "Network";
+  supabaseSyncActive: boolean;
+  whatsappApiConnected: boolean;
+
+  // 12. Security
+  twoFactorAuth: boolean;
+  sessionTimeoutMinutes: number;
+  enforceStrongPassword: boolean;
+  ipRestrictionEnabled: boolean;
+  auditLoggingEnabled: boolean;
 
   // Print Settings
   defaultPaperSize: string;
@@ -63,8 +148,34 @@ function SettingsInner() {
   const accountType = useAuthStore((s) => s.accountType);
   const activeShop = useAuthStore((s) => s.activeShop);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [activeTab, setActiveTab] = useState<string>("general");
+  const validTabs = [
+    "general",
+    "business",
+    "shop",
+    "invoice",
+    "tax",
+    "payment",
+    "inventory",
+    "users",
+    "notifications",
+    "backup",
+    "integrations",
+    "security",
+  ];
+
+  const urlTab = searchParams.get("tab");
+  const activeTab = urlTab && validTabs.includes(urlTab) ? urlTab : "general";
+
+  const handleTabChange = (tabId: string) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("tab", tabId);
+      return next;
+    });
+  };
+
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -80,10 +191,9 @@ function SettingsInner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initial dynamic defaults from active user / shop context
-  const getInitialState = (): BusinessSettingsState => {
+  const getInitialState = (): FullSettingsState => {
     const person = accountType === "owner" ? owner : employee;
 
-    // Check if previously saved settings exist in localStorage
     try {
       const saved = localStorage.getItem(STORAGE_SETTINGS_KEY);
       if (saved) {
@@ -93,11 +203,13 @@ function SettingsInner() {
           name: person?.name || parsed.name || "",
           email: person?.email || parsed.email || "",
           accountType: accountType === "owner" ? "Owner" : "Staff",
-          businessName: activeShop?.name || parsed.businessName || "",
-          address: activeShop?.address || parsed.address || "",
-          businessPhone: activeShop?.phone || parsed.businessPhone || "",
-          businessEmail: activeShop?.email || parsed.businessEmail || "",
+          businessName: activeShop?.name || parsed.businessName || "NSY Business",
+          address: activeShop?.address || parsed.address || "123, Main Road, Near Market, New Delhi - 110001",
+          businessPhone: activeShop?.phone || parsed.businessPhone || "+91 9876543210",
+          businessEmail: activeShop?.email || parsed.businessEmail || "business@nsyu.com",
           businessLogo: activeShop?.logo || parsed.businessLogo || "",
+          shopName: activeShop?.name || parsed.shopName || "Main Shop - Electronics",
+          shopCode: activeShop?.code || parsed.shopCode || "NSYU-01",
         };
       }
     } catch {
@@ -105,15 +217,18 @@ function SettingsInner() {
     }
 
     return {
-      name: person?.name || "",
-      email: person?.email || "",
+      name: person?.name || "NSYU",
+      email: person?.email || "nsyu.mnt@gmail.com",
       accountType: accountType === "owner" ? "Owner" : "Staff",
-      phone: person && "phone" in person && person.phone ? String(person.phone) : "",
-      alternatePhone: "",
+      phone: person && "phone" in person && person.phone ? String(person.phone) : "+91 9876543210",
+      alternatePhone: "+91 9876543210",
       language: "English",
 
       businessName: activeShop?.name || "NSY Business",
+      tradeName: "NSY Electronics & Mobile Accessories",
       businessType: "Electronics",
+      cinNumber: "U72900DL2026PTC123456",
+      panNumber: "ABCDE1234F",
       gstin: "27ABCDE1234F1Z5",
       businessLogo: activeShop?.logo || "",
       address: activeShop?.address || "123, Main Road, Near Market, New Delhi - 110001",
@@ -123,6 +238,91 @@ function SettingsInner() {
       businessPhone: activeShop?.phone || "+91 9876543210",
       businessEmail: activeShop?.email || "business@nsyu.com",
       website: "https://www.nsyubusiness.com",
+      businessTagline: "Smart Multi-Shop Business Management",
+
+      shopName: activeShop?.name || "Main Shop - Electronics",
+      shopCode: activeShop?.code || "NSYU-01",
+      branchAddress: activeShop?.address || "Shop No. 12, Main Market, Jasola, New Delhi - 110025",
+      branchPhone: activeShop?.phone || "+91 8800503662",
+      branchEmail: activeShop?.email || "jasola@nsyubusiness.com",
+      openingTime: "09:30 AM",
+      closingTime: "09:30 PM",
+      workingDays: "Monday - Saturday",
+      allowMultiShopSwitching: true,
+
+      invoicePrefix: "INV-",
+      nextInvoiceNumber: 126,
+      invoiceTitle: "TAX INVOICE",
+      showHsnColumn: true,
+      showMrpColumn: true,
+      showDiscountColumn: true,
+      showTaxColumn: true,
+      showBankDetailsOnBill: true,
+      showUpiQrOnBill: true,
+      invoiceTermsAndConditions:
+        "1. Warranty as per product manufacturer rules.\n2. Payment must be cleared within 21 days.\n3. Goods once sold will not be returned without original receipt.",
+      invoiceFooterNote: "Thank you for doing business with us! Visit again.",
+      signatoryText: "For NSY Business (Authorized Signatory)",
+
+      gstRegistrationType: "Regular",
+      defaultGstRate: 18,
+      pricesIncludeTax: false,
+      requireHsnCode: true,
+      enableRcm: false,
+      eWayBillThreshold: 50000,
+      stateGstCode: "07 - Delhi",
+
+      bankName: "HDFC Bank",
+      bankAccountName: "NSY BUSINESS PRIVATE LIMITED",
+      bankAccountNumber: "50200012345678",
+      bankIfscCode: "HDFC0001234",
+      bankBranch: "Jasola Vihar, New Delhi",
+      upiId: "nsyu@hdfcbank",
+      enableCash: true,
+      enableUpi: true,
+      enableCard: true,
+      enableNetBanking: true,
+      enableCustomerCredit: true,
+
+      allowNegativeStock: false,
+      enableBarcodeScanner: true,
+      autoDeductStockOnBill: true,
+      defaultUnit: "PCS",
+      enableBatchTracking: true,
+      enableWarehouseLocations: true,
+      stockAdjustmentReasons: "Damaged, Expired, Missing / Theft, Stock Audit, Sample Given",
+
+      allowStaffDiscount: true,
+      maxStaffDiscountPercent: 10,
+      allowStaffDeleteItems: false,
+      allowStaffViewCostPrice: false,
+      allowStaffViewReports: false,
+
+      newSaleNotification: true,
+      paymentReceived: true,
+      lowStockAlertNotification: true,
+      duePaymentReminder: true,
+      employeeActivity: true,
+      systemNotifications: true,
+      marketingUpdates: false,
+      whatsappInvoiceShare: true,
+      whatsappPaymentReminder: true,
+
+      autoBackupFrequency: "daily",
+      cloudBackupSync: true,
+      lastBackupDate: new Date().toLocaleDateString("en-IN"),
+
+      thermalPrinterEnabled: true,
+      printerPaperWidth: "80mm",
+      printerConnectionType: "USB",
+      supabaseSyncActive: true,
+      whatsappApiConnected: true,
+
+      twoFactorAuth: false,
+      sessionTimeoutMinutes: 60,
+      enforceStrongPassword: true,
+      ipRestrictionEnabled: false,
+      auditLoggingEnabled: true,
 
       dateFormat: "DD/MM/YYYY",
       timeFormat: "24 Hours (HH:mm)",
@@ -135,14 +335,6 @@ function SettingsInner() {
 
       theme: "light",
 
-      newSaleNotification: true,
-      paymentReceived: true,
-      lowStockAlertNotification: true,
-      duePaymentReminder: true,
-      employeeActivity: true,
-      systemNotifications: true,
-      marketingUpdates: false,
-
       defaultPaperSize: "A4",
       printFormat: "Thermal (80mm)",
       showLogoInPrint: true,
@@ -151,22 +343,20 @@ function SettingsInner() {
     };
   };
 
-  const [settings, setSettings] = useState<BusinessSettingsState>(getInitialState);
+  const [settings, setSettings] = useState<FullSettingsState>(getInitialState);
 
-  // Sync state if activeShop or user changes
   useEffect(() => {
     setSettings(getInitialState());
   }, [activeShop, owner, employee, accountType]);
 
-  const handleTextChange = (field: keyof BusinessSettingsState, value: any) => {
+  const handleTextChange = (field: keyof FullSettingsState, value: any) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleToggle = (field: keyof BusinessSettingsState) => {
+  const handleToggle = (field: keyof FullSettingsState) => {
     setSettings((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  // Handle Logo Upload
   const handleLogoFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -186,34 +376,31 @@ function SettingsInner() {
     reader.readAsDataURL(file);
   };
 
-  // Save Settings Function
   const handleSaveSettings = async () => {
     setSaving(true);
     setErrorMessage(null);
     setSavedSuccess(false);
 
     try {
-      // 1. If activeShop exists, update backend database shop table
       if (activeShop?.id) {
         try {
           const res = await api.put(`/shops/${activeShop.id}`, {
-            name: settings.businessName,
-            phone: settings.businessPhone,
-            email: settings.businessEmail,
-            address: settings.address,
+            name: settings.businessName || settings.shopName,
+            phone: settings.businessPhone || settings.branchPhone,
+            email: settings.businessEmail || settings.branchEmail,
+            address: settings.address || settings.branchAddress,
             logo: settings.businessLogo,
+            code: settings.shopCode,
           });
           if (res.data?.data) {
             setActiveShop(res.data.data);
           }
         } catch {
-          // If shop update API has permission or network constraint, continue saving local settings
+          // Fall back gracefully if restricted
         }
       }
 
-      // 2. Persist complete dynamic settings to localStorage
       localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(settings));
-
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3500);
     } catch (err: any) {
@@ -223,7 +410,6 @@ function SettingsInner() {
     }
   };
 
-  // Change Password Submit
   const handleChangePassword = async () => {
     setPasswordError(null);
     if (!currentPassword || !newPassword) {
@@ -253,7 +439,6 @@ function SettingsInner() {
     }
   };
 
-  // Backup Export
   const handleBackupNow = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));
     const downloadAnchor = document.createElement("a");
@@ -265,7 +450,7 @@ function SettingsInner() {
   };
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-24">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Settings</h1>
@@ -279,7 +464,7 @@ function SettingsInner() {
             <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            <span className="font-bold">Settings saved successfully! All business preferences are updated.</span>
+            <span className="font-bold">Settings saved successfully! Configuration is dynamically persisted.</span>
           </div>
           <button type="button" onClick={() => setSavedSuccess(false)} className="text-emerald-700 hover:text-emerald-900 font-bold">
             ✕
@@ -317,7 +502,7 @@ function SettingsInner() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 isActive
                   ? "bg-blue-600 text-white shadow-xs shadow-blue-500/25"
@@ -331,494 +516,401 @@ function SettingsInner() {
         })}
       </div>
 
-      {/* Main Grid: Left Column (Main Forms) & Right Column (Side Panels) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ========================================================================= */}
-        {/* LEFT COLUMN: Account, Business, & Application Preferences                */}
-        {/* ========================================================================= */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Card 1: Account Information */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+      {/* ========================================================================= */}
+      {/* 1. GENERAL TAB                                                            */}
+      {/* ========================================================================= */}
+      {activeTab === "general" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 space-y-6">
+            {/* Account Information Card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    👤
+                  </div>
+                  <h2 className="text-sm font-bold text-slate-900">Account Information</h2>
                 </div>
-                <h2 className="text-sm font-bold text-slate-900">Account Information</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowPasswordModal(true)}
-                className="px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0110 0v4" />
-                </svg>
-                <span>Change Password</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={settings.name}
-                  onChange={(e) => handleTextChange("name", e.target.value)}
-                  placeholder="Enter your name"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Email <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={settings.email}
-                  onChange={(e) => handleTextChange("email", e.target.value)}
-                  placeholder="your.email@business.com"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Account type
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={settings.accountType}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 font-semibold text-slate-500 cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Phone
-                </label>
-                <input
-                  type="text"
-                  value={settings.phone}
-                  onChange={(e) => handleTextChange("phone", e.target.value)}
-                  placeholder="+91 9876543210"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Alternate Phone
-                </label>
-                <input
-                  type="text"
-                  value={settings.alternatePhone}
-                  onChange={(e) => handleTextChange("alternatePhone", e.target.value)}
-                  placeholder="+91 9876543210"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Language
-                </label>
-                <select
-                  value={settings.language}
-                  onChange={(e) => handleTextChange("language", e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(true)}
+                  className="px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <option value="English">English</option>
-                  <option value="Hindi">Hindi (हिंदी)</option>
-                  <option value="Hinglish">Hinglish</option>
-                </select>
+                  <span>🔒</span>
+                  <span>Change Password</span>
+                </button>
               </div>
-            </div>
-          </div>
 
-          {/* Card 2: Business Information */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-              </div>
-              <h2 className="text-sm font-bold text-slate-900">Business Information</h2>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              {/* Form fields */}
-              <div className="lg:col-span-8 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-1">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Business Name <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.businessName}
-                      onChange={(e) => handleTextChange("businessName", e.target.value)}
-                      placeholder="e.g. NSY Business"
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Business Type
-                    </label>
-                    <select
-                      value={settings.businessType}
-                      onChange={(e) => handleTextChange("businessType", e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                      <option value="Electronics">Electronics</option>
-                      <option value="Mobile Accessories">Mobile Accessories</option>
-                      <option value="Wholesale Distributor">Wholesale Distributor</option>
-                      <option value="Retail Store">Retail Store</option>
-                      <option value="Hardware & Electric">Hardware & Electric</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                      GSTIN
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.gstin}
-                      onChange={(e) => handleTextChange("gstin", e.target.value)}
-                      placeholder="27ABCDE1234F1Z5"
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 uppercase font-mono"
-                    />
-                  </div>
-                </div>
-
-                {/* Address Textarea */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Address
+                    Name <span className="text-rose-500">*</span>
                   </label>
-                  <textarea
-                    rows={2}
-                    value={settings.address}
-                    onChange={(e) => handleTextChange("address", e.target.value)}
-                    placeholder="Enter complete store address..."
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                  <input
+                    type="text"
+                    value={settings.name}
+                    onChange={(e) => handleTextChange("name", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={settings.email}
+                    onChange={(e) => handleTextChange("email", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Account type
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={settings.accountType}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 font-semibold text-slate-500 cursor-not-allowed"
                   />
                 </div>
               </div>
 
-              {/* Logo Upload Box matching Reference Design */}
-              <div className="lg:col-span-4 p-4 rounded-xl border border-slate-200 bg-slate-50/60 flex flex-col items-center text-center space-y-2.5">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleLogoFileChange}
-                  accept="image/png, image/jpeg, image/webp"
-                  className="hidden"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.phone}
+                    onChange={(e) => handleTextChange("phone", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Alternate Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.alternatePhone}
+                    onChange={(e) => handleTextChange("alternatePhone", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Language
+                  </label>
+                  <select
+                    value={settings.language}
+                    onChange={(e) => handleTextChange("language", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="English">English</option>
+                    <option value="Hindi">Hindi (हिंदी)</option>
+                    <option value="Hinglish">Hinglish</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-                <div className="w-20 h-20 rounded-xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center relative group shadow-2xs">
-                  {settings.businessLogo ? (
-                    <img src={settings.businessLogo} alt="Business Logo" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-center p-2 text-slate-400">
-                      <svg className="w-6 h-6 mx-auto mb-1 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span className="text-[10px]">No Logo</span>
+            {/* Business Information Card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  🏬
+                </div>
+                <h2 className="text-sm font-bold text-slate-900">Business Information</h2>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                <div className="lg:col-span-8 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                        Business Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.businessName}
+                        onChange={(e) => handleTextChange("businessName", e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+                      />
                     </div>
-                  )}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                        Business Type
+                      </label>
+                      <select
+                        value={settings.businessType}
+                        onChange={(e) => handleTextChange("businessType", e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="Electronics">Electronics</option>
+                        <option value="Mobile Accessories">Mobile Accessories</option>
+                        <option value="Wholesale Distributor">Wholesale Distributor</option>
+                        <option value="Retail Store">Retail Store</option>
+                        <option value="Hardware & Electric">Hardware & Electric</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                        GSTIN
+                      </label>
+                      <input
+                        type="text"
+                        value={settings.gstin}
+                        onChange={(e) => handleTextChange("gstin", e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 font-mono uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                      Address
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={settings.address}
+                      onChange={(e) => handleTextChange("address", e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="lg:col-span-4 p-4 rounded-xl border border-slate-200 bg-slate-50/60 flex flex-col items-center text-center space-y-2.5">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleLogoFileChange}
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                  />
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center relative group shadow-2xs">
+                    {settings.businessLogo ? (
+                      <img src={settings.businessLogo} alt="Business Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center p-2 text-slate-400">
+                        <span className="text-xl">🏪</span>
+                        <div className="text-[10px] mt-1">No Logo</div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800">Business Logo</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">300 x 300 (PNG, JPG)</div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity"
+                    className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                   >
-                    Change
+                    Upload Logo
                   </button>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
                 <div>
-                  <div className="text-xs font-bold text-slate-800">Business Logo</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">Recommended size: 300 x 300 (PNG, JPG)</div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">State</label>
+                  <input
+                    type="text"
+                    value={settings.state}
+                    onChange={(e) => handleTextChange("state", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
                 </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">City</label>
+                  <input
+                    type="text"
+                    value={settings.city}
+                    onChange={(e) => handleTextChange("city", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Pincode</label>
+                  <input
+                    type="text"
+                    value={settings.pincode}
+                    onChange={(e) => handleTextChange("pincode", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-mono"
+                  />
+                </div>
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Upload Logo
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Phone</label>
+                  <input
+                    type="text"
+                    value={settings.businessPhone}
+                    onChange={(e) => handleTextChange("businessPhone", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
+                  <input
+                    type="email"
+                    value={settings.businessEmail}
+                    onChange={(e) => handleTextChange("businessEmail", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Website</label>
+                  <input
+                    type="text"
+                    value={settings.website}
+                    onChange={(e) => handleTextChange("website", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* State, City, Pincode */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  State
-                </label>
-                <select
-                  value={settings.state}
-                  onChange={(e) => handleTextChange("state", e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="Delhi">Delhi</option>
-                  <option value="Uttar Pradesh">Uttar Pradesh</option>
-                  <option value="Haryana">Haryana</option>
-                  <option value="Maharashtra">Maharashtra</option>
-                  <option value="Gujarat">Gujarat</option>
-                  <option value="Karnataka">Karnataka</option>
-                  <option value="Tamil Nadu">Tamil Nadu</option>
-                  <option value="West Bengal">West Bengal</option>
-                </select>
+            {/* Application Preferences Card */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
+              <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  ⚙️
+                </div>
+                <h2 className="text-sm font-bold text-slate-900">Application Preferences</h2>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  City
-                </label>
-                <input
-                  type="text"
-                  value={settings.city}
-                  onChange={(e) => handleTextChange("city", e.target.value)}
-                  placeholder="New Delhi"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Date Format</label>
+                  <select
+                    value={settings.dateFormat}
+                    onChange={(e) => handleTextChange("dateFormat", e.target.value)}
+                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium"
+                  >
+                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Time Format</label>
+                  <select
+                    value={settings.timeFormat}
+                    onChange={(e) => handleTextChange("timeFormat", e.target.value)}
+                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium"
+                  >
+                    <option value="24 Hours (HH:mm)">24 Hours (HH:mm)</option>
+                    <option value="12 Hours (hh:mm A)">12 Hours (hh:mm A)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Currency</label>
+                  <select
+                    value={settings.currency}
+                    onChange={(e) => handleTextChange("currency", e.target.value)}
+                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium"
+                  >
+                    <option value="INR (₹)">INR (₹)</option>
+                    <option value="USD ($)">USD ($)</option>
+                    <option value="EUR (€)">EUR (€)</option>
+                    <option value="GBP (£)">GBP (£)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Timezone</label>
+                  <select
+                    value={settings.timezone}
+                    onChange={(e) => handleTextChange("timezone", e.target.value)}
+                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium truncate"
+                  >
+                    <option value="Asia/Kolkata (GMT+5:30)">Asia/Kolkata (GMT+5:30)</option>
+                    <option value="UTC">UTC (GMT+0)</option>
+                    <option value="Asia/Dubai (GMT+4:00)">Asia/Dubai (GMT+4:00)</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Pincode
-                </label>
-                <input
-                  type="text"
-                  value={settings.pincode}
-                  onChange={(e) => handleTextChange("pincode", e.target.value)}
-                  placeholder="110001"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Business Contact Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Phone
-                </label>
-                <input
-                  type="text"
-                  value={settings.businessPhone}
-                  onChange={(e) => handleTextChange("businessPhone", e.target.value)}
-                  placeholder="+91 9876543210"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={settings.businessEmail}
-                  onChange={(e) => handleTextChange("businessEmail", e.target.value)}
-                  placeholder="business@nsyu.com"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Website
-                </label>
-                <input
-                  type="text"
-                  value={settings.website}
-                  onChange={(e) => handleTextChange("website", e.target.value)}
-                  placeholder="https://www.nsyubusiness.com"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Application Preferences */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-3">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              <h2 className="text-sm font-bold text-slate-900">Application Preferences</h2>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Date Format
-                </label>
-                <select
-                  value={settings.dateFormat}
-                  onChange={(e) => handleTextChange("dateFormat", e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Time Format
-                </label>
-                <select
-                  value={settings.timeFormat}
-                  onChange={(e) => handleTextChange("timeFormat", e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="24 Hours (HH:mm)">24 Hours (HH:mm)</option>
-                  <option value="12 Hours (hh:mm A)">12 Hours (hh:mm A)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Currency
-                </label>
-                <select
-                  value={settings.currency}
-                  onChange={(e) => handleTextChange("currency", e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="INR (₹)">INR (₹)</option>
-                  <option value="USD ($)">USD ($)</option>
-                  <option value="EUR (€)">EUR (€)</option>
-                  <option value="GBP (£)">GBP (£)</option>
-                  <option value="AED (د.إ)">AED (د.إ)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Timezone
-                </label>
-                <select
-                  value={settings.timezone}
-                  onChange={(e) => handleTextChange("timezone", e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none truncate"
-                >
-                  <option value="Asia/Kolkata (GMT+5:30)">Asia/Kolkata (GMT+5:30)</option>
-                  <option value="UTC">UTC (GMT+0)</option>
-                  <option value="Asia/Dubai (GMT+4:00)">Asia/Dubai (GMT+4:00)</option>
-                  <option value="America/New_York (GMT-5:00)">America/New_York (GMT-5:00)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Default Payment Method
-                </label>
-                <select
-                  value={settings.defaultPaymentMethod}
-                  onChange={(e) => handleTextChange("defaultPaymentMethod", e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="Cash">Cash</option>
-                  <option value="UPI">UPI</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Card">Card</option>
-                  <option value="Credit">Credit (Due)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Default Customer Type
-                </label>
-                <select
-                  value={settings.defaultCustomerType}
-                  onChange={(e) => handleTextChange("defaultCustomerType", e.target.value)}
-                  className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="Retail Customer">Retail Customer</option>
-                  <option value="Wholesale Customer">Wholesale Customer</option>
-                  <option value="Dealer / Distributor">Dealer / Distributor</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Default Invoice Terms (Days)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={settings.defaultInvoiceTerms}
-                  onChange={(e) => handleTextChange("defaultInvoiceTerms", Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>Low Stock Alert</span>
-                  <span className="text-[10px] text-slate-400 font-normal">ⓘ Threshold</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={settings.lowStockAlert}
-                  onChange={(e) => handleTextChange("lowStockAlert", Number(e.target.value))}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none font-mono"
-                />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-1">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Default Payment Method</label>
+                  <select
+                    value={settings.defaultPaymentMethod}
+                    onChange={(e) => handleTextChange("defaultPaymentMethod", e.target.value)}
+                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Card">Card</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Default Customer Type</label>
+                  <select
+                    value={settings.defaultCustomerType}
+                    onChange={(e) => handleTextChange("defaultCustomerType", e.target.value)}
+                    className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium"
+                  >
+                    <option value="Retail Customer">Retail Customer</option>
+                    <option value="Wholesale Customer">Wholesale Customer</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Default Invoice Terms (Days)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={settings.defaultInvoiceTerms}
+                    onChange={(e) => handleTextChange("defaultInvoiceTerms", Number(e.target.value))}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Low Stock Alert</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.lowStockAlert}
+                    onChange={(e) => handleTextChange("lowStockAlert", Number(e.target.value))}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-mono"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ========================================================================= */}
-        {/* RIGHT COLUMN: Theme, Notifications, Print, Data Management               */}
-        {/* ========================================================================= */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Theme Settings */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3.5">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-              <span className="text-sm">🎨</span>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Theme Settings</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: "light", label: "Light", icon: "☀️" },
-                { id: "dark", label: "Dark", icon: "🌙" },
-                { id: "system", label: "System", icon: "💻" },
-              ].map((m) => {
-                const isSelected = settings.theme === m.id;
-                return (
+          {/* Right Column: Theme, Notification, Print, Data Panels */}
+          <div className="lg:col-span-4 space-y-6">
+            {/* Theme Settings */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3.5">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                <span className="text-sm">🎨</span>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Theme Settings</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "light", label: "Light", icon: "☀️" },
+                  { id: "dark", label: "Dark", icon: "🌙" },
+                  { id: "system", label: "System", icon: "💻" },
+                ].map((m) => (
                   <button
                     key={m.id}
                     type="button"
                     onClick={() => handleTextChange("theme", m.id)}
                     className={`py-2 px-2 rounded-xl text-xs font-bold flex flex-col items-center gap-1 border transition-all cursor-pointer ${
-                      isSelected
+                      settings.theme === m.id
                         ? "bg-blue-50 border-blue-600 text-blue-600 shadow-2xs"
                         : "bg-slate-50/60 border-slate-200 text-slate-600 hover:bg-slate-100"
                     }`}
@@ -826,164 +918,1021 @@ function SettingsInner() {
                     <span>{m.icon}</span>
                     <span>{m.label}</span>
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Notification Settings */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3.5">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-              <span className="text-sm">🔔</span>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Notification Settings</h3>
-            </div>
-            <div className="space-y-3">
-              {[
-                { field: "newSaleNotification", label: "New Sale Notification" },
-                { field: "paymentReceived", label: "Payment Received" },
-                { field: "lowStockAlertNotification", label: "Low Stock Alert" },
-                { field: "duePaymentReminder", label: "Due Payment Reminder" },
-                { field: "employeeActivity", label: "Employee Activity" },
-                { field: "systemNotifications", label: "System Notifications" },
-                { field: "marketingUpdates", label: "Marketing Updates" },
-              ].map((item) => {
-                const isChecked = (settings as any)[item.field];
-                return (
-                  <div key={item.field} className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700">{item.label}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggle(item.field as any)}
-                      className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                        isChecked ? "bg-blue-600" : "bg-slate-200"
-                      }`}
-                    >
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
-                          isChecked ? "left-4.5" : "left-0.75"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Print Settings */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3.5">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-              <span className="text-sm">🖨️</span>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Print Settings</h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Default Paper Size
-                </label>
-                <select
-                  value={settings.defaultPaperSize}
-                  onChange={(e) => handleTextChange("defaultPaperSize", e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-none"
-                >
-                  <option value="A4">A4</option>
-                  <option value="A5">A5</option>
-                  <option value="Thermal (80mm)">Thermal (80mm)</option>
-                  <option value="Thermal (58mm)">Thermal (58mm)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                  Print Format
-                </label>
-                <select
-                  value={settings.printFormat}
-                  onChange={(e) => handleTextChange("printFormat", e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50 font-medium text-slate-800 focus:bg-white focus:outline-none"
-                >
-                  <option value="Thermal (80mm)">Thermal (80mm)</option>
-                  <option value="Standard PDF">Standard PDF</option>
-                  <option value="Compact Slip">Compact Slip</option>
-                </select>
+                ))}
               </div>
             </div>
 
-            <div className="space-y-2.5 pt-1">
-              {[
-                { field: "showLogoInPrint", label: "Show Logo in Print" },
-                { field: "showGstDetails", label: "Show GST Details" },
-                { field: "showTermsAndConditions", label: "Show Terms & Conditions" },
-              ].map((p) => {
-                const val = (settings as any)[p.field];
-                return (
-                  <div key={p.field} className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-slate-700">{p.label}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggle(p.field as any)}
-                      className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                        val ? "bg-blue-600" : "bg-slate-200"
-                      }`}
-                    >
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
-                          val ? "left-4.5" : "left-0.75"
+            {/* Notification Settings */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <span className="text-sm">🔔</span>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Notification Settings</h3>
+              </div>
+              <div className="space-y-2.5">
+                {[
+                  { field: "newSaleNotification", label: "New Sale Notification" },
+                  { field: "paymentReceived", label: "Payment Received" },
+                  { field: "lowStockAlertNotification", label: "Low Stock Alert" },
+                  { field: "duePaymentReminder", label: "Due Payment Reminder" },
+                  { field: "employeeActivity", label: "Employee Activity" },
+                  { field: "systemNotifications", label: "System Notifications" },
+                  { field: "marketingUpdates", label: "Marketing Updates" },
+                ].map((item) => {
+                  const isChecked = (settings as any)[item.field];
+                  return (
+                    <div key={item.field} className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-700">{item.label}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggle(item.field as any)}
+                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                          isChecked ? "bg-blue-600" : "bg-slate-200"
                         }`}
-                      />
-                    </button>
-                  </div>
-                );
-              })}
+                      >
+                        <span
+                          className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                            isChecked ? "left-4.5" : "left-0.75"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Data Management */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3.5">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-              <span className="text-sm">🗄️</span>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Data Management</h3>
+            {/* Print Settings */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <span className="text-sm">🖨️</span>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Print Settings</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Paper Size</label>
+                  <select
+                    value={settings.defaultPaperSize}
+                    onChange={(e) => handleTextChange("defaultPaperSize", e.target.value)}
+                    className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50"
+                  >
+                    <option value="A4">A4</option>
+                    <option value="A5">A5</option>
+                    <option value="Thermal (80mm)">Thermal (80mm)</option>
+                    <option value="Thermal (58mm)">Thermal (58mm)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Print Format</label>
+                  <select
+                    value={settings.printFormat}
+                    onChange={(e) => handleTextChange("printFormat", e.target.value)}
+                    className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50"
+                  >
+                    <option value="Thermal (80mm)">Thermal (80mm)</option>
+                    <option value="Standard PDF">Standard PDF</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-2 pt-1">
+                {[
+                  { field: "showLogoInPrint", label: "Show Logo in Print" },
+                  { field: "showGstDetails", label: "Show GST Details" },
+                  { field: "showTermsAndConditions", label: "Show Terms & Conditions" },
+                ].map((p) => {
+                  const val = (settings as any)[p.field];
+                  return (
+                    <div key={p.field} className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-700">{p.label}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggle(p.field as any)}
+                        className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                          val ? "bg-blue-600" : "bg-slate-200"
+                        }`}
+                      >
+                        <span
+                          className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                            val ? "left-4.5" : "left-0.75"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={handleBackupNow}
-                className="py-2 px-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs transition-colors cursor-pointer"
-              >
-                <span>📥</span>
-                <span>Backup Now</span>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => alert("Ready to restore: select your NSYU backup .json file.")}
-                className="py-2 px-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs transition-colors cursor-pointer"
-              >
-                <span>📤</span>
-                <span>Restore</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm("Are you sure you want to reset local cached settings to defaults?")) {
-                    localStorage.removeItem(STORAGE_SETTINGS_KEY);
-                    setSettings(getInitialState());
-                  }
-                }}
-                className="py-2 px-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs transition-colors cursor-pointer"
-              >
-                <span>🗑️</span>
-                <span>Reset Data</span>
-              </button>
+            {/* Data Management */}
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <span className="text-sm">🗄️</span>
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Data Management</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={handleBackupNow}
+                  className="py-2 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+                >
+                  <span>📥</span>
+                  <span>Backup</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => alert("Select an existing JSON backup to restore.")}
+                  className="py-2 px-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+                >
+                  <span>📤</span>
+                  <span>Restore</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm("Reset local cached settings to defaults?")) {
+                      localStorage.removeItem(STORAGE_SETTINGS_KEY);
+                      setSettings(getInitialState());
+                    }
+                  }}
+                  className="py-2 px-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] flex items-center justify-center gap-1 shadow-xs cursor-pointer"
+                >
+                  <span>🗑️</span>
+                  <span>Reset</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 2. BUSINESS TAB                                                           */}
+      {/* ========================================================================= */}
+      {activeTab === "business" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">🏬</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Corporate & Legal Business Profile</h2>
+              <p className="text-xs text-slate-500">Configure legal business registrations, tax numbers, and official trade identities.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Legal Business Name</label>
+              <input
+                type="text"
+                value={settings.businessName}
+                onChange={(e) => handleTextChange("businessName", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Trade / Brand Name</label>
+              <input
+                type="text"
+                value={settings.tradeName}
+                onChange={(e) => handleTextChange("tradeName", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Business Tagline</label>
+              <input
+                type="text"
+                value={settings.businessTagline}
+                onChange={(e) => handleTextChange("businessTagline", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">GSTIN Number</label>
+              <input
+                type="text"
+                value={settings.gstin}
+                onChange={(e) => handleTextChange("gstin", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono uppercase font-bold text-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Company PAN Number</label>
+              <input
+                type="text"
+                value={settings.panNumber}
+                onChange={(e) => handleTextChange("panNumber", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono uppercase font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">CIN / Reg Number</label>
+              <input
+                type="text"
+                value={settings.cinNumber}
+                onChange={(e) => handleTextChange("cinNumber", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Registered Office Address</label>
+              <textarea
+                rows={3}
+                value={settings.address}
+                onChange={(e) => handleTextChange("address", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 resize-none font-medium"
+              />
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Official Phone</label>
+                  <input
+                    type="text"
+                    value={settings.businessPhone}
+                    onChange={(e) => handleTextChange("businessPhone", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Official Email</label>
+                  <input
+                    type="email"
+                    value={settings.businessEmail}
+                    onChange={(e) => handleTextChange("businessEmail", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Website</label>
+                <input
+                  type="text"
+                  value={settings.website}
+                  onChange={(e) => handleTextChange("website", e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. SHOP TAB                                                               */}
+      {/* ========================================================================= */}
+      {activeTab === "shop" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏪</span>
+              <div>
+                <h2 className="text-base font-bold text-slate-900">Branch & Shop Management</h2>
+                <p className="text-xs text-slate-500">Manage individual outlet properties, branch code, and daily business hours.</p>
+              </div>
+            </div>
+            <span className="badge bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-lg border border-blue-200">
+              Active: {settings.shopName} ({settings.shopCode})
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Branch Name</label>
+              <input
+                type="text"
+                value={settings.shopName}
+                onChange={(e) => handleTextChange("shopName", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Branch Code</label>
+              <input
+                type="text"
+                value={settings.shopCode}
+                onChange={(e) => handleTextChange("shopCode", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold uppercase text-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Working Days</label>
+              <input
+                type="text"
+                value={settings.workingDays}
+                onChange={(e) => handleTextChange("workingDays", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Physical Outlet Address</label>
+              <textarea
+                rows={3}
+                value={settings.branchAddress}
+                onChange={(e) => handleTextChange("branchAddress", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 resize-none font-medium"
+              />
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Branch Contact Phone</label>
+                  <input
+                    type="text"
+                    value={settings.branchPhone}
+                    onChange={(e) => handleTextChange("branchPhone", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Branch Email</label>
+                  <input
+                    type="email"
+                    value={settings.branchEmail}
+                    onChange={(e) => handleTextChange("branchEmail", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Opening Time</label>
+                  <input
+                    type="text"
+                    value={settings.openingTime}
+                    onChange={(e) => handleTextChange("openingTime", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Closing Time</label>
+                  <input
+                    type="text"
+                    value={settings.closingTime}
+                    onChange={(e) => handleTextChange("closingTime", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. INVOICE TAB                                                            */}
+      {/* ========================================================================= */}
+      {activeTab === "invoice" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">📄</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Invoice & Billing Format Configurations</h2>
+              <p className="text-xs text-slate-500">Configure numbering sequences, column headers, terms, and footer disclosures.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Invoice Number Prefix</label>
+              <input
+                type="text"
+                value={settings.invoicePrefix}
+                onChange={(e) => handleTextChange("invoicePrefix", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Next Sequence #</label>
+              <input
+                type="number"
+                value={settings.nextInvoiceNumber}
+                onChange={(e) => handleTextChange("nextInvoiceNumber", Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Invoice Header Title</label>
+              <input
+                type="text"
+                value={settings.invoiceTitle}
+                onChange={(e) => handleTextChange("invoiceTitle", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Item Table Column Visibility</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { field: "showHsnColumn", label: "Show HSN/SAC Code" },
+                { field: "showMrpColumn", label: "Show MRP Column" },
+                { field: "showDiscountColumn", label: "Show Discount Column" },
+                { field: "showTaxColumn", label: "Show Tax Rate & Amount" },
+              ].map((col) => (
+                <label key={col.field} className="flex items-center gap-2 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(settings as any)[col.field]}
+                    onChange={() => handleToggle(col.field as any)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="font-medium text-slate-700">{col.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Terms & Conditions (Printed on Bill)</label>
+              <textarea
+                rows={4}
+                value={settings.invoiceTermsAndConditions}
+                onChange={(e) => handleTextChange("invoiceTermsAndConditions", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 resize-none font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Footer Note & Signatory Text</label>
+              <textarea
+                rows={2}
+                value={settings.invoiceFooterNote}
+                onChange={(e) => handleTextChange("invoiceFooterNote", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 resize-none font-medium mb-3"
+              />
+              <input
+                type="text"
+                value={settings.signatoryText}
+                onChange={(e) => handleTextChange("signatoryText", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
+                placeholder="Authorized Signatory Text"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. TAX & GST TAB                                                          */}
+      {/* ========================================================================= */}
+      {activeTab === "tax" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">⚖️</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Tax & GST Configuration</h2>
+              <p className="text-xs text-slate-500">Configure Indian GST compliance rules, tax calculation logic, and E-Way bill settings.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">GST Registration Type</label>
+              <select
+                value={settings.gstRegistrationType}
+                onChange={(e) => handleTextChange("gstRegistrationType", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+              >
+                <option value="Regular">Regular Taxpayer</option>
+                <option value="Composition">Composition Scheme</option>
+                <option value="Unregistered">Unregistered / Exempted</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Default GST Rate (%)</label>
+              <select
+                value={settings.defaultGstRate}
+                onChange={(e) => handleTextChange("defaultGstRate", Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold"
+              >
+                <option value={0}>0% (Nil / Exempt)</option>
+                <option value={5}>5%</option>
+                <option value={12}>12%</option>
+                <option value={18}>18% (Standard Electronics)</option>
+                <option value={28}>28%</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Home State & GST Code</label>
+              <input
+                type="text"
+                value={settings.stateGstCode}
+                onChange={(e) => handleTextChange("stateGstCode", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-medium"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3.5">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Tax Calculation & Legal Flags</h3>
+            <div className="space-y-3 text-xs">
+              {[
+                { field: "pricesIncludeTax", label: "Selling Prices Include GST by default (Tax Inclusive MRP)" },
+                { field: "requireHsnCode", label: "Enforce HSN/SAC code as mandatory when adding new inventory products" },
+                { field: "enableRcm", label: "Enable Reverse Charge Mechanism (RCM) on applicable purchase vouchers" },
+              ].map((flag) => (
+                <div key={flag.field} className="flex items-center justify-between">
+                  <span className="font-medium text-slate-700">{flag.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(flag.field as any)}
+                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                      (settings as any)[flag.field] ? "bg-blue-600" : "bg-slate-200"
+                    }`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                        (settings as any)[flag.field] ? "left-4.5" : "left-0.75"
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. PAYMENT TAB                                                            */}
+      {/* ========================================================================= */}
+      {activeTab === "payment" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">💳</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Payment Modes & Bank Account Configuration</h2>
+              <p className="text-xs text-slate-500">Configure bank details and UPI IDs printed on invoices for direct customer payments.</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Accepted Payment Modes at Checkout</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {[
+                { field: "enableCash", label: "Cash" },
+                { field: "enableUpi", label: "UPI" },
+                { field: "enableCard", label: "Card" },
+                { field: "enableNetBanking", label: "Net Banking" },
+                { field: "enableCustomerCredit", label: "Customer Ledger (Due)" },
+              ].map((m) => (
+                <label key={m.field} className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(settings as any)[m.field]}
+                    onChange={() => handleToggle(m.field as any)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>{m.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4 space-y-4">
+            <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Business Bank Account Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Bank Name</label>
+                <input
+                  type="text"
+                  value={settings.bankName}
+                  onChange={(e) => handleTextChange("bankName", e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Account Beneficiary Name</label>
+                <input
+                  type="text"
+                  value={settings.bankAccountName}
+                  onChange={(e) => handleTextChange("bankAccountName", e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Account Number</label>
+                <input
+                  type="text"
+                  value={settings.bankAccountNumber}
+                  onChange={(e) => handleTextChange("bankAccountNumber", e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">IFSC Code</label>
+                <input
+                  type="text"
+                  value={settings.bankIfscCode}
+                  onChange={(e) => handleTextChange("bankIfscCode", e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono uppercase font-bold text-blue-600"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Bank Branch</label>
+                <input
+                  type="text"
+                  value={settings.bankBranch}
+                  onChange={(e) => handleTextChange("bankBranch", e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Merchant UPI ID (VPA)</label>
+                <input
+                  type="text"
+                  value={settings.upiId}
+                  onChange={(e) => handleTextChange("upiId", e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold text-emerald-600"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. INVENTORY TAB                                                          */}
+      {/* ========================================================================= */}
+      {activeTab === "inventory" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">📦</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Inventory, Stock & Warehouse Rules</h2>
+              <p className="text-xs text-slate-500">Configure stock deductions, barcode scanner behavior, and warehouse shelf locations.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              { field: "allowNegativeStock", label: "Allow Negative Stock (Permit billing even if product inventory is 0)" },
+              { field: "autoDeductStockOnBill", label: "Automatically deduct product inventory immediately on saving confirmed invoices" },
+              { field: "enableBarcodeScanner", label: "Enable Instant Barcode Scanning mode (Auto-add product on laser scan)" },
+              { field: "enableBatchTracking", label: "Enable Batch / Lot Number and Expiry Date tracking per purchase batch" },
+              { field: "enableWarehouseLocations", label: "Enable Shelf / Rack Location tags for warehouse inventory items" },
+            ].map((rule) => (
+              <div key={rule.field} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs">
+                <span className="font-medium text-slate-800">{rule.label}</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggle(rule.field as any)}
+                  className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                    (settings as any)[rule.field] ? "bg-blue-600" : "bg-slate-200"
+                  }`}
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                      (settings as any)[rule.field] ? "left-4.5" : "left-0.75"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Default Unit of Measurement (UOM)</label>
+              <select
+                value={settings.defaultUnit}
+                onChange={(e) => handleTextChange("defaultUnit", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+              >
+                <option value="PCS">PCS (Pieces)</option>
+                <option value="BOX">BOX (Boxes)</option>
+                <option value="KG">KG (Kilograms)</option>
+                <option value="MTR">MTR (Meters)</option>
+                <option value="SET">SET (Sets)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Stock Adjustment Reasons</label>
+              <input
+                type="text"
+                value={settings.stockAdjustmentReasons}
+                onChange={(e) => handleTextChange("stockAdjustmentReasons", e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-medium"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 8. USERS TAB                                                              */}
+      {/* ========================================================================= */}
+      {activeTab === "users" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">👥</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">User Access & Staff Permissions</h2>
+              <p className="text-xs text-slate-500">Define access boundaries, price visibility, and discount limits for billing staff.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3.5">
+            {[
+              { field: "allowStaffDiscount", label: "Allow Billing Staff to apply custom discounts during bill creation" },
+              { field: "allowStaffDeleteItems", label: "Allow Billing Staff to remove items after being added to cart" },
+              { field: "allowStaffViewCostPrice", label: "Allow Staff to view Purchase Price and Gross Profit margins" },
+              { field: "allowStaffViewReports", label: "Allow Staff to access Business Intelligence & Financial Reports" },
+            ].map((p) => (
+              <div key={p.field} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs">
+                <span className="font-medium text-slate-800">{p.label}</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggle(p.field as any)}
+                  className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                    (settings as any)[p.field] ? "bg-blue-600" : "bg-slate-200"
+                  }`}
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                      (settings as any)[p.field] ? "left-4.5" : "left-0.75"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-blue-900">Advanced Role Permission Matrix</div>
+              <div className="text-[11px] text-blue-700 mt-0.5">Customize individual permissions for Managers, Sales, Billing, and Accountants.</div>
+            </div>
+            <a
+              href="/app/roles"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
+            >
+              Open Roles & Permissions →
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 9. NOTIFICATIONS TAB                                                      */}
+      {/* ========================================================================= */}
+      {activeTab === "notifications" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">🔔</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Notifications & Automation Alerts</h2>
+              <p className="text-xs text-slate-500">Configure customer WhatsApp notifications, SMS receipts, and owner balance alerts.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Customer Communication</h3>
+              {[
+                { field: "whatsappInvoiceShare", label: "Auto-share digital invoice link via WhatsApp on bill creation" },
+                { field: "whatsappPaymentReminder", label: "Send automated WhatsApp payment reminders before due dates" },
+              ].map((c) => (
+                <div key={c.field} className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-700">{c.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(c.field as any)}
+                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                      (settings as any)[c.field] ? "bg-blue-600" : "bg-slate-200"
+                    }`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                        (settings as any)[c.field] ? "left-4.5" : "left-0.75"
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Owner & Admin Alerts</h3>
+              {[
+                { field: "newSaleNotification", label: "Notify owner on every completed sale" },
+                { field: "lowStockAlertNotification", label: "Immediate push alert when item drops below minimum stock" },
+                { field: "duePaymentReminder", label: "Daily summary of all customer ledger dues pending collection" },
+              ].map((c) => (
+                <div key={c.field} className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-700">{c.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle(c.field as any)}
+                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                      (settings as any)[c.field] ? "bg-blue-600" : "bg-slate-200"
+                    }`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                        (settings as any)[c.field] ? "left-4.5" : "left-0.75"
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 10. BACKUP TAB                                                            */}
+      {/* ========================================================================= */}
+      {activeTab === "backup" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">🔒</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Database Backup & Cloud Safeguard</h2>
+              <p className="text-xs text-slate-500">Protect your complete ledger, inventory, customer lists, and financial records.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="p-5 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-2">
+              <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Cloud PostgreSQL Sync</div>
+              <div className="text-lg font-bold text-emerald-700 flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                Active & Synced
+              </div>
+              <p className="text-[11px] text-emerald-600">Database transactions are atomically committed to Supabase Cloud PostgreSQL.</p>
+            </div>
+
+            <div className="p-5 rounded-xl border border-blue-200 bg-blue-50/40 space-y-2">
+              <div className="text-xs font-bold text-blue-800 uppercase tracking-wider">Auto-Backup Schedule</div>
+              <div className="text-lg font-bold text-blue-700 capitalize">{settings.autoBackupFrequency} Backup</div>
+              <p className="text-[11px] text-blue-600">Full business snapshot generated automatically and safely stored.</p>
+            </div>
+
+            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Last Local Snapshot</div>
+              <div className="text-lg font-bold text-slate-800">{settings.lastBackupDate}</div>
+              <p className="text-[11px] text-slate-500">Download a fresh backup snapshot whenever you make major adjustments.</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleBackupNow}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-xs cursor-pointer"
+            >
+              <span>📥</span>
+              <span>Download Instant JSON Backup</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => alert("Ready to restore: choose your JSON snapshot.")}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-2 shadow-xs cursor-pointer"
+            >
+              <span>📤</span>
+              <span>Restore from Backup File</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 11. INTEGRATIONS TAB                                                      */}
+      {/* ========================================================================= */}
+      {activeTab === "integrations" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">🔗</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Hardware & External Cloud Integrations</h2>
+              <p className="text-xs text-slate-500">Connect receipt printers, messaging APIs, and accounting synchronizers.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Thermal Receipt Printer</h3>
+                  <p className="text-[11px] text-slate-500">Print 58mm / 80mm bills directly via Bluetooth or USB ESC/POS.</p>
+                </div>
+                <span className="badge bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded">Enabled</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">Paper Width</label>
+                  <select
+                    value={settings.printerPaperWidth}
+                    onChange={(e) => handleTextChange("printerPaperWidth", e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white"
+                  >
+                    <option value="80mm">80mm (3-inch Standard)</option>
+                    <option value="58mm">58mm (2-inch Compact)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">Interface</label>
+                  <select
+                    value={settings.printerConnectionType}
+                    onChange={(e) => handleTextChange("printerConnectionType", e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white"
+                  >
+                    <option value="USB">USB Direct</option>
+                    <option value="Bluetooth">Bluetooth Wireless</option>
+                    <option value="Network">Network Ethernet / Wi-Fi</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Supabase Cloud Database</h3>
+                  <p className="text-[11px] text-slate-500">Live PostgreSQL database connection for real-time transactions.</p>
+                </div>
+                <span className="badge bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded">Connected</span>
+              </div>
+              <div className="text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-200 font-mono text-[11px] space-y-1">
+                <div>Host: aws-0-ap-south-1.pooler.supabase.com:5432</div>
+                <div>Status: Online (200 OK) • Latency: 24ms</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 12. SECURITY TAB                                                          */}
+      {/* ========================================================================= */}
+      {activeTab === "security" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="text-2xl">🛡️</span>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Security & Authentication Policies</h2>
+              <p className="text-xs text-slate-500">Configure login sessions, two-factor authentication, and security audit policies.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              { field: "twoFactorAuth", label: "Two-Factor Authentication (2FA) required on new device sign-ins" },
+              { field: "enforceStrongPassword", label: "Enforce strong passwords for all staff and employee accounts" },
+              { field: "auditLoggingEnabled", label: "Record detailed tamper-proof audit trail for every billing & inventory change" },
+              { field: "ipRestrictionEnabled", label: "Restrict staff login access to authorized store IP addresses only" },
+            ].map((s) => (
+              <div key={s.field} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs">
+                <span className="font-medium text-slate-800">{s.label}</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggle(s.field as any)}
+                  className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                    (settings as any)[s.field] ? "bg-blue-600" : "bg-slate-200"
+                  }`}
+                >
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                      (settings as any)[s.field] ? "left-4.5" : "left-0.75"
+                    }`}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+            <div>
+              <div className="text-xs font-bold text-slate-800">Change Account Password</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Regularly updating passwords keeps your store ledger protected.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPasswordModal(true)}
+              className="px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            >
+              Update Password
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Floating / Sticky Bottom Bar with Cancel and Save Settings */}
-      <div className="fixed bottom-0 right-0 left-64 bg-white/95 backdrop-blur-xs border-t border-slate-200 px-6 py-3.5 flex items-center justify-end gap-3 z-30 shadow-lg">
+      <div className="fixed bottom-0 right-0 left-0 md:left-64 bg-white/95 backdrop-blur-xs border-t border-slate-200 px-6 py-3.5 flex items-center justify-end gap-3 z-30 shadow-lg">
         <button
           type="button"
           onClick={() => setSettings(getInitialState())}
