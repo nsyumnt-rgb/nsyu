@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
-import '../providers/bills_provider.dart';
 import '../screens/business_info_screen.dart';
 import '../screens/collect_payment_screen.dart';
 import '../screens/help_support_screen.dart';
@@ -11,9 +9,12 @@ import '../screens/visibility_settings_screen.dart';
 import '../theme/app_theme.dart';
 import 'app_bottom_nav.dart';
 
-/// Modal bottom sheet matching Reference Image 10 ("More" menu sheet)
-/// Features 4-column circular icon grid with soft blue-gray backgrounds,
-/// Kaccha Khaata red notification badge, and integrated bottom nav bar with green close button.
+/// Modal bottom sheet matching Reference Image ("More Options")
+/// Features:
+/// - "More Options" header with center drag handle and circular close ✕ button
+/// - 3-Column Grid of 9 rounded rectangular cards with soft green circular icons,
+///   descriptive labels, and right-pointing chevrons (>)
+/// - Integrated bottom navigation bar with active More tab
 class MoreMenuSheet extends StatelessWidget {
   final ValueChanged<int> onNavigate;
   final BottomNavMode navMode;
@@ -21,13 +22,13 @@ class MoreMenuSheet extends StatelessWidget {
   const MoreMenuSheet({
     super.key,
     required this.onNavigate,
-    this.navMode = BottomNavMode.ledger,
+    this.navMode = BottomNavMode.catalog,
   });
 
   static void show(
     BuildContext context, {
     required ValueChanged<int> onNavigate,
-    BottomNavMode navMode = BottomNavMode.ledger,
+    BottomNavMode navMode = BottomNavMode.catalog,
   }) {
     showModalBottomSheet(
       context: context,
@@ -42,7 +43,7 @@ class MoreMenuSheet extends StatelessWidget {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
@@ -51,148 +52,184 @@ class MoreMenuSheet extends StatelessWidget {
           ),
         ],
       ),
-      padding: EdgeInsets.fromLTRB(12, 28, 12, MediaQuery.of(context).padding.bottom + 8),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 4-Column Action Grid matching Reference Image 10
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Column(
-              children: [
-                // Row 1: Account, Profile, Help, Settings
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.description_outlined,
-                      label: 'Account',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessInfoScreen()));
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.person_outline_rounded,
-                      label: 'Profile',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(onNavigate: onNavigate)));
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      iconWidget: const _NamasteIcon(color: Color(0xFF1E293B), size: 24),
-                      label: 'Help',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      icon: Icons.settings_outlined,
-                      label: 'Settings',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const VisibilitySettingsScreen()));
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-
-                // Row 2: Bills, Stock Managem..., Multi Device, Auto Reminder
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMenuItem(
-                      context,
-                      iconWidget: const _BillsIcon(),
-                      label: 'Bills',
-                      onTap: () {
-                        Navigator.pop(context);
-                        onNavigate(1); // switch to Bills tab
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      iconWidget: const _StockManagementIcon(),
-                      label: 'Stock\nManagem...',
-                      onTap: () {
-                        Navigator.pop(context);
-                        onNavigate(2); // switch to Inventory/Catalog tab
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      iconWidget: const _MultiDeviceIcon(),
-                      label: 'Multi Device',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showMultiDeviceSheet(context);
-                      },
-                    ),
-                    _buildMenuItem(
-                      context,
-                      iconWidget: const _AutoReminderIcon(),
-                      label: 'Auto\nReminder',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showAutoReminderSheet(context);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-
-                // Row 3: Kaccha Khaata (with red notification dot badge)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMenuItem(
-                      context,
-                      iconWidget: const _KacchaKhaataIcon(),
-                      label: 'Kaccha\nKhaata',
-                      hasRedBadge: true, // Red dot notification badge matching Reference Image 10!
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showKacchaKhaataSheet(context);
-                      },
-                    ),
-                    const SizedBox(width: 72),
-                    const SizedBox(width: 72),
-                    const SizedBox(width: 72),
-                  ],
-                ),
-              ],
+          // Drag handle
+          Center(
+            child: Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFCBD5E1),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 12),
 
-          // Integrated Bottom Navigation Bar with green ✕ close pill matching Reference Image 10
+          // Header Row: "More Options" + Circular Close (✕) Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'More Options',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+              InkWell(
+                onTap: () => Navigator.pop(context),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, size: 18, color: Color(0xFF475569)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // 3-Column Grid of 9 Cards matching Reference Image
+          Column(
+            children: [
+              // Row 1: Account >, Profile >, Help >
+              Row(
+                children: [
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.description_outlined,
+                    label: 'Account',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessInfoScreen()));
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.person_outline_rounded,
+                    label: 'Profile',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(onNavigate: onNavigate)));
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.volunteer_activism_outlined,
+                    label: 'Help',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Row 2: Settings >, Bill >, Inventory > (Highlighted)
+              Row(
+                children: [
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const VisibilitySettingsScreen()));
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.receipt_long_outlined,
+                    label: 'Bill',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onNavigate(1); // Switch to Bills tab
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.inventory_2_outlined,
+                    label: 'Inventory',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onNavigate(2); // Switch to Inventory tab
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Row 3: Auto Reminder >, Catalog >, Kaccha Khaata >
+              Row(
+                children: [
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.more_time_rounded,
+                    label: 'Auto\nReminder',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showAutoReminderSheet(context);
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.menu_book_rounded,
+                    label: 'Catalog',
+                    onTap: () {
+                      Navigator.pop(context);
+                      onNavigate(2); // Switch to Catalog/Inventory tab
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  _buildOptionCard(
+                    context,
+                    icon: Icons.edit_note_rounded,
+                    label: 'Kaccha\nKhaata',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showKacchaKhaataSheet(context);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Integrated Bottom Navigation Bar with active More pill
           AppBottomNav(
             currentIndex: 3,
-            isMoreOpen: true,
+            isMoreOpen: false,
             navMode: navMode,
             onTap: (index) {
               Navigator.pop(context);
-              if (index == 3) {
-                // Closed via ✕ More button
-                return;
-              }
-              if (navMode == BottomNavMode.ledger) {
-                if (index == 0) {
-                  onNavigate(0);
-                } else if (index == 1) {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectPaymentScreen()));
-                } else if (index == 2) {
-                  showMyPlanSheet(context);
+              if (index != 3) {
+                if (navMode == BottomNavMode.ledger) {
+                  if (index == 0) {
+                    onNavigate(0);
+                  } else if (index == 1) {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectPaymentScreen()));
+                  } else if (index == 2) {
+                    showMyPlanSheet(context);
+                  }
+                } else {
+                  onNavigate(index);
                 }
-              } else {
-                onNavigate(index);
               }
             },
           ),
@@ -201,168 +238,75 @@ class MoreMenuSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuItem(
+  Widget _buildOptionCard(
     BuildContext context, {
-    IconData? icon,
-    Widget? iconWidget,
+    required IconData icon,
     required String label,
-    bool hasRedBadge = false,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        width: 72,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE2EBF0), // Soft cool blue-gray circle matching Reference Image 10
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: iconWidget ??
-                        Icon(
-                          icon,
-                          size: 24,
-                          color: const Color(0xFF1E293B), // Charcoal slate icon matching Reference Image 10
-                        ),
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 98,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE8F5E9), // Soft light green circle
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: const Color(0xFF006837), // Forest green icon
                   ),
                 ),
-                if (hasRedBadge)
-                  Positioned(
-                    top: 1,
-                    right: 1,
-                    child: Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444), // Red circular notification dot badge
-                        shape: BoxShape.circle,
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                        height: 1.15,
                       ),
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF1E293B),
-                height: 1.15,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // MULTI-DEVICE SYNC SHEET
-  // ──────────────────────────────────────────────────────────────────────────
-  void _showMultiDeviceSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.devices_rounded, color: Color(0xFF16A34A)),
-                    SizedBox(width: 8),
-                    Text('Multi-Device Cloud Sync', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-              ],
-            ),
-            const Divider(),
-            const SizedBox(height: 8),
-            _statusRow(Icons.check_circle, 'Supabase Cloud Database', 'Connected & Active', const Color(0xFF16A34A)),
-            _statusRow(Icons.phone_android, 'This Android Device', 'Online (Primary)', const Color(0xFF2563EB)),
-            _statusRow(Icons.laptop_chromebook, 'Web Dashboard Portal', 'Synchronized', const Color(0xFF64748B)),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.cloud_done_outlined, color: Color(0xFF16A34A), size: 22),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'All bills, payments, customers, and inventory changes sync automatically across your phone and desktop in real time.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF334155)),
-                    ),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: Color(0xFF94A3B8),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.sync_rounded),
-                label: const Text('Sync Now With Cloud'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  await context.read<BillsProvider>().syncFromSupabase();
-                  if (context.mounted) {
-                    showAppSnackBar(context, 'All records synced successfully with Supabase PostgreSQL');
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _statusRow(IconData icon, String title, String status, Color statusColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 18, color: const Color(0xFF475569)),
-              const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
             ],
           ),
-          Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: statusColor)),
-        ],
+        ),
       ),
     );
   }
@@ -516,171 +460,6 @@ class MoreMenuSheet extends StatelessWidget {
       ),
     );
   }
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// CUSTOM CONST ICON WIDGETS MATCHING REFERENCE IMAGE 10
-// ────────────────────────────────────────────────────────────────────────────
-
-class _BillsIcon extends StatelessWidget {
-  const _BillsIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        Icon(Icons.receipt_long_outlined, size: 24, color: Color(0xFF1E293B)),
-        Positioned(
-          top: 6,
-          child: Text(
-            '₹',
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1E293B),
-              height: 1.0,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StockManagementIcon extends StatelessWidget {
-  const _StockManagementIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        Icon(Icons.assignment_outlined, size: 24, color: Color(0xFF1E293B)),
-        Positioned(
-          right: -2,
-          bottom: -2,
-          child: Icon(Icons.inventory_2_outlined, size: 12, color: Color(0xFF1E293B)),
-        ),
-      ],
-    );
-  }
-}
-
-class _MultiDeviceIcon extends StatelessWidget {
-  const _MultiDeviceIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        Positioned(
-          left: -2,
-          top: 1,
-          child: Icon(Icons.tablet_android_rounded, size: 18, color: Color(0xFF1E293B)),
-        ),
-        Positioned(
-          right: -1,
-          bottom: 1,
-          child: Icon(Icons.phone_android_rounded, size: 16, color: Color(0xFF1E293B)),
-        ),
-      ],
-    );
-  }
-}
-
-class _AutoReminderIcon extends StatelessWidget {
-  const _AutoReminderIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        Icon(Icons.chat_bubble_outline_rounded, size: 24, color: Color(0xFF1E293B)),
-        Positioned(
-          top: 5,
-          child: Icon(Icons.access_time_rounded, size: 11, color: Color(0xFF1E293B)),
-        ),
-      ],
-    );
-  }
-}
-
-class _KacchaKhaataIcon extends StatelessWidget {
-  const _KacchaKhaataIcon();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Icon(Icons.edit_note_rounded, size: 26, color: Color(0xFF1E293B));
-  }
-}
-
-/// Namaste / Praying Hands vector icon matching Reference Image 10
-class _NamasteIcon extends StatelessWidget {
-  final Color color;
-  final double size;
-
-  const _NamasteIcon({required this.color, this.size = 24});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _NamastePainter(color),
-      ),
-    );
-  }
-}
-
-class _NamastePainter extends CustomPainter {
-  final Color color;
-  _NamastePainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final strokePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final w = size.width;
-    final h = size.height;
-
-    // Left hand outline
-    final leftPath = Path();
-    leftPath.moveTo(w * 0.30, h * 0.88);
-    leftPath.lineTo(w * 0.30, h * 0.65);
-    leftPath.quadraticBezierTo(w * 0.18, h * 0.52, w * 0.36, h * 0.28);
-    leftPath.lineTo(w * 0.49, h * 0.12);
-    leftPath.lineTo(w * 0.49, h * 0.88);
-
-    // Right hand outline (mirror)
-    final rightPath = Path();
-    rightPath.moveTo(w * 0.70, h * 0.88);
-    rightPath.lineTo(w * 0.70, h * 0.65);
-    rightPath.quadraticBezierTo(w * 0.82, h * 0.52, w * 0.64, h * 0.28);
-    rightPath.lineTo(w * 0.51, h * 0.12);
-    rightPath.lineTo(w * 0.51, h * 0.88);
-
-    canvas.drawPath(leftPath, strokePaint);
-    canvas.drawPath(rightPath, strokePaint);
-
-    // Wrist base line
-    canvas.drawLine(Offset(w * 0.25, h * 0.88), Offset(w * 0.75, h * 0.88), strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _NamastePainter oldDelegate) => oldDelegate.color != color;
 }
 
 /// Plan & Subscription modal sheet

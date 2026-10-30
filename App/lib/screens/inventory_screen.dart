@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../models/product.dart';
 import '../providers/catalog_provider.dart';
 import '../widgets/animated_feedback_dialog.dart';
 import '../models/catalog_item.dart';
 import '../widgets/app_bottom_nav.dart';
-import 'bill_screen.dart';
 import 'edit_product_screen.dart';
 import 'order_cart_screen.dart';
 
@@ -110,44 +108,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _currentIndex = (_currentIndex + 1) % total;
       _qtyCtrl.text = '1';
     });
-  }
-
-  void _handleAddToCart(_CatalogItem item) {
-    final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 1;
-    if (qty <= 0) return;
-
-    final provider = context.read<CatalogProvider>();
-
-    // Add to bill items in provider
-    final product = Product(
-      sno: item.sNo,
-      code: item.code,
-      desc: item.name,
-      spec: item.specs,
-      pkg: item.stdPkg,
-      category: item.category,
-      brand: item.brand,
-      purchase: item.price,
-      marginPrice: double.tryParse(item.margin.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 10.0,
-      sellingPrice: item.slPrice,
-      stock: item.qty,
-    );
-
-    // Add specified quantity
-    for (int i = 0; i < qty; i++) {
-      provider.addToBill(product);
-    }
-
-    AppToast.showAddedToBill(
-      context,
-      productName: item.name,
-      quantity: qty,
-      onViewBill: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const BillScreen()),
-        );
-      },
-    );
   }
 
   void _showAddProductDialog() async {
@@ -957,74 +917,103 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
             const SizedBox(height: 14),
 
-            // ── Section 4: Quantity Input & Add to Cart Button ──
+            // ── Section 4: Action Row (Quantity Stepper + Big Green Edit Button) matching Screen 2 ──
             Row(
               children: [
+                // "Quantity" label
                 const Text(
                   'Quantity',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF334155),
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
 
-                // Qty Input Box with Green Border and Clear icon
+                // Stepper [ —  1  + ]
                 Container(
-                  width: 95,
-                  height: 42,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF16A34A), width: 1.4),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _qtyCtrl,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
+                      InkWell(
+                        onTap: () {
+                          int val = int.tryParse(_qtyCtrl.text) ?? 1;
+                          if (val > 1) {
+                            setState(() => _qtyCtrl.text = '${val - 1}');
+                          }
+                        },
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          child: Icon(Icons.remove, size: 16, color: Color(0xFF334155)),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          _qtyCtrl.text.isNotEmpty ? _qtyCtrl.text : '1',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
                           ),
                         ),
                       ),
                       InkWell(
-                        onTap: () => setState(() => _qtyCtrl.text = '1'),
+                        onTap: () {
+                          int val = int.tryParse(_qtyCtrl.text) ?? 1;
+                          setState(() => _qtyCtrl.text = '${val + 1}');
+                        },
+                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
                         child: const Padding(
-                          padding: EdgeInsets.only(right: 6),
-                          child: Icon(Icons.cancel, color: Color(0xFFCBD5E1), size: 16),
+                          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          child: Icon(Icons.add, size: 16, color: Color(0xFF334155)),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
 
-                // Big Green Add to Cart Button
+                // Big Green Edit Button matching Reference Image Screen 2
                 Expanded(
                   child: SizedBox(
-                    height: 44,
-                    child: ElevatedButton(
+                    height: 42,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: const Text(
+                        'Edit',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF006837),
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      onPressed: () => _handleAddToCart(item),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.shopping_cart_outlined, size: 19),
-                          SizedBox(width: 6),
-                          Text(
-                            'Add to Cart',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                      onPressed: () async {
+                        final updated = await Navigator.push<CatalogItem>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditProductScreen(item: item),
                           ),
-                        ],
-                      ),
+                        );
+                        if (updated != null) {
+                          setState(() {
+                            _catalog[_currentIndex] = updated;
+                          });
+                          if (mounted) {
+                            AppToast.showSuccess(context, title: 'Product Updated', subtitle: '${updated.name} details saved.');
+                          }
+                        }
+                      },
                     ),
                   ),
                 ),

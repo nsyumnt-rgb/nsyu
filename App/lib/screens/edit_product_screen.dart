@@ -579,15 +579,15 @@ class _EditProductScreenState extends State<EditProductScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 6. Pricing 3-Column Row: Price, Margin, SLPrice
+                      // 6. Pricing 2-Column Row: Price (Incl GST) * & Margin matching Reference Image
                       Row(
                         children: [
-                          // Price (Incl. GST) *
+                          // Price (Incl GST) *
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildFieldLabel('Price (Incl. GST)', isRequired: true),
+                                _buildFieldLabel('Price (Incl GST)', isRequired: true),
                                 const SizedBox(height: 4),
                                 SizedBox(
                                   height: 38,
@@ -601,14 +601,14 @@ class _EditProductScreenState extends State<EditProductScreen> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 14),
 
-                          // Margin (%) *
+                          // Margin
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildFieldLabel('Margin (%)', isRequired: true),
+                                _buildFieldLabel('Margin', isRequired: false),
                                 const SizedBox(height: 4),
                                 SizedBox(
                                   height: 38,
@@ -617,27 +617,6 @@ class _EditProductScreenState extends State<EditProductScreen> {
                                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                                     decoration: _inputDecoration(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-
-                          // SLPrice (Incl. GST) *
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildFieldLabel('SLPrice (Incl. GST)', isRequired: true),
-                                const SizedBox(height: 4),
-                                SizedBox(
-                                  height: 38,
-                                  child: TextField(
-                                    controller: _slPriceCtrl,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
-                                    decoration: _pricingDecoration('₹'),
                                   ),
                                 ),
                               ],
