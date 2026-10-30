@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { NavLink, useLocation, useSearchParams } from "react-router-dom";
 import clsx from "clsx";
 import { usePermission } from "../hooks/usePermission";
@@ -8,7 +8,7 @@ interface NavItem {
   to: string;
   label: string;
   module: ModuleName;
-  group?: "BUSINESS" | "PEOPLE" | "ADMIN";
+  group?: "BUSINESS" | "PEOPLE" | "REPORTS" | "ADMIN";
   icon: (active: boolean) => ReactNode;
 }
 
@@ -206,6 +206,21 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
 
+  // BUSINESS INTELLIGENCE & REPORTS
+  {
+    to: "/app/reports",
+    label: "Reports",
+    module: "reports",
+    group: "REPORTS",
+    icon: (active) => (
+      <svg className={clsx("w-4 h-4", active ? "text-white" : "text-slate-500")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" />
+        <line x1="12" y1="20" x2="12" y2="4" />
+        <line x1="6" y1="20" x2="6" y2="14" />
+      </svg>
+    ),
+  },
+
   // ADMIN
   {
     to: "/app/shops",
@@ -231,19 +246,6 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    to: "/app/reports",
-    label: "Reports",
-    module: "reports",
-    group: "ADMIN",
-    icon: (active) => (
-      <svg className={clsx("w-4 h-4", active ? "text-white" : "text-slate-500")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="18" y1="20" x2="18" y2="10" />
-        <line x1="12" y1="20" x2="12" y2="4" />
-        <line x1="6" y1="20" x2="6" y2="14" />
-      </svg>
-    ),
-  },
-  {
     to: "/app/settings",
     label: "Settings",
     module: "settings",
@@ -251,7 +253,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: (active) => (
       <svg className={clsx("w-4 h-4", active ? "text-white" : "text-slate-500")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
     ),
   },
@@ -261,9 +263,11 @@ export default function Sidebar() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { can, isOwner } = usePermission();
+  const [reportsExpanded, setReportsExpanded] = useState<boolean | null>(null);
 
   const businessItems = NAV_ITEMS.filter((i) => i.group === "BUSINESS" && (isOwner || can(i.module, "view")));
   const peopleItems = NAV_ITEMS.filter((i) => i.group === "PEOPLE" && (isOwner || can(i.module, "view")));
+  const reportItems = NAV_ITEMS.filter((i) => i.group === "REPORTS" && (isOwner || can(i.module, "view")));
   const adminItems = NAV_ITEMS.filter((i) => i.group === "ADMIN" && (isOwner || can(i.module, "view")));
 
   return (
@@ -434,6 +438,105 @@ export default function Sidebar() {
                   )}
                 </NavLink>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* BUSINESS INTELLIGENCE & REPORTS Group */}
+        {reportItems.length > 0 && (
+          <div>
+            <div className="px-3 mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              BUSINESS INTELLIGENCE & REPORTS
+            </div>
+            <div className="space-y-0.5">
+              {reportItems.map((item) => {
+                const isReports = item.to === "/app/reports";
+                const isReportsActive = location.pathname.startsWith("/app/reports");
+                const currentReportTab = searchParams.get("tab") || "sales";
+                const showReportsSub = reportsExpanded ?? isReportsActive;
+
+                return (
+                  <div key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      className={({ isActive }) =>
+                        clsx(
+                          "flex items-center justify-between rounded-lg px-3 py-2 text-[13px] font-medium transition-all group",
+                          isActive
+                            ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        )
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <div className="flex items-center gap-3">
+                            {item.icon(isActive)}
+                            <span>{item.label}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setReportsExpanded(!showReportsSub);
+                            }}
+                            className="p-1 rounded hover:bg-black/10 transition-colors"
+                            aria-label="Toggle Reports Menu"
+                          >
+                            <svg
+                              className={clsx(
+                                "w-3 h-3 transition-transform",
+                                isActive ? "text-white/80" : "text-slate-300 group-hover:text-slate-400",
+                                isReports && showReportsSub && "rotate-90"
+                              )}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                    </NavLink>
+
+                    {/* Reports Sub-menu */}
+                    {isReports && showReportsSub && (
+                      <div className="pl-9 pr-2 py-1.5 space-y-1 text-xs">
+                        {[
+                          { id: "sales", label: "Sales Analytics" },
+                          { id: "purchases", label: "Purchases" },
+                          { id: "profit", label: "Gross Profit & Margins" },
+                          { id: "inventory", label: "Inventory Valuation" },
+                          { id: "outstanding", label: "Customer Outstanding" },
+                          ...(isOwner ? [{ id: "performance", label: "Shop Performance" }] : []),
+                        ].map((sub) => {
+                          const isSubActive = isReportsActive && currentReportTab === sub.id;
+                          return (
+                            <NavLink
+                              key={sub.id}
+                              to={`/app/reports?tab=${sub.id}`}
+                              className={clsx(
+                                "flex items-center gap-2 py-1 px-2 rounded-md font-medium transition-colors",
+                                isSubActive
+                                  ? "text-blue-600 font-bold bg-blue-50/60"
+                                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                              )}
+                            >
+                              {isSubActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />}
+                              <span className={isSubActive ? "" : "pl-3.5"}>{sub.label}</span>
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
