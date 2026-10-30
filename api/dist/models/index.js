@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_VISIBILITY_SETTINGS = exports.VisibilitySettings = exports.OrderItem = exports.Order = exports.PurchaseReturnItem = exports.PurchaseReturn = exports.SupplierLedger = exports.SupplierPayment = exports.PurchaseItem = exports.Purchase = exports.PurchaseCounter = exports.Notification = exports.EmployeeLedger = exports.SalaryPayment = exports.Payroll = exports.EmployeeIncentive = exports.EmployeeAdvance = exports.SalaryConfig = exports.LeaveRequest = exports.Attendance = exports.InvoiceCounter = exports.SaleReturnItem = exports.SaleReturn = exports.EMIInstallment = exports.EMIPlan = exports.CustomerLedger = exports.Payment = exports.SaleItem = exports.Sale = exports.Customer = exports.StockTransfer = exports.InventoryTransaction = exports.ProductLocation = exports.ProductStock = exports.ProductImage = exports.Supplier = exports.Subcategory = exports.Category = exports.Product = exports.AuditLog = exports.RefreshToken = exports.EmployeeShop = exports.Employee = exports.RoleFieldPermission = exports.RolePermission = exports.Role = exports.Shop = exports.Owner = exports.sequelize = void 0;
+exports.Module = exports.DEFAULT_VISIBILITY_SETTINGS = exports.VisibilitySettings = exports.OrderItem = exports.Order = exports.PurchaseReturnItem = exports.PurchaseReturn = exports.SupplierLedger = exports.SupplierPayment = exports.PurchaseItem = exports.Purchase = exports.PurchaseCounter = exports.Notification = exports.EmployeeLedger = exports.SalaryPayment = exports.Payroll = exports.EmployeeIncentive = exports.EmployeeAdvance = exports.SalaryConfig = exports.LeaveRequest = exports.Attendance = exports.InvoiceCounter = exports.SaleReturnItem = exports.SaleReturn = exports.EMIInstallment = exports.EMIPlan = exports.CustomerLedger = exports.Payment = exports.SaleItem = exports.Sale = exports.Customer = exports.StockTransfer = exports.InventoryTransaction = exports.ProductLocation = exports.ProductStock = exports.ProductImage = exports.Supplier = exports.Subcategory = exports.Category = exports.Product = exports.AuditLog = exports.RefreshToken = exports.EmployeeShop = exports.Employee = exports.RoleFieldPermission = exports.RolePermission = exports.Role = exports.Shop = exports.Owner = exports.sequelize = void 0;
+exports.UserRole = exports.ShopModule = exports.Permission = void 0;
 const database_1 = __importDefault(require("../config/database"));
 exports.sequelize = database_1.default;
 const Owner_1 = require("./Owner");
@@ -99,6 +100,14 @@ Object.defineProperty(exports, "OrderItem", { enumerable: true, get: function ()
 const VisibilitySettings_1 = require("./VisibilitySettings");
 Object.defineProperty(exports, "VisibilitySettings", { enumerable: true, get: function () { return VisibilitySettings_1.VisibilitySettings; } });
 Object.defineProperty(exports, "DEFAULT_VISIBILITY_SETTINGS", { enumerable: true, get: function () { return VisibilitySettings_1.DEFAULT_VISIBILITY_SETTINGS; } });
+const Module_1 = require("./Module");
+Object.defineProperty(exports, "Module", { enumerable: true, get: function () { return Module_1.Module; } });
+const Permission_1 = require("./Permission");
+Object.defineProperty(exports, "Permission", { enumerable: true, get: function () { return Permission_1.Permission; } });
+const ShopModule_1 = require("./ShopModule");
+Object.defineProperty(exports, "ShopModule", { enumerable: true, get: function () { return ShopModule_1.ShopModule; } });
+const UserRole_1 = require("./UserRole");
+Object.defineProperty(exports, "UserRole", { enumerable: true, get: function () { return UserRole_1.UserRole; } });
 /* ---------------- Owner ---------------- */
 Owner_1.Owner.hasMany(Shop_1.Shop, { foreignKey: "owner_id", as: "shops" });
 Shop_1.Shop.belongsTo(Owner_1.Owner, { foreignKey: "owner_id", as: "owner" });
@@ -111,6 +120,18 @@ Role_1.Role.hasMany(RolePermission_1.RolePermission, { foreignKey: "role_id", as
 RolePermission_1.RolePermission.belongsTo(Role_1.Role, { foreignKey: "role_id", as: "role" });
 Role_1.Role.hasMany(RoleFieldPermission_1.RoleFieldPermission, { foreignKey: "role_id", as: "fieldPermissions" });
 RoleFieldPermission_1.RoleFieldPermission.belongsTo(Role_1.Role, { foreignKey: "role_id", as: "role" });
+Module_1.Module.hasMany(Permission_1.Permission, { foreignKey: "module_id", as: "permissions" });
+Permission_1.Permission.belongsTo(Module_1.Module, { foreignKey: "module_id", as: "module" });
+Module_1.Module.hasMany(RolePermission_1.RolePermission, { foreignKey: "module_id", as: "rolePermissions" });
+RolePermission_1.RolePermission.belongsTo(Module_1.Module, { foreignKey: "module_id", as: "moduleDetails" });
+Shop_1.Shop.hasMany(ShopModule_1.ShopModule, { foreignKey: "shop_id", as: "modules" });
+ShopModule_1.ShopModule.belongsTo(Shop_1.Shop, { foreignKey: "shop_id", as: "shop" });
+Module_1.Module.hasMany(ShopModule_1.ShopModule, { foreignKey: "module_id", as: "shopModules" });
+ShopModule_1.ShopModule.belongsTo(Module_1.Module, { foreignKey: "module_id", as: "module" });
+Role_1.Role.hasMany(UserRole_1.UserRole, { foreignKey: "role_id", as: "userRoles" });
+UserRole_1.UserRole.belongsTo(Role_1.Role, { foreignKey: "role_id", as: "role" });
+Shop_1.Shop.hasMany(UserRole_1.UserRole, { foreignKey: "shop_id", as: "userRoles" });
+UserRole_1.UserRole.belongsTo(Shop_1.Shop, { foreignKey: "shop_id", as: "shop" });
 /* ---------------- Employee <-> Shop (many-to-many, role per shop) ---------------- */
 Employee_1.Employee.hasMany(EmployeeShop_1.EmployeeShop, { foreignKey: "employee_id", as: "shopAssignments" });
 EmployeeShop_1.EmployeeShop.belongsTo(Employee_1.Employee, { foreignKey: "employee_id", as: "employee" });

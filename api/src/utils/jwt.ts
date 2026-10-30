@@ -18,8 +18,12 @@ export interface AccessTokenPayload {
   ownerId: number;
   isOwner: boolean; // true = the account itself is the Owner, not an Employee
   employeeId?: number;
+  customerId?: number;
+  isSuperAdmin?: boolean;
+  isCustomer?: boolean;
   shopId?: number | null; // null until a shop is selected
   roleId?: number | null;
+  roleCode?: string | null;
   roleName?: string | null;
 }
 

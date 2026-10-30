@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { Owner, Employee, Role, RolePermission, RoleFieldPermission, EmployeeShop, RefreshToken, Shop } from "../models";
+import { Owner, Employee, Role, RolePermission, RoleFieldPermission, EmployeeShop, RefreshToken, Shop, ShopModule } from "../models";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, refreshExpiryDate } from "../utils/jwt";
 import { seedOwnerDefaults } from "../utils/seed";
-import { MODULES, SENSITIVE_FIELDS } from "../config/permissions";
+import { MODULES, SENSITIVE_FIELDS, toCanonicalModule } from "../config/permissions";
 
 /**
  * Registers a brand-new Owner account. This is the entry point of
@@ -211,14 +211,27 @@ export async function getMe(req: Request, res: Response) {
         RoleFieldPermission.findAll({ where: { role_id: auth.roleId } }),
       ]);
       rolePerms.forEach((p) => {
-        permissions[p.module] = {
+        const perm = {
           can_view: p.can_view,
           can_create: p.can_create,
           can_edit: p.can_edit,
           can_delete: p.can_delete,
         };
+        permissions[p.module] = perm;
+        const canonical = toCanonicalModule(p.module);
+        permissions[canonical] = perm;
       });
       fieldPerms.forEach((f) => (fieldPermissions[f.field] = f.allowed));
+
+      // If shop has disabled any module via shop_modules, revoke access for staff
+      if (auth.shopId) {
+        try {
+          const disabledShopMods = await ShopModule.findAll({ where: { shop_id: auth.shopId, is_enabled: false } });
+          disabledShopMods.forEach((sm) => {
+            permissions[sm.module_code] = { can_view: false, can_create: false, can_edit: false, can_delete: false };
+          });
+        } catch {}
+      }
     }
   }
 

@@ -193,14 +193,27 @@ async function getMe(req, res) {
                 models_1.RoleFieldPermission.findAll({ where: { role_id: auth.roleId } }),
             ]);
             rolePerms.forEach((p) => {
-                permissions[p.module] = {
+                const perm = {
                     can_view: p.can_view,
                     can_create: p.can_create,
                     can_edit: p.can_edit,
                     can_delete: p.can_delete,
                 };
+                permissions[p.module] = perm;
+                const canonical = (0, permissions_1.toCanonicalModule)(p.module);
+                permissions[canonical] = perm;
             });
             fieldPerms.forEach((f) => (fieldPermissions[f.field] = f.allowed));
+            // If shop has disabled any module via shop_modules, revoke access for staff
+            if (auth.shopId) {
+                try {
+                    const disabledShopMods = await models_1.ShopModule.findAll({ where: { shop_id: auth.shopId, is_enabled: false } });
+                    disabledShopMods.forEach((sm) => {
+                        permissions[sm.module_code] = { can_view: false, can_create: false, can_edit: false, can_delete: false };
+                    });
+                }
+                catch { }
+            }
         }
     }
     if (auth.isOwner) {

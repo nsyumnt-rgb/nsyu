@@ -1,35 +1,90 @@
 import { Request, Response, NextFunction } from "express";
-import { RolePermission, RoleFieldPermission } from "../models";
-import { ActionName, ModuleName, SensitiveField } from "../config/permissions";
+import { Op } from "sequelize";
+import { RolePermission, RoleFieldPermission, ShopModule } from "../models";
+import { ActionName, ModuleName, SensitiveField, toCanonicalModule } from "../config/permissions";
 
 /**
- * requirePermission("products", "create")
+ * Backend API permission enforcement for dynamic RBAC.
  *
- * The Owner account bypasses all checks (owner always has full
- * access to their own data). Employees are checked against the
- * RolePermission row for their CURRENT shop's role
- * (req.auth.roleId, set at login / shop-switch time).
- *
- * This runs on the SERVER for every request — permissions are
- * never trusted from the frontend, per the spec requirement that
- * "permissions must work at backend/API level, not only frontend."
+ * Rules:
+ * 1. Super Admin: Full system control across all shops and modules.
+ * 2. Owner: Full shop access to own shop modules, blocked from platform modules.
+ * 3. Staff: Checked dynamically against role_permissions in DB + shop_modules enabled.
+ * 4. User (Customer): Limited to customer portal operations (catalog view, self orders).
  */
-export function requirePermission(module: ModuleName, action: ActionName) {
+export function requirePermission(module: ModuleName | string, action: ActionName) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const auth = req.auth;
     if (!auth) {
       return res.status(401).json({ success: false, message: "Authentication required" });
     }
 
-    // Owner always has full access to everything under their own account
-    if (auth.isOwner) return next();
+    const canonicalModule = toCanonicalModule(module);
 
+    // 1. Super Admin has unrestricted access to all modules and shops
+    if (auth.isSuperAdmin || auth.roleCode === "super_admin" || auth.roleName === "Super Admin") {
+      return next();
+    }
+
+    // 2. Global platform modules restricted to Super Admin only
+    const SUPER_ADMIN_ONLY_MODULES = ["all_shops", "subscriptions", "system_settings"];
+    if (SUPER_ADMIN_ONLY_MODULES.includes(canonicalModule)) {
+      return res.status(403).json({
+        success: false,
+        message: `Only Super Admin can access the ${canonicalModule} module`,
+      });
+    }
+
+    // 3. User / Customer Portal restrictions
+    if (auth.isCustomer || auth.roleCode === "user" || auth.roleName === "User") {
+      if (canonicalModule === "products" && action === "view") {
+        return next();
+      }
+      if (canonicalModule === "orders" && (action === "view" || action === "create")) {
+        return next();
+      }
+      return res.status(403).json({
+        success: false,
+        message: "Customer access is restricted to customer portal features only",
+      });
+    }
+
+    // 4. Owner has full business control within their own shop for shop-level modules
+    if (auth.isOwner) {
+      return next();
+    }
+
+    // 5. Staff / Employee: Check dynamic permissions from DB
     if (!auth.roleId) {
       return res.status(403).json({ success: false, message: "No role assigned for this shop" });
     }
 
+    // Check shop_modules table if current shop disabled this module
+    if (auth.shopId) {
+      try {
+        const shopMod = await ShopModule.findOne({
+          where: {
+            shop_id: auth.shopId,
+            module_code: canonicalModule,
+          },
+        });
+        if (shopMod && !shopMod.is_enabled) {
+          return res.status(403).json({
+            success: false,
+            message: `Module ${canonicalModule} is deactivated for this shop`,
+          });
+        }
+      } catch (err) {
+        // Fallback gracefully if shop_modules lookup fails
+      }
+    }
+
+    // Check dynamic RolePermission row
     const permission = await RolePermission.findOne({
-      where: { role_id: auth.roleId, module },
+      where: {
+        role_id: auth.roleId,
+        [Op.or]: [{ module: canonicalModule }, { module: module }],
+      },
     });
 
     const columnMap: Record<ActionName, keyof RolePermission> = {
@@ -44,7 +99,7 @@ export function requirePermission(module: ModuleName, action: ActionName) {
     if (!allowed) {
       return res.status(403).json({
         success: false,
-        message: `You do not have permission to ${action} ${module}`,
+        message: `You do not have permission to ${action} ${canonicalModule}`,
       });
     }
 
@@ -53,19 +108,11 @@ export function requirePermission(module: ModuleName, action: ActionName) {
 }
 
 /**
- * For self-service modules (attendance, leave, payroll): an employee
- * may always view/act on their OWN records without any RolePermission
- * row, but touching another employee's records — or the Owner acting
- * on any employee's records — requires the normal module permission.
- * The Owner account always passes (see requirePermission above).
- *
- * `resolveTargetEmployeeId` pulls the employee id the request is
- * about (e.g. from req.params.employeeId, or req.body.employeeId for
- * a create). Returning undefined (e.g. "list my own stuff" endpoints
- * with no target param) is treated as "definitely self".
+ * Self-service routes (viewing own attendance, orders, profile):
+ * Allows the user if the record belongs to them, or falls back to requirePermission.
  */
 export function requireSelfOrPermission(
-  module: ModuleName,
+  module: ModuleName | string,
   action: ActionName,
   resolveTargetEmployeeId: (req: Request) => number | undefined
 ) {
@@ -73,6 +120,7 @@ export function requireSelfOrPermission(
     const auth = req.auth;
     if (!auth) return res.status(401).json({ success: false, message: "Authentication required" });
 
+    if (auth.isSuperAdmin || auth.roleCode === "super_admin") return next();
     if (auth.isOwner) return next();
 
     const targetEmployeeId = resolveTargetEmployeeId(req);
@@ -84,13 +132,7 @@ export function requireSelfOrPermission(
 }
 
 /**
- * Loads which sensitive fields (purchase_price, profit, salary...)
- * the current actor is allowed to see, and stashes them on the
- * request so controllers can strip disallowed fields from the
- * response before sending it — e.g.:
- *
- *   const allowed = await getAllowedFields(req, ["purchase_price", "profit"]);
- *   const safeProduct = stripFields(product, allowed);
+ * Loads allowed sensitive fields (purchase_price, profit, etc.) for current role.
  */
 export async function getAllowedFields(
   req: Request,
@@ -98,8 +140,8 @@ export async function getAllowedFields(
 ): Promise<Record<SensitiveField, boolean>> {
   const result = {} as Record<SensitiveField, boolean>;
 
-  // Owner sees everything
-  if (req.auth?.isOwner) {
+  // Super Admin & Owner see everything
+  if (req.auth?.isSuperAdmin || req.auth?.roleCode === "super_admin" || req.auth?.isOwner) {
     fields.forEach((f) => (result[f] = true));
     return result;
   }
@@ -118,11 +160,6 @@ export async function getAllowedFields(
   return result;
 }
 
-/**
- * Removes any key from `record` whose corresponding field permission
- * is false. Works on plain objects (call .toJSON() on Sequelize
- * instances first).
- */
 export function stripFields<T extends Record<string, any>>(
   record: T,
   allowed: Record<string, boolean>

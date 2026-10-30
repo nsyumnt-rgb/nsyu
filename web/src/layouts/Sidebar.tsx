@@ -237,7 +237,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     to: "/app/roles",
     label: "Roles & Permissions",
-    module: "employees",
+    module: "role_permissions",
     group: "ADMIN",
     icon: (active) => (
       <svg className={clsx("w-4 h-4", active ? "text-white" : "text-slate-500")} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

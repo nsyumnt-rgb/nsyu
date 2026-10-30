@@ -1,14 +1,30 @@
+// The 14 standardized system modules
+export const CORE_MODULES = [
+  "all_shops",
+  "shop_settings",
+  "user_management",
+  "role_permissions",
+  "products",
+  "stock_management",
+  "billing",
+  "sales_purchases",
+  "customers",
+  "orders",
+  "accounts_expenses",
+  "reports",
+  "subscriptions",
+  "system_settings",
+] as const;
+export type CoreModuleName = (typeof CORE_MODULES)[number];
+
 // These mirror src/config/permissions.ts on the backend exactly.
-// If the backend adds a module/field, add it here too.
 export const MODULES = [
+  ...CORE_MODULES,
   "dashboard",
   "shops",
-  "products",
   "inventory",
   "purchase",
   "sales",
-  "billing",
-  "customers",
   "suppliers",
   "payments",
   "ledger",
@@ -16,10 +32,19 @@ export const MODULES = [
   "employees",
   "attendance",
   "payroll",
-  "reports",
   "settings",
 ] as const;
 export type ModuleName = (typeof MODULES)[number];
+
+export interface ModuleItem {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  sort_order: number;
+  is_active: boolean;
+}
 
 export const ACTIONS = ["view", "create", "edit", "delete"] as const;
 export type ActionName = (typeof ACTIONS)[number];
@@ -88,10 +113,12 @@ export interface Shop {
 
 export interface Role {
   id: number;
-  owner_id: number;
+  owner_id?: number | null;
+  code?: string | null;
   name: string;
+  description?: string | null;
   is_system: boolean;
-  permissions?: Array<{ module: ModuleName } & ModulePermission>;
+  permissions?: Array<{ module: string; module_id?: number; scope?: string } & ModulePermission>;
   fieldPermissions?: Array<{ field: SensitiveField; allowed: boolean }>;
 }
 

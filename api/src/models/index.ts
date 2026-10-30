@@ -44,6 +44,10 @@ import { PurchaseReturn, PurchaseReturnItem } from "./PurchaseReturn";
 import { Order } from "./Order";
 import { OrderItem } from "./OrderItem";
 import { VisibilitySettings, DEFAULT_VISIBILITY_SETTINGS } from "./VisibilitySettings";
+import { Module } from "./Module";
+import { Permission } from "./Permission";
+import { ShopModule } from "./ShopModule";
+import { UserRole } from "./UserRole";
 
 /* ---------------- Owner ---------------- */
 Owner.hasMany(Shop, { foreignKey: "owner_id", as: "shops" });
@@ -61,6 +65,24 @@ RolePermission.belongsTo(Role, { foreignKey: "role_id", as: "role" });
 
 Role.hasMany(RoleFieldPermission, { foreignKey: "role_id", as: "fieldPermissions" });
 RoleFieldPermission.belongsTo(Role, { foreignKey: "role_id", as: "role" });
+
+Module.hasMany(Permission, { foreignKey: "module_id", as: "permissions" });
+Permission.belongsTo(Module, { foreignKey: "module_id", as: "module" });
+
+Module.hasMany(RolePermission, { foreignKey: "module_id", as: "rolePermissions" });
+RolePermission.belongsTo(Module, { foreignKey: "module_id", as: "moduleDetails" });
+
+Shop.hasMany(ShopModule, { foreignKey: "shop_id", as: "modules" });
+ShopModule.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+
+Module.hasMany(ShopModule, { foreignKey: "module_id", as: "shopModules" });
+ShopModule.belongsTo(Module, { foreignKey: "module_id", as: "module" });
+
+Role.hasMany(UserRole, { foreignKey: "role_id", as: "userRoles" });
+UserRole.belongsTo(Role, { foreignKey: "role_id", as: "role" });
+
+Shop.hasMany(UserRole, { foreignKey: "shop_id", as: "userRoles" });
+UserRole.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
 
 /* ---------------- Employee <-> Shop (many-to-many, role per shop) ---------------- */
 Employee.hasMany(EmployeeShop, { foreignKey: "employee_id", as: "shopAssignments" });
@@ -310,4 +332,8 @@ export {
   OrderItem,
   VisibilitySettings,
   DEFAULT_VISIBILITY_SETTINGS,
+  Module,
+  Permission,
+  ShopModule,
+  UserRole,
 };

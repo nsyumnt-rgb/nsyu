@@ -13,20 +13,19 @@ exports.RolePermission = RolePermission;
 RolePermission.init({
     id: { type: sequelize_1.DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     role_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: false },
-    module: { type: sequelize_1.DataTypes.ENUM(...permissions_1.MODULES), allowNull: false },
+    module_id: { type: sequelize_1.DataTypes.INTEGER, allowNull: true },
+    module: { type: sequelize_1.DataTypes.STRING(100), allowNull: false },
     can_view: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
     can_create: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
     can_edit: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
     can_delete: { type: sequelize_1.DataTypes.BOOLEAN, defaultValue: false },
+    scope: { type: sequelize_1.DataTypes.STRING(50), defaultValue: "shop" },
 }, {
     sequelize: database_1.default,
     modelName: "RolePermission",
     tableName: "role_permissions",
-    indexes: [
-        { unique: true, fields: ["role_id", "module"] },
-        { fields: ["role_id"] },
-    ],
+    timestamps: true,
+    underscored: true,
 });
-// Exported for reference in seed / validation logic
 exports.ALL_ACTIONS = permissions_1.ACTIONS;
 //# sourceMappingURL=RolePermission.js.map

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth";
+import { requirePermission } from "../middleware/permission";
 import {
   getOrders,
   getOrderById,
@@ -12,10 +13,10 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get("/", getOrders);
-router.get("/:id", getOrderById);
-router.post("/", createOrder);
-router.put("/:id/status", updateOrderStatus);
-router.post("/:id/convert", convertOrderToBill);
+router.get("/", requirePermission("orders", "view"), getOrders);
+router.get("/:id", requirePermission("orders", "view"), getOrderById);
+router.post("/", requirePermission("orders", "create"), createOrder);
+router.put("/:id/status", requirePermission("orders", "edit"), updateOrderStatus);
+router.post("/:id/convert", requirePermission("billing", "create"), convertOrderToBill);
 
 export default router;
