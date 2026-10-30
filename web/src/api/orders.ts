@@ -122,3 +122,4 @@ export function updateOrderStatus(
 export function convertOrderToBill(id: number | string, saleId?: number) {
   return api.post<ApiEnvelope<OrderRecord>>(`/orders/${id}/convert`, { saleId });
 }
+
