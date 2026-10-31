@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/catalog_provider.dart';
 import '../widgets/animated_feedback_dialog.dart';
 import '../models/catalog_item.dart';
+import '../navigation/app_navigation.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'edit_product_screen.dart';
 
@@ -35,12 +36,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
   int _selectedThumbnail = 0; // 0: White front, 1: Black front, 2: Side USB
   bool _isFavorite = false;
   bool _isTableView = false; // Toggle between Card Catalog and Spreadsheet Table
+  late PageController _pageController;
 
   List<_CatalogItem> _catalog = [];
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<CatalogProvider>();
       if (provider.products.isEmpty) {
@@ -74,6 +77,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   void dispose() {
     _searchCtrl.dispose();
     _qtyCtrl.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -101,23 +105,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _selectedCategory = cat;
       _currentIndex = 0;
       _selectedThumbnail = 0;
+      _qtyCtrl.text = '1';
     });
+    if (_pageController.hasClients) {
+      _pageController.jumpToPage(0);
+    }
   }
 
   void _goToPrevProduct(int total) {
-    if (total == 0) return;
-    setState(() {
-      _currentIndex = (_currentIndex - 1 + total) % total;
-      _qtyCtrl.text = '1';
-    });
+    if (total <= 1) return;
+    if (_currentIndex > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeInOutCubic,
+      );
+    } else {
+      _pageController.jumpToPage(total - 1);
+    }
   }
 
   void _goToNextProduct(int total) {
-    if (total == 0) return;
-    setState(() {
-      _currentIndex = (_currentIndex + 1) % total;
-      _qtyCtrl.text = '1';
-    });
+    if (total <= 1) return;
+    if (_currentIndex < total - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeInOutCubic,
+      );
+    } else {
+      _pageController.jumpToPage(0);
+    }
   }
 
   void _showAddProductDialog() async {
@@ -252,6 +268,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
             if (val.trim().isNotEmpty) {
               _searchCtrl.text = val.trim();
               setState(() => _currentIndex = 0);
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(0);
+              }
             }
           },
         ),
@@ -264,6 +283,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
               if (ctrl.text.trim().isNotEmpty) {
                 _searchCtrl.text = ctrl.text.trim();
                 setState(() => _currentIndex = 0);
+                if (_pageController.hasClients) {
+                  _pageController.jumpToPage(0);
+                }
               }
             },
             child: const Text('Search'),
@@ -338,7 +360,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     if (_currentIndex >= totalItems && totalItems > 0) {
       _currentIndex = 0;
     }
-    final activeItem = totalItems > 0 ? filtered[_currentIndex] : null;
 
     final dynamicCategories = <String>['All (${_catalog.length})'];
     for (final c in provider.categories) {
@@ -465,7 +486,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   Expanded(
                                     child: TextField(
                                       controller: _searchCtrl,
-                                      onChanged: (v) => setState(() => _currentIndex = 0),
+                                      onChanged: (v) {
+                                        setState(() => _currentIndex = 0);
+                                        if (_pageController.hasClients) {
+                                          _pageController.jumpToPage(0);
+                                        }
+                                      },
                                       style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
                                       decoration: const InputDecoration(
                                         hintText: 'Search product name, code or barcode...',
@@ -571,23 +597,44 @@ class _InventoryScreenState extends State<InventoryScreen> {
             Expanded(
               child: _isTableView
                   ? _buildSpreadsheetTable(filtered)
-                  : (activeItem == null
+                  : (totalItems == 0
                       ? _buildEmptyState()
-                      : _buildProductCatalogCard(activeItem, totalItems)),
+                      : Column(
+                          children: [
+                            Expanded(
+                              child: PageView.builder(
+                                controller: _pageController,
+                                itemCount: totalItems,
+                                onPageChanged: (idx) {
+                                  setState(() {
+                                    _currentIndex = idx;
+                                    _selectedThumbnail = 0;
+                                    _qtyCtrl.text = '1';
+                                  });
+                                },
+                                itemBuilder: (ctx, idx) {
+                                  return _buildProductCatalogCard(filtered[idx]);
+                                },
+                              ),
+                            ),
+                            _buildPagerNavigation(totalItems),
+                          ],
+                        )),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: widget.onNavigate != null
-          ? AppBottomNav(currentIndex: 2, onTap: widget.onNavigate!)
-          : null,
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 2,
+        onTap: widget.onNavigate ?? (tab) => AppNavigation.toTab(context, tab),
+      ),
     );
   }
 
   // ──────────────────────────────────────────────────────────────────────────
   // PRODUCT CATALOG CARD matching Reference Image
   // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildProductCatalogCard(_CatalogItem item, int totalItems) {
+  Widget _buildProductCatalogCard(_CatalogItem item) {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
       child: Container(
@@ -1033,7 +1080,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         );
                         if (updated != null) {
                           setState(() {
-                            _catalog[_currentIndex] = updated;
+                            final idx = _catalog.indexWhere((c) => c.code == item.code || c.sNo == item.sNo);
+                            if (idx != -1) {
+                              _catalog[idx] = updated;
+                            }
                           });
                           if (mounted) {
                             AppToast.showSuccess(context, title: 'Product Updated', subtitle: '${updated.name} details saved.');
@@ -1058,7 +1108,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 );
                 if (updated != null) {
                   setState(() {
-                    _catalog[_currentIndex] = updated;
+                    final idx = _catalog.indexWhere((c) => c.code == item.code || c.sNo == item.sNo);
+                    if (idx != -1) {
+                      _catalog[idx] = updated;
+                    }
                   });
                   if (mounted) {
                     AppToast.showSuccess(context, title: 'Product Updated', subtitle: '${updated.name} details saved.');
@@ -1097,51 +1150,59 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 14),
-            // ── Section 6: Pager Navigation (<  1 of 125  >) ──
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                InkWell(
-                  onTap: () => _goToPrevProduct(totalItems),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDCFCE7),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.chevron_left, color: Color(0xFF15803D), size: 22),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Text(
-                  '${_currentIndex + 1} of $totalItems',
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF334155),
-                  ),
-                ),
-                const SizedBox(width: 24),
-                InkWell(
-                  onTap: () => _goToNextProduct(totalItems),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDCFCE7),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.chevron_right, color: Color(0xFF15803D), size: 22),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // PAGER NAVIGATION (<  1 of 125  >)
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildPagerNavigation(int totalItems) {
+    if (totalItems <= 1) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          InkWell(
+            onTap: () => _goToPrevProduct(totalItems),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDCFCE7),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.chevron_left, color: Color(0xFF15803D), size: 22),
+            ),
+          ),
+          const SizedBox(width: 24),
+          Text(
+            '${_currentIndex + 1} of $totalItems',
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF334155),
+            ),
+          ),
+          const SizedBox(width: 24),
+          InkWell(
+            onTap: () => _goToNextProduct(totalItems),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDCFCE7),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.chevron_right, color: Color(0xFF15803D), size: 22),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1262,6 +1323,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                 setState(() {
                                   _currentIndex = i;
                                   _isTableView = false;
+                                });
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (_pageController.hasClients) {
+                                    _pageController.jumpToPage(i);
+                                  }
                                 });
                               },
                               child: const Icon(Icons.visibility_outlined, size: 18, color: Color(0xFF006837)),

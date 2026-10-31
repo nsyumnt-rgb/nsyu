@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../screens/business_info_screen.dart';
-import '../screens/collect_payment_screen.dart';
 import '../screens/help_support_screen.dart';
 import '../screens/inventory_screen.dart';
 import '../screens/profile_screen.dart';
@@ -220,17 +219,7 @@ class MoreMenuSheet extends StatelessWidget {
             onTap: (index) {
               Navigator.pop(context);
               if (index != 3) {
-                if (navMode == BottomNavMode.ledger) {
-                  if (index == 0) {
-                    onNavigate(0);
-                  } else if (index == 1) {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectPaymentScreen()));
-                  } else if (index == 2) {
-                    showMyPlanSheet(context);
-                  }
-                } else {
-                  onNavigate(index);
-                }
+                onNavigate(index);
               }
             },
           ),

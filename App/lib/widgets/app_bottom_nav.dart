@@ -53,57 +53,33 @@ class AppBottomNav extends StatelessWidget {
                 ),
               ),
 
-              // Tab 1: Collection (in ledger mode) or Bill (in catalog mode)
-              if (navMode == BottomNavMode.ledger)
-                Expanded(
-                  child: _NavItem(
-                    label: 'Collection',
-                    active: currentIndex == 1 && !isMoreOpen,
-                    iconBuilder: (active, color) => _collectionIcon(color),
-                    onTap: () => onTap(1),
+              // Tab 1: Bill (Always Bill with receipt icon)
+              Expanded(
+                child: _NavItem(
+                  label: 'Bill',
+                  active: currentIndex == 1 && !isMoreOpen,
+                  iconBuilder: (active, color) => Icon(
+                    active ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
+                    color: color,
+                    size: 22,
                   ),
-                )
-              else
-                Expanded(
-                  child: _NavItem(
-                    label: 'Bill',
-                    active: currentIndex == 1 && !isMoreOpen,
-                    iconBuilder: (active, color) => Icon(
-                      active ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
-                      color: color,
-                      size: 22,
-                    ),
-                    onTap: () => onTap(1),
-                  ),
+                  onTap: () => onTap(1),
                 ),
+              ),
 
-              // Tab 2: Catalog (in catalog mode) or My Plan (in ledger mode)
-              if (navMode == BottomNavMode.ledger)
-                Expanded(
-                  child: _NavItem(
-                    label: 'My Plan',
-                    active: currentIndex == 2 && !isMoreOpen,
-                    iconBuilder: (active, color) => Icon(
-                      Icons.stars_outlined,
-                      color: color,
-                      size: 23,
-                    ),
-                    onTap: () => onTap(2),
+              // Tab 2: Catalog (Always Catalog with inventory_2 box icon)
+              Expanded(
+                child: _NavItem(
+                  label: 'Catalog',
+                  active: currentIndex == 2 && !isMoreOpen,
+                  iconBuilder: (active, color) => Icon(
+                    active ? Icons.inventory_2_rounded : Icons.inventory_2_outlined,
+                    color: color,
+                    size: 22,
                   ),
-                )
-              else
-                Expanded(
-                  child: _NavItem(
-                    label: 'Catalog',
-                    active: currentIndex == 2 && !isMoreOpen,
-                    iconBuilder: (active, color) => Icon(
-                      active ? Icons.inventory_2_rounded : Icons.inventory_2_outlined,
-                      color: color,
-                      size: 22,
-                    ),
-                    onTap: () => onTap(2),
-                  ),
+                  onTap: () => onTap(2),
                 ),
+              ),
 
               // Tab 3: More (transforms to close ✕ button when sheet is open)
               Expanded(
@@ -155,27 +131,6 @@ class AppBottomNav extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  static Widget _collectionIcon(Color color) {
-    return Container(
-      width: 21,
-      height: 21,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: color, width: 1.8),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '₹',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: color,
-          height: 1.0,
-        ),
-      ),
     );
   }
 }
