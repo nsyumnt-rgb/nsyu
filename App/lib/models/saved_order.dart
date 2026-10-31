@@ -1,3 +1,5 @@
+import 'bill_pdf_data.dart';
+
 enum OrderStatus { pending, confirmed, delivered, cancelled, convertedToBill }
 
 extension OrderStatusLabel on OrderStatus {
@@ -123,6 +125,20 @@ class SavedOrder {
                 taxAmount;
 
   double get total => totalAmount;
+
+  BillPdfData toPdfData() => BillPdfData(
+        billNumber: orderNumber,
+        date: date,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        items: items
+            .map((i) => BillPdfLineData(desc: i.desc, qty: i.qty, price: i.price))
+            .toList(),
+        discount: discountAmount,
+        tax: taxAmount,
+        previousOutstanding: 0.0,
+        paidAmount: 0.0,
+      );
 
   Map<String, dynamic> toJson() => {
         'id': id,

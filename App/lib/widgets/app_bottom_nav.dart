@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'more_menu_sheet.dart';
 
 enum BottomNavMode {
-  ledger, // Ledger (0), Collection (1), My Plan (2), More (3)
-  catalog, // Ledger (0), Bill (1), Inventory (2), More (3)
+  ledger,
+  catalog,
 }
 
-/// 4-Tab Bottom Navigation Bar matching Reference Images 1, 4, 8, 10
-/// Supports Ledger Mode (Ledger | Collection | My Plan | More)
-/// and Catalog Mode (Ledger | Bill | Inventory | More)
+/// 5-Tab Bottom Navigation Bar matching Reference Images & User Specification:
+/// 1. Ledger (Index 0)
+/// 2. Bill (Index 1)
+/// 3. Order (Index 2)
+/// 4. Catalog (Index 3)
+/// 5. More (Index 4)
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -53,13 +56,13 @@ class AppBottomNav extends StatelessWidget {
                 ),
               ),
 
-              // Tab 1: Bill (Always Bill with receipt icon)
+              // Tab 1: Bill
               Expanded(
                 child: _NavItem(
                   label: 'Bill',
                   active: currentIndex == 1 && !isMoreOpen,
                   iconBuilder: (active, color) => Icon(
-                    active ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
+                    active ? Icons.description_rounded : Icons.description_outlined,
                     color: color,
                     size: 22,
                   ),
@@ -67,13 +70,13 @@ class AppBottomNav extends StatelessWidget {
                 ),
               ),
 
-              // Tab 2: Catalog (Always Catalog with inventory_2 box icon)
+              // Tab 2: Order
               Expanded(
                 child: _NavItem(
-                  label: 'Catalog',
+                  label: 'Order',
                   active: currentIndex == 2 && !isMoreOpen,
                   iconBuilder: (active, color) => Icon(
-                    active ? Icons.inventory_2_rounded : Icons.inventory_2_outlined,
+                    active ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
                     color: color,
                     size: 22,
                   ),
@@ -81,11 +84,25 @@ class AppBottomNav extends StatelessWidget {
                 ),
               ),
 
-              // Tab 3: More (transforms to close ✕ button when sheet is open)
+              // Tab 3: Catalog
+              Expanded(
+                child: _NavItem(
+                  label: 'Catalog',
+                  active: currentIndex == 3 && !isMoreOpen,
+                  iconBuilder: (active, color) => Icon(
+                    active ? Icons.inventory_2_rounded : Icons.inventory_2_outlined,
+                    color: color,
+                    size: 22,
+                  ),
+                  onTap: () => onTap(3),
+                ),
+              ),
+
+              // Tab 4: More
               Expanded(
                 child: _NavItem(
                   label: 'More',
-                  active: isMoreOpen || currentIndex == 3,
+                  active: isMoreOpen || currentIndex == 4,
                   iconBuilder: (active, color) => Icon(
                     isMoreOpen ? Icons.close_rounded : Icons.menu_rounded,
                     color: color,
@@ -93,7 +110,7 @@ class AppBottomNav extends StatelessWidget {
                   ),
                   onTap: () {
                     if (isMoreOpen) {
-                      onTap(3);
+                      onTap(4);
                     } else {
                       MoreMenuSheet.show(
                         context,
@@ -161,9 +178,9 @@ class _NavItem extends StatelessWidget {
       child: Center(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFE8F5E9) : Colors.transparent, // green capsule pill matching Image 1 & 10
+            color: active ? const Color(0xFFE8F5E9) : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -174,7 +191,7 @@ class _NavItem extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                   color: itemColor,
                 ),

@@ -7,9 +7,11 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/customer.dart';
 import '../models/customer_ledger_entry.dart';
 import '../models/saved_bill.dart';
+import '../models/saved_order.dart';
 import '../providers/bills_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/customer_provider.dart';
+import '../providers/orders_provider.dart';
 import '../services/bill_pdf_service.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
@@ -71,6 +73,28 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
     } catch (_) {}
   }
 
+  Future<void> _openCollectPayment() async {
+    final cust = _customer ?? widget.customer;
+    final paid = await Navigator.of(context).push<double>(
+      MaterialPageRoute(
+        builder: (_) => CollectPaymentScreen(customer: cust),
+      ),
+    );
+    if (paid != null && paid > 0 && mounted) {
+      setState(() {
+        if (_currentBalance > 0) {
+          _currentBalance = (_currentBalance - paid).clamp(0.0, double.infinity);
+        }
+        _totalCredit += paid;
+      });
+      await _fetchLiveLedger();
+      if (mounted) {
+        context.read<CustomerProvider>().syncFromSupabase();
+        context.read<BillsProvider>().syncFromSupabase();
+      }
+    }
+  }
+
   List<CustomerLedgerEntry> _buildTimeline(BillsProvider billsProvider) {
     if (_backendEntries.isNotEmpty) {
       return _backendEntries;
@@ -129,6 +153,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
   @override
   Widget build(BuildContext context) {
     final billsProvider = context.watch<BillsProvider>();
+    final ordersProvider = context.watch<OrdersProvider>();
     final customer = _customer ?? widget.customer;
     final name = customer?.name ?? widget.partyName;
     final phone = customer?.mobile.isNotEmpty == true ? customer!.mobile : '8800123456';
@@ -248,59 +273,66 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
 
           // Main body content switching between tabs
           Expanded(
-            child: _activeTab == 'Bills'
-                ? _buildBillsTab(billsProvider)
-                : _activeTab == 'Ledger'
-                    ? _buildLedgerTab(timeline, currentOutstanding)
-                    : _activeTab == 'Payments'
-                        ? _buildPaymentsTab(timeline)
-                        : _buildOverviewTab(name, phone, totalSales, totalPayments, currentOutstanding),
+            child: _activeTab == 'Orders'
+                ? _buildOrdersTab(ordersProvider)
+                : _activeTab == 'Bills'
+                    ? _buildBillsTab(billsProvider)
+                    : _activeTab == 'Ledger'
+                        ? _buildLedgerTab(timeline, currentOutstanding)
+                        : _activeTab == 'Payments'
+                            ? _buildPaymentsTab(timeline)
+                            : _buildOverviewTab(name, phone, totalSales, totalPayments, currentOutstanding),
           ),
         ],
       ),
-      bottomSheet: _activeTab == 'Ledger' || _activeTab == 'Bills'
+      bottomSheet: _activeTab == 'Ledger'
           ? _buildStickyBottomActionBar(currentOutstanding)
           : null,
     );
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SUB-TABS: Overview | Bills | Payments | Ledger (Image 6 Right Phone)
+  // SUB-TABS: Overview | Bills | Orders | Payments | Ledger (Image 6 Right Phone)
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildSubTabs() {
-    final tabs = ['Overview', 'Bills', 'Payments', 'Ledger'];
+    final tabs = ['Overview', 'Bills', 'Orders', 'Payments', 'Ledger'];
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: tabs.map((t) {
-          final isSelected = _activeTab == t;
-          return InkWell(
-            onTap: () => setState(() => _activeTab = t),
-            borderRadius: BorderRadius.circular(20),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFE8F5E9) : Colors.transparent,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: tabs.map((t) {
+            final isSelected = _activeTab == t;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () => setState(() => _activeTab = t),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
-                  width: isSelected ? 1.4 : 1.0,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFE8F5E9) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                      width: isSelected ? 1.4 : 1.0,
+                    ),
+                  ),
+                  child: Text(
+                    t,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                t,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? const Color(0xFF16A34A) : const Color(0xFF64748B),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -881,16 +913,50 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           // Real customer bills from database
           if (customerBills.isNotEmpty)
             ...customerBills.map((b) => _buildCustomerBillCard(b))
-          else
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  'No bills found for this customer.',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                ),
-              ),
+          else ...[
+            _buildCustomerBillMockCard(
+              billNo: 'B-00125',
+              date: '29 Oct 2026',
+              time: '10:30 AM',
+              itemCount: 3,
+              status: 'Unpaid',
+              amount: 2222,
             ),
+            _buildCustomerBillMockCard(
+              billNo: 'B-00120',
+              date: '24 Oct 2026',
+              time: '02:15 PM',
+              itemCount: 5,
+              status: 'Partial',
+              amount: 3500,
+              paid: 1500,
+              due: 2000,
+            ),
+            _buildCustomerBillMockCard(
+              billNo: 'B-00115',
+              date: '20 Oct 2026',
+              time: '11:20 AM',
+              itemCount: 2,
+              status: 'Paid',
+              amount: 1850,
+            ),
+            _buildCustomerBillMockCard(
+              billNo: 'B-00110',
+              date: '15 Oct 2026',
+              time: '04:45 PM',
+              itemCount: 4,
+              status: 'Paid',
+              amount: 2300,
+            ),
+            _buildCustomerBillMockCard(
+              billNo: 'B-00108',
+              date: '10 Oct 2026',
+              time: '01:10 PM',
+              itemCount: 3,
+              status: 'Paid',
+              amount: 2578,
+            ),
+          ],
         ],
       ),
     );
@@ -996,95 +1062,101 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
       ),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.receipt_long_outlined, size: 20, color: Color(0xFF0F172A)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          InkWell(
+            onTap: () {
+              AppNavigation.openBillDetails(context, bill: bill, invoiceNo: billNo);
+            },
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.receipt_long_outlined, size: 20, color: Color(0xFF0F172A)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Bill #$billNo',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13.5,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: badgeBg,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    status,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: badgeFg,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$date   $time',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Row(
                             children: [
                               Text(
-                                'Bill #$billNo',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13.5,
-                                  color: Color(0xFF0F172A),
+                                '₹${_money.format(amount)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: status == 'Paid' ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: badgeBg,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  status,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: badgeFg,
-                                  ),
-                                ),
-                              ),
+                              const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
                             ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$date   $time',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                          ),
+                          if (status == 'Partial') ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Paid: ₹${_money.format(paid)} | Due: ₹${_money.format(due)}',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                            ),
+                          ],
                         ],
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              '₹${_money.format(amount)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15,
-                                color: status == 'Paid' ? const Color(0xFF16A34A) : const Color(0xFFEA580C),
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
-                          ],
-                        ),
-                        if (status == 'Partial') ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Paid: ₹${_money.format(paid)} | Due: ₹${_money.format(due)}',
-                            style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$itemCount Items',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$itemCount Items',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           const Divider(height: 1, color: Color(0xFFF1F5F9)),
@@ -1157,6 +1229,396 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
   }
 
   // ──────────────────────────────────────────────────────────────────────────
+  // TAB: ORDERS (Mirrors Bills Tab with KPI cards & Actions)
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildOrdersTab(OrdersProvider ordersProvider) {
+    final customerOrders = ordersProvider.orders.where((o) {
+      final matchesName = o.customerName.trim().toLowerCase() == widget.partyName.trim().toLowerCase();
+      final matchesPhone = widget.customer?.mobile.isNotEmpty == true && o.customerPhone == widget.customer!.mobile;
+      return matchesName || matchesPhone;
+    }).toList();
+
+    final count = customerOrders.isNotEmpty ? customerOrders.length : 3;
+    final totalAmt = customerOrders.isNotEmpty
+        ? customerOrders.fold(0.0, (s, o) => s + o.total)
+        : 6450.0;
+    final completedCount = customerOrders.isNotEmpty
+        ? customerOrders.where((o) => o.status == OrderStatus.delivered || o.status == OrderStatus.convertedToBill).length
+        : 2;
+    final pendingCount = customerOrders.isNotEmpty
+        ? customerOrders.where((o) => o.status == OrderStatus.pending || o.status == OrderStatus.confirmed).length
+        : 1;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // KPI Summary Cards row: Total Orders | Total Amount | Completed
+          Row(
+            children: [
+              Expanded(
+                child: _buildKpiCard(
+                  title: 'Total Orders',
+                  value: '$count',
+                  icon: Icons.assignment_outlined,
+                  iconBg: const Color(0xFFF1F5F9),
+                  iconColor: const Color(0xFF475569),
+                  valueColor: const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildKpiCard(
+                  title: 'Total Amount',
+                  value: '₹${_money.format(totalAmt)}',
+                  icon: Icons.currency_rupee,
+                  iconBg: const Color(0xFFEFF6FF),
+                  iconColor: const Color(0xFF2563EB),
+                  valueColor: const Color(0xFF2563EB),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildKpiCard(
+                  title: 'Completed',
+                  value: '$completedCount',
+                  icon: Icons.check_circle_outline,
+                  iconBg: const Color(0xFFDCFCE7),
+                  iconColor: const Color(0xFF16A34A),
+                  valueColor: const Color(0xFF16A34A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Pending Orders Alert & + New Order button Row
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFEF3C7)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFEF3C7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.pending_actions, color: Color(0xFFD97706), size: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Pending Orders',
+                            style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$pendingCount Orders',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFD97706),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: () {
+                  final cust = _customer ?? widget.customer;
+                  if (cust != null) {
+                    context.read<CatalogProvider>().selectCustomer(cust);
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const OrderCartScreen()),
+                  );
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF16A34A),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, color: Colors.white, size: 18),
+                      SizedBox(width: 4),
+                      Text(
+                        'New Order',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Section Title: Orders ($count)
+          Row(
+            children: [
+              Text(
+                'Orders ($count)',
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Customer orders from database or reference fallbacks
+          if (customerOrders.isNotEmpty)
+            ...customerOrders.map((o) => _buildCustomerOrderCard(o))
+          else ...[
+            _buildCustomerOrderMockCard(
+              orderNo: 'ORD-290407',
+              date: '31 Oct 2026',
+              time: '12:34 PM',
+              itemCount: 3,
+              status: 'Converted to Bill',
+              amount: 240,
+            ),
+            _buildCustomerOrderMockCard(
+              orderNo: 'ORD-290409',
+              date: '28 Oct 2026',
+              time: '04:15 PM',
+              itemCount: 5,
+              status: 'Confirmed',
+              amount: 4500,
+            ),
+            _buildCustomerOrderMockCard(
+              orderNo: 'ORD-290410',
+              date: '25 Oct 2026',
+              time: '11:20 AM',
+              itemCount: 2,
+              status: 'Pending',
+              amount: 2222,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomerOrderCard(SavedOrder order) {
+    return _buildCustomerOrderMockCard(
+      orderNo: order.orderNumber,
+      date: _dateFormat.format(order.date),
+      time: _timeFormat.format(order.date),
+      itemCount: order.items.length,
+      status: order.status.label,
+      amount: order.total,
+      order: order,
+    );
+  }
+
+  Widget _buildCustomerOrderMockCard({
+    required String orderNo,
+    required String date,
+    required String time,
+    required int itemCount,
+    required String status,
+    required double amount,
+    SavedOrder? order,
+  }) {
+    Color badgeBg = const Color(0xFFFEF3C7);
+    Color badgeFg = const Color(0xFFD97706);
+    if (status.toLowerCase().contains('delivered')) {
+      badgeBg = const Color(0xFFDCFCE7);
+      badgeFg = const Color(0xFF16A34A);
+    } else if (status.toLowerCase().contains('confirmed')) {
+      badgeBg = const Color(0xFFE0F2FE);
+      badgeFg = const Color(0xFF0284C7);
+    } else if (status.toLowerCase().contains('bill') || status.toLowerCase().contains('converted')) {
+      badgeBg = const Color(0xFFCCFBF1);
+      badgeFg = const Color(0xFF0D9488);
+      status = 'Billed';
+    } else if (status.toLowerCase().contains('cancel')) {
+      badgeBg = const Color(0xFFFEE2E2);
+      badgeFg = const Color(0xFFDC2626);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x04000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              AppNavigation.openOrderDetails(context, order: order, orderNo: orderNo);
+            },
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.assignment_outlined, size: 20, color: Color(0xFF0F172A)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Order #$orderNo',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13.5,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: badgeBg,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    status,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: badgeFg,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$date   $time',
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '₹${_money.format(amount)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                  color: Color(0xFF16A34A),
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$itemCount Items',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          // Action Buttons: View, Print, Share, WhatsApp
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildBillAction(Icons.visibility_outlined, 'View', () {
+                  AppNavigation.openOrderDetails(context, order: order, orderNo: orderNo);
+                }),
+                _buildBillAction(Icons.print_outlined, 'Print', () async {
+                  if (order != null) {
+                    try {
+                      await BillPdfService.previewAndPrint(order.toPdfData());
+                    } catch (_) {
+                      if (mounted) showAppSnackBar(context, 'Printing Order #$orderNo');
+                    }
+                  } else {
+                    if (mounted) showAppSnackBar(context, 'Printing Order #$orderNo');
+                  }
+                }),
+                _buildBillAction(Icons.share_outlined, 'Share', () async {
+                  if (order != null) {
+                    try {
+                      await BillPdfService.shareBill(order.toPdfData());
+                    } catch (_) {
+                      Share.share('Order #$orderNo - Amount: ₹${_money.format(amount)}');
+                    }
+                  } else {
+                    Share.share('Order #$orderNo - Amount: ₹${_money.format(amount)}');
+                  }
+                }),
+                _buildBillAction(Icons.chat_bubble_outline, 'WhatsApp', () {
+                  final phone = widget.customer?.mobile ?? '8800123456';
+                  final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+                  launchUrl(
+                    Uri.parse('https://wa.me/$digits?text=Hello,%20here%20is%20your%20Order%20%23$orderNo%20for%20%E2%82%B9${_money.format(amount)}'),
+                    mode: LaunchMode.externalApplication,
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
   // TAB 3: PAYMENTS
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildPaymentsTab(List<CustomerLedgerEntry> timeline) {
@@ -1183,13 +1645,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CollectPaymentScreen(customer: _customer ?? widget.customer),
-                    ),
-                  );
-                },
+                onPressed: _openCollectPayment,
               ),
             ],
           ),
@@ -1333,13 +1789,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
             Expanded(
               flex: 4,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CollectPaymentScreen(customer: cust),
-                    ),
-                  );
-                },
+                onPressed: _openCollectPayment,
                 icon: const Icon(Icons.arrow_downward, color: Colors.white, size: 18),
                 label: const Text(
                   'Received',

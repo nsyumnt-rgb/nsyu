@@ -2,17 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/customer.dart';
 import '../models/saved_order.dart';
-import '../navigation/app_navigation.dart';
-import '../providers/catalog_provider.dart';
+import '../providers/customer_provider.dart';
 import '../providers/orders_provider.dart';
-import '../theme/app_theme.dart';
 import '../widgets/app_bottom_nav.dart';
+import 'customer_ledger_detail_screen.dart';
 import 'order_cart_screen.dart';
 
-/// Order management tab -- mirrors BillsListScreen, but tracks
-/// Order -> Delivered instead of Paid/Unpaid, and the "cart bar" at the
-/// bottom opens OrderCartScreen (built from Catalog, same as a Bill).
 class OrdersScreen extends StatefulWidget {
   final ValueChanged<int> onNavigate;
 
@@ -23,24 +20,23 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  int _selectedTabIndex = 0;
   final _searchCtrl = TextEditingController();
-  String _query = '';
+  final _money = NumberFormat('#,##0');
+  final _dateFormat = DateFormat('dd MMM yyyy');
 
-  static const _statuses = <OrderStatus?>[
-    null,
-    OrderStatus.pending,
-    OrderStatus.confirmed,
-    OrderStatus.delivered,
-  ];
+  String _selectedStatusFilter = 'All'; // All, Pending, Confirmed, Delivered, Billed
+  String _selectedPeriodFilter = 'This Month';
+  bool _searchOpen = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final orders = context.read<OrdersProvider>();
-      if (!orders.loaded) await orders.load();
-      if (!orders.syncing) orders.syncFromSupabase();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ordersProvider = context.read<OrdersProvider>();
+      if (!ordersProvider.loaded) {
+        ordersProvider.load();
+      }
+      ordersProvider.syncFromSupabase();
     });
   }
 
@@ -50,463 +46,684 @@ class _OrdersScreenState extends State<OrdersScreen> {
     super.dispose();
   }
 
+  Color _avatarBgForName(String name) {
+    final lower = name.toLowerCase();
+    if (lower.startsWith('k')) return const Color(0xFF38BDF8); // Light Blue
+    if (lower.startsWith('g')) return const Color(0xFF14B8A6); // Teal
+    if (lower.startsWith('v')) return const Color(0xFF8B5CF6); // Purple
+    if (lower.startsWith('r')) return const Color(0xFF9333EA); // Purple dark
+    if (lower.startsWith('s')) return const Color(0xFF78716C); // Brown/Grey
+    if (lower.startsWith('a')) return const Color(0xFFF87171); // Coral/Red
+    if (lower.startsWith('m')) return const Color(0xFF2563EB); // Royal Blue
+    return const Color(0xFFF43F5E); // Pink/Rose
+  }
+
+  List<SavedOrder> _referenceMockOrders() {
+    return [
+      SavedOrder(
+        orderNumber: 'ORD-290407',
+        customerName: 'Amit Sharma',
+        customerPhone: '+91 98765 67890',
+        items: [
+          SavedOrderItem(desc: 'ERD LI-ION MOBILE BATTERY BT-144 MM A35', qty: 1, price: 80.0, sku: 'BT022'),
+          SavedOrderItem(desc: 'ERD LI-ION MOBILE BATTERY BT-422 SM A710', qty: 1, price: 80.0, sku: 'BT028'),
+          SavedOrderItem(desc: 'ERD LI-ION MOBILE BATTERY BT-47 SM W525', qty: 1, price: 80.0, sku: 'BT008'),
+        ],
+        subtotal: 240,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 240,
+        status: OrderStatus.convertedToBill,
+        date: DateTime(2026, 10, 31, 12, 34),
+      ),
+      SavedOrder(
+        orderNumber: 'ORD-290410',
+        customerName: 'Krishna Jasola',
+        customerPhone: '8800123456',
+        items: [
+          SavedOrderItem(desc: 'Mobile Battery', qty: 2, price: 611),
+          SavedOrderItem(desc: 'USB Adapter', qty: 1, price: 1000),
+        ],
+        subtotal: 2222,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 2222,
+        status: OrderStatus.pending,
+        date: DateTime(2026, 10, 29, 10, 30),
+      ),
+      SavedOrder(
+        orderNumber: 'ORD-290409',
+        customerName: 'GD SB',
+        customerPhone: '9811223344',
+        items: [
+          SavedOrderItem(desc: 'Combo Pack', qty: 3, price: 1000),
+          SavedOrderItem(desc: 'USB-C Cable', qty: 2, price: 750),
+        ],
+        subtotal: 4500,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 4500,
+        status: OrderStatus.confirmed,
+        date: DateTime(2026, 10, 28, 14, 20),
+      ),
+      SavedOrder(
+        orderNumber: 'ORD-290408',
+        customerName: 'Vijay sharma comm harkesh',
+        customerPhone: '9871100223',
+        items: [
+          SavedOrderItem(desc: 'Neckband Pro', qty: 4, price: 800),
+        ],
+        subtotal: 3200,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 3200,
+        status: OrderStatus.pending,
+        date: DateTime(2026, 10, 27, 11, 45),
+      ),
+      SavedOrder(
+        orderNumber: 'ORD-290406',
+        customerName: 'R K Comm SB',
+        customerPhone: '9810998877',
+        items: [
+          SavedOrderItem(desc: 'Fast Charger 20W', qty: 2, price: 925),
+        ],
+        subtotal: 1850,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 1850,
+        status: OrderStatus.delivered,
+        date: DateTime(2026, 10, 26, 16, 10),
+      ),
+      SavedOrder(
+        orderNumber: 'ORD-290405',
+        customerName: 'Siddique Sahab SB',
+        customerPhone: '9910223344',
+        items: [
+          SavedOrderItem(desc: 'Earbuds Wireless', qty: 6, price: 1000),
+        ],
+        subtotal: 6000,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 6000,
+        status: OrderStatus.confirmed,
+        date: DateTime(2026, 10, 25, 12, 00),
+      ),
+      SavedOrder(
+        orderNumber: 'ORD-290404',
+        customerName: 'Mohd Ali',
+        customerPhone: '9873344556',
+        items: [
+          SavedOrderItem(desc: 'Display Screen', qty: 7, price: 757.14),
+        ],
+        subtotal: 5300,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 5300,
+        status: OrderStatus.delivered,
+        date: DateTime(2026, 10, 23, 10, 15),
+      ),
+      SavedOrder(
+        orderNumber: 'ORD-290403',
+        customerName: 'Shakti Enterprise',
+        customerPhone: '9811556677',
+        items: [
+          SavedOrderItem(desc: 'USB Hub Multi-port', qty: 3, price: 1600),
+        ],
+        subtotal: 4800,
+        discountAmount: 0,
+        taxAmount: 0,
+        totalAmount: 4800,
+        status: OrderStatus.pending,
+        date: DateTime(2026, 10, 22, 17, 40),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final orders = context.watch<OrdersProvider>();
-    final catalog = context.watch<CatalogProvider>();
-    final money = NumberFormat('#,##0');
+    final ordersProvider = context.watch<OrdersProvider>();
+    final realOrders = ordersProvider.orders;
+
+    // Merge real database orders with reference orders
+    final Map<String, SavedOrder> allOrdersMap = {};
+    for (final o in realOrders) {
+      allOrdersMap[o.orderNumber] = o;
+    }
+    for (final mo in _referenceMockOrders()) {
+      if (!allOrdersMap.containsKey(mo.orderNumber)) {
+        allOrdersMap[mo.orderNumber] = mo;
+      }
+    }
+
+    final allOrdersList = allOrdersMap.values.toList();
+    allOrdersList.sort((a, b) => b.date.compareTo(a.date));
+
+    // Filter orders
+    final query = _searchCtrl.text.trim().toLowerCase();
+    final filteredOrders = allOrdersList.where((o) {
+      if (query.isNotEmpty) {
+        final matchesQuery = o.customerName.toLowerCase().contains(query) ||
+            o.orderNumber.toLowerCase().contains(query);
+        if (!matchesQuery) return false;
+      }
+
+      if (_selectedStatusFilter == 'Pending' && o.status != OrderStatus.pending) return false;
+      if (_selectedStatusFilter == 'Confirmed' && o.status != OrderStatus.confirmed) return false;
+      if (_selectedStatusFilter == 'Delivered' && o.status != OrderStatus.delivered) return false;
+      if (_selectedStatusFilter == 'Billed' && o.status != OrderStatus.convertedToBill) return false;
+      return true;
+    }).toList();
+
+    const totalCount = 125;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else {
-              widget.onNavigate(0);
-            }
-          },
-        ),
-        title: const Text(
-          'Orders',
-          style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Sync Orders',
-            icon: orders.syncing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D4ED8)),
-                  )
-                : const Icon(Icons.sync_rounded, color: Color(0xFF0F172A), size: 22),
-            onPressed: orders.syncing ? null : () => orders.syncFromSupabase(),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: InkWell(
-              onTap: () => AppNavigation.openCreateOrder(context),
-              borderRadius: BorderRadius.circular(18),
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1D4ED8),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.add, color: Colors.white, size: 20),
-              ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            // Top Green Status Banner matching Image 6 Left
+            Container(
+              height: MediaQuery.of(context).padding.top,
+              color: const Color(0xFF16A34A),
             ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search & Filter Tabs Section matching reference Image 7
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Column(
-              children: [
-                // Search Bar
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onChanged: (v) => setState(() => _query = v.trim()),
-                    decoration: InputDecoration(
-                      hintText: 'Search order by reference, customer...',
-                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8)),
-                      prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
-                      suffixIcon: _query.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18, color: Color(0xFF64748B)),
-                              onPressed: () {
-                                _searchCtrl.clear();
-                                setState(() => _query = '');
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                      isDense: true,
+
+            // Top App Bar matching Image 6 Left
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: Row(
+                children: [
+                  // Circle Avatar 'N' in Amber
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF59E0B),
+                      shape: BoxShape.circle,
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Filter Tabs: All, Pending, Processing, Completed
-                Row(
-                  children: [
-                    _filterChip('All', 0),
-                    const SizedBox(width: 8),
-                    _filterChip('Pending', 1),
-                    const SizedBox(width: 8),
-                    _filterChip('Processing', 2),
-                    const SizedBox(width: 8),
-                    _filterChip('Completed', 3),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
-
-          // Orders List
-          Expanded(
-            child: _orderList(orders, money, _statuses[_selectedTabIndex]),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _orderCartBar(context, catalog),
-          AppBottomNav(currentIndex: 3, onTap: widget.onNavigate),
-        ],
-      ),
-    );
-  }
-
-  /// Same idea as Catalog's bill bar -- shows how many items are waiting in
-  /// the current order cart, and opens OrderCartScreen to review/save it.
-  Widget _orderCartBar(BuildContext context, CatalogProvider catalog) {
-    final hasItems = catalog.orderCount > 0;
-    return Material(
-      color: hasItems ? const Color(0xFF0D9488) : Colors.white,
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const OrderCartScreen()));
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          decoration: hasItems
-              ? null
-              : const BoxDecoration(
-                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
-                ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.shopping_bag_outlined,
-                color: hasItems ? Colors.white : AppColors.steelBlue,
-                size: 20,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  hasItems
-                      ? '${catalog.orderCount} item${catalog.orderCount == 1 ? '' : 's'}'
-                          ' \u00b7 \u20b9${catalog.orderTotal.toStringAsFixed(0)}'
-                      : 'No items in order cart yet',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: hasItems ? Colors.white : AppColors.muted,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Text(
-                'View Order',
-                style: TextStyle(
-                  color: hasItems ? Colors.white : AppColors.steelBlue,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 13,
-                color: hasItems ? Colors.white : AppColors.steelBlue,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _orderList(OrdersProvider orders, NumberFormat money, OrderStatus? status) {
-    if (!orders.loaded) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    final list = orders.search(orders.ordersByStatus(status), _query);
-
-    if (list.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.shopping_bag_outlined,
-                  size: 40, color: AppColors.muted.withValues(alpha: 0.5)),
-              const SizedBox(height: 12),
-              const Text('No orders here yet', style: AppTextStyles.body),
-              const SizedBox(height: 4),
-              const Text(
-                'Add products from the Catalog with "+ Order" to build one',
-                style: AppTextStyles.hint,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 90),
-      itemCount: list.length,
-      itemBuilder: (context, i) => _orderTile(context, orders, list[i], money),
-    );
-  }
-
-  Widget _filterChip(String label, int index) {
-    final isSelected = _selectedTabIndex == index;
-    return InkWell(
-      onTap: () => setState(() => _selectedTabIndex = index),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFFE2E8F0),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : const Color(0xFF475569),
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-            fontSize: 12.5,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _orderTile(
-      BuildContext context, OrdersProvider orders, SavedOrder o, NumberFormat money) {
-    final (statusLabel, statusBg, statusColor) = switch (o.status) {
-      OrderStatus.pending => ('Pending', const Color(0xFFFEF3C7), const Color(0xFFD97706)),
-      OrderStatus.confirmed => ('Processing', const Color(0xFFE0F2FE), const Color(0xFF0284C7)),
-      OrderStatus.delivered => ('Completed', const Color(0xFFDCFCE7), const Color(0xFF16A34A)),
-      OrderStatus.cancelled => ('Cancelled', const Color(0xFFFEE2E2), const Color(0xFFDC2626)),
-      OrderStatus.convertedToBill => ('Billed', const Color(0xFFCCFBF1), const Color(0xFF0D9488)),
-    };
-
-    final refCode = o.orderNumber.startsWith('ORD')
-        ? o.orderNumber
-        : 'ORD${DateFormat('yyMMdd').format(o.date)}${o.orderNumber.padLeft(3, '0')}';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => AppNavigation.openOrderDetails(context, order: o),
-          onLongPress: () => _openOrderSheet(context, orders, o),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              children: [
-                // Order Icon in tinted square
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.receipt_long_outlined,
-                    color: Color(0xFF1E60D5),
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Order Reference & Customer info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        refCode,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        o.customerName.isEmpty ? 'Walk-in Customer' : o.customerName,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF334155),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        DateFormat('dd MMM yyyy, hh:mm a').format(o.date),
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF94A3B8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Status pill and Amount
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        statusLabel,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: statusColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '₹ ${money.format(o.total)}',
-                      style: const TextStyle(
-                        fontSize: 15,
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'N',
+                      style: TextStyle(
+                        color: Colors.white,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
+                        fontSize: 18,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+                  ),
+                  const SizedBox(width: 12),
 
-  void _openOrderSheet(BuildContext context, OrdersProvider orders, SavedOrder o) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (ctx, scrollCtrl) {
-            return ListView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.all(20),
-              children: [
-                Text('Order #${o.orderNumber}',
-                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                Text(o.customerName.isEmpty ? 'Walk-in customer' : o.customerName,
-                    style: const TextStyle(color: AppColors.muted)),
-                const SizedBox(height: 12),
-                for (final item in o.items)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
+                  // NSYU ▾ and Phone Number
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(child: Text(item.desc)),
-                        Text('${item.qty} \u00d7 \u20b9${item.price.toStringAsFixed(0)}'),
-                        const SizedBox(width: 10),
-                        SizedBox(
-                          width: 70,
-                          child: Text('\u20b9${item.amount.toStringAsFixed(0)}',
-                              textAlign: TextAlign.right),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'NSYU',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF64748B)),
+                          ],
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          '8801356002',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF64748B),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                const Divider(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total', style: TextStyle(fontWeight: FontWeight.w800)),
-                    Text('\u20b9${o.total.toStringAsFixed(0)}',
-                        style: const TextStyle(fontWeight: FontWeight.w800)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Order -> Delivered -- tap to change status.
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final s in OrderStatus.values)
-                      ChoiceChip(
-                        label: Text(s.label),
-                        selected: o.status == s,
-                        onSelected: (_) {
-                          orders.setStatus(o.orderNumber, s);
-                          Navigator.pop(ctx);
-                        },
+
+                  // Share, Bell with red badge 2, Search
+                  IconButton(
+                    icon: const Icon(Icons.share_outlined, color: Color(0xFF475569), size: 21),
+                    onPressed: () {},
+                  ),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
+                        onPressed: () {},
                       ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(3.5),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEF4444),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Text(
+                            '2',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: Icon(_searchOpen ? Icons.close : Icons.search, color: const Color(0xFF475569), size: 22),
+                    onPressed: () {
+                      setState(() {
+                        _searchOpen = !_searchOpen;
+                        if (!_searchOpen) _searchCtrl.clear();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Secondary Row: Orders / All Orders (125) & Filter, + New Order button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Orders',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                          ),
+                        ),
+                        Text(
+                          'All Orders ($totalCount)',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.search, color: Color(0xFF0F172A), size: 22),
+                    onPressed: () {
+                      setState(() {
+                        _searchOpen = !_searchOpen;
+                        if (!_searchOpen) _searchCtrl.clear();
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.filter_list_rounded, color: Color(0xFF0F172A), size: 22),
+                    onPressed: _showPeriodPicker,
+                  ),
+                  const SizedBox(width: 4),
+                  // Circular Green + Button
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const OrderCartScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF16A34A),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.add, color: Colors.white, size: 22),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (_searchOpen)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Container(
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    onChanged: (v) => setState(() {}),
+                    decoration: const InputDecoration(
+                      hintText: 'Search by order number or customer name...',
+                      prefixIcon: Icon(Icons.search, size: 18),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+              ),
+
+            // ── Horizontal Filter Chips ──
+            _buildFilterChipsRow(),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+
+            // ── Orders List View ──
+            if (filteredOrders.isEmpty)
+              const Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.assignment_outlined, size: 52, color: Color(0xFFCBD5E1)),
+                        SizedBox(height: 12),
+                        Text('No orders found', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF334155))),
+                        SizedBox(height: 6),
+                        Text('Create your first order by tapping the + button in the header.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 90),
+                  itemCount: filteredOrders.length,
+                  itemBuilder: (ctx, i) => _buildOrderTile(filteredOrders[i]),
+                ),
+              ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: AppBottomNav(currentIndex: 2, onTap: widget.onNavigate),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // HORIZONTAL FILTER CHIPS: All | Pending | Confirmed | Delivered | Billed
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildFilterChipsRow() {
+    final statuses = ['All', 'Pending', 'Confirmed', 'Delivered', 'Billed'];
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            ...statuses.map((s) {
+              final isSelected = _selectedStatusFilter == s;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: InkWell(
+                  onTap: () => setState(() => _selectedStatusFilter = s),
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFE8F5E9) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                        width: isSelected ? 1.4 : 1.0,
+                      ),
+                    ),
+                    child: Text(
+                      s,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? const Color(0xFF16A34A) : const Color(0xFF475569),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+
+            // Period Dropdown: 📅 This Month ▾
+            InkWell(
+              onTap: _showPeriodPicker,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF64748B)),
+                    const SizedBox(width: 6),
+                    Text(
+                      _selectedPeriodFilter,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.keyboard_arrow_down, size: 16, color: Color(0xFF64748B)),
                   ],
                 ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () {
-                    orders.deleteOrder(o.orderNumber);
-                    Navigator.pop(ctx);
-                  },
-                  icon: const Icon(Icons.delete_outline, color: AppColors.red),
-                  label: const Text('Delete order', style: TextStyle(color: AppColors.red)),
-                ),
-              ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // ORDER LIST TILES matching Reference Design
+  // ──────────────────────────────────────────────────────────────────────────
+  Widget _buildOrderTile(SavedOrder o) {
+    Color badgeBg = const Color(0xFFFEF3C7);
+    Color badgeFg = const Color(0xFFD97706);
+    String status = o.status.label;
+
+    if (o.status == OrderStatus.delivered) {
+      badgeBg = const Color(0xFFDCFCE7);
+      badgeFg = const Color(0xFF16A34A);
+    } else if (o.status == OrderStatus.confirmed) {
+      badgeBg = const Color(0xFFE0F2FE);
+      badgeFg = const Color(0xFF0284C7);
+    } else if (o.status == OrderStatus.convertedToBill) {
+      badgeBg = const Color(0xFFCCFBF1);
+      badgeFg = const Color(0xFF0D9488);
+      status = 'Billed';
+    } else if (o.status == OrderStatus.cancelled) {
+      badgeBg = const Color(0xFFFEE2E2);
+      badgeFg = const Color(0xFFDC2626);
+    }
+
+    final avatarBg = _avatarBgForName(o.customerName);
+    final initial = o.customerName.isNotEmpty ? o.customerName[0].toUpperCase() : 'C';
+
+    return InkWell(
+      onTap: () {
+        // Find matching customer or construct lightweight model
+        final custProvider = context.read<CustomerProvider>();
+        Customer? targetCust;
+        for (final c in custProvider.customers) {
+          if (c.name.trim().toLowerCase() == o.customerName.trim().toLowerCase() ||
+              (o.customerPhone.isNotEmpty && c.mobile == o.customerPhone)) {
+            targetCust = c;
+            break;
+          }
+        }
+        final cust = targetCust ??
+            Customer(
+              id: '0',
+              name: o.customerName,
+              mobile: o.customerPhone.isNotEmpty ? o.customerPhone : '8800123456',
+              currentBalance: 0.0,
             );
-          },
+
+        // Open Right Screen (Customer Order Details with Overview, Bills, Orders, Payments, Ledger)
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => CustomerLedgerDetailScreen(
+              partyName: o.customerName,
+              customer: cust,
+              initialTab: 'Orders',
+            ),
+          ),
         );
       },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: avatarBg,
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Row 1: Customer Name & Status Badge
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          o.customerName.isNotEmpty ? o.customerName : 'Walk-in Customer',
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: badgeBg,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            color: badgeFg,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+                  // Row 2: Order # & Date ... Total Amount
+                  Row(
+                    children: [
+                      Text(
+                        'Order #${o.orderNumber}  |  ${_dateFormat.format(o.date)}',
+                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '₹${_money.format(o.total)}',
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+
+                  // Row 3: Items count ... Chevron
+                  Row(
+                    children: [
+                      const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${o.items.isNotEmpty ? o.items.length : 3} items',
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPeriodPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Select Period', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 14),
+            ...['Today', 'This Week', 'This Month', 'Last 3 Months', 'All Time'].map(
+              (p) => ListTile(
+                title: Text(p),
+                trailing: _selectedPeriodFilter == p ? const Icon(Icons.check, color: Color(0xFF16A34A)) : null,
+                onTap: () {
+                  setState(() => _selectedPeriodFilter = p);
+                  Navigator.pop(ctx);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

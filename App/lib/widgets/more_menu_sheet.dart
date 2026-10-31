@@ -192,7 +192,7 @@ class MoreMenuSheet extends StatelessWidget {
                     label: 'Catalog',
                     onTap: () {
                       Navigator.pop(context);
-                      onNavigate(2); // Switch to Catalog/Inventory tab
+                      onNavigate(3); // Switch to Catalog tab
                     },
                   ),
                   const SizedBox(width: 10),
@@ -213,12 +213,12 @@ class MoreMenuSheet extends StatelessWidget {
 
           // Integrated Bottom Navigation Bar with active More pill
           AppBottomNav(
-            currentIndex: 3,
+            currentIndex: 4,
             isMoreOpen: false,
             navMode: navMode,
             onTap: (index) {
               Navigator.pop(context);
-              if (index != 3) {
+              if (index != 4) {
                 onNavigate(index);
               }
             },

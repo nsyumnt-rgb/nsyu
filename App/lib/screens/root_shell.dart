@@ -4,12 +4,14 @@ import '../navigation/app_navigation.dart';
 import 'bills_list_screen.dart';
 import 'catalog_screen.dart';
 import 'ledger_screen.dart';
+import 'orders_screen.dart';
 
-/// Root shell hosting the 3 primary persistent tabs matching Reference Images:
+/// Root shell hosting the 4 primary persistent tabs:
 /// Tab 0: Ledger
-/// Tab 1: Bills
-/// Tab 2: Catalog (Product Catalog matching Reference Image)
-/// Tab 3 (More): Handled dynamically by AppBottomNav opening MoreMenuSheet
+/// Tab 1: Bill
+/// Tab 2: Order
+/// Tab 3: Catalog
+/// Tab 4 (More): Handled dynamically by AppBottomNav opening MoreMenuSheet
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
 
@@ -35,13 +37,13 @@ class _RootShellState extends State<RootShell> {
   void _onExternalTabChange() {
     if (mounted && _index != AppNavigation.currentTabNotifier.value) {
       setState(() {
-        _index = AppNavigation.currentTabNotifier.value.clamp(0, 2);
+        _index = AppNavigation.currentTabNotifier.value.clamp(0, 3);
       });
     }
   }
 
   void _goTo(int i) {
-    if (i < 0 || i > 2) return;
+    if (i < 0 || i > 3) return;
     if (_index == i) return;
     AppNavigation.currentTabNotifier.value = i;
     setState(() => _index = i);
@@ -62,6 +64,7 @@ class _RootShellState extends State<RootShell> {
         children: [
           LedgerScreen(onNavigate: _goTo),
           BillsListScreen(onNavigate: _goTo),
+          OrdersScreen(onNavigate: _goTo),
           CatalogScreen(onNavigate: _goTo),
         ],
       ),

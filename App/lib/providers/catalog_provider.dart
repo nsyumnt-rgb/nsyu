@@ -172,10 +172,13 @@ class CatalogProvider extends ChangeNotifier {
     status = LoadStatus.loading;
     notifyListeners();
     try {
-      _allProducts = await _supabaseService.fetchProducts().timeout(const Duration(seconds: 15));
+      debugPrint('🔄 Fetching catalog products from backend...');
+      _allProducts = await _supabaseService.fetchProducts().timeout(const Duration(seconds: 45));
+      debugPrint('✅ Loaded ${_allProducts.length} catalog products.');
       status = LoadStatus.loaded;
     } catch (e) {
       errorMessage = e.toString();
+      debugPrint('❌ Error loading products: $e');
       status = LoadStatus.loaded;
     }
     notifyListeners();
@@ -348,6 +351,8 @@ class CatalogProvider extends ChangeNotifier {
     paymentRemarks = '';
     notifyListeners();
   }
+
+  bool isItemInCart(String code) => orderItemFor(code) != null || billItemFor(code) != null;
 
   BillItem? orderItemFor(String code) {
     for (final i in orderItems) {

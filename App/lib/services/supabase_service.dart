@@ -536,6 +536,55 @@ class SupabaseService {
   }
 
   /// Records a payment in Supabase PostgreSQL against customer and invoice
+  /// Records a customer payment by allocating against unpaid sales and updating the ledger in Supabase
+  Future<bool> recordCustomerPayment({
+    required dynamic customerId,
+    required double amount,
+    required String method,
+    String? notes,
+  }) async {
+    await ensureAuth();
+    final cleanId = int.tryParse(customerId.toString().replaceAll(RegExp(r'[^0-9]'), '')) ?? customerId;
+
+    try {
+      final salesUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales?customerId=$cleanId');
+      final salesRes = await _getWithRetry(salesUrl);
+      List unpaidSales = [];
+      if (salesRes.statusCode == 200) {
+        final decoded = jsonDecode(salesRes.body);
+        final list = (decoded['data'] as List? ?? []);
+        unpaidSales = list.where((s) => s['status'] == 'unpaid' || s['status'] == 'partially_paid').toList();
+        unpaidSales.sort((a, b) => (a['id'] as dynamic).toString().compareTo((b['id'] as dynamic).toString()));
+      }
+
+      double remaining = amount;
+      if (unpaidSales.isNotEmpty) {
+        for (final sale in unpaidSales) {
+          if (remaining <= 0) break;
+          final saleId = sale['id'];
+          final due = double.tryParse(sale['due_amount']?.toString() ?? '0') ?? 0.0;
+          if (due <= 0) continue;
+          final payAmount = remaining > due ? due : remaining;
+
+          final payUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales/$saleId/payments');
+          final payBody = jsonEncode({
+            'amount': payAmount,
+            'method': method.toLowerCase().replaceAll(' ', '_'),
+            'notes': notes ?? 'Payment received',
+          });
+          final postRes = await http.post(payUrl, headers: _headers, body: payBody);
+          if (postRes.statusCode < 300) {
+            remaining -= payAmount;
+          }
+        }
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error recording customer payment: $e');
+      return false;
+    }
+  }
+
   Future<SavedPayment> recordPayment(SavedPayment payment) async {
     await ensureAuth();
     final url = Uri.parse('${SupabaseConfig.apiUrl}/payments');

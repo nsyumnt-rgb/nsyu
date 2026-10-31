@@ -14,9 +14,16 @@ class PaymentPdfService {
 
   Future<File> generate(Payment payment, double outstandingAfter) async {
     final pdf = pw.Document();
-    final logo = pw.MemoryImage(
-      (await rootBundle.load('assets/logo.png')).buffer.asUint8List(),
-    );
+    pw.MemoryImage? logo;
+    try {
+      final data = await rootBundle.load('assets/nsyu_logo.png');
+      logo = pw.MemoryImage(data.buffer.asUint8List());
+    } catch (_) {
+      try {
+        final data = await rootBundle.load('assets/logo.png');
+        logo = pw.MemoryImage(data.buffer.asUint8List());
+      } catch (_) {}
+    }
 
     pdf.addPage(
       pw.Page(
@@ -47,12 +54,12 @@ class PaymentPdfService {
 
     final dir = await getApplicationDocumentsDirectory();
     final file =
-        File('${dir.path}/PaymentReceipt_${payment.id.substring(0, 8)}.pdf');
+        File('${dir.path}/PaymentReceipt_${payment.id.length >= 8 ? payment.id.substring(0, 8) : payment.id}.pdf');
     await file.writeAsBytes(await pdf.save());
     return file;
   }
 
-  pw.Widget _header(pw.MemoryImage logo) {
+  pw.Widget _header(pw.MemoryImage? logo) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
@@ -66,11 +73,25 @@ class PaymentPdfService {
             pw.Text('your.email@example.com | +91 12345 67890'),
           ],
         ),
-        pw.SizedBox(
-          height: 60,
-          width: 60,
-          child: pw.Image(logo),
-        ),
+        if (logo != null)
+          pw.SizedBox(
+            height: 60,
+            width: 60,
+            child: pw.Image(logo),
+          )
+        else
+          pw.Container(
+            height: 60,
+            width: 60,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Center(
+              child: pw.Text('NSYU',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+            ),
+          ),
       ],
     );
   }

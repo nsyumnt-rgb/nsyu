@@ -260,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     _checkBackendHealth();
                   }
                 },
-                child: const Text('Save & Apply'),
+                child: const Text('Save'),
               ),
             ],
           );

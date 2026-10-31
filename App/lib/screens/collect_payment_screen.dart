@@ -1,3 +1,5 @@
+import '../models/saved_bill.dart';
+import '../models/saved_payment.dart' as sp;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -161,6 +163,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
     final cust = _selectedCustomer;
     final custName = cust?.name ?? 'Customer';
     final payments = context.read<PaymentsProvider>();
+    final billsProv = context.read<BillsProvider>();
     final outstandingBefore = cust?.currentBalance ?? 0.0;
 
     final payment = Payment(
@@ -172,23 +175,42 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
     );
 
     try {
-      final success = await payments.addPayment(payment, customerId: cust?.id);
+      // 1. Record customer payment in backend / Supabase
+      await payments.addPayment(payment, customerId: cust?.id);
       if (!mounted) return;
 
-      if (success) {
-        context.read<BillsProvider>().syncFromSupabase();
-        showAppSnackBar(context, 'Payment of ₹${_money.format(amount)} recorded successfully!');
+      // 2. Allocate payment to unpaid bills in BillsProvider so party balance updates
+      double remainingAmt = amount;
+      final unpaidBills = billsProv.billsForParty(custName).where((b) => b.status == BillStatus.unpaid).toList();
+      for (final bill in unpaidBills) {
+        if (remainingAmt <= 0) break;
+        final due = bill.due;
+        final payAmt = remainingAmt > due ? due : remainingAmt;
+        await billsProv.receivePayment(
+          bill: bill,
+          amount: payAmt,
+          method: sp.PaymentMethod.values.firstWhere((m) => m.name == _method.name, orElse: () => sp.PaymentMethod.cash),
+          customerId: cust?.id ?? '',
+          remarks: _notes.isNotEmpty ? _notes : 'Payment received',
+        );
+        remainingAmt -= payAmt;
+      }
 
+      showAppSnackBar(context, 'Payment of ₹${_money.format(amount)} recorded successfully!');
+
+      File? pdfFile;
+      try {
         final pdfService = PaymentPdfService();
-        final outstandingAfter = outstandingBefore - amount;
-        final pdfFile = await pdfService.generate(payment, outstandingAfter);
+        final outstandingAfter = (outstandingBefore - amount).clamp(0.0, double.infinity);
+        pdfFile = await pdfService.generate(payment, outstandingAfter);
+      } catch (e) {
+        debugPrint('PDF generation error: $e');
+      }
 
-        if (!mounted) return;
-        Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pop(amount);
+      if (pdfFile != null) {
         _showPostPaymentOptions(payment, pdfFile);
-      } else {
-        setState(() => _isSubmitting = false);
-        showAppSnackBar(context, 'Error saving payment: ${payments.syncError}', isError: true);
       }
     } catch (e) {
       if (!mounted) return;

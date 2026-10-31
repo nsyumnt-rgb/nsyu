@@ -11,19 +11,18 @@ import 'edit_product_screen.dart';
 import 'order_cart_screen.dart';
 
 /// Product Catalog Screen matching Reference Design:
-/// - Forest Green Header (#006837) with Back, Box icon, Product Catalog title, All Products (N), Barcode trigger, + Add Product, Cart icon with badge (3)
+/// - Forest Green Header (#006837) with Back, Box icon, Product Catalog title, All Products (N), Barcode trigger, + Add Product, Cart icon with badge
 /// - Integrated Search & Filter row with in-field barcode trigger
-/// - Category Chips: All (125), Mobile Accessories, Chargers, Cables, Stationery, Others
-/// - Rich Product Card:
-///   - Hero image with In Stock badge & Wishlist Heart icon
-///   - Code badge (TC001), Product Name, Short Description/Specs
+/// - Category Chips: All (340), MARKET, NECKBAND, CHARGER, CABLES, etc.
+/// - Compact Product Cards in smooth scrolling ListView:
+///   - Compact image with In Stock badge & Wishlist Heart icon
+///   - Brand badge (edenic, boAt), Product Name, Short Description/Specs
 ///   - Meta rows: Category, Brand, Unit, HSN/SAC
-///   - Packaging Metrics Strip: STD. P KG. 20 | QTY. 10
-///   - 3-Item Pricing Row: Margin 10.00 | SLPrice ₹77.00 | Price (Incl. GST) ₹67.00
-///   - Quantity input with clear button & solid green [ 🛒 Add to Cart ] button
-///   - Product Description card
-///   - Pager Navigation: < 1 of 125 >
-/// - Bottom Navigation Bar (Ledger | Bill | Catalog [Active] | More)
+///   - Packaging Metrics Strip: STD. P KG. 5 | QTY. 9
+///   - ONLY SL-Price Banner: green tag icon + SL-Price + ₹150.00 in bold green (NO Margin, NO regular price!)
+///   - Quantity Selector [-] 1 [+] with solid green [ 🛒 Add to Cart ] button
+///   - Compact expandable Product Description card
+/// - 5-Tab Bottom Navigation Bar (Ledger | Bill | Order | Catalog [Active] | More)
 class CatalogScreen extends StatefulWidget {
   final ValueChanged<int>? onNavigate;
 
@@ -33,20 +32,33 @@ class CatalogScreen extends StatefulWidget {
   State<CatalogScreen> createState() => _CatalogScreenState();
 }
 
+enum CatalogStockFilter { all, inStock, outOfStock }
+enum CatalogSortOrder { none, nameAsc, priceAsc, priceDesc }
+
 class _CatalogScreenState extends State<CatalogScreen> {
   final TextEditingController _searchCtrl = TextEditingController();
-  final TextEditingController _qtyCtrl = TextEditingController(text: '1');
   final NumberFormat _money = NumberFormat('#,##0.00');
 
   String _selectedCategory = 'All';
   int _currentIndex = 0;
-  bool _isFavorite = false;
-  late PageController _pageController;
+  CatalogStockFilter _stockFilter = CatalogStockFilter.all;
+  CatalogSortOrder _sortOrder = CatalogSortOrder.none;
+
+  final Map<String, int> _quantities = {};
+  final Set<String> _favorites = {};
+  final Set<String> _expandedDescriptions = {};
+
+  int _getQty(String code) => _quantities[code] ?? 1;
+
+  void _changeQty(String code, int delta, int maxStock) {
+    final current = _getQty(code);
+    final next = (current + delta).clamp(1, maxStock > 0 ? maxStock : 9999);
+    setState(() => _quantities[code] = next);
+  }
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: _currentIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<CatalogProvider>();
       if (provider.products.isEmpty) {
@@ -58,8 +70,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   void dispose() {
     _searchCtrl.dispose();
-    _qtyCtrl.dispose();
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -67,11 +77,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     setState(() {
       _selectedCategory = cat;
       _currentIndex = 0;
-      _qtyCtrl.text = '1';
     });
-    if (_pageController.hasClients) {
-      _pageController.jumpToPage(0);
-    }
   }
 
   void _openBarcodeDialog() {
@@ -98,14 +104,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
           onSubmitted: (val) {
             Navigator.pop(ctx);
             if (val.trim().isNotEmpty) {
-              _searchCtrl.text = val.trim();
               setState(() {
+                _searchCtrl.text = val.trim();
                 _currentIndex = 0;
-                _qtyCtrl.text = '1';
               });
-              if (_pageController.hasClients) {
-                _pageController.jumpToPage(0);
-              }
             }
           },
         ),
@@ -119,14 +121,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               if (ctrl.text.trim().isNotEmpty) {
-                _searchCtrl.text = ctrl.text.trim();
                 setState(() {
+                  _searchCtrl.text = ctrl.text.trim();
                   _currentIndex = 0;
-                  _qtyCtrl.text = '1';
                 });
-                if (_pageController.hasClients) {
-                  _pageController.jumpToPage(0);
-                }
               }
             },
             child: const Text('Search'),
@@ -136,72 +134,95 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  void _openFilterSheet(BuildContext context, CatalogProvider provider) {
+  void _showAddProductDialog() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const EditProductScreen(isNew: true),
+      ),
+    );
+  }
+
+  void _openFilterSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) => Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Filter Catalog', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              const Text('Filter by Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('All Categories'),
-                    selected: _selectedCategory.startsWith('All') || _selectedCategory.isEmpty,
-                    onSelected: (val) {
-                      _onCategorySelected('All');
-                      Navigator.pop(ctx);
-                    },
-                  ),
-                  ...provider.categories.map((c) => ChoiceChip(
-                        label: Text(c),
-                        selected: _selectedCategory.toLowerCase() == c.toLowerCase(),
-                        onSelected: (val) {
-                          _onCategorySelected(val ? c : 'All');
-                          Navigator.pop(ctx);
-                        },
-                      )),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF006837),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Close'),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Filter Products', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                  ],
                 ),
-              ),
-            ],
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.all_inclusive, color: Color(0xFF006837)),
+                  title: const Text('All Products'),
+                  trailing: _stockFilter == CatalogStockFilter.all ? const Icon(Icons.check, color: Color(0xFF006837)) : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _stockFilter = CatalogStockFilter.all);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.check_circle_outline, color: Color(0xFF006837)),
+                  title: const Text('In Stock Only'),
+                  trailing: _stockFilter == CatalogStockFilter.inStock ? const Icon(Icons.check, color: Color(0xFF006837)) : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _stockFilter = CatalogStockFilter.inStock);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.highlight_off, color: Color(0xFFDC2626)),
+                  title: const Text('Out of Stock Only'),
+                  trailing: _stockFilter == CatalogStockFilter.outOfStock ? const Icon(Icons.check, color: Color(0xFF006837)) : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _stockFilter = CatalogStockFilter.outOfStock);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.sort_by_alpha, color: Color(0xFF1E293B)),
+                  title: const Text('Sort by Name (A-Z)'),
+                  trailing: _sortOrder == CatalogSortOrder.nameAsc ? const Icon(Icons.check, color: Color(0xFF006837)) : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _sortOrder = CatalogSortOrder.nameAsc);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.currency_rupee, color: Color(0xFF1E293B)),
+                  title: const Text('Sort by SL-Price (Low to High)'),
+                  trailing: _sortOrder == CatalogSortOrder.priceAsc ? const Icon(Icons.check, color: Color(0xFF006837)) : null,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _sortOrder = CatalogSortOrder.priceAsc);
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  void _showAddProductDialog() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const EditProductScreen()),
-    );
-  }
-
-  void _addToCart(Product product, CatalogProvider provider) {
-    final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 1;
+  void _addToCart(Product product, CatalogProvider provider, [int? customQty]) {
+    if (provider.isItemInCart(product.code)) {
+      showAppSnackBar(context, '${product.desc} is already in Cart');
+      return;
+    }
+    final qty = customQty ?? (_quantities[product.code] ?? 1);
     if (qty <= 0) {
       showAppSnackBar(context, 'Please enter a valid quantity', isError: true);
       return;
@@ -219,6 +240,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
     final provider = context.watch<CatalogProvider>();
     final allProducts = provider.products;
 
+    if (allProducts.isEmpty && provider.status != LoadStatus.loading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && provider.products.isEmpty && provider.status != LoadStatus.loading) {
+          provider.loadProducts();
+        }
+      });
+    }
+
     // Filter by search & category
     final query = _searchCtrl.text.toLowerCase().trim();
     final filtered = allProducts.where((p) {
@@ -230,11 +259,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
             (p.brand != null && p.brand!.toLowerCase().contains(query));
         if (!matches) return false;
       }
-      if (_selectedCategory.startsWith('All') || _selectedCategory.isEmpty) {
-        return true;
+      if (!_selectedCategory.startsWith('All') && _selectedCategory.isNotEmpty) {
+        if (p.category.toLowerCase() != _selectedCategory.toLowerCase()) return false;
       }
-      return p.category.toLowerCase() == _selectedCategory.toLowerCase();
+      if (_stockFilter == CatalogStockFilter.inStock && p.stock <= 0) return false;
+      if (_stockFilter == CatalogStockFilter.outOfStock && p.stock > 0) return false;
+      return true;
     }).toList();
+
+    if (_sortOrder == CatalogSortOrder.nameAsc) {
+      filtered.sort((a, b) => a.desc.toLowerCase().compareTo(b.desc.toLowerCase()));
+    } else if (_sortOrder == CatalogSortOrder.priceAsc) {
+      filtered.sort((a, b) => a.slPrice.compareTo(b.slPrice));
+    } else if (_sortOrder == CatalogSortOrder.priceDesc) {
+      filtered.sort((a, b) => b.slPrice.compareTo(a.slPrice));
+    }
 
     final totalItems = filtered.length;
     if (_currentIndex >= totalItems && totalItems > 0) {
@@ -248,11 +287,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
       }
     }
     if (dynamicCategories.length == 1) {
-      dynamicCategories.addAll(['Mobile Accessories', 'Chargers', 'Cables', 'Stationery', 'Others']);
+      dynamicCategories.addAll(['MARKET', 'NECKBAND', 'CHARGER', 'CABLES', 'OTHERS']);
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         top: false,
         child: Column(
@@ -292,7 +331,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             ),
                             child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 19),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,13 +339,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               children: [
                                 const Text(
                                   'Product Catalog',
-                                  style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w800, color: Colors.white),
+                                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.2),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  'Product ${_currentIndex + 1} of $totalItems',
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                                  totalItems > 0 ? 'All Products ($totalItems)' : (allProducts.isNotEmpty ? 'All Products (${allProducts.length})' : 'All Products'),
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white70),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -316,10 +355,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
                           // Barcode Scanner Icon in Header
                           IconButton(
-                            icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 22),
+                            icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 21),
                             tooltip: 'Scan Barcode',
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                            constraints: const BoxConstraints(minWidth: 30, minHeight: 32),
                             onPressed: _openBarcodeDialog,
                           ),
 
@@ -328,8 +367,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             onTap: _showAddProductDialog,
                             borderRadius: BorderRadius.circular(18),
                             child: Container(
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              height: 30,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(18),
@@ -424,11 +463,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                       onChanged: (v) {
                                         setState(() {
                                           _currentIndex = 0;
-                                          _qtyCtrl.text = '1';
                                         });
-                                        if (_pageController.hasClients) {
-                                          _pageController.jumpToPage(0);
-                                        }
                                       },
                                       style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A)),
                                       decoration: const InputDecoration(
@@ -453,7 +488,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           ),
                           const SizedBox(width: 8),
                           InkWell(
-                            onTap: () => _openFilterSheet(context, provider),
+                            onTap: () => _openFilterSheet(context),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(
                               height: 38,
@@ -535,29 +570,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
 
             // =========================================================================
-            // 3. MAIN PRODUCT DETAILS CARD (Vertical Reel-style Paging)
+            // 3. MAIN COMPACT PRODUCT LIST (Smooth Vertical Scrollable List)
             // =========================================================================
             Expanded(
               child: totalItems == 0
-                  ? _buildEmptyState()
-                  : PageView.builder(
-                      controller: _pageController,
-                      scrollDirection: Axis.vertical,
-                      physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
+                  ? _buildEmptyState(provider, allProducts.isEmpty)
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
                       itemCount: totalItems,
-                      onPageChanged: (idx) {
-                        setState(() {
-                          _currentIndex = idx;
-                          _qtyCtrl.text = '1';
-                        });
-                      },
                       itemBuilder: (ctx, idx) {
                         return Padding(
-                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-                          child: SingleChildScrollView(
-                            physics: const ClampingScrollPhysics(),
-                            child: _buildProductCard(context, filtered[idx], totalItems, provider),
-                          ),
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildProductCard(context, filtered[idx], totalItems, provider, idx),
                         );
                       },
                     ),
@@ -566,7 +590,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         ),
       ),
       bottomNavigationBar: AppBottomNav(
-        currentIndex: 2,
+        currentIndex: 3,
         onTap: widget.onNavigate ?? (tab) => AppNavigation.toTab(context, tab),
       ),
     );
@@ -577,9 +601,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
     Product item,
     int totalItems,
     CatalogProvider provider,
+    int index,
   ) {
-    final marginVal = item.marginAmount.toStringAsFixed(2);
     final inStock = item.stock > 0;
+    final isFav = _favorites.contains(item.code);
+    final isExpanded = _expandedDescriptions.contains(item.code);
+    final qty = _getQty(item.code);
 
     return Container(
       decoration: BoxDecoration(
@@ -587,14 +614,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -602,10 +629,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product Image
+              // Product Image (Compact 110x110)
               Container(
-                width: 135,
-                height: 145,
+                width: 110,
+                height: 115,
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(12),
@@ -613,16 +640,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Center(
-                    child: Transform.scale(
-                      scale: 1.25,
-                      child: const _ChargerIllustration(),
-                    ),
-                  ),
+                  child: _ProductThumbnail(brand: item.brand ?? item.code, isDark: index % 2 == 1),
                 ),
               ),
 
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
 
               // Product Info & Meta
               Expanded(
@@ -634,7 +656,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: inStock ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
                             borderRadius: BorderRadius.circular(6),
@@ -647,15 +669,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             children: [
                               Icon(
                                 Icons.inventory_2_outlined,
-                                size: 12,
+                                size: 11,
                                 color: inStock ? const Color(0xFF15803D) : const Color(0xFFDC2626),
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 3),
                               Text(
                                 inStock ? 'In Stock' : 'Out of Stock',
                                 style: TextStyle(
                                   color: inStock ? const Color(0xFF15803D) : const Color(0xFFDC2626),
-                                  fontSize: 11,
+                                  fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -665,78 +687,86 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
                         // Wishlist Favorite Heart
                         InkWell(
-                          onTap: () => setState(() => _isFavorite = !_isFavorite),
+                          onTap: () {
+                            setState(() {
+                              if (isFav) {
+                                _favorites.remove(item.code);
+                              } else {
+                                _favorites.add(item.code);
+                              }
+                            });
+                          },
                           borderRadius: BorderRadius.circular(16),
                           child: Padding(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(2),
                             child: Icon(
-                              _isFavorite ? Icons.favorite : Icons.favorite_border,
-                              color: _isFavorite ? const Color(0xFFDC2626) : const Color(0xFF1E293B),
-                              size: 22,
+                              isFav ? Icons.favorite : Icons.favorite_border,
+                              color: isFav ? const Color(0xFFDC2626) : const Color(0xFF1E293B),
+                              size: 20,
                             ),
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
 
-                    // Code Badge
+                    // Code / Brand Tag
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFF334155),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        item.code,
+                        (item.brand?.isNotEmpty == true ? item.brand! : item.code).toLowerCase(),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
 
                     // Product Name
                     Text(
                       item.desc,
                       style: const TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF0F172A),
+                        height: 1.2,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                    const SizedBox(height: 2),
+
+                    // Short Description / Spec
+                    Text(
+                      '${item.desc}. Suitable for mobile phones and other devices.',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
                         height: 1.25,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 6),
 
-                    // Short Spec / Voltage
-                    Text(
-                      item.spec.isNotEmpty ? item.spec : 'Standard Specification',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // 4 Meta Rows
-                    _buildMetaRow('Category', item.category.isNotEmpty ? item.category : 'General', hasChevron: true),
-                    const SizedBox(height: 2.5),
-                    _buildMetaRow('Brand', item.brand ?? 'ERD'),
-                    const SizedBox(height: 2.5),
+                    // Meta Rows
+                    _buildMetaRow('Category', item.category.isNotEmpty ? item.category : 'MARKET', hasChevron: true),
+                    const SizedBox(height: 2),
+                    _buildMetaRow('Brand', item.brand ?? 'MARKET'),
+                    const SizedBox(height: 2),
                     _buildMetaRow('Unit', 'PCS'),
-                    const SizedBox(height: 2.5),
+                    const SizedBox(height: 2),
                     _buildMetaRow('HSN/SAC', '8504'),
                   ],
                 ),
@@ -744,14 +774,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // ── Section 2: Metrics Strip (STD. P KG. 20 | QTY. 10) ──
+          // ── Section 2: Metrics Strip (STD. P KG. 5 | QTY. 9) ──
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
             decoration: BoxDecoration(
               color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFDCFCE7)),
             ),
             child: Row(
@@ -761,18 +791,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1E293B), size: 22),
-                      const SizedBox(width: 8),
+                      const Icon(Icons.shopping_bag_outlined, color: Color(0xFF1E293B), size: 18),
+                      const SizedBox(width: 6),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'STD. P KG.',
-                            style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 8.5, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            '${item.pkg > 0 ? item.pkg : 20}',
-                            style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                            '${item.pkg > 0 ? item.pkg : 5}',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                           ),
                         ],
                       ),
@@ -780,25 +810,25 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ),
                 ),
 
-                Container(width: 1, height: 32, color: const Color(0xFFCBD5E1)),
+                Container(width: 1, height: 26, color: const Color(0xFFCBD5E1)),
 
                 // QTY.
                 Expanded(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.inventory_2_outlined, color: Color(0xFF15803D), size: 22),
-                      const SizedBox(width: 8),
+                      const Icon(Icons.inventory_2_outlined, color: Color(0xFF15803D), size: 18),
+                      const SizedBox(width: 6),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             'QTY.',
-                            style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                            style: TextStyle(fontSize: 8.5, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            '${item.stock > 0 ? item.stock : 10}',
-                            style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w900, color: Color(0xFF15803D)),
+                            '${item.stock > 0 ? item.stock : 9}',
+                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF15803D)),
                           ),
                         ],
                       ),
@@ -809,116 +839,97 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // ── Section 3: Pricing Row (Margin 10.00 | SLPrice ₹77.00 | Price (Incl. GST) ₹67.00) ──
-          Row(
-            children: [
-              // Margin
-              Expanded(
-                child: Column(
+          // ── Section 3: Pricing Banner (ONLY SL-Price Visible!) ──
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFDCFCE7)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.local_offer_outlined, color: Color(0xFF16A34A), size: 20),
+                const SizedBox(width: 8),
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.trending_up, size: 16, color: Color(0xFF334155)),
-                        SizedBox(width: 4),
-                        Text('Margin', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
-                      ],
+                    const Text(
+                      'SL-Price',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF15803D),
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      marginVal,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                    ),
-                  ],
-                ),
-              ),
-
-              // SLPrice
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.savings_outlined, size: 16, color: Color(0xFF15803D)),
-                        SizedBox(width: 4),
-                        Text('SLPrice', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
                     Text(
                       '₹${_money.format(item.slPrice)}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF15803D)),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF16A34A),
+                        letterSpacing: 0.2,
+                      ),
                     ),
                   ],
                 ),
-              ),
-
-              // Price (Incl. GST)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.local_offer_outlined, size: 16, color: Color(0xFF1D4ED8)),
-                        SizedBox(width: 4),
-                        Text('Price\n(Incl. GST)', style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600, height: 1)),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '₹${_money.format(item.purchase)}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
           // ── Section 4: Quantity & Add to Cart Row ──
           Row(
             children: [
               const Text(
                 'Quantity',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
 
-              // Quantity Input Box with Clear Button
+              // Interactive Quantity Pill [-] QTY [+]
               Container(
-                width: 95,
-                height: 42,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _qtyCtrl,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                    InkWell(
+                      onTap: () => _changeQty(item.code, -1, item.stock),
+                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        child: Icon(Icons.remove, size: 16, color: Color(0xFF475569)),
+                      ),
+                    ),
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 28),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$qty',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
                         ),
                       ),
                     ),
                     InkWell(
-                      onTap: () => setState(() => _qtyCtrl.clear()),
+                      onTap: () => _changeQty(item.code, 1, item.stock),
+                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
                       child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 6),
-                        child: Icon(Icons.cancel, size: 16, color: Color(0xFF94A3B8)),
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        child: Icon(Icons.add, size: 16, color: Color(0xFF475569)),
                       ),
                     ),
                   ],
@@ -927,62 +938,99 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
               const SizedBox(width: 10),
 
-              // Solid Forest Green [ 🛒 Add to Cart ] Button
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _addToCart(item, provider),
-                  icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-                  label: const Text(
-                    'Add to Cart',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF006837),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    minimumSize: const Size(double.infinity, 42),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ),
+              // Add to Cart Button (Disabled once added)
+              Builder(builder: (_) {
+                final isInCart = provider.isItemInCart(item.code);
+                return Expanded(
+                  child: isInCart
+                      ? ElevatedButton.icon(
+                          onPressed: null, // Dobara click nahi hoga
+                          icon: const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+                          label: const Text(
+                            'Added in Cart',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            disabledBackgroundColor: const Color(0xFF16A34A),
+                            disabledForegroundColor: Colors.white,
+                            elevation: 0,
+                            minimumSize: const Size(double.infinity, 38),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        )
+                      : ElevatedButton.icon(
+                          onPressed: () => _addToCart(item, provider, qty),
+                          icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+                          label: const Text(
+                            'Add to Cart',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF006837),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            minimumSize: const Size(double.infinity, 38),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                        ),
+                );
+              }),
             ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // ── Section 5: Product Description Card ──
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.description_outlined, size: 16, color: Color(0xFF475569)),
-                        SizedBox(width: 6),
-                        Text(
-                          'Product Description',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
-                        ),
-                      ],
-                    ),
-                    Icon(Icons.chevron_right, size: 16, color: Color(0xFF64748B)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${item.desc}. ${item.spec.isNotEmpty ? "${item.spec}. " : ""}Suitable for mobile phones and other devices.',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.35),
-                ),
-              ],
+          // ── Section 5: Product Description Card (Expandable) ──
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedDescriptions.remove(item.code);
+                } else {
+                  _expandedDescriptions.add(item.code);
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.description_outlined, size: 15, color: Color(0xFF475569)),
+                          SizedBox(width: 6),
+                          Text(
+                            'Product Description',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                          ),
+                        ],
+                      ),
+                      Icon(
+                        isExpanded ? Icons.keyboard_arrow_up : Icons.chevron_right,
+                        size: 16,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item.desc}. ${item.spec.isNotEmpty ? "${item.spec}. " : ""}Suitable for mobile phones and other devices.',
+                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B), height: 1.3),
+                    maxLines: isExpanded ? null : 2,
+                    overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1019,7 +1067,60 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(CatalogProvider provider, bool isTotalEmpty) {
+    if (provider.status == LoadStatus.loading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Color(0xFF006837)),
+            SizedBox(height: 14),
+            Text(
+              'Loading products from catalog...',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (isTotalEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 54, color: Color(0xFF94A3B8)),
+              const SizedBox(height: 12),
+              const Text(
+                'No products loaded yet',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Tap below to reload products from the database',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF006837),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Reload Products', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () => provider.loadProducts(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -1037,6 +1138,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
               onPressed: () {
                 _searchCtrl.clear();
                 _onCategorySelected('All');
+                setState(() {
+                  _stockFilter = CatalogStockFilter.all;
+                  _sortOrder = CatalogSortOrder.none;
+                });
               },
               child: const Text('Reset Filters', style: TextStyle(color: Color(0xFF006837), fontWeight: FontWeight.bold)),
             ),
@@ -1047,119 +1152,81 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 }
 
-/// ERD Charger Vector Illustration matching the reference photo
-class _ChargerIllustration extends StatelessWidget {
-  const _ChargerIllustration();
+/// Clean Vector Thumbnail matching Reference Image
+class _ProductThumbnail extends StatelessWidget {
+  final String brand;
+  final bool isDark;
+
+  const _ProductThumbnail({required this.brand, this.isDark = false});
 
   @override
   Widget build(BuildContext context) {
+    final bg = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final fg = isDark ? Colors.white : const Color(0xFF0F172A);
+
     return Center(
       child: SizedBox(
-        width: 100,
-        height: 100,
+        width: 80,
+        height: 80,
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Metal AC Prongs
+            // Metal Prongs
             Positioned(
-              top: 10,
-              left: 36,
+              top: 4,
+              left: 28,
               child: Container(
-                width: 7,
-                height: 18,
+                width: 6,
+                height: 14,
                 decoration: BoxDecoration(
                   color: const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(2),
                   border: Border.all(color: const Color(0xFF94A3B8), width: 1),
                 ),
-                child: Center(
-                  child: Container(
-                    width: 3,
-                    height: 3,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF64748B),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
               ),
             ),
             Positioned(
-              top: 10,
-              left: 56,
+              top: 4,
+              left: 46,
               child: Container(
-                width: 7,
-                height: 18,
+                width: 6,
+                height: 14,
                 decoration: BoxDecoration(
                   color: const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(2),
                   border: Border.all(color: const Color(0xFF94A3B8), width: 1),
                 ),
-                child: Center(
-                  child: Container(
-                    width: 3,
-                    height: 3,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF64748B),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
               ),
             ),
-
-            // Main Charger Body Block
+            // Body
             Positioned(
-              top: 24,
+              top: 16,
               child: Container(
-                width: 72,
-                height: 68,
+                width: 58,
+                height: 56,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                  color: bg,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(2, 4),
+                      blurRadius: 6,
+                      offset: const Offset(1, 3),
                     ),
                   ],
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Side perspective shade
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 12,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(8),
-                            bottomRight: Radius.circular(8),
-                          ),
-                        ),
-                      ),
+                child: Center(
+                  child: Text(
+                    brand.isNotEmpty ? brand.toUpperCase() : 'ERD',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: fg,
+                      letterSpacing: 0.5,
                     ),
-
-                    // "ERD" Logo Printed on Face
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8, right: 6),
-                      child: Text(
-                        'ERD',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

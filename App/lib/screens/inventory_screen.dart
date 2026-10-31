@@ -602,7 +602,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
       ),
       bottomNavigationBar: AppBottomNav(
-        currentIndex: 2,
+        currentIndex: 3,
         onTap: widget.onNavigate ?? (tab) => AppNavigation.toTab(context, tab),
       ),
     );

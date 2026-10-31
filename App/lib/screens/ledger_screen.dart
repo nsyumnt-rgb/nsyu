@@ -7,7 +7,6 @@ import '../models/saved_bill.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../widgets/app_bottom_nav.dart';
-import '../widgets/more_menu_sheet.dart';
 import 'customer_ledger_detail_screen.dart';
 import 'customer_picker_screen.dart';
 
@@ -345,17 +344,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       bottomNavigationBar: AppBottomNav(
         currentIndex: 0,
         navMode: BottomNavMode.ledger,
-        onTap: (tab) {
-          if (tab == 0) {
-            widget.onNavigate(0);
-          } else if (tab == 1) {
-            widget.onNavigate(1); // Switch to Bills tab
-          } else if (tab == 2) {
-            widget.onNavigate(2); // Switch to Catalog tab
-          } else if (tab == 3) {
-            MoreMenuSheet.show(context, onNavigate: widget.onNavigate, navMode: BottomNavMode.ledger);
-          }
-        },
+        onTap: widget.onNavigate,
       ),
     );
   }
