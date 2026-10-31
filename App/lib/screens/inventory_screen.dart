@@ -112,30 +112,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
-  void _goToPrevProduct(int total) {
-    if (total <= 1) return;
-    if (_currentIndex > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeInOutCubic,
-      );
-    } else {
-      _pageController.jumpToPage(total - 1);
-    }
-  }
-
-  void _goToNextProduct(int total) {
-    if (total <= 1) return;
-    if (_currentIndex < total - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeInOutCubic,
-      );
-    } else {
-      _pageController.jumpToPage(0);
-    }
-  }
-
   void _showAddProductDialog() async {
     final newItem = await Navigator.push<CatalogItem>(
       context,
@@ -426,8 +402,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  'All Products (${_catalog.length})',
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white70),
+                                  'Product ${_currentIndex + 1} of $totalItems',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -599,26 +575,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ? _buildSpreadsheetTable(filtered)
                   : (totalItems == 0
                       ? _buildEmptyState()
-                      : Column(
-                          children: [
-                            Expanded(
-                              child: PageView.builder(
-                                controller: _pageController,
-                                itemCount: totalItems,
-                                onPageChanged: (idx) {
-                                  setState(() {
-                                    _currentIndex = idx;
-                                    _selectedThumbnail = 0;
-                                    _qtyCtrl.text = '1';
-                                  });
-                                },
-                                itemBuilder: (ctx, idx) {
-                                  return _buildProductCatalogCard(filtered[idx]);
-                                },
+                      : PageView.builder(
+                          controller: _pageController,
+                          scrollDirection: Axis.vertical,
+                          physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
+                          itemCount: totalItems,
+                          onPageChanged: (idx) {
+                            setState(() {
+                              _currentIndex = idx;
+                              _selectedThumbnail = 0;
+                              _qtyCtrl.text = '1';
+                            });
+                          },
+                          itemBuilder: (ctx, idx) {
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                              child: SingleChildScrollView(
+                                physics: const ClampingScrollPhysics(),
+                                child: _buildProductCatalogCard(filtered[idx]),
                               ),
-                            ),
-                            _buildPagerNavigation(totalItems),
-                          ],
+                            );
+                          },
                         )),
             ),
           ],
@@ -1152,57 +1129,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // PAGER NAVIGATION (<  1 of 125  >)
-  // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildPagerNavigation(int totalItems) {
-    if (totalItems <= 1) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          InkWell(
-            onTap: () => _goToPrevProduct(totalItems),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDCFCE7),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.chevron_left, color: Color(0xFF15803D), size: 22),
-            ),
-          ),
-          const SizedBox(width: 24),
-          Text(
-            '${_currentIndex + 1} of $totalItems',
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF334155),
-            ),
-          ),
-          const SizedBox(width: 24),
-          InkWell(
-            onTap: () => _goToNextProduct(totalItems),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDCFCE7),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.chevron_right, color: Color(0xFF15803D), size: 22),
-            ),
-          ),
-        ],
       ),
     );
   }

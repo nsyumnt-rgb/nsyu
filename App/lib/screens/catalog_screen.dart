@@ -74,30 +74,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }
   }
 
-  void _goToPrevProduct(int total) {
-    if (total <= 1) return;
-    if (_currentIndex > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeInOutCubic,
-      );
-    } else {
-      _pageController.jumpToPage(total - 1);
-    }
-  }
-
-  void _goToNextProduct(int total) {
-    if (total <= 1) return;
-    if (_currentIndex < total - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeInOutCubic,
-      );
-    } else {
-      _pageController.jumpToPage(0);
-    }
-  }
-
   void _openBarcodeDialog() {
     final ctrl = TextEditingController();
     showDialog(
@@ -329,8 +305,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  'All Products (${allProducts.length})',
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.white70),
+                                  'Product ${_currentIndex + 1} of $totalItems',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -559,33 +535,31 @@ class _CatalogScreenState extends State<CatalogScreen> {
             ),
 
             // =========================================================================
-            // 3. MAIN PRODUCT DETAILS CARD
+            // 3. MAIN PRODUCT DETAILS CARD (Vertical Reel-style Paging)
             // =========================================================================
             Expanded(
               child: totalItems == 0
                   ? _buildEmptyState()
-                  : Column(
-                      children: [
-                        Expanded(
-                          child: PageView.builder(
-                            controller: _pageController,
-                            itemCount: totalItems,
-                            onPageChanged: (idx) {
-                              setState(() {
-                                _currentIndex = idx;
-                                _qtyCtrl.text = '1';
-                              });
-                            },
-                            itemBuilder: (ctx, idx) {
-                              return SingleChildScrollView(
-                                padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-                                child: _buildProductCard(context, filtered[idx], totalItems, provider),
-                              );
-                            },
+                  : PageView.builder(
+                      controller: _pageController,
+                      scrollDirection: Axis.vertical,
+                      physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
+                      itemCount: totalItems,
+                      onPageChanged: (idx) {
+                        setState(() {
+                          _currentIndex = idx;
+                          _qtyCtrl.text = '1';
+                        });
+                      },
+                      itemBuilder: (ctx, idx) {
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                          child: SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            child: _buildProductCard(context, filtered[idx], totalItems, provider),
                           ),
-                        ),
-                        _buildPagerNavigation(totalItems),
-                      ],
+                        );
+                      },
                     ),
             ),
           ],
@@ -1009,57 +983,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.35),
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // PAGER NAVIGATION (<  1 of 125  >)
-  // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildPagerNavigation(int totalItems) {
-    if (totalItems <= 1) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          InkWell(
-            onTap: () => _goToPrevProduct(totalItems),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDCFCE7),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.chevron_left, color: Color(0xFF15803D), size: 22),
-            ),
-          ),
-          const SizedBox(width: 24),
-          Text(
-            '${_currentIndex + 1} of $totalItems',
-            style: const TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF334155),
-            ),
-          ),
-          const SizedBox(width: 24),
-          InkWell(
-            onTap: () => _goToNextProduct(totalItems),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDCFCE7),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.chevron_right, color: Color(0xFF15803D), size: 22),
             ),
           ),
         ],
