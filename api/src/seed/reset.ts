@@ -48,6 +48,15 @@ import {
   SalaryPayment,
   EmployeeLedger,
   Notification,
+  Order,
+  OrderItem,
+  OrderStatusHistory,
+  CustomerAccount,
+  CustomerOtp,
+  CustomerRefreshToken,
+  CustomerCart,
+  CustomerCartItem,
+  ShopPortalSettings,
 } from "../models";
 import { DEMO_MARKER_EMAIL } from "./seedData";
 
@@ -73,6 +82,12 @@ export async function resetDemoData(): Promise<void> {
   await sequelize.transaction(async (t) => {
     const employees = await Employee.findAll({ where: { owner_id: ownerId }, transaction: t });
     const employeeIds = employees.map((e) => e.id);
+
+    const shops = await Shop.findAll({ where: { owner_id: ownerId }, transaction: t });
+    const shopIds = shops.map((s) => s.id);
+
+    const customers = await Customer.findAll({ where: { owner_id: ownerId }, transaction: t });
+    const customerIds = customers.map((c) => c.id);
 
     const emiPlans = await EMIPlan.findAll({ where: { owner_id: ownerId }, transaction: t });
     const emiPlanIds = emiPlans.map((p) => p.id);
@@ -117,6 +132,38 @@ export async function resetDemoData(): Promise<void> {
     await Payment.destroy({ where: { owner_id: ownerId }, transaction: t });
     await Sale.destroy({ where: { owner_id: ownerId }, transaction: t });
     await CustomerLedger.destroy({ where: { owner_id: ownerId }, transaction: t });
+    // Customer Portal & Orders
+    const customerAccounts = await CustomerAccount.findAll({ where: { owner_id: ownerId }, transaction: t });
+    const customerAccountIds = customerAccounts.map((ca) => ca.id);
+
+    const carts = customerIds.length
+      ? await CustomerCart.findAll({ where: { customer_id: { [Op.in]: customerIds } }, transaction: t })
+      : [];
+    const cartIds = carts.map((c) => c.id);
+
+    if (cartIds.length) {
+      await CustomerCartItem.destroy({ where: { cart_id: { [Op.in]: cartIds } }, transaction: t });
+    }
+    if (customerIds.length) {
+      await CustomerCart.destroy({ where: { customer_id: { [Op.in]: customerIds } }, transaction: t });
+    }
+    if (customerAccountIds.length) {
+      await CustomerRefreshToken.destroy({ where: { account_id: { [Op.in]: customerAccountIds } }, transaction: t });
+      await CustomerOtp.destroy({ where: { account_id: { [Op.in]: customerAccountIds } }, transaction: t });
+    }
+    if (shopIds.length) {
+      await ShopPortalSettings.destroy({ where: { shop_id: { [Op.in]: shopIds } }, transaction: t });
+    }
+    await CustomerAccount.destroy({ where: { owner_id: ownerId }, transaction: t });
+
+    const orders = await Order.findAll({ where: { owner_id: ownerId }, transaction: t });
+    const orderIds = orders.map((o) => o.id);
+    if (orderIds.length) {
+      await OrderStatusHistory.destroy({ where: { order_id: { [Op.in]: orderIds } }, transaction: t });
+      await OrderItem.destroy({ where: { order_id: { [Op.in]: orderIds } }, transaction: t });
+    }
+    await Order.destroy({ where: { owner_id: ownerId }, transaction: t });
+
     await InvoiceCounter.destroy({ where: { owner_id: ownerId }, transaction: t });
     await Customer.destroy({ where: { owner_id: ownerId }, transaction: t });
 
