@@ -33,8 +33,8 @@ async function start() {
       }
     }
 
-    app.listen(PORT, () => {
-      console.log(`🚀 NSYU Business API running on port ${PORT}`);
+    app.listen(Number(PORT), "0.0.0.0", () => {
+      console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);
     });
   } catch (err) {
     console.error("❌ Unable to start server:", err);

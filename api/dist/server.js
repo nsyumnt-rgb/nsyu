@@ -33,8 +33,8 @@ async function start() {
                 console.error("⚠️  Demo seed failed (server will continue starting):", seedErr);
             }
         }
-        app_1.default.listen(PORT, () => {
-            console.log(`🚀 NSYU Business API running on port ${PORT}`);
+        app_1.default.listen(Number(PORT), "0.0.0.0", () => {
+            console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);
         });
     }
     catch (err) {

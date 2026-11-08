@@ -140,6 +140,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () => setDialogState(() => urlCtrl.text = 'https://nsyu-backend-api.onrender.com/api'),
                       ),
                       ActionChip(
+                        avatar: const Icon(Icons.wifi, size: 14, color: Color(0xFF047857)),
+                        label: const Text('WiFi LAN (10.96.203.24:5000)', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
+                        onPressed: () => setDialogState(() => urlCtrl.text = 'http://10.96.203.24:5000/api'),
+                      ),
+                      ActionChip(
                         label: const Text('localhost:5000', style: TextStyle(fontSize: 10.5)),
                         onPressed: () => setDialogState(() => urlCtrl.text = 'http://localhost:5000/api'),
                       ),
@@ -220,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         });
                         try {
                           final uri = Uri.parse('${urlCtrl.text.trim()}/health');
-                          final res = await http.get(uri).timeout(const Duration(seconds: 4));
+                          final res = await http.get(uri).timeout(const Duration(seconds: 12));
                           if (res.statusCode == 200) {
                             final data = jsonDecode(res.body);
                             String clientMsg = '';

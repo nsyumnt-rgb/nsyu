@@ -33,7 +33,7 @@ class SupabaseService {
   Future<Map<String, dynamic>> checkHealth() async {
     try {
       final url = Uri.parse('${SupabaseConfig.apiUrl}/health');
-      final res = await http.get(url).timeout(const Duration(seconds: 5));
+      final res = await http.get(url).timeout(const Duration(seconds: 12));
       if (res.statusCode == 200) {
         return jsonDecode(res.body) as Map<String, dynamic>;
       }

@@ -67,12 +67,7 @@ class SupabaseConfig {
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final savedApiUrl = prefs.getString(_prefApiUrlKey);
-    // If the saved URL is empty, localhost, or android emulator 10.0.2.2,
-    // automatically migrate to the 24/7 live cloud backend URL on Render!
-    if (savedApiUrl == null ||
-        savedApiUrl.isEmpty ||
-        savedApiUrl.contains('localhost') ||
-        savedApiUrl.contains('10.0.2.2')) {
+    if (savedApiUrl == null || savedApiUrl.isEmpty) {
       _apiUrl = liveCloudApiUrl;
       await prefs.setString(_prefApiUrlKey, _apiUrl);
     } else {
