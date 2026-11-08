@@ -5,12 +5,14 @@ import 'config/supabase_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/bills_provider.dart';
 import 'providers/catalog_provider.dart';
+import 'providers/customer_portal_provider.dart';
 import 'providers/customer_provider.dart';
 import 'providers/orders_provider.dart';
 import 'providers/payments_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/visibility_provider.dart';
 import 'screens/login_screen.dart';
+import 'screens/portal/customer_portal_shell.dart';
 import 'screens/root_shell.dart';
 import 'theme/app_theme.dart';
 
@@ -33,6 +35,7 @@ class NsyuApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CustomerProvider()),
         ChangeNotifierProvider(create: (_) => PaymentsProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => CustomerPortalProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => VisibilityProvider()),
       ],
@@ -74,6 +77,10 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     if (auth.isLoggedIn) {
+      if (auth.isCustomer) {
+        return const CustomerPortalShell();
+      }
+
       final visibility = context.read<VisibilityProvider>();
       if (!visibility.loaded) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,8 +89,9 @@ class _AuthGateState extends State<AuthGate> {
           }
         });
       }
+      return const RootShell();
     }
 
-    return auth.isLoggedIn ? const RootShell() : const LoginScreen();
+    return const LoginScreen();
   }
 }

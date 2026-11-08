@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { listCustomers, createCustomer } from "../api/customers";
+import { listCustomers, createCustomer, updateCustomerPortalAccess } from "../api/customers";
 import { apiErrorMessage } from "../api/client";
 import { usePermission } from "../hooks/usePermission";
 import RequireModule from "../components/RequireModule";
@@ -42,6 +42,16 @@ function CustomersInner() {
       setError(apiErrorMessage(err, "Could not create customer"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleTogglePortal(id: number) {
+    try {
+      await updateCustomerPortalAccess(id, true);
+      alert("Portal access enabled successfully! Customer can now log in using Phone + OTP.");
+      load();
+    } catch (err) {
+      alert(apiErrorMessage(err, "Could not enable portal access"));
     }
   }
 
@@ -182,6 +192,14 @@ function CustomersInner() {
                       </span>
                     </td>
                     <td className="text-right space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePortal(c.id)}
+                        className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"
+                        title="Enable Customer Portal login for this customer"
+                      >
+                        Portal Access
+                      </button>
                       <Link
                         to={`/app/customers/${c.id}`}
                         className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"

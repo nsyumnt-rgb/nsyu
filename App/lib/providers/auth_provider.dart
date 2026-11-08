@@ -4,10 +4,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/supabase_config.dart';
 import '../models/business_profile.dart';
 import '../services/supabase_service.dart';
+import '../services/customer_portal_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   static const _mobileKey = 'nsyu_owner_mobile';
   static const _loggedInKey = 'nsyu_logged_in';
+  static const _isCustomerKey = 'nsyu_is_customer';
   static const _userNameKey = 'nsyu_user_name';
   static const _userEmailKey = 'nsyu_user_email';
   static const _roleNameKey = 'nsyu_role_name';
@@ -21,6 +23,7 @@ class AuthProvider extends ChangeNotifier {
 
   String? _registeredMobile;
   bool _isLoggedIn = false;
+  bool _isCustomer = false;
   bool loaded = false;
 
   String _userName = '';
@@ -39,6 +42,7 @@ class AuthProvider extends ChangeNotifier {
 
   String? get registeredMobile => _registeredMobile;
   bool get isLoggedIn => _isLoggedIn;
+  bool get isCustomer => _isCustomer;
   bool get hasAccount => _registeredMobile != null && _registeredMobile!.isNotEmpty;
   String get userName => _userName;
   String get userEmail => _userEmail;
@@ -78,6 +82,7 @@ class AuthProvider extends ChangeNotifier {
     _registeredMobile = prefs.getString(_mobileKey);
 
     _isLoggedIn = prefs.getBool(_loggedInKey) ?? false;
+    _isCustomer = prefs.getBool(_isCustomerKey) ?? false;
     _userName = prefs.getString(_userNameKey) ?? '';
     _userEmail = prefs.getString(_userEmailKey) ?? '';
     _roleName = prefs.getString(_roleNameKey) ?? 'Owner';
@@ -92,7 +97,7 @@ class AuthProvider extends ChangeNotifier {
     loaded = true;
     notifyListeners();
 
-    if (_isLoggedIn) {
+    if (_isLoggedIn && !_isCustomer) {
       refreshProfile();
     }
   }
@@ -230,9 +235,11 @@ class AuthProvider extends ChangeNotifier {
     if (token != null) {
       final prefs = await SharedPreferences.getInstance();
       _isLoggedIn = true;
+      _isCustomer = false;
       _userEmail = trimmed;
       await prefs.setString(_userEmailKey, _userEmail);
       await prefs.setBool(_loggedInKey, true);
+      await prefs.setBool(_isCustomerKey, false);
       await refreshProfile();
       notifyListeners();
       return true;
@@ -240,10 +247,44 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
+  /// Customer Portal Phone + OTP Login
+  Future<bool> loginAsCustomer({
+    required String phone,
+    required String otp,
+    String? shopCode,
+  }) async {
+    try {
+      final res = await CustomerPortalService().verifyOtp(
+        phone: phone,
+        otp: otp,
+        shopCode: shopCode,
+      );
+      final customer = res['customer'] as Map<String, dynamic>?;
+
+      _isLoggedIn = true;
+      _isCustomer = true;
+      _userName = customer?['name']?.toString() ?? 'Customer';
+      _registeredMobile = customer?['phone']?.toString() ?? phone;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_loggedInKey, true);
+      await prefs.setBool(_isCustomerKey, true);
+      await prefs.setString(_userNameKey, _userName);
+      await prefs.setString(_mobileKey, _registeredMobile!);
+
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     _isLoggedIn = false;
+    _isCustomer = false;
     await prefs.setBool(_loggedInKey, false);
+    await prefs.remove(_isCustomerKey);
     await prefs.remove(_userNameKey);
     await prefs.remove(_userEmailKey);
     await prefs.remove(_shopNameKey);
@@ -253,6 +294,7 @@ class AuthProvider extends ChangeNotifier {
     await prefs.remove(_shopEmailKey);
     await prefs.remove(_shopLogoKey);
     await SupabaseConfig.clearAuth();
+    await CustomerPortalService().logout();
     _fieldPermissions.clear();
     _userName = '';
     _userEmail = '';

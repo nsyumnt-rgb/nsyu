@@ -104,7 +104,12 @@ async function assignShopRole(req, res) {
     const [employee, shop, role] = await Promise.all([
         models_1.Employee.findOne({ where: { id: employeeId, owner_id: req.auth.ownerId } }),
         models_1.Shop.findOne({ where: { id: shopId, owner_id: req.auth.ownerId } }),
-        models_1.Role.findOne({ where: { id: roleId, owner_id: req.auth.ownerId } }),
+        models_1.Role.findOne({
+            where: {
+                id: roleId,
+                [sequelize_1.Op.or]: [{ owner_id: req.auth.ownerId }, { owner_id: null }],
+            },
+        }),
     ]);
     if (!employee || !shop || !role) {
         return res.status(404).json({ success: false, message: "Employee, shop or role not found" });

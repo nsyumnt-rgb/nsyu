@@ -43,6 +43,7 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [dateRange] = useState("01 Oct 2026 - 31 Oct 2026");
 
   // Step 2 Form State
@@ -470,6 +471,16 @@ export default function Orders() {
                   <option value="Failed">Failed</option>
                 </select>
 
+                <select
+                  value={sourceFilter}
+                  onChange={(e) => setSourceFilter(e.target.value)}
+                  className="input !py-1.5 text-xs text-slate-700 bg-white"
+                >
+                  <option value="all">All Sources</option>
+                  <option value="customer">Customer Portal</option>
+                  <option value="staff">Staff / Counter</option>
+                </select>
+
                 <div className="flex items-center gap-1.5 border border-border rounded-md px-3 py-1.5 text-xs text-slate-600 bg-slate-50">
                   <span>📅</span>
                   <span className="font-medium">{dateRange}</span>
@@ -484,6 +495,28 @@ export default function Orders() {
                 </button>
               </div>
             </div>
+
+            {/* Pending Customer Orders Notification Banner */}
+            {orders.filter((o) => (o as any).placed_by === "customer" && (o.status === "pending" || o.status === "Pending")).length > 0 && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                  <span className="font-bold">
+                    {orders.filter((o) => (o as any).placed_by === "customer" && (o.status === "pending" || o.status === "Pending")).length} new pending customer portal order(s) waiting for review!
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter("pending");
+                    setSourceFilter("customer");
+                  }}
+                  className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline"
+                >
+                  View Portal Orders &rarr;
+                </button>
+              </div>
+            )}
 
             {/* Orders Table (Exact layout from Image 1) */}
             <div className="card overflow-hidden border border-border bg-white shadow-xs">
@@ -521,7 +554,13 @@ export default function Orders() {
                       </tr>
                     )}
                     {!loading &&
-                      orders.map((ord, idx) => {
+                      orders
+                        .filter((ord) => {
+                          if (sourceFilter === "customer") return (ord as any).placed_by === "customer";
+                          if (sourceFilter === "staff") return (ord as any).placed_by !== "customer";
+                          return true;
+                        })
+                        .map((ord, idx) => {
                         const statusColor =
                           ord.status === "delivered" || ord.status === "Delivered"
                             ? "bg-emerald-100 text-emerald-800 border-emerald-200"
@@ -549,15 +588,22 @@ export default function Orders() {
                             </td>
                             <td className="py-3 px-2 text-slate-400 font-mono">{idx + 1}</td>
                             <td className="py-3 px-3">
-                              <button
-                                onClick={() => {
-                                  setSelectedOrder(ord);
-                                  setStep("view");
-                                }}
-                                className="font-bold text-blue-600 hover:underline"
-                              >
-                                {ord.order_number}
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setSelectedOrder(ord);
+                                    setStep("view");
+                                  }}
+                                  className="font-bold text-blue-600 hover:underline"
+                                >
+                                  {ord.order_number}
+                                </button>
+                                {(ord as any).placed_by === "customer" && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
+                                    Portal
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="py-3 px-3 whitespace-nowrap">
                               <div className="font-medium text-slate-800">

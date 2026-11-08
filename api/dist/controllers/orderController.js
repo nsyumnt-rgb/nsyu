@@ -8,9 +8,22 @@ exports.updateOrderStatus = updateOrderStatus;
 exports.convertOrderToBill = convertOrderToBill;
 const sequelize_1 = require("sequelize");
 const models_1 = require("../models");
+const inventory_1 = require("../utils/inventory");
+const ledger_1 = require("../utils/ledger");
+const invoice_1 = require("../utils/invoice");
 function round2(n) {
     return Math.round(n * 100) / 100;
 }
+const ALLOWED_STATUS_TRANSITIONS = {
+    pending: ["confirmed", "cancelled"],
+    confirmed: ["processing", "cancelled"],
+    processing: ["completed", "converted_to_bill", "delivered", "shipped", "cancelled"],
+    shipped: ["delivered", "completed", "cancelled"],
+    delivered: ["completed"],
+    completed: [],
+    converted_to_bill: [],
+    cancelled: [],
+};
 /**
  * Returns KPI statistics for orders overview matching Image 1
  */
@@ -269,19 +282,16 @@ async function createOrder(req, res) {
     }
 }
 /**
- * 5. Update Order Status – Pending → Processing → Shipped → Delivered (and Cancelled)
+ * 5. Update Order Status – Strictly validated transitions + history + notification.
  */
 async function updateOrderStatus(req, res) {
     const ownerId = req.auth.ownerId;
     const { id } = req.params;
     const { status, remarks, payment_status } = req.body;
-    const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled", "confirmed"];
-    if (!status || !validStatuses.includes(status.toLowerCase())) {
-        return res.status(400).json({
-            success: false,
-            message: `status must be one of: ${validStatuses.join(", ")}`,
-        });
+    if (!status) {
+        return res.status(400).json({ success: false, message: "status is required" });
     }
+    const targetStatus = String(status).toLowerCase().trim();
     try {
         const order = await models_1.Order.findOne({
             where: { id, owner_id: ownerId },
@@ -290,23 +300,48 @@ async function updateOrderStatus(req, res) {
         if (!order) {
             return res.status(404).json({ success: false, message: "Order not found" });
         }
+        const currentStatus = String(order.status).toLowerCase().trim();
+        // Reject duplicate status transition (CP-O06)
+        if (currentStatus === targetStatus) {
+            return res.status(400).json({
+                success: false,
+                message: `Duplicate status transition: order is already in "${order.status}" status`,
+            });
+        }
+        // Validate transition against matrix (section 8.1)
+        const allowedTargets = ALLOWED_STATUS_TRANSITIONS[currentStatus];
+        if (!allowedTargets || !allowedTargets.includes(targetStatus)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid status transition: cannot change status from "${order.status}" to "${status}"`,
+            });
+        }
         const previousStatus = order.status;
-        order.status = status;
+        order.status = targetStatus;
         if (remarks)
             order.remarks = remarks;
         if (payment_status)
             order.payment_status = payment_status;
         await order.save();
-        // Trigger Notification (Step 9)
+        // Record OrderStatusHistory
+        await models_1.OrderStatusHistory.create({
+            order_id: order.id,
+            from_status: String(previousStatus),
+            to_status: targetStatus,
+            changed_by_type: req.auth.isOwner ? "owner" : "employee",
+            changed_by_id: req.auth.isOwner ? req.auth.ownerId : (req.auth.employeeId || req.auth.ownerId),
+            note: remarks || `Status changed to ${targetStatus}`,
+        });
+        // Notify customer
         try {
             await models_1.Notification.create({
                 owner_id: ownerId,
                 shop_id: order.shop_id,
-                recipient_type: "owner",
-                recipient_id: ownerId,
-                type: "general",
-                title: `Order Status Updated: ${order.order_number}`,
-                message: `Order #${order.order_number} transitioned from ${previousStatus} to ${status}. ${remarks || ""}`,
+                recipient_type: "customer",
+                recipient_id: order.customer_id,
+                type: "order_status_changed",
+                title: `Order Status: ${targetStatus}`,
+                message: `Your order #${order.order_number} status has been updated to ${targetStatus}.`,
                 reference_type: "order",
                 reference_id: order.id,
                 is_read: false,
@@ -318,6 +353,7 @@ async function updateOrderStatus(req, res) {
                 { model: models_1.OrderItem, as: "items" },
                 { model: models_1.Customer, as: "customer" },
                 { model: models_1.Shop, as: "shop", attributes: ["id", "name", "address", "phone"] },
+                { model: models_1.OrderStatusHistory, as: "statusHistory" },
             ],
         });
         return res.json({
@@ -331,39 +367,253 @@ async function updateOrderStatus(req, res) {
     }
 }
 /**
- * Validates and locks an order for conversion to a bill.
+ * 6. Convert Order to Bill – Atomic transaction: stock deduction, ledger debit, order status.
+ * CP-B01, CP-B02, CP-B03.
  */
 async function convertOrderToBill(req, res) {
     const ownerId = req.auth.ownerId;
     const { id } = req.params;
-    const { saleId } = req.body;
+    const { saleId, paidAmount = 0, paymentMethod = "cash", notes } = req.body;
     try {
         const order = await models_1.Order.findOne({
             where: { id, owner_id: ownerId },
-            include: [{ model: models_1.OrderItem, as: "items" }, { model: models_1.Customer, as: "customer" }],
+            include: [
+                { model: models_1.OrderItem, as: "items" },
+                { model: models_1.Customer, as: "customer" },
+            ],
         });
         if (!order) {
             return res.status(404).json({ success: false, message: "Order not found" });
         }
-        if (order.status === "converted_to_bill") {
-            return res.status(400).json({
-                success: false,
-                message: "Order already converted to bill! Duplicate bill generation prevented.",
+        // CP-B02: If already converted, return existing bill; create no duplicate
+        if (order.status === "converted_to_bill" || order.converted_sale_id) {
+            const existingBill = await models_1.Sale.findByPk(order.converted_sale_id || 0, {
+                include: [{ model: models_1.SaleItem, as: "items" }, { model: models_1.Payment, as: "payments" }],
+            });
+            return res.json({
+                success: true,
+                message: "Order already converted to bill",
+                data: {
+                    order,
+                    bill: existingBill,
+                },
             });
         }
+        // If saleId was provided directly (linked from billing screen)
         if (saleId) {
+            const existingSale = await models_1.Sale.findOne({ where: { id: saleId, owner_id: ownerId } });
+            if (!existingSale) {
+                return res.status(404).json({ success: false, message: "Linked sale not found" });
+            }
             order.status = "converted_to_bill";
-            order.converted_sale_id = saleId;
+            order.converted_sale_id = existingSale.id;
             await order.save();
+            await models_1.OrderStatusHistory.create({
+                order_id: order.id,
+                from_status: order.status,
+                to_status: "converted_to_bill",
+                changed_by_type: req.auth.isOwner ? "owner" : "employee",
+                changed_by_id: req.auth.isOwner ? req.auth.ownerId : (req.auth.employeeId || req.auth.ownerId),
+                note: `Linked to bill #${existingSale.invoice_number}`,
+            });
+            return res.json({
+                success: true,
+                message: "Order converted to bill",
+                data: { order, bill: existingSale },
+            });
         }
+        // Otherwise, convert order items directly in ONE atomic transaction
+        const actorType = req.auth.isOwner ? "owner" : "employee";
+        const actorId = req.auth.isOwner ? req.auth.ownerId : (req.auth.employeeId || req.auth.ownerId);
+        const shopId = order.shop_id;
+        const items = order.items || [];
+        if (items.length === 0) {
+            return res.status(400).json({ success: false, message: "Cannot convert an order with no items" });
+        }
+        const conversionResult = await models_1.sequelize.transaction(async (t) => {
+            // 1. Re-check stock for every line (CP-B03)
+            const shortLines = [];
+            const stockUpdates = [];
+            for (const item of items) {
+                if (!item.product_id)
+                    continue;
+                const stock = await models_1.ProductStock.findOne({
+                    where: { product_id: item.product_id, shop_id: shopId },
+                    lock: true,
+                    transaction: t,
+                });
+                const currentStock = stock ? Number(stock.current_stock || 0) : 0;
+                if (currentStock < item.quantity) {
+                    shortLines.push(`"${item.product_name}" has only ${currentStock} in stock (${item.quantity} required)`);
+                }
+                else if (stock) {
+                    const product = await models_1.Product.findByPk(item.product_id, { transaction: t });
+                    stockUpdates.push({ product: product, stock, quantity: item.quantity });
+                }
+            }
+            if (shortLines.length > 0) {
+                throw Object.assign(new Error(`Insufficient stock to convert order: ${shortLines.join("; ")}`), {
+                    status: 400,
+                    shortLines,
+                });
+            }
+            // 2. Generate invoice number
+            const invoiceNumber = await (0, invoice_1.nextInvoiceNumber)({ ownerId, shopId, transaction: t });
+            const paid = Math.min(Number(paidAmount) || 0, Number(order.total_amount));
+            const due = round2(Number(order.total_amount) - paid);
+            let saleStatus = "unpaid";
+            if (paid >= Number(order.total_amount) && Number(order.total_amount) > 0)
+                saleStatus = "paid";
+            else if (paid > 0)
+                saleStatus = "partially_paid";
+            // 3. Create Sale header
+            const sale = await models_1.Sale.create({
+                owner_id: ownerId,
+                shop_id: shopId,
+                customer_id: order.customer_id,
+                invoice_number: invoiceNumber,
+                invoice_date: new Date(),
+                subtotal: order.subtotal,
+                discount_amount: order.discount_amount,
+                tax_amount: order.tax_amount,
+                total_amount: order.total_amount,
+                paid_amount: paid,
+                due_amount: due,
+                payment_method: paymentMethod,
+                is_emi: false,
+                status: saleStatus,
+                notes: notes || `Converted from Order #${order.order_number}`,
+                actor_type: actorType,
+                actor_id: actorId,
+            }, { transaction: t });
+            // 4. Create SaleItems and deduct stock via recordStockMovement
+            for (const item of items) {
+                await models_1.SaleItem.create({
+                    sale_id: sale.id,
+                    product_id: item.product_id,
+                    product_name: item.product_name,
+                    sku: item.sku,
+                    quantity: item.quantity,
+                    rate: item.rate,
+                    discount_percent: item.discount_percent,
+                    discount_amount: round2((item.rate * item.quantity * item.discount_percent) / 100),
+                    tax_percent: item.gst_percent || 0,
+                    tax_amount: item.tax_amount || 0,
+                    total_amount: item.amount,
+                }, { transaction: t });
+                if (item.product_id) {
+                    await (0, inventory_1.recordStockMovement)({
+                        ownerId,
+                        shopId,
+                        productId: item.product_id,
+                        type: "sale",
+                        quantity: item.quantity,
+                        actorType,
+                        actorId,
+                        referenceType: "Sale",
+                        referenceId: sale.id,
+                        notes: `Converted from Order ${order.order_number}`,
+                        externalTransaction: t,
+                    });
+                }
+            }
+            // 5. CustomerLedger debit for full bill amount
+            await (0, ledger_1.recordLedgerEntry)({
+                ownerId,
+                shopId,
+                customerId: order.customer_id,
+                entryType: "debit",
+                amount: Number(order.total_amount),
+                referenceType: "Sale",
+                referenceId: sale.id,
+                description: `Sale ${invoiceNumber} (from Order ${order.order_number})`,
+                actorType,
+                actorId,
+                entryDate: sale.invoice_date,
+                externalTransaction: t,
+            });
+            // 6. Payment if money received
+            if (paid > 0) {
+                const payment = await models_1.Payment.create({
+                    owner_id: ownerId,
+                    shop_id: shopId,
+                    customer_id: order.customer_id,
+                    sale_id: sale.id,
+                    type: "sale_payment",
+                    amount: paid,
+                    method: paymentMethod,
+                    payment_date: new Date(),
+                    actor_type: actorType,
+                    actor_id: actorId,
+                }, { transaction: t });
+                await (0, ledger_1.recordLedgerEntry)({
+                    ownerId,
+                    shopId,
+                    customerId: order.customer_id,
+                    entryType: "credit",
+                    amount: paid,
+                    referenceType: "Payment",
+                    referenceId: payment.id,
+                    description: `Payment for ${invoiceNumber}`,
+                    actorType,
+                    actorId,
+                    externalTransaction: t,
+                });
+            }
+            // 7. Update order to converted_to_bill
+            const prevStatus = order.status;
+            order.status = "converted_to_bill";
+            order.converted_sale_id = sale.id;
+            await order.save({ transaction: t });
+            // 8. OrderStatusHistory
+            await models_1.OrderStatusHistory.create({
+                order_id: order.id,
+                from_status: String(prevStatus),
+                to_status: "converted_to_bill",
+                changed_by_type: actorType,
+                changed_by_id: actorId,
+                note: `Converted to Bill #${invoiceNumber}`,
+            }, { transaction: t });
+            // 9. Notifications to customer
+            try {
+                await models_1.Notification.create({
+                    owner_id: ownerId,
+                    shop_id: shopId,
+                    recipient_type: "customer",
+                    recipient_id: order.customer_id,
+                    type: "bill_created",
+                    title: `Bill Generated: ${invoiceNumber}`,
+                    message: `Your order #${order.order_number} has been billed (Invoice #${invoiceNumber}, Total: ₹${order.total_amount}).`,
+                    reference_type: "sale",
+                    reference_id: sale.id,
+                    is_read: false,
+                }, { transaction: t });
+            }
+            catch { }
+            return { order, sale };
+        });
+        const refreshedOrder = await models_1.Order.findByPk(order.id, {
+            include: [
+                { model: models_1.OrderItem, as: "items" },
+                { model: models_1.OrderStatusHistory, as: "statusHistory" },
+            ],
+        });
         return res.json({
             success: true,
-            message: "Order ready for bill conversion",
-            data: order,
+            message: "Order successfully converted to bill",
+            data: {
+                order: refreshedOrder,
+                bill: conversionResult.sale,
+            },
         });
     }
     catch (err) {
-        return res.status(500).json({ success: false, message: err.message || "Failed to convert order" });
+        const statusCode = err.status || 500;
+        return res.status(statusCode).json({
+            success: false,
+            message: err.message || "Failed to convert order",
+            shortLines: err.shortLines,
+        });
     }
 }
 //# sourceMappingURL=orderController.js.map

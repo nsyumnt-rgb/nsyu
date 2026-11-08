@@ -48,6 +48,13 @@ import { Module } from "./Module";
 import { Permission } from "./Permission";
 import { ShopModule } from "./ShopModule";
 import { UserRole } from "./UserRole";
+import { CustomerAccount } from "./CustomerAccount";
+import { CustomerOtp } from "./CustomerOtp";
+import { CustomerRefreshToken } from "./CustomerRefreshToken";
+import { CustomerCart } from "./CustomerCart";
+import { CustomerCartItem } from "./CustomerCartItem";
+import { OrderStatusHistory } from "./OrderStatusHistory";
+import { ShopPortalSettings } from "./ShopPortalSettings";
 
 /* ---------------- Owner ---------------- */
 Owner.hasMany(Shop, { foreignKey: "owner_id", as: "shops" });
@@ -282,6 +289,26 @@ OrderItem.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 
 Order.belongsTo(Sale, { foreignKey: "converted_sale_id", as: "convertedSale" });
 
+/* ---------------- Customer Portal ---------------- */
+Customer.hasOne(CustomerAccount, { foreignKey: "customer_id", as: "account" });
+CustomerAccount.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
+CustomerAccount.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+
+CustomerAccount.hasMany(CustomerRefreshToken, { foreignKey: "account_id", as: "refreshTokens" });
+CustomerRefreshToken.belongsTo(CustomerAccount, { foreignKey: "account_id", as: "account" });
+
+Customer.hasOne(CustomerCart, { foreignKey: "customer_id", as: "cart" });
+CustomerCart.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
+CustomerCart.hasMany(CustomerCartItem, { foreignKey: "cart_id", as: "items" });
+CustomerCartItem.belongsTo(CustomerCart, { foreignKey: "cart_id", as: "cart" });
+CustomerCartItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+
+Order.hasMany(OrderStatusHistory, { foreignKey: "order_id", as: "statusHistory" });
+OrderStatusHistory.belongsTo(Order, { foreignKey: "order_id", as: "order" });
+
+Shop.hasOne(ShopPortalSettings, { foreignKey: "shop_id", as: "portalSettings" });
+ShopPortalSettings.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+
 export {
   sequelize,
   Owner,
@@ -336,4 +363,11 @@ export {
   Permission,
   ShopModule,
   UserRole,
+  CustomerAccount,
+  CustomerOtp,
+  CustomerRefreshToken,
+  CustomerCart,
+  CustomerCartItem,
+  OrderStatusHistory,
+  ShopPortalSettings,
 };

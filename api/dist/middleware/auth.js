@@ -1,9 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticate = authenticate;
+exports.requireCustomer = requireCustomer;
 exports.requireShop = requireShop;
 exports.requireOwner = requireOwner;
 const jwt_1 = require("../utils/jwt");
+const models_1 = require("../models");
 /**
  * Verifies the access token and attaches req.auth.
  * Does NOT check shop selection or permissions — see requireShop()
@@ -18,14 +20,51 @@ function authenticate(req, res, next) {
     }
     const token = header.split(" ")[1];
     try {
-        req.auth = (0, jwt_1.verifyAccessToken)(token);
+        const payload = (0, jwt_1.verifyAccessToken)(token);
+        if (payload.isCustomer) {
+            return res.status(403).json({ success: false, message: "Customer tokens cannot access staff endpoints" });
+        }
+        req.auth = payload;
         return next();
     }
     catch (err) {
         return res.status(401).json({ success: false, message: "Invalid or expired token" });
     }
 }
-const models_1 = require("../models");
+/**
+ * Verifies customer access token, verifies account is Active in DB,
+ * and attaches req.customer.
+ * Rejects staff tokens with 403, and deactivated accounts with 401.
+ */
+async function requireCustomer(req, res, next) {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith("Bearer ")) {
+        return res.status(401).json({ success: false, message: "Authentication required" });
+    }
+    const token = header.split(" ")[1];
+    try {
+        const payload = (0, jwt_1.verifyAccessToken)(token);
+        req.auth = payload;
+        if (!payload.isCustomer || !payload.customerId || !payload.accountId) {
+            return res.status(403).json({ success: false, message: "Staff tokens cannot access customer portal" });
+        }
+        const account = await models_1.CustomerAccount.findByPk(payload.accountId);
+        if (!account || account.status !== "active") {
+            return res.status(401).json({ success: false, message: "Customer account is disabled or inactive" });
+        }
+        req.customer = {
+            customerId: account.customer_id,
+            shopId: account.shop_id,
+            ownerId: account.owner_id,
+            accountId: account.id,
+            phone: account.phone,
+        };
+        return next();
+    }
+    catch (err) {
+        return res.status(401).json({ success: false, message: "Invalid or expired token" });
+    }
+}
 /**
  * Every module route (products, sales, billing...) needs an active
  * shop context. This guarantees req.auth.shopId is present before

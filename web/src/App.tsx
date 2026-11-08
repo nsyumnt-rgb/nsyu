@@ -1,6 +1,8 @@
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import RequireAuth from "./components/RequireAuth";
+import RequireCustomerAuth from "./components/RequireCustomerAuth";
 import DashboardLayout from "./layouts/DashboardLayout";
+import CustomerPortalLayout from "./layouts/CustomerPortalLayout";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -38,6 +40,19 @@ import MovementDetail from "./pages/details/MovementDetail";
 import EmiDetail from "./pages/details/EmiDetail";
 import PayrollDetail from "./pages/details/PayrollDetail";
 
+/* Customer Portal Pages */
+import PortalLogin from "./pages/portal/PortalLogin";
+import PortalHome from "./pages/portal/PortalHome";
+import PortalCatalog from "./pages/portal/PortalCatalog";
+import PortalCart from "./pages/portal/PortalCart";
+import PortalOrders from "./pages/portal/PortalOrders";
+import PortalOrderDetail from "./pages/portal/PortalOrderDetail";
+import PortalBills from "./pages/portal/PortalBills";
+import PortalBillDetail from "./pages/portal/PortalBillDetail";
+import PortalLedger from "./pages/portal/PortalLedger";
+import PortalNotifications from "./pages/portal/PortalNotifications";
+import PortalProfile from "./pages/portal/PortalProfile";
+
 export default function App() {
   return (
     <HashRouter>
@@ -46,9 +61,25 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Everything below requires a session; RequireAuth also
-            resolves /auth/me and redirects employees without an
-            active shop to /select-shop. */}
+        {/* Customer Portal Auth & App Routes */}
+        <Route path="/portal/login" element={<PortalLogin />} />
+        <Route element={<RequireCustomerAuth />}>
+          <Route path="/portal" element={<CustomerPortalLayout />}>
+            <Route index element={<Navigate to="/portal/home" replace />} />
+            <Route path="home" element={<PortalHome />} />
+            <Route path="catalog" element={<PortalCatalog />} />
+            <Route path="cart" element={<PortalCart />} />
+            <Route path="orders" element={<PortalOrders />} />
+            <Route path="orders/:id" element={<PortalOrderDetail />} />
+            <Route path="bills" element={<PortalBills />} />
+            <Route path="bills/:id" element={<PortalBillDetail />} />
+            <Route path="ledger" element={<PortalLedger />} />
+            <Route path="notifications" element={<PortalNotifications />} />
+            <Route path="profile" element={<PortalProfile />} />
+          </Route>
+        </Route>
+
+        {/* Staff/Admin App Routes */}
         <Route element={<RequireAuth />}>
           <Route path="/select-shop" element={<SelectShop />} />
 

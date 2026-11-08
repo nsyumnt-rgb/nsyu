@@ -6,9 +6,15 @@ const permission_1 = require("../middleware/permission");
 const customerController_1 = require("../controllers/customerController");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate, auth_1.requireShop);
+router.get("/portal-requests", (0, permission_1.requirePermission)("customers", "view"), customerController_1.listPortalRequests);
+router.post("/portal-requests/:id/approve", (0, permission_1.requirePermission)("customers", "edit"), customerController_1.approvePortalRequest);
+router.post("/portal-requests/:id/reject", (0, permission_1.requirePermission)("customers", "edit"), customerController_1.rejectPortalRequest);
 router.get("/", (0, permission_1.requirePermission)("customers", "view"), customerController_1.listCustomers);
 router.get("/:customerId", (0, permission_1.requirePermission)("customers", "view"), customerController_1.getCustomer);
 router.post("/", (0, permission_1.requirePermission)("customers", "create"), customerController_1.createCustomer);
 router.put("/:customerId", (0, permission_1.requirePermission)("customers", "edit"), customerController_1.updateCustomer);
+router.post("/:customerId/portal/invite", (0, permission_1.requirePermission)("customers", "edit"), customerController_1.inviteCustomerToPortal);
+router.post("/:customerId/portal/disable", (0, permission_1.requirePermission)("customers", "edit"), customerController_1.disableCustomerPortal);
+router.post("/:customerId/portal/enable", (0, permission_1.requirePermission)("customers", "edit"), customerController_1.enableCustomerPortal);
 exports.default = router;
 //# sourceMappingURL=customerRoutes.js.map

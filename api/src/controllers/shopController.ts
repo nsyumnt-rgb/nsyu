@@ -13,6 +13,7 @@ import {
   Payroll,
   EMIPlan,
   ProductStock,
+  ShopPortalSettings,
 } from "../models";
 import { signAccessToken } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
@@ -269,5 +270,61 @@ export async function switchShop(req: Request, res: Response) {
   await logAudit({ req, module: "shops", action: "switch", entityType: "Shop", entityId: shop.id });
 
   return res.json({ success: true, data: { accessToken, shop } });
+}
+
+export async function getShopPortalSettings(req: Request, res: Response) {
+  try {
+    const shopId = Number(req.params.shopId || req.params.id);
+    const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } });
+    if (!shop) return res.status(404).json({ success: false, message: "Shop not found" });
+
+    let [settings] = await ShopPortalSettings.findOrCreate({
+      where: { shop_id: shop.id },
+      defaults: {
+        shop_id: shop.id,
+        show_stock_qty: false,
+        allow_self_registration: false,
+        allow_orders: true,
+        min_order_value: 0,
+        allow_customer_cancel: true,
+      },
+    });
+
+    return res.json({ success: true, data: settings });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to load portal settings" });
+  }
+}
+
+export async function updateShopPortalSettings(req: Request, res: Response) {
+  try {
+    const shopId = Number(req.params.shopId || req.params.id);
+    const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } });
+    if (!shop) return res.status(404).json({ success: false, message: "Shop not found" });
+
+    let [settings] = await ShopPortalSettings.findOrCreate({
+      where: { shop_id: shop.id },
+      defaults: {
+        shop_id: shop.id,
+        show_stock_qty: false,
+        allow_self_registration: false,
+        allow_orders: true,
+        min_order_value: 0,
+        allow_customer_cancel: true,
+      },
+    });
+
+    const { showStockQty, allowSelfRegistration, allowOrders, minOrderValue, allowCustomerCancel } = req.body;
+    if (showStockQty !== undefined) settings.show_stock_qty = Boolean(showStockQty);
+    if (allowSelfRegistration !== undefined) settings.allow_self_registration = Boolean(allowSelfRegistration);
+    if (allowOrders !== undefined) settings.allow_orders = Boolean(allowOrders);
+    if (minOrderValue !== undefined) settings.min_order_value = Math.max(0, Number(minOrderValue) || 0);
+    if (allowCustomerCancel !== undefined) settings.allow_customer_cancel = Boolean(allowCustomerCancel);
+
+    await settings.save();
+    return res.json({ success: true, message: "Portal settings updated", data: settings });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to update portal settings" });
+  }
 }
 

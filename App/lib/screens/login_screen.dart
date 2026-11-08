@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../config/supabase_config.dart';
 import '../providers/auth_provider.dart';
 import '../services/supabase_service.dart';
+import '../services/customer_portal_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,7 +18,12 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _identifierCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _customerPhoneCtrl = TextEditingController();
+  final _customerShopCodeCtrl = TextEditingController();
+  final _customerOtpCtrl = TextEditingController();
 
+  bool _isCustomerMode = false;
+  bool _otpSent = false;
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _loading = false;
@@ -273,6 +279,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _identifierCtrl.dispose();
     _passwordCtrl.dispose();
+    _customerPhoneCtrl.dispose();
+    _customerShopCodeCtrl.dispose();
+    _customerOtpCtrl.dispose();
     super.dispose();
   }
 
@@ -308,6 +317,60 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = false;
       if (!success) {
         _error = 'Invalid credentials. Please verify your details.';
+      }
+    });
+  }
+
+  Future<void> _handleCustomerRequestOtp() async {
+    final phone = _customerPhoneCtrl.text.trim();
+    if (phone.length < 10) {
+      setState(() => _error = 'Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await CustomerPortalService().requestOtp(
+        phone: phone,
+        shopCode: _customerShopCodeCtrl.text.trim().isNotEmpty ? _customerShopCodeCtrl.text.trim() : null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _otpSent = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _handleCustomerVerifyOtp() async {
+    final phone = _customerPhoneCtrl.text.trim();
+    final otp = _customerOtpCtrl.text.trim();
+    if (otp.length < 4) {
+      setState(() => _error = 'Please enter the verification OTP.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final success = await context.read<AuthProvider>().loginAsCustomer(
+      phone: phone,
+      otp: otp,
+      shopCode: _customerShopCodeCtrl.text.trim().isNotEmpty ? _customerShopCodeCtrl.text.trim() : null,
+    );
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      if (!success) {
+        _error = 'Invalid OTP. Please verify and try again.';
       }
     });
   }
@@ -409,7 +472,169 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Email / Username Field
+                          // Mode Switcher (Staff vs Customer Portal)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => setState(() {
+                                    _isCustomerMode = false;
+                                    _error = null;
+                                  }),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: !_isCustomerMode ? const Color(0xFF1D4ED8) : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Staff / Owner',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: !_isCustomerMode ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => setState(() {
+                                    _isCustomerMode = true;
+                                    _error = null;
+                                  }),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(
+                                          color: _isCustomerMode ? const Color(0xFF047857) : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Customer Portal',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                        color: _isCustomerMode ? const Color(0xFF047857) : const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+
+                          if (_isCustomerMode) ...[
+                            if (!_otpSent) ...[
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: TextField(
+                                  controller: _customerPhoneCtrl,
+                                  keyboardType: TextInputType.phone,
+                                  style: const TextStyle(fontSize: 14),
+                                  decoration: const InputDecoration(
+                                    hintText: '10-digit Mobile Number',
+                                    prefixText: '+91 ',
+                                    prefixIcon: Icon(Icons.phone_outlined, size: 20, color: Color(0xFF64748B)),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: TextField(
+                                  controller: _customerShopCodeCtrl,
+                                  textCapitalization: TextCapitalization.characters,
+                                  style: const TextStyle(fontSize: 14),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Shop Code (optional)',
+                                    prefixIcon: Icon(Icons.storefront_outlined, size: 20, color: Color(0xFF64748B)),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                  ),
+                                ),
+                              ),
+                              if (_error != null) ...[
+                                const SizedBox(height: 10),
+                                Text(_error!, style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
+                              ],
+                              const SizedBox(height: 18),
+                              ElevatedButton(
+                                onPressed: _loading ? null : _handleCustomerRequestOtp,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF047857),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: _loading
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                    : const Text('Get Verification OTP >', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ] else ...[
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: TextField(
+                                  controller: _customerOtpCtrl,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 8),
+                                  decoration: const InputDecoration(
+                                    hintText: '••••••',
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                  ),
+                                ),
+                              ),
+                              if (_error != null) ...[
+                                const SizedBox(height: 10),
+                                Text(_error!, style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
+                              ],
+                              const SizedBox(height: 18),
+                              ElevatedButton(
+                                onPressed: _loading ? null : _handleCustomerVerifyOtp,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF047857),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: _loading
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                    : const Text('Verify & Enter Portal >', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                              TextButton(
+                                onPressed: () => setState(() => _otpSent = false),
+                                child: const Text('Change Mobile Number', style: TextStyle(color: Color(0xFF047857))),
+                              ),
+                            ],
+                          ] else ...[
+                            // Email / Username Field
                           Container(
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
@@ -613,8 +838,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ],
-                      ),
+                      ],
                     ),
+                  ),
                     const SizedBox(height: 16),
 
                     // Backend & Supabase Connection Status Pill

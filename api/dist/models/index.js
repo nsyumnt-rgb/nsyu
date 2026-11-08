@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Module = exports.DEFAULT_VISIBILITY_SETTINGS = exports.VisibilitySettings = exports.OrderItem = exports.Order = exports.PurchaseReturnItem = exports.PurchaseReturn = exports.SupplierLedger = exports.SupplierPayment = exports.PurchaseItem = exports.Purchase = exports.PurchaseCounter = exports.Notification = exports.EmployeeLedger = exports.SalaryPayment = exports.Payroll = exports.EmployeeIncentive = exports.EmployeeAdvance = exports.SalaryConfig = exports.LeaveRequest = exports.Attendance = exports.InvoiceCounter = exports.SaleReturnItem = exports.SaleReturn = exports.EMIInstallment = exports.EMIPlan = exports.CustomerLedger = exports.Payment = exports.SaleItem = exports.Sale = exports.Customer = exports.StockTransfer = exports.InventoryTransaction = exports.ProductLocation = exports.ProductStock = exports.ProductImage = exports.Supplier = exports.Subcategory = exports.Category = exports.Product = exports.AuditLog = exports.RefreshToken = exports.EmployeeShop = exports.Employee = exports.RoleFieldPermission = exports.RolePermission = exports.Role = exports.Shop = exports.Owner = exports.sequelize = void 0;
-exports.UserRole = exports.ShopModule = exports.Permission = void 0;
+exports.ShopPortalSettings = exports.OrderStatusHistory = exports.CustomerCartItem = exports.CustomerCart = exports.CustomerRefreshToken = exports.CustomerOtp = exports.CustomerAccount = exports.UserRole = exports.ShopModule = exports.Permission = void 0;
 const database_1 = __importDefault(require("../config/database"));
 exports.sequelize = database_1.default;
 const Owner_1 = require("./Owner");
@@ -108,6 +108,20 @@ const ShopModule_1 = require("./ShopModule");
 Object.defineProperty(exports, "ShopModule", { enumerable: true, get: function () { return ShopModule_1.ShopModule; } });
 const UserRole_1 = require("./UserRole");
 Object.defineProperty(exports, "UserRole", { enumerable: true, get: function () { return UserRole_1.UserRole; } });
+const CustomerAccount_1 = require("./CustomerAccount");
+Object.defineProperty(exports, "CustomerAccount", { enumerable: true, get: function () { return CustomerAccount_1.CustomerAccount; } });
+const CustomerOtp_1 = require("./CustomerOtp");
+Object.defineProperty(exports, "CustomerOtp", { enumerable: true, get: function () { return CustomerOtp_1.CustomerOtp; } });
+const CustomerRefreshToken_1 = require("./CustomerRefreshToken");
+Object.defineProperty(exports, "CustomerRefreshToken", { enumerable: true, get: function () { return CustomerRefreshToken_1.CustomerRefreshToken; } });
+const CustomerCart_1 = require("./CustomerCart");
+Object.defineProperty(exports, "CustomerCart", { enumerable: true, get: function () { return CustomerCart_1.CustomerCart; } });
+const CustomerCartItem_1 = require("./CustomerCartItem");
+Object.defineProperty(exports, "CustomerCartItem", { enumerable: true, get: function () { return CustomerCartItem_1.CustomerCartItem; } });
+const OrderStatusHistory_1 = require("./OrderStatusHistory");
+Object.defineProperty(exports, "OrderStatusHistory", { enumerable: true, get: function () { return OrderStatusHistory_1.OrderStatusHistory; } });
+const ShopPortalSettings_1 = require("./ShopPortalSettings");
+Object.defineProperty(exports, "ShopPortalSettings", { enumerable: true, get: function () { return ShopPortalSettings_1.ShopPortalSettings; } });
 /* ---------------- Owner ---------------- */
 Owner_1.Owner.hasMany(Shop_1.Shop, { foreignKey: "owner_id", as: "shops" });
 Shop_1.Shop.belongsTo(Owner_1.Owner, { foreignKey: "owner_id", as: "owner" });
@@ -291,4 +305,19 @@ Order_1.Order.belongsTo(Customer_1.Customer, { foreignKey: "customer_id", as: "c
 Order_1.Order.hasMany(OrderItem_1.OrderItem, { foreignKey: "order_id", as: "items" });
 OrderItem_1.OrderItem.belongsTo(Order_1.Order, { foreignKey: "order_id", as: "order" });
 Order_1.Order.belongsTo(Sale_1.Sale, { foreignKey: "converted_sale_id", as: "convertedSale" });
+/* ---------------- Customer Portal ---------------- */
+Customer_1.Customer.hasOne(CustomerAccount_1.CustomerAccount, { foreignKey: "customer_id", as: "account" });
+CustomerAccount_1.CustomerAccount.belongsTo(Customer_1.Customer, { foreignKey: "customer_id", as: "customer" });
+CustomerAccount_1.CustomerAccount.belongsTo(Shop_1.Shop, { foreignKey: "shop_id", as: "shop" });
+CustomerAccount_1.CustomerAccount.hasMany(CustomerRefreshToken_1.CustomerRefreshToken, { foreignKey: "account_id", as: "refreshTokens" });
+CustomerRefreshToken_1.CustomerRefreshToken.belongsTo(CustomerAccount_1.CustomerAccount, { foreignKey: "account_id", as: "account" });
+Customer_1.Customer.hasOne(CustomerCart_1.CustomerCart, { foreignKey: "customer_id", as: "cart" });
+CustomerCart_1.CustomerCart.belongsTo(Customer_1.Customer, { foreignKey: "customer_id", as: "customer" });
+CustomerCart_1.CustomerCart.hasMany(CustomerCartItem_1.CustomerCartItem, { foreignKey: "cart_id", as: "items" });
+CustomerCartItem_1.CustomerCartItem.belongsTo(CustomerCart_1.CustomerCart, { foreignKey: "cart_id", as: "cart" });
+CustomerCartItem_1.CustomerCartItem.belongsTo(Product_1.Product, { foreignKey: "product_id", as: "product" });
+Order_1.Order.hasMany(OrderStatusHistory_1.OrderStatusHistory, { foreignKey: "order_id", as: "statusHistory" });
+OrderStatusHistory_1.OrderStatusHistory.belongsTo(Order_1.Order, { foreignKey: "order_id", as: "order" });
+Shop_1.Shop.hasOne(ShopPortalSettings_1.ShopPortalSettings, { foreignKey: "shop_id", as: "portalSettings" });
+ShopPortalSettings_1.ShopPortalSettings.belongsTo(Shop_1.Shop, { foreignKey: "shop_id", as: "shop" });
 //# sourceMappingURL=index.js.map

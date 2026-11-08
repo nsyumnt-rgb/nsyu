@@ -19,6 +19,8 @@ export interface AccessTokenPayload {
   isOwner: boolean; // true = the account itself is the Owner, not an Employee
   employeeId?: number;
   customerId?: number;
+  accountId?: number;
+  phone?: string;
   isSuperAdmin?: boolean;
   isCustomer?: boolean;
   shopId?: number | null; // null until a shop is selected

@@ -77,7 +77,7 @@ function requirePermission(module, action) {
             }
         }
         // Check dynamic RolePermission row
-        const permission = await models_1.RolePermission.findOne({
+        const permissions = await models_1.RolePermission.findAll({
             where: {
                 role_id: auth.roleId,
                 [sequelize_1.Op.or]: [{ module: canonicalModule }, { module: module }],
@@ -89,7 +89,7 @@ function requirePermission(module, action) {
             edit: "can_edit",
             delete: "can_delete",
         };
-        const allowed = permission ? Boolean(permission[columnMap[action]]) : false;
+        const allowed = permissions.some((p) => Boolean(p[columnMap[action]]));
         if (!allowed) {
             return res.status(403).json({
                 success: false,

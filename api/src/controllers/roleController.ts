@@ -60,7 +60,6 @@ export async function listRoles(req: Request, res: Response) {
         [Op.or]: [
           { owner_id: req.auth!.ownerId },
           { owner_id: null },
-          { is_system: true },
         ],
       },
       include: [

@@ -16,3 +16,7 @@ export function createCustomer(data: { name: string; phone: string; email?: stri
 export function updateCustomer(id: number, data: Partial<{ name: string; phone: string; email?: string; address?: string; status: "active" | "inactive" }>) {
   return api.put<ApiEnvelope<Customer>>(`/customers/${id}`, data);
 }
+
+export function updateCustomerPortalAccess(id: number, enabled: boolean) {
+  return api.post<ApiEnvelope<any>>(`/customers/${id}/portal-access`, { enabled });
+}

@@ -63,7 +63,6 @@ async function listRoles(req, res) {
                 [sequelize_1.Op.or]: [
                     { owner_id: req.auth.ownerId },
                     { owner_id: null },
-                    { is_system: true },
                 ],
             },
             include: [

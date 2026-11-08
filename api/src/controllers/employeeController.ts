@@ -102,7 +102,12 @@ export async function assignShopRole(req: Request, res: Response) {
   const [employee, shop, role] = await Promise.all([
     Employee.findOne({ where: { id: employeeId, owner_id: req.auth!.ownerId } }),
     Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } }),
-    Role.findOne({ where: { id: roleId, owner_id: req.auth!.ownerId } }),
+    Role.findOne({
+      where: {
+        id: roleId,
+        [Op.or]: [{ owner_id: req.auth!.ownerId }, { owner_id: null }],
+      },
+    }),
   ]);
   if (!employee || !shop || !role) {
     return res.status(404).json({ success: false, message: "Employee, shop or role not found" });

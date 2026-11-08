@@ -80,7 +80,7 @@ export function requirePermission(module: ModuleName | string, action: ActionNam
     }
 
     // Check dynamic RolePermission row
-    const permission = await RolePermission.findOne({
+    const permissions = await RolePermission.findAll({
       where: {
         role_id: auth.roleId,
         [Op.or]: [{ module: canonicalModule }, { module: module }],
@@ -94,7 +94,7 @@ export function requirePermission(module: ModuleName | string, action: ActionNam
       delete: "can_delete",
     };
 
-    const allowed = permission ? Boolean((permission as any)[columnMap[action]]) : false;
+    const allowed = permissions.some((p: any) => Boolean((p as any)[columnMap[action]]));
 
     if (!allowed) {
       return res.status(403).json({

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt";
+import { Shop, CustomerAccount } from "../models";
 
 /**
  * Verifies the access token and attaches req.auth.
@@ -16,14 +17,55 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 
   const token = header.split(" ")[1];
   try {
-    req.auth = verifyAccessToken(token);
+    const payload = verifyAccessToken(token);
+    if (payload.isCustomer) {
+      return res.status(403).json({ success: false, message: "Customer tokens cannot access staff endpoints" });
+    }
+    req.auth = payload;
     return next();
   } catch (err) {
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 }
 
-import { Shop } from "../models";
+/**
+ * Verifies customer access token, verifies account is Active in DB,
+ * and attaches req.customer.
+ * Rejects staff tokens with 403, and deactivated accounts with 401.
+ */
+export async function requireCustomer(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+
+  const token = header.split(" ")[1];
+  try {
+    const payload = verifyAccessToken(token);
+    req.auth = payload;
+
+    if (!payload.isCustomer || !payload.customerId || !payload.accountId) {
+      return res.status(403).json({ success: false, message: "Staff tokens cannot access customer portal" });
+    }
+
+    const account = await CustomerAccount.findByPk(payload.accountId);
+    if (!account || account.status !== "active") {
+      return res.status(401).json({ success: false, message: "Customer account is disabled or inactive" });
+    }
+
+    req.customer = {
+      customerId: account.customer_id,
+      shopId: account.shop_id,
+      ownerId: account.owner_id,
+      accountId: account.id,
+      phone: account.phone,
+    };
+
+    return next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
+}
 
 /**
  * Every module route (products, sales, billing...) needs an active

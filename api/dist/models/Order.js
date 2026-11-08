@@ -37,6 +37,9 @@ Order.init({
     shipping_address: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
     remarks: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
     converted_sale_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
+    placed_by: { type: sequelize_1.DataTypes.ENUM("customer", "staff"), allowNull: true, defaultValue: "staff" },
+    customer_account_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
+    client_request_id: { type: sequelize_1.DataTypes.STRING(100), allowNull: true },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,
@@ -47,6 +50,7 @@ Order.init({
         { fields: ["owner_id", "shop_id"] },
         { fields: ["customer_id"] },
         { fields: ["status"] },
+        { fields: ["client_request_id"] },
         { fields: ["reference_code"] },
     ],
 });

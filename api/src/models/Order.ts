@@ -31,6 +31,9 @@ export interface OrderAttributes {
   shipping_address?: string | null;
   remarks?: string | null;
   converted_sale_id?: number | null;
+  placed_by?: "customer" | "staff" | null;
+  customer_account_id?: number | null;
+  client_request_id?: string | null;
   reference_code?: string | null;
   created_at?: Date;
   updated_at?: Date;
@@ -52,6 +55,9 @@ export interface OrderCreationAttributes
     | "remarks"
     | "expected_delivery_date"
     | "converted_sale_id"
+    | "placed_by"
+    | "customer_account_id"
+    | "client_request_id"
     | "reference_code"
     | "created_at"
     | "updated_at"
@@ -76,6 +82,9 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
   public shipping_address?: string | null;
   public remarks?: string | null;
   public converted_sale_id?: number | null;
+  public placed_by?: "customer" | "staff" | null;
+  public customer_account_id?: number | null;
+  public client_request_id?: string | null;
   public reference_code?: string | null;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
@@ -101,6 +110,9 @@ Order.init(
     shipping_address: { type: DataTypes.TEXT, allowNull: true },
     remarks: { type: DataTypes.TEXT, allowNull: true },
     converted_sale_id: { type: DataTypes.BIGINT, allowNull: true },
+    placed_by: { type: DataTypes.ENUM("customer", "staff"), allowNull: true, defaultValue: "staff" },
+    customer_account_id: { type: DataTypes.BIGINT, allowNull: true },
+    client_request_id: { type: DataTypes.STRING(100), allowNull: true },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {
@@ -112,6 +124,7 @@ Order.init(
       { fields: ["owner_id", "shop_id"] },
       { fields: ["customer_id"] },
       { fields: ["status"] },
+      { fields: ["client_request_id"] },
       { fields: ["reference_code"] },
     ],
   }

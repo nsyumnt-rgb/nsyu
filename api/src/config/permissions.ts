@@ -104,10 +104,15 @@ export const SENSITIVE_FIELDS = [
 
 export type SensitiveField = (typeof SENSITIVE_FIELDS)[number];
 
-// The 4 standardized roles
+// The standardized system roles
 export const SYSTEM_ROLES = [
   "Super Admin",
   "Owner",
+  "Manager",
+  "Sales Staff",
+  "Billing Staff",
+  "Inventory Staff",
+  "Accountant",
   "Staff",
   "User",
 ] as const;

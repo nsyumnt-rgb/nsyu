@@ -7,6 +7,8 @@ exports.updateShop = updateShop;
 exports.toggleShopStatus = toggleShopStatus;
 exports.deleteShop = deleteShop;
 exports.switchShop = switchShop;
+exports.getShopPortalSettings = getShopPortalSettings;
+exports.updateShopPortalSettings = updateShopPortalSettings;
 const sequelize_1 = require("sequelize");
 const models_1 = require("../models");
 const jwt_1 = require("../utils/jwt");
@@ -222,5 +224,63 @@ async function switchShop(req, res) {
     });
     await (0, audit_1.logAudit)({ req, module: "shops", action: "switch", entityType: "Shop", entityId: shop.id });
     return res.json({ success: true, data: { accessToken, shop } });
+}
+async function getShopPortalSettings(req, res) {
+    try {
+        const shopId = Number(req.params.shopId || req.params.id);
+        const shop = await models_1.Shop.findOne({ where: { id: shopId, owner_id: req.auth.ownerId } });
+        if (!shop)
+            return res.status(404).json({ success: false, message: "Shop not found" });
+        let [settings] = await models_1.ShopPortalSettings.findOrCreate({
+            where: { shop_id: shop.id },
+            defaults: {
+                shop_id: shop.id,
+                show_stock_qty: false,
+                allow_self_registration: false,
+                allow_orders: true,
+                min_order_value: 0,
+                allow_customer_cancel: true,
+            },
+        });
+        return res.json({ success: true, data: settings });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message || "Failed to load portal settings" });
+    }
+}
+async function updateShopPortalSettings(req, res) {
+    try {
+        const shopId = Number(req.params.shopId || req.params.id);
+        const shop = await models_1.Shop.findOne({ where: { id: shopId, owner_id: req.auth.ownerId } });
+        if (!shop)
+            return res.status(404).json({ success: false, message: "Shop not found" });
+        let [settings] = await models_1.ShopPortalSettings.findOrCreate({
+            where: { shop_id: shop.id },
+            defaults: {
+                shop_id: shop.id,
+                show_stock_qty: false,
+                allow_self_registration: false,
+                allow_orders: true,
+                min_order_value: 0,
+                allow_customer_cancel: true,
+            },
+        });
+        const { showStockQty, allowSelfRegistration, allowOrders, minOrderValue, allowCustomerCancel } = req.body;
+        if (showStockQty !== undefined)
+            settings.show_stock_qty = Boolean(showStockQty);
+        if (allowSelfRegistration !== undefined)
+            settings.allow_self_registration = Boolean(allowSelfRegistration);
+        if (allowOrders !== undefined)
+            settings.allow_orders = Boolean(allowOrders);
+        if (minOrderValue !== undefined)
+            settings.min_order_value = Math.max(0, Number(minOrderValue) || 0);
+        if (allowCustomerCancel !== undefined)
+            settings.allow_customer_cancel = Boolean(allowCustomerCancel);
+        await settings.save();
+        return res.json({ success: true, message: "Portal settings updated", data: settings });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message || "Failed to update portal settings" });
+    }
 }
 //# sourceMappingURL=shopController.js.map

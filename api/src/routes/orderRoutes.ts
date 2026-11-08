@@ -19,6 +19,8 @@ router.get("/", requirePermission("orders", "view"), getOrders);
 router.get("/:id", requirePermission("orders", "view"), getOrderById);
 router.post("/", requirePermission("orders", "create"), createOrder);
 router.put("/:id/status", requirePermission("orders", "edit"), updateOrderStatus);
+router.patch("/:id/status", requirePermission("orders", "edit"), updateOrderStatus);
 router.post("/:id/convert", requirePermission("billing", "create"), convertOrderToBill);
+router.post("/:id/convert-to-bill", requirePermission("billing", "create"), convertOrderToBill);
 
 export default router;

@@ -11,6 +11,8 @@ router.get("/", (0, permission_1.requirePermission)("orders", "view"), orderCont
 router.get("/:id", (0, permission_1.requirePermission)("orders", "view"), orderController_1.getOrderById);
 router.post("/", (0, permission_1.requirePermission)("orders", "create"), orderController_1.createOrder);
 router.put("/:id/status", (0, permission_1.requirePermission)("orders", "edit"), orderController_1.updateOrderStatus);
+router.patch("/:id/status", (0, permission_1.requirePermission)("orders", "edit"), orderController_1.updateOrderStatus);
 router.post("/:id/convert", (0, permission_1.requirePermission)("billing", "create"), orderController_1.convertOrderToBill);
+router.post("/:id/convert-to-bill", (0, permission_1.requirePermission)("billing", "create"), orderController_1.convertOrderToBill);
 exports.default = router;
 //# sourceMappingURL=orderRoutes.js.map

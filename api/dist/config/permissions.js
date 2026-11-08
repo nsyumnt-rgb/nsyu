@@ -94,10 +94,15 @@ exports.SENSITIVE_FIELDS = [
     "emi",
     "salary",
 ];
-// The 4 standardized roles
+// The standardized system roles
 exports.SYSTEM_ROLES = [
     "Super Admin",
     "Owner",
+    "Manager",
+    "Sales Staff",
+    "Billing Staff",
+    "Inventory Staff",
+    "Accountant",
     "Staff",
     "User",
 ];
