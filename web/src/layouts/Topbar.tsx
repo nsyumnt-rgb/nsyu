@@ -141,7 +141,7 @@ export default function Topbar() {
     }
   }
 
-  const displayName = accountType === "owner" ? (owner?.name || "Mohd Nazim") : employee?.name;
+  const displayName = accountType === "owner" ? (owner?.name || "Owner") : (employee?.name || "Staff");
   const displayRole = accountType === "owner" ? "Owner" : (roleName || "Staff");
 
   return (

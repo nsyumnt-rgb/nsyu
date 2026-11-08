@@ -85,77 +85,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 orElse: () => null,
               );
 
-          final fallback = retryMatch ??
-              SavedOrder(
-                orderNumber: widget.orderNo ?? 'ORD-290407',
-                customerName: 'Amit Sharma',
-                customerPhone: '+91 98765 67890',
-                items: [
-                  SavedOrderItem(
-                    desc: 'ERD LI-ION MOBILE BATTERY BT-144 MM A35',
-                    qty: 1,
-                    price: 80.0,
-                    sku: 'BT022',
-                  ),
-                  SavedOrderItem(
-                    desc: 'ERD LI-ION MOBILE BATTERY BT-422 SM A710',
-                    qty: 1,
-                    price: 80.0,
-                    sku: 'BT028',
-                  ),
-                  SavedOrderItem(
-                    desc: 'ERD LI-ION MOBILE BATTERY BT-47 SM W525',
-                    qty: 1,
-                    price: 80.0,
-                    sku: 'BT008',
-                  ),
-                ],
-                subtotal: 240.0,
-                discountAmount: 0.0,
-                taxAmount: 0.0,
-                totalAmount: 240.0,
-                status: OrderStatus.convertedToBill,
-                date: DateTime(2026, 10, 31, 12, 34),
-              );
-
           setState(() {
-            _order = fallback;
+            _order = retryMatch;
+            if (retryMatch == null) {
+              _error = 'Order #${widget.orderNo} not found.';
+            }
             _loading = false;
           });
         }).catchError((e) {
           if (!mounted) return;
           setState(() {
-            _order = SavedOrder(
-              orderNumber: widget.orderNo ?? 'ORD-290407',
-              customerName: 'Amit Sharma',
-              customerPhone: '+91 98765 67890',
-              items: [
-                SavedOrderItem(
-                  desc: 'ERD LI-ION MOBILE BATTERY BT-144 MM A35',
-                  qty: 1,
-                  price: 80.0,
-                  sku: 'BT022',
-                ),
-                SavedOrderItem(
-                  desc: 'ERD LI-ION MOBILE BATTERY BT-422 SM A710',
-                  qty: 1,
-                  price: 80.0,
-                  sku: 'BT028',
-                ),
-                SavedOrderItem(
-                  desc: 'ERD LI-ION MOBILE BATTERY BT-47 SM W525',
-                  qty: 1,
-                  price: 80.0,
-                  sku: 'BT008',
-                ),
-              ],
-              subtotal: 240.0,
-              discountAmount: 0.0,
-              taxAmount: 0.0,
-              totalAmount: 240.0,
-              status: OrderStatus.convertedToBill,
-              date: DateTime(2026, 10, 31, 12, 34),
-            );
+            _order = null;
+            _error = 'Failed to load order: $e';
             _loading = false;
           });
         });
@@ -194,8 +135,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   void _sendWhatsApp(SavedOrder order) {
-    final phone = order.customerPhone.isNotEmpty ? order.customerPhone : '8800123456';
+    final phone = order.customerPhone;
     final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer phone number not available')));
+      return;
+    }
     final msg = Uri.encodeComponent(
       'Hello ${order.customerName},\n\nHere is your Order #${order.orderNumber} from NSYU.\n'
       'Status: ${order.status.label}\n'

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/customer.dart';
 import '../models/saved_bill.dart';
+import '../providers/auth_provider.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../widgets/app_bottom_nav.dart';
@@ -58,119 +59,17 @@ class _BillsListScreenState extends State<BillsListScreen> {
     return const Color(0xFFF43F5E); // Pink/Rose (Shakti Enterprise)
   }
 
-  /// Reference items matching Image 6 Left Screen so the list has full realistic data
-  List<SavedBill> _referenceMockBills() {
-    return [
-      SavedBill(
-        billNumber: 'INV-NSYU-000125',
-        customerName: 'Krishna Jasola',
-        customerPhone: '8800123456',
-        items: [
-          SavedBillItem(desc: 'Mobile Battery', qty: 2, price: 611),
-          SavedBillItem(desc: 'USB Adapter', qty: 1, price: 1000),
-        ],
-        status: BillStatus.unpaid,
-        paidAmount: 0,
-        date: DateTime(2026, 10, 29, 10, 30),
-      ),
-      SavedBill(
-        billNumber: 'INV-NSYU-000124',
-        customerName: 'GD SB',
-        customerPhone: '9811223344',
-        items: [
-          SavedBillItem(desc: 'Combo Pack', qty: 3, price: 1000),
-          SavedBillItem(desc: 'USB-C Cable', qty: 2, price: 750),
-        ],
-        status: BillStatus.unpaid,
-        paidAmount: 1500,
-        date: DateTime(2026, 10, 28, 14, 20),
-      ),
-      SavedBill(
-        billNumber: 'INV-NSYU-000123',
-        customerName: 'Vijay sharma comm harkesh',
-        customerPhone: '9871100223',
-        items: [
-          SavedBillItem(desc: 'Neckband Pro', qty: 4, price: 800),
-        ],
-        status: BillStatus.unpaid,
-        paidAmount: 0,
-        date: DateTime(2026, 10, 27, 11, 45),
-      ),
-      SavedBill(
-        billNumber: 'INV-NSYU-000122',
-        customerName: 'R K Comm SB',
-        customerPhone: '9810998877',
-        items: [
-          SavedBillItem(desc: 'Fast Charger 20W', qty: 2, price: 925),
-        ],
-        status: BillStatus.paid,
-        paidAmount: 1850,
-        date: DateTime(2026, 10, 26, 16, 10),
-      ),
-      SavedBill(
-        billNumber: 'INV-NSYU-000121',
-        customerName: 'Siddique Sahab SB',
-        customerPhone: '9910223344',
-        items: [
-          SavedBillItem(desc: 'Earbuds Wireless', qty: 6, price: 1000),
-        ],
-        status: BillStatus.unpaid,
-        paidAmount: 2000,
-        date: DateTime(2026, 10, 25, 12, 00),
-      ),
-      SavedBill(
-        billNumber: 'INV-NSYU-000120',
-        customerName: 'Aalam Near RG',
-        customerPhone: '9899112233',
-        items: [
-          SavedBillItem(desc: 'Power Bank 10000mAh', qty: 3, price: 916.6666666666666),
-        ],
-        status: BillStatus.unpaid,
-        paidAmount: 0,
-        date: DateTime(2026, 10, 24, 15, 30),
-      ),
-      SavedBill(
-        billNumber: 'INV-NSYU-000119',
-        customerName: 'Mohd Ali',
-        customerPhone: '9873344556',
-        items: [
-          SavedBillItem(desc: 'Display Screen', qty: 7, price: 757.1428571428571),
-        ],
-        status: BillStatus.paid,
-        paidAmount: 5300,
-        date: DateTime(2026, 10, 23, 10, 15),
-      ),
-      SavedBill(
-        billNumber: 'INV-NSYU-000118',
-        customerName: 'Shakti Enterprise',
-        customerPhone: '9811556677',
-        items: [
-          SavedBillItem(desc: 'USB Hub Multi-port', qty: 3, price: 1600),
-        ],
-        status: BillStatus.unpaid,
-        paidAmount: 1800,
-        date: DateTime(2026, 10, 22, 17, 40),
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     final billsProvider = context.watch<BillsProvider>();
     final realBills = billsProvider.bills;
 
-    // Merge real database bills (like Amit Sharma INV-NSYU-000010) with reference bills
-    final Map<String, SavedBill> allBillsMap = {};
-    for (final b in realBills) {
-      allBillsMap[b.billNumber] = b;
-    }
-    for (final mb in _referenceMockBills()) {
-      if (!allBillsMap.containsKey(mb.billNumber)) {
-        allBillsMap[mb.billNumber] = mb;
-      }
-    }
+    final shopName = auth.shopName.isNotEmpty ? auth.shopName : 'NSYU';
+    final shopPhone = auth.shopPhone;
 
-    final allBillsList = allBillsMap.values.toList();
+    // Real database bills
+    final allBillsList = List<SavedBill>.from(realBills);
     allBillsList.sort((a, b) => b.date.compareTo(a.date));
 
     // Filter bills
@@ -232,7 +131,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
                   const SizedBox(width: 12),
 
                   // NSYU ▾ and Phone Number
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -241,62 +140,40 @@ class _BillsListScreenState extends State<BillsListScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'NSYU',
-                              style: TextStyle(
+                              shopName,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF0F172A),
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF64748B)),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF64748B)),
                           ],
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          '8801356002',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
+                        if (shopPhone.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            shopPhone,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
 
-                  // Share, Bell with red badge 2, Search
+                  // Share, Notifications, Search
                   IconButton(
                     icon: const Icon(Icons.share_outlined, color: Color(0xFF475569), size: 21),
                     onPressed: () {},
                   ),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
-                        onPressed: () {},
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(3.5),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
+                    onPressed: () {},
                   ),
                   IconButton(
                     icon: Icon(_searchOpen ? Icons.close : Icons.search, color: const Color(0xFF475569), size: 22),

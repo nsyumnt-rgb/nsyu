@@ -73,6 +73,33 @@ Recent major updates include:
   - `tests/customer_portal.test.ts` (OTP auth, server cart, order conversion, tenant isolation).
   - `tests/multishop_comprehensive.test.ts` (Multi-shop isolation & security).
   - `tests/sales.test.ts` & `tests/purchase.test.ts` (Ledger, inventory, payments, EMI).
+
+---
+
+### D. Database Dummy Data Cleanup & Full Backup
+- [x] **Database Audit & Comprehensive Backup:**
+  - Audited all 59 tables across PostgreSQL `public` schema in Supabase (`aws-0-ap-south-1.pooler.supabase.com:5432`).
+  - Full table-by-table JSON export with foreign keys and manifest stored securely in `backups/db_backup_1794165380111/`.
+  - Referential integrity verified across Master tables (Products, Categories, Suppliers, Customers, Shops, Owners), System tables (Roles, RolePermissions, RoleFieldPermissions, ReferenceCounters), and Transaction tables.
+- [x] **Controlled Data Retention:**
+  - Preserved 1 valid Product (ID 1: `20w C USB DOCK`, SKU `CC-49`, Category `CHARGER`, Supplier `ERD Technologies`), 1 Stock row for Shop 1, 1 Customer, 1 Supplier, 1 Shop, 1 Owner (`nsyu.mnt@gmail.com`), 7 Categories, 18 RBAC Roles, 448 Role Permissions, 112 Field Permissions, 2 Sequence Reference Counters, and valid audit logs.
+  - Safely eliminated all temporary test entries with atomic transaction verification.
+
+---
+
+### E. 100% Real Database-Driven UI (Elimination of All Fake/Mock Data)
+- [x] **Web Application (`web/`):**
+  - **Dashboard (`web/src/pages/Dashboard.tsx`):** Completely removed hardcoded dummy numbers (`1245600`, `820300`, `1875400`, `52400`, `28900`), mock sales fallbacks ("Rahul Sharma", "Priya Verma", "Amit Kumar"), fake low stock products ("iPhone 15", "Samsung Galaxy S24"), fabricated shop donut chart, and hardcoded SVG spline curves. Connected 100% real database metrics and clean empty states with "+ Create Sale" and "+ Record Purchase" actions.
+  - **Inventory (`web/src/pages/Inventory.tsx`):** Removed hardcoded metric multipliers, fake adjustment history rows, fake movements table, and hardcoded user dropdowns ("Mohd Nazim", "Ramesh Kumar"). Connected live `InventoryTransaction` records with empty state.
+  - **Topbar (`web/src/layouts/Topbar.tsx`):** Removed fallback to "Mohd Nazim"; displays authenticated owner or employee name.
+- [x] **Flutter Mobile App (`App/`):**
+  - **Bills List (`App/lib/screens/bills_list_screen.dart`):** Deleted `_referenceMockBills()` (8 fake bills). Renders real database bills with clean empty state. Removed hardcoded red notification badge '2' and static phone.
+  - **Orders List (`App/lib/screens/orders_screen.dart`):** Deleted `_referenceMockOrders()` (8 fake orders). Renders real database orders with clean empty state. Removed hardcoded red notification badge '2' and static phone.
+  - **Customer Ledger (`App/lib/screens/customer_ledger_detail_screen.dart`):** Replaced fake timeline fallback (`INV-261014-001`, `19156.0`) with clean empty state. Replaced 5 mock bill cards and 3 mock order cards with real database entries and empty states. Removed all hardcoded fallbacks to `8800123456`, `Jasola, New Delhi`, and `19000.0`.
+  - **Bill & Order Detail Screens:** Removed fake "Amit Sharma" fallbacks (`INV-NSYU-000010` and `ORD-290407`); displays proper not-found error views.
+  - **Home Dashboard (`App/lib/screens/home_screen.dart`):** Removed static percentage badges (`↑ 12%`, `↑ 8%`, `↑ 15%`) and `purchasesEstimate` formula. Connected honest chart baseline bars (3px grey tick for zero sales).
+  - **More Menu (`App/lib/widgets/more_menu_sheet.dart`):** Removed hardcoded rough estimate tiles (Rahul Verma, Amit Electronics, Suresh Mobile).
+  - **Payment Collection (`App/lib/screens/collect_payment_screen.dart`):** Removed fallback to "Krishna Jasola" and `4510.0`.
   - `tests/payroll.test.ts` & `tests/seed.test.ts` (Attendance, leave, salary ledger).
 
 ---

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../screens/business_info_screen.dart';
 import '../screens/help_support_screen.dart';
@@ -402,13 +401,21 @@ class MoreMenuSheet extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 12),
-            Expanded(
-              child: ListView(
-                children: [
-                  _kacchaTile(context, 'Rahul Verma', 'Rough Estimate #EST-101', 3200.0, '28 Oct 2026'),
-                  _kacchaTile(context, 'Amit Electronics', 'Pending Quotation #EST-102', 8500.0, '27 Oct 2026'),
-                  _kacchaTile(context, 'Suresh Mobile', 'Sample Dispatch #EST-103', 1450.0, '25 Oct 2026'),
-                ],
+            const Expanded(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_note_rounded, size: 48, color: Color(0xFFCBD5E1)),
+                      SizedBox(height: 12),
+                      Text('No estimate entries yet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155))),
+                      SizedBox(height: 4),
+                      Text('Tap the button below to record your first rough estimate draft.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+                    ],
+                  ),
+                ),
               ),
             ),
             SizedBox(
@@ -430,23 +437,6 @@ class MoreMenuSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _kacchaTile(BuildContext context, String party, String ref, double amount, String date) {
-    final money = NumberFormat('#,##0');
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: ListTile(
-        leading: const CircleAvatar(
-          backgroundColor: Color(0xFFFFEDD5),
-          child: Icon(Icons.receipt_outlined, color: Color(0xFFEA580C), size: 20),
-        ),
-        title: Text(party, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5)),
-        subtitle: Text('$ref • $date', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
-        trailing: Text('₹${money.format(amount)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFFEA580C))),
       ),
     );
   }

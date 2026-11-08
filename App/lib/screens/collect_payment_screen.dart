@@ -343,9 +343,9 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildCalculatorPaymentScreen() {
     final cust = _selectedCustomer ?? widget.customer;
-    final name = cust?.name ?? 'Krishna Jasola';
-    final due = cust?.currentBalance ?? 4510.0;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'K';
+    final name = cust?.name.isNotEmpty == true ? cust!.name : 'Customer';
+    final due = cust?.currentBalance ?? 0.0;
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'C';
 
     return Scaffold(
       backgroundColor: Colors.white,

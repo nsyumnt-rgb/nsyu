@@ -156,7 +156,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
     final ordersProvider = context.watch<OrdersProvider>();
     final customer = _customer ?? widget.customer;
     final name = customer?.name ?? widget.partyName;
-    final phone = customer?.mobile.isNotEmpty == true ? customer!.mobile : '8800123456';
+    final phone = customer?.mobile.isNotEmpty == true ? customer!.mobile : '';
 
     final timeline = _buildTimeline(billsProvider);
 
@@ -341,7 +341,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
   // TAB 1: LEDGER (Image 2)
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildLedgerTab(List<CustomerLedgerEntry> timeline, double currentOutstanding) {
-    final due = currentOutstanding > 0 ? currentOutstanding : 19000.0;
+    final due = currentOutstanding;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
@@ -420,40 +420,27 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
 
   Widget _buildImage2TimelineList(List<CustomerLedgerEntry> timeline) {
     if (timeline.isEmpty) {
-      // Fallback display with realistic items as in reference Image 2
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildDatePill('14 Oct 2026'),
-          const SizedBox(height: 10),
-          _buildBillCard(
-            billNo: 'INV-261014-001',
-            time: '08:57 PM',
-            amount: 19156.0,
-            hasPdf: true,
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.receipt_long_outlined, size: 48, color: Color(0xFFCBD5E1)),
+              SizedBox(height: 12),
+              Text(
+                'No transactions recorded yet',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155)),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Bills and payments for this customer will appear here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          _buildPaymentCard(
-            title: 'Payment',
-            subtitle: 'discount • 08:57 PM',
-            amount: 156.0,
-          ),
-          const SizedBox(height: 16),
-          _buildDatePill('10 Oct 2026'),
-          const SizedBox(height: 10),
-          _buildPaymentCard(
-            title: 'Payment',
-            subtitle: 'Cash • 04:30 PM',
-            amount: 3000.0,
-          ),
-          const SizedBox(height: 10),
-          _buildBillCard(
-            billNo: 'INV-251010-002',
-            time: '11:20 AM',
-            amount: 12000.0,
-            isRedBadge: true,
-          ),
-        ],
+        ),
       );
     }
 
@@ -913,50 +900,23 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           // Real customer bills from database
           if (customerBills.isNotEmpty)
             ...customerBills.map((b) => _buildCustomerBillCard(b))
-          else ...[
-            _buildCustomerBillMockCard(
-              billNo: 'B-00125',
-              date: '29 Oct 2026',
-              time: '10:30 AM',
-              itemCount: 3,
-              status: 'Unpaid',
-              amount: 2222,
+          else
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.receipt_outlined, size: 40, color: Color(0xFFCBD5E1)),
+                    SizedBox(height: 8),
+                    Text(
+                      'No bills found for this customer',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF475569)),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00120',
-              date: '24 Oct 2026',
-              time: '02:15 PM',
-              itemCount: 5,
-              status: 'Partial',
-              amount: 3500,
-              paid: 1500,
-              due: 2000,
-            ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00115',
-              date: '20 Oct 2026',
-              time: '11:20 AM',
-              itemCount: 2,
-              status: 'Paid',
-              amount: 1850,
-            ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00110',
-              date: '15 Oct 2026',
-              time: '04:45 PM',
-              itemCount: 4,
-              status: 'Paid',
-              amount: 2300,
-            ),
-            _buildCustomerBillMockCard(
-              billNo: 'B-00108',
-              date: '10 Oct 2026',
-              time: '01:10 PM',
-              itemCount: 3,
-              status: 'Paid',
-              amount: 2578,
-            ),
-          ],
         ],
       ),
     );
@@ -1012,7 +972,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
 
   Widget _buildCustomerBillCard(SavedBill bill) {
     final statusStr = bill.isPaid ? 'Paid' : (bill.paidAmount > 0 ? 'Partial' : 'Unpaid');
-    return _buildCustomerBillMockCard(
+    return _buildCustomerBillCardView(
       billNo: bill.billNumber.replaceAll(RegExp(r'^[#B\-]'), ''),
       date: _dateFormat.format(bill.date),
       time: _timeFormat.format(bill.date),
@@ -1025,7 +985,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
     );
   }
 
-  Widget _buildCustomerBillMockCard({
+  Widget _buildCustomerBillCardView({
     required String billNo,
     required String date,
     required String time,
@@ -1192,8 +1152,12 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   }
                 }),
                 _buildBillAction(Icons.chat_bubble_outline, 'WhatsApp', () {
-                  final phone = widget.customer?.mobile ?? '8800123456';
+                  final phone = widget.customer?.mobile ?? (_customer?.mobile ?? '');
                   final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+                  if (digits.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer phone number not available')));
+                    return;
+                  }
                   launchUrl(Uri.parse('https://wa.me/$digits?text=Hello,%20here%20is%20your%20bill%20%23$billNo%20for%20%E2%82%B9${_money.format(amount)}'), mode: LaunchMode.externalApplication);
                 }),
               ],
@@ -1392,42 +1356,33 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           ),
           const SizedBox(height: 10),
 
-          // Customer orders from database or reference fallbacks
+          // Customer orders from database
           if (customerOrders.isNotEmpty)
             ...customerOrders.map((o) => _buildCustomerOrderCard(o))
-          else ...[
-            _buildCustomerOrderMockCard(
-              orderNo: 'ORD-290407',
-              date: '31 Oct 2026',
-              time: '12:34 PM',
-              itemCount: 3,
-              status: 'Converted to Bill',
-              amount: 240,
+          else
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.assignment_outlined, size: 40, color: Color(0xFFCBD5E1)),
+                    SizedBox(height: 8),
+                    Text(
+                      'No orders found for this customer',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF475569)),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            _buildCustomerOrderMockCard(
-              orderNo: 'ORD-290409',
-              date: '28 Oct 2026',
-              time: '04:15 PM',
-              itemCount: 5,
-              status: 'Confirmed',
-              amount: 4500,
-            ),
-            _buildCustomerOrderMockCard(
-              orderNo: 'ORD-290410',
-              date: '25 Oct 2026',
-              time: '11:20 AM',
-              itemCount: 2,
-              status: 'Pending',
-              amount: 2222,
-            ),
-          ],
         ],
       ),
     );
   }
 
   Widget _buildCustomerOrderCard(SavedOrder order) {
-    return _buildCustomerOrderMockCard(
+    return _buildCustomerOrderCardView(
       orderNo: order.orderNumber,
       date: _dateFormat.format(order.date),
       time: _timeFormat.format(order.date),
@@ -1438,7 +1393,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
     );
   }
 
-  Widget _buildCustomerOrderMockCard({
+  Widget _buildCustomerOrderCardView({
     required String orderNo,
     required String date,
     required String time,
@@ -1603,8 +1558,12 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   }
                 }),
                 _buildBillAction(Icons.chat_bubble_outline, 'WhatsApp', () {
-                  final phone = widget.customer?.mobile ?? '8800123456';
+                  final phone = widget.customer?.mobile ?? (_customer?.mobile ?? '');
                   final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+                  if (digits.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer phone number not available')));
+                    return;
+                  }
                   launchUrl(
                     Uri.parse('https://wa.me/$digits?text=Hello,%20here%20is%20your%20Order%20%23$orderNo%20for%20%E2%82%B9${_money.format(amount)}'),
                     mode: LaunchMode.externalApplication,
@@ -1766,7 +1725,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildStickyBottomActionBar(double currentOutstanding) {
     final cust = _customer ?? widget.customer;
-    final phone = cust?.mobile ?? '8800123456';
+    final phone = cust?.mobile ?? '';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1895,9 +1854,9 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
             ),
             const SizedBox(height: 12),
             _profileRow('Name', cust?.name ?? widget.partyName),
-            _profileRow('Mobile', cust?.mobile.isNotEmpty == true ? cust!.mobile : '8800123456'),
-            _profileRow('Address', cust?.address.isNotEmpty == true ? cust!.address : 'Jasola, New Delhi'),
-            _profileRow('Current Outstanding', '₹${_money.format(_currentBalance != 0.0 ? _currentBalance : (cust?.currentBalance ?? 19000.0))}'),
+            _profileRow('Mobile', cust?.mobile.isNotEmpty == true ? cust!.mobile : 'Not Provided'),
+            _profileRow('Address', cust?.address.isNotEmpty == true ? cust!.address : 'Not Provided'),
+            _profileRow('Current Outstanding', '₹${_money.format(_currentBalance != 0.0 ? _currentBalance : (cust?.currentBalance ?? 0.0))}'),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,

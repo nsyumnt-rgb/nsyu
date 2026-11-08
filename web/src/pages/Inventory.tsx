@@ -150,7 +150,7 @@ function InventoryInner() {
   const [products, setProducts] = useState<Product[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [_history, setHistory] = useState<InventoryTransaction[]>([]);
+  const [history, setHistory] = useState<InventoryTransaction[]>([]);
   const [_loading, setLoading] = useState(true);
   const [_error, setError] = useState<string | null>(null);
 
@@ -272,12 +272,17 @@ function InventoryInner() {
   const startIndex = (currentPage - 1) * pageSize;
   const paginatedProducts = sortedProducts.slice(startIndex, startIndex + pageSize);
 
-  // Top Metrics
-  const totalProductsCount = products.length >= 10 ? 1248 : products.length;
-  const totalStockQty = products.length >= 10 ? 8426 : products.reduce((acc, p) => acc + (p.stocks?.[0]?.current_stock ?? 0), 0);
-  const stockValue = 1875400;
-  const lowStockCount = products.length >= 10 ? 46 : products.filter((p) => (p.stocks?.[0]?.current_stock ?? 0) <= p.min_stock && (p.stocks?.[0]?.current_stock ?? 0) > 0).length;
-  const outOfStockCount = products.length >= 10 ? 12 : products.filter((p) => (p.stocks?.[0]?.current_stock ?? 0) <= 0).length;
+  // Top Metrics from actual database records
+  const totalProductsCount = products.length;
+  const totalStockQty = products.reduce((acc, p) => acc + (p.stocks?.[0]?.current_stock ?? 0), 0);
+  const stockValue = products.reduce(
+    (acc, p) => acc + ((p.stocks?.[0]?.current_stock ?? 0) * Number(p.purchase_price || p.selling_price || 0)),
+    0
+  );
+  const lowStockCount = products.filter(
+    (p) => (p.stocks?.[0]?.current_stock ?? 0) <= p.min_stock && (p.stocks?.[0]?.current_stock ?? 0) > 0
+  ).length;
+  const outOfStockCount = products.filter((p) => (p.stocks?.[0]?.current_stock ?? 0) <= 0).length;
 
   // Toggle selection
   function handleSelectRow(id: number) {
@@ -853,61 +858,52 @@ function InventoryInner() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-[11.5px]">
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 px-1 text-slate-400">Oct 27, 2026 10:30</td>
-                      <td className="py-2 px-1 font-medium text-slate-800">iPhone 15</td>
-                      <td className="py-2 px-1 font-mono text-slate-500">IPH15-001</td>
-                      <td className="py-2 px-1 text-rose-500 font-medium">Decrease</td>
-                      <td className="py-2 px-1 text-center font-bold text-rose-500">-5</td>
-                      <td className="py-2 px-1 text-center text-slate-600">20</td>
-                      <td className="py-2 px-1 text-center font-bold text-slate-800">15</td>
-                      <td className="py-2 px-1 text-slate-700">Damaged</td>
-                      <td className="py-2 pl-1 text-right text-slate-600">Ramesh Kumar</td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 px-1 text-slate-400">Oct 26, 2026 14:20</td>
-                      <td className="py-2 px-1 font-medium text-slate-800">Samsung Galaxy S24</td>
-                      <td className="py-2 px-1 font-mono text-slate-500">SS24-002</td>
-                      <td className="py-2 px-1 text-emerald-600 font-medium">Increase</td>
-                      <td className="py-2 px-1 text-center font-bold text-emerald-600">+10</td>
-                      <td className="py-2 px-1 text-center text-slate-400">—</td>
-                      <td className="py-2 px-1 text-center font-bold text-slate-800">8</td>
-                      <td className="py-2 px-1 text-slate-700">Stock Count Correction</td>
-                      <td className="py-2 pl-1 text-right text-slate-600">Mohd Nazim</td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 px-1 text-slate-400">Oct 26, 2026 11:15</td>
-                      <td className="py-2 px-1 font-medium text-slate-800">HDMI Cable 2m</td>
-                      <td className="py-2 px-1 font-mono text-slate-500">CBL-007</td>
-                      <td className="py-2 px-1 text-emerald-600 font-medium">Increase</td>
-                      <td className="py-2 px-1 text-center font-bold text-emerald-600">+6</td>
-                      <td className="py-2 px-1 text-center text-slate-600">0</td>
-                      <td className="py-2 px-1 text-center font-bold text-slate-800">6</td>
-                      <td className="py-2 px-1 text-slate-700">Opening Stock</td>
-                      <td className="py-2 pl-1 text-right text-slate-600">Priya Verma</td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 px-1 text-slate-400">Oct 25, 2026 16:40</td>
-                      <td className="py-2 px-1 font-medium text-slate-800">Smart Watch</td>
-                      <td className="py-2 px-1 font-mono text-slate-500">SW-006</td>
-                      <td className="py-2 px-1 text-rose-500 font-medium">Decrease</td>
-                      <td className="py-2 px-1 text-center font-bold text-rose-500">-2</td>
-                      <td className="py-2 px-1 text-center text-slate-600">30</td>
-                      <td className="py-2 px-1 text-center font-bold text-slate-800">28</td>
-                      <td className="py-2 px-1 text-slate-700">Lost</td>
-                      <td className="py-2 pl-1 text-right text-slate-600">Amit Kumar</td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 px-1 text-slate-400">Oct 24, 2026 09:10</td>
-                      <td className="py-2 px-1 font-medium text-slate-800">Dell Inspiron 3520</td>
-                      <td className="py-2 px-1 font-mono text-slate-500">LPD-003</td>
-                      <td className="py-2 px-1 text-emerald-600 font-medium">Increase</td>
-                      <td className="py-2 px-1 text-center font-bold text-emerald-600">+3</td>
-                      <td className="py-2 px-1 text-center text-slate-600">0</td>
-                      <td className="py-2 px-1 text-center font-bold text-slate-800">3</td>
-                      <td className="py-2 px-1 text-slate-700">Stock Count Correction</td>
-                      <td className="py-2 pl-1 text-right text-slate-600">Neha Gupta</td>
-                    </tr>
+                    {(() => {
+                      const adjustments = history.filter(
+                        (h: any) => h.type === "adjustment" || h.reference_type === "adjustment"
+                      );
+                      if (adjustments.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={9} className="py-8 text-center text-slate-400">
+                              No stock adjustments recorded yet.
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return adjustments.map((h: any, idx) => {
+                        const qty = h.signed_quantity ?? h.quantity ?? 0;
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="py-2 px-1 text-slate-400">
+                              {new Date(h.created_at || h.createdAt).toLocaleString()}
+                            </td>
+                            <td className="py-2 px-1 font-medium text-slate-800">
+                              {h.product?.name || `Product #${h.product_id}`}
+                            </td>
+                            <td className="py-2 px-1 font-mono text-slate-500">
+                              {h.product?.sku || "—"}
+                            </td>
+                            <td className={`py-2 px-1 font-medium ${qty > 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                              {qty > 0 ? "Increase" : "Decrease"}
+                            </td>
+                            <td className={`py-2 px-1 text-center font-bold ${qty > 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                              {qty > 0 ? `+${qty}` : qty}
+                            </td>
+                            <td className="py-2 px-1 text-center text-slate-600">
+                              {(h.balance_after ?? 0) - qty}
+                            </td>
+                            <td className="py-2 px-1 text-center font-bold text-slate-800">
+                              {h.balance_after ?? "—"}
+                            </td>
+                            <td className="py-2 px-1 text-slate-700">{h.notes || "Stock Adjustment"}</td>
+                            <td className="py-2 pl-1 text-right text-slate-600 font-mono text-[10.5px]">
+                              {h.actor_id ? `User #${h.actor_id}` : "System"}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -1126,13 +1122,10 @@ function InventoryInner() {
 
                 <select className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700">
                   <option>All Users</option>
-                  <option>Mohd Nazim</option>
-                  <option>Ramesh Kumar</option>
-                  <option>Priya Verma</option>
                 </select>
 
                 <select className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700">
-                  <option>{activeShop?.name || "Main Shop - Electronics"}</option>
+                  <option>{activeShop?.name || "Current Shop"}</option>
                 </select>
               </div>
             </div>
@@ -1157,227 +1150,294 @@ function InventoryInner() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-[11.5px]">
-                    {[
-                      { date: "Oct 27, 2026 10:30", ref: "INV-00125", type: "Sale", product: "iPhone 15", sku: "IPH15-001", in: "-", out: "1", bal: 15, shop: "Main Shop", user: "Ramesh Kumar" },
-                      { date: "Oct 27, 2026 09:15", ref: "PUR-00078", type: "Purchase", product: "Samsung Galaxy S24", sku: "SS24-002", in: "10", out: "-", bal: 8, shop: "Main Shop", user: "Mohd Nazim" },
-                      { date: "Oct 26, 2026 16:40", ref: "ADJ-00012", type: "Adjustment", product: "HDMI Cable 2m", sku: "CBL-007", in: "5", out: "-", bal: 6, shop: "Main Shop", user: "Priya Verma" },
-                      { date: "Oct 26, 2026 14:20", ref: "TRF-00008", type: "Transfer In", product: "Smart Watch", sku: "SW-006", in: "8", out: "-", bal: 28, shop: "Main Shop", user: "Amit Kumar" },
-                      { date: "Oct 26, 2026 12:15", ref: "TRF-00007", type: "Transfer Out", product: "Dell Inspiron 3520", sku: "LPD-003", in: "-", out: "3", bal: 3, shop: "Main Shop", user: "Neha Gupta" },
-                      { date: "Oct 25, 2026 11:45", ref: "RET-00006", type: "Return", product: "iPhone 15", sku: "IPH15-001", in: "1", out: "-", bal: 16, shop: "Main Shop", user: "Ramesh Kumar" },
-                      { date: "Oct 25, 2026 10:10", ref: "PUR-00077", type: "Purchase", product: "HP Pavilion 14", sku: "HP14-004", in: "15", out: "-", bal: 6, shop: "Main Shop", user: "Mohd Nazim" },
-                      { date: "Oct 24, 2026 18:30", ref: "INV-00122", type: "Sale", product: "Wireless Earbuds", sku: "EAR-005", in: "-", out: "2", bal: 42, shop: "Main Shop", user: "Sunita Devi" },
-                    ].map((row, idx) => (
-                      <tr
-                        key={idx}
-                        onClick={() => setSelectedMovement(row)}
-                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedMovement?.ref === row.ref ? "bg-blue-50/50" : ""}`}
-                      >
-                        <td className="py-2.5 px-2 text-slate-400 whitespace-nowrap">{row.date}</td>
-                        <td className="py-2.5 px-2 font-mono font-medium">
-                          <ReferenceLink refNumber={row.ref} />
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <span
-                            className={`font-semibold ${
-                              row.type === "Sale"
-                                ? "text-rose-600"
-                                : row.type === "Purchase"
-                                ? "text-emerald-600"
-                                : row.type === "Adjustment"
-                                ? "text-cyan-600"
-                                : row.type === "Transfer In"
-                                ? "text-emerald-600"
-                                : row.type === "Transfer Out"
-                                ? "text-amber-600"
-                                : "text-indigo-600"
-                            }`}
-                          >
-                            {row.type}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-2 font-medium text-slate-800">
-                          <ReferenceLink type="product" refNumber={row.sku} className="text-slate-800 hover:text-blue-600">
-                            {row.product}
-                          </ReferenceLink>
-                        </td>
-                        <td className="py-2.5 px-2 font-mono text-slate-500">
-                          <ReferenceLink type="product" refNumber={row.sku} />
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-bold text-emerald-600">{row.in}</td>
-                        <td className="py-2.5 px-2 text-center font-bold text-rose-500">{row.out}</td>
-                        <td className="py-2.5 px-2 text-center font-bold text-slate-800">{row.bal}</td>
-                        <td className="py-2.5 px-2 text-slate-600">{row.shop}</td>
-                        <td className="py-2.5 px-2 text-slate-600">{row.user}</td>
-                        <td className="py-2.5 pl-2 text-right">
-                          <Link
-                            to={`/app/inventory/movements/${idx + 1}`}
-                            className="p-1 rounded text-slate-400 hover:text-blue-600 inline-block"
-                            title="View Movement Details"
-                          >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </Link>
+                    {history.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-12 text-center text-slate-400">
+                          <div className="w-10 h-10 rounded-full bg-slate-100 mx-auto flex items-center justify-center text-slate-400 mb-2">
+                            📦
+                          </div>
+                          <div className="font-semibold text-slate-700 text-xs">No Stock Movements Recorded</div>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Transactions from sales, purchases, adjustments, and transfers will appear here.
+                          </p>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      history.map((row: any, idx) => {
+                        const isInward = row.quantity > 0;
+                        const refCode = row.reference_code || (row.reference_type ? `${row.reference_type.toUpperCase()}-${row.reference_id}` : `TX-${row.id}`);
+                        const moveType = row.movement_type || row.reference_type || "Movement";
+                        return (
+                          <tr
+                            key={row.id || idx}
+                            onClick={() => setSelectedMovement(row)}
+                            className={`hover:bg-slate-50 transition-colors cursor-pointer ${selectedMovement?.id === row.id ? "bg-blue-50/50" : ""}`}
+                          >
+                            <td className="py-2.5 px-2 text-slate-400 whitespace-nowrap">
+                              {new Date(row.created_at || row.createdAt).toLocaleString()}
+                            </td>
+                            <td className="py-2.5 px-2 font-mono font-medium">
+                              <ReferenceLink refNumber={refCode} />
+                            </td>
+                            <td className="py-2.5 px-2">
+                              <span
+                                className={`font-semibold capitalize ${
+                                  isInward ? "text-emerald-600" : "text-rose-600"
+                                }`}
+                              >
+                                {moveType}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2 font-medium text-slate-800">
+                              <ReferenceLink type="product" refNumber={row.product?.name || `Product #${row.product_id}`} className="text-slate-800 hover:text-blue-600">
+                                {row.product?.name || `Product #${row.product_id}`}
+                              </ReferenceLink>
+                            </td>
+                            <td className="py-2.5 px-2 font-mono text-slate-500">
+                              <ReferenceLink type="product" refNumber={row.product?.sku || "—"} />
+                            </td>
+                            <td className="py-2.5 px-2 text-center font-bold text-emerald-600">
+                              {isInward ? `+${row.quantity}` : "—"}
+                            </td>
+                            <td className="py-2.5 px-2 text-center font-bold text-rose-500">
+                              {!isInward ? `${row.quantity}` : "—"}
+                            </td>
+                            <td className="py-2.5 px-2 text-center font-bold text-slate-800">
+                              {row.quantity_after ?? "—"}
+                            </td>
+                            <td className="py-2.5 px-2 text-slate-600">{row.shop?.name || `Shop #${row.shop_id || activeShop?.id || 1}`}</td>
+                            <td className="py-2.5 px-2 text-slate-600">{row.created_by ? `User #${row.created_by}` : "System"}</td>
+                            <td className="py-2.5 pl-2 text-right">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMovement(row);
+                                }}
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 inline-block"
+                                title="View Movement Details"
+                              >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {/* Bottom Analytics (3 items) */}
+            {/* Bottom Analytics (3 items from real history) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4">
-                <div className="text-xs font-bold text-slate-800 mb-2">Stock Movement Trend</div>
-                <div className="h-28 flex items-end gap-1.5 pt-4">
-                  {[40, 60, 50, 75, 90, 80, 100, 65, 85, 70, 95, 90].map((h, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full bg-blue-600 rounded-t" style={{ height: `${h * 0.7}%` }} />
-                      <div className="w-full bg-emerald-500 rounded-t" style={{ height: `${h * 0.4}%` }} />
+              <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col justify-between">
+                <div className="text-xs font-bold text-slate-800 mb-2">Movement Activity</div>
+                {history.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-400">
+                    No movement records to graph.
+                  </div>
+                ) : (
+                  <div className="text-xs space-y-1.5 pt-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Total Movements:</span>
+                      <span className="font-bold text-slate-800">{history.length}</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Inward Count:</span>
+                      <span className="font-bold text-emerald-600">{history.filter((h: any) => (h.signed_quantity ?? h.quantity ?? 0) > 0).length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Outward Count:</span>
+                      <span className="font-bold text-rose-600">{history.filter((h: any) => (h.signed_quantity ?? h.quantity ?? 0) < 0).length}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col justify-between">
                 <div className="text-xs font-bold text-slate-800">Movement by Type</div>
-                <div className="text-xs space-y-1.5 pt-2">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">• Purchase</span>
-                    <span className="font-semibold text-slate-800">28% (3,496)</span>
+                {history.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-400">
+                    No transactions recorded.
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">• Sale</span>
-                    <span className="font-semibold text-slate-800">32% (3,994)</span>
+                ) : (
+                  <div className="text-xs space-y-1.5 pt-2">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">• Purchase</span>
+                      <span className="font-semibold text-slate-800">
+                        {history.filter((h: any) => h.type === "purchase" || h.reference_type === "purchase").length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">• Sale</span>
+                      <span className="font-semibold text-slate-800">
+                        {history.filter((h: any) => h.type === "sale" || h.reference_type === "sale").length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">• Adjustment</span>
+                      <span className="font-semibold text-slate-800">
+                        {history.filter((h: any) => h.type === "adjustment" || h.reference_type === "adjustment").length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">• Transfer</span>
+                      <span className="font-semibold text-slate-800">
+                        {history.filter((h: any) => h.type === "transfer" || h.reference_type === "transfer").length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">• Adjustment</span>
-                    <span className="font-semibold text-slate-800">12% (1,498)</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">• Transfer In</span>
-                    <span className="font-semibold text-slate-800">8% (998)</span>
-                  </div>
-                </div>
+                )}
               </div>
 
-              <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4">
-                <div className="text-xs font-bold text-slate-800 mb-2">Top Moved Products</div>
-                <div className="text-xs space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-slate-800">iPhone 15</span>
-                    <span className="text-emerald-600 font-bold">+70</span>
+              <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4 flex flex-col justify-between">
+                <div className="text-xs font-bold text-slate-800 mb-2">Catalog Health</div>
+                <div className="text-xs space-y-1.5 pt-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Total Products:</span>
+                    <span className="font-bold text-slate-800">{products.length}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-slate-800">Samsung Galaxy S24</span>
-                    <span className="text-emerald-600 font-bold">+30</span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">In Stock:</span>
+                    <span className="font-bold text-emerald-600">
+                      {products.filter(p => (p.stocks?.[0]?.current_stock ?? 0) > 0).length}
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-slate-800">HDMI Cable 2m</span>
-                    <span className="text-emerald-600 font-bold">+80</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium text-slate-800">Smart Watch</span>
-                    <span className="text-emerald-600 font-bold">+20</span>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Zero Stock:</span>
+                    <span className="font-bold text-rose-500">
+                      {products.filter(p => (p.stocks?.[0]?.current_stock ?? 0) <= 0).length}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column (4 cols): Movement Details Drawer (Screenshot 5) */}
+          {/* Right Column (4 cols): Movement Details Drawer */}
           <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 shadow-xs p-5 space-y-4 h-fit">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="text-[15px] font-bold text-slate-800">Movement Details</div>
-              <button
-                onClick={() => setSelectedMovement(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                ✕
-              </button>
+              {selectedMovement && (
+                <button
+                  onClick={() => setSelectedMovement(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded text-xs font-bold bg-rose-50 text-rose-600">
-                ↓ Sale
-              </span>
-              <span className="font-mono text-xs font-bold text-slate-700">
-                {selectedMovement?.ref || "INV-00125"}
-              </span>
-              <span className="text-slate-400 text-[11px] ml-auto">
-                {selectedMovement?.date || "Oct 27, 2026 10:30"}
-              </span>
-            </div>
+            {!selectedMovement ? (
+              <div className="py-12 flex flex-col items-center justify-center text-center text-slate-400">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-lg mb-2">
+                  🔍
+                </div>
+                <div className="font-semibold text-slate-700 text-xs">No Movement Selected</div>
+                <p className="text-[11px] text-slate-400 mt-1 max-w-[200px]">
+                  Click on any transaction row in the table to inspect its batch and audit details.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      selectedMovement.quantity > 0
+                        ? "bg-emerald-50 text-emerald-600"
+                        : "bg-rose-50 text-rose-600"
+                    }`}
+                  >
+                    {selectedMovement.quantity > 0 ? "↑ Inward" : "↓ Outward"}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-700">
+                    {selectedMovement.reference_code || `TX-${selectedMovement.id}`}
+                  </span>
+                  <span className="text-slate-400 text-[11px] ml-auto">
+                    {new Date(selectedMovement.created_at || selectedMovement.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
 
-            {/* Product card */}
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <DeviceThumbnail name="iPhone 15" category="Mobile Phone" />
-              <div>
-                <div className="font-bold text-xs text-slate-900">{selectedMovement?.product || "iPhone 15"}</div>
-                <div className="text-[11px] font-mono text-slate-400">SKU: {selectedMovement?.sku || "IPH15-001"}</div>
-                <div className="text-[10.5px] text-slate-500">Category: Mobile Phone · Brand: Apple</div>
-              </div>
-            </div>
+                {/* Product card */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <DeviceThumbnail name={selectedMovement.product?.name || "Product"} />
+                  <div>
+                    <div className="font-bold text-xs text-slate-900">
+                      {selectedMovement.product?.name || `Product #${selectedMovement.product_id}`}
+                    </div>
+                    <div className="text-[11px] font-mono text-slate-400">
+                      SKU: {selectedMovement.product?.sku || "—"}
+                    </div>
+                    <div className="text-[10.5px] text-slate-500">
+                      {selectedMovement.product?.brand ? `Brand: ${selectedMovement.product.brand}` : "Catalog Item"}
+                    </div>
+                  </div>
+                </div>
 
-            {/* Shop & User */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-slate-400 text-[11px] block">Shop</span>
-                <span className="font-medium text-slate-800 flex items-center gap-1">
-                  🏪 {selectedMovement?.shop || "Main Shop - Electronics"}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 text-[11px] block">User</span>
-                <span className="font-medium text-slate-800 flex items-center gap-1">
-                  👤 {selectedMovement?.user || "Ramesh Kumar"}
-                </span>
-              </div>
-            </div>
+                {/* Shop & User */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[11px] block">Shop</span>
+                    <span className="font-medium text-slate-800 flex items-center gap-1">
+                      🏪 {selectedMovement.shop?.name || `Shop #${selectedMovement.shop_id || activeShop?.id || 1}`}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px] block">Recorded By</span>
+                    <span className="font-medium text-slate-800 flex items-center gap-1">
+                      👤 {selectedMovement.created_by ? `User #${selectedMovement.created_by}` : "System"}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Counters */}
-            <div className="grid grid-cols-3 gap-2 text-center pt-2">
-              <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50">
-                <span className="text-[11px] text-slate-500 block">Inward Qty</span>
-                <span className="text-base font-bold text-slate-800">{selectedMovement?.in || 0}</span>
-              </div>
-              <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50">
-                <span className="text-[11px] text-slate-500 block">Outward Qty</span>
-                <span className="text-base font-bold text-rose-600">{selectedMovement?.out || 1}</span>
-              </div>
-              <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50">
-                <span className="text-[11px] text-slate-500 block">Stock Balance</span>
-                <span className="text-base font-bold text-emerald-600">{selectedMovement?.bal || 15}</span>
-              </div>
-            </div>
+                {/* Counters */}
+                <div className="grid grid-cols-3 gap-2 text-center pt-2">
+                  <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50">
+                    <span className="text-[11px] text-slate-500 block">Prev Stock</span>
+                    <span className="text-base font-bold text-slate-800">{selectedMovement.quantity_before ?? "—"}</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50">
+                    <span className="text-[11px] text-slate-500 block">Change Qty</span>
+                    <span className={`text-base font-bold ${selectedMovement.quantity > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                      {selectedMovement.quantity > 0 ? `+${selectedMovement.quantity}` : selectedMovement.quantity}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg border border-slate-200 bg-slate-50">
+                    <span className="text-[11px] text-slate-500 block">New Balance</span>
+                    <span className="text-base font-bold text-slate-800">{selectedMovement.quantity_after ?? "—"}</span>
+                  </div>
+                </div>
 
-            <div className="space-y-2 text-xs border-t border-slate-100 pt-3">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Reference:</span>
-                <span className="font-mono font-medium text-slate-800">{selectedMovement?.ref || "INV-00125"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Customer:</span>
-                <span className="font-medium text-slate-800">Rahul Sharma (CUST-001)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Invoice Date:</span>
-                <span className="font-medium text-slate-800">Oct 27, 2026</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Remarks:</span>
-                <span className="font-medium text-slate-800">Sale invoice checkout</span>
-              </div>
-            </div>
+                <div className="space-y-2 text-xs border-t border-slate-100 pt-3">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Reference:</span>
+                    <span className="font-mono font-medium text-slate-800">
+                      {selectedMovement.reference_code || (selectedMovement.reference_type ? `${selectedMovement.reference_type.toUpperCase()}-${selectedMovement.reference_id}` : `TX-${selectedMovement.id}`)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Transaction Date:</span>
+                    <span className="font-medium text-slate-800">
+                      {new Date(selectedMovement.created_at || selectedMovement.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Notes / Reason:</span>
+                    <span className="font-medium text-slate-800">{selectedMovement.notes || "—"}</span>
+                  </div>
+                </div>
 
-            <button
-              onClick={() => setSelectedMovement(null)}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-colors"
-            >
-              Close
-            </button>
+                <button
+                  onClick={() => setSelectedMovement(null)}
+                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -2014,27 +2074,37 @@ function InventoryInner() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100/70">
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 pr-1 text-slate-400 text-[11px]">Oct 27, 2026</td>
-                      <td className="py-2 px-1 font-medium text-slate-800 truncate max-w-[85px]">iPhone 15</td>
-                      <td className="py-2 px-1 text-rose-600 font-semibold text-[11px]">Sale</td>
-                      <td className="py-2 px-1 text-right font-bold text-rose-600">-1</td>
-                      <td className="py-2 pl-1 text-right font-mono text-[10.5px] text-slate-500">INV-00125</td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 pr-1 text-slate-400 text-[11px]">Oct 27, 2026</td>
-                      <td className="py-2 px-1 font-medium text-slate-800 truncate max-w-[85px]">Samsung Galaxy S24</td>
-                      <td className="py-2 px-1 text-emerald-600 font-semibold text-[11px]">Purchase</td>
-                      <td className="py-2 px-1 text-right font-bold text-emerald-600">+10</td>
-                      <td className="py-2 pl-1 text-right font-mono text-[10.5px] text-slate-500">PUR-00078</td>
-                    </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="py-2 pr-1 text-slate-400 text-[11px]">Oct 26, 2026</td>
-                      <td className="py-2 px-1 font-medium text-slate-800 truncate max-w-[85px]">HDMI Cable 2m</td>
-                      <td className="py-2 px-1 text-cyan-600 font-semibold text-[11px]">Adjustment</td>
-                      <td className="py-2 px-1 text-right font-bold text-cyan-600">+5</td>
-                      <td className="py-2 pl-1 text-right font-mono text-[10.5px] text-slate-500">ADJ-00012</td>
-                    </tr>
+                    {history.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-400 text-xs">
+                          No recent stock movements.
+                        </td>
+                      </tr>
+                    ) : (
+                      history.slice(0, 5).map((row: any, idx) => {
+                        const isInward = row.quantity > 0;
+                        const refCode = row.reference_code || (row.reference_type ? `${row.reference_type.toUpperCase()}-${row.reference_id}` : `TX-${row.id}`);
+                        return (
+                          <tr key={row.id || idx} className="hover:bg-slate-50">
+                            <td className="py-2 pr-1 text-slate-400 text-[11px]">
+                              {new Date(row.created_at || row.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-2 px-1 font-medium text-slate-800 truncate max-w-[85px]">
+                              {row.product?.name || `Product #${row.product_id}`}
+                            </td>
+                            <td className={`py-2 px-1 font-semibold text-[11px] ${isInward ? "text-emerald-600" : "text-rose-600"}`}>
+                              {row.movement_type || row.reference_type || "Move"}
+                            </td>
+                            <td className={`py-2 px-1 text-right font-bold ${isInward ? "text-emerald-600" : "text-rose-600"}`}>
+                              {isInward ? `+${row.quantity}` : row.quantity}
+                            </td>
+                            <td className="py-2 pl-1 text-right font-mono text-[10.5px] text-slate-500">
+                              {refCode}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>

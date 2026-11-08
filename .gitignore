@@ -48,6 +48,7 @@ web/.env
 # Uploads and temporary data
 api/uploads/
 uploads/
+backups/
 
 
 # Office temporary lock files

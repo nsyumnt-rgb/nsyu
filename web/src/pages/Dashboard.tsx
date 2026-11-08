@@ -1,155 +1,104 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { getSalesReport, getInventoryReport, getCustomerOutstandingReport } from "../api/reports";
+import {
+  getSalesReport,
+  getPurchaseReport,
+  getInventoryReport,
+  getCustomerOutstandingReport,
+  getSupplierOutstandingReport,
+} from "../api/reports";
 import { listSales } from "../api/sales";
+import { listPurchases } from "../api/purchases";
+import { listCustomers } from "../api/customers";
+import { listEmployees } from "../api/employees";
+import { listProducts } from "../api/products";
 import { listShops } from "../api/shops";
+import { api } from "../api/client";
 import ReferenceLink from "../components/ReferenceLink";
+import ProductItemIcon from "../components/ProductItemIcon";
 
 export default function Dashboard() {
   const shopId = useAuthStore((s) => s.shopId);
 
   const [_loading, setLoading] = useState(true);
   const [salesSummary, setSalesSummary] = useState<any>(null);
+  const [purchaseSummary, setPurchaseSummary] = useState<any>(null);
   const [invSummary, setInvSummary] = useState<any>(null);
   const [outSummary, setOutSummary] = useState<any>(null);
+  const [suppOutSummary, setSuppOutSummary] = useState<any>(null);
   const [liveSales, setLiveSales] = useState<any[]>([]);
+  const [livePurchases, setLivePurchases] = useState<any[]>([]);
+  const [customersCount, setCustomersCount] = useState(0);
+  const [employeesCount, setEmployeesCount] = useState(0);
+  const [productsList, setProductsList] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [shopsList, setShopsList] = useState<any[]>([]);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       getSalesReport().catch(() => ({ data: { data: {} } })),
+      getPurchaseReport().catch(() => ({ data: { data: {} } })),
       getInventoryReport().catch(() => ({ data: { data: {} } })),
       getCustomerOutstandingReport().catch(() => ({ data: { data: {} } })),
+      getSupplierOutstandingReport().catch(() => ({ data: { data: {} } })),
       listSales({ limit: 5 }).catch(() => ({ data: { data: [] } })),
+      listPurchases({ limit: 5 }).catch(() => ({ data: { data: [] } })),
+      listCustomers().catch(() => ({ data: { data: [] } })),
+      listEmployees().catch(() => ({ data: { data: [] } })),
+      listProducts().catch(() => ({ data: { data: [] } })),
+      api.get("/activity", { params: { limit: 5 } }).catch(() => ({ data: { data: [] } })),
       listShops().catch(() => ({ data: { data: [] } })),
     ])
-      .then(([salesRes, invRes, outRes, recentRes]) => {
+      .then(([salesRes, purchRes, invRes, outRes, suppOutRes, recentSalesRes, recentPurchRes, custRes, empRes, prodRes, actRes, shopsRes]) => {
         setSalesSummary(salesRes.data?.data?.summary || null);
+        setPurchaseSummary(purchRes.data?.data?.summary || null);
         setInvSummary(invRes.data?.data || null);
         setOutSummary(outRes.data?.data || null);
-        setLiveSales(recentRes.data?.data || []);
+        setSuppOutSummary(suppOutRes.data?.data || null);
+        setLiveSales(recentSalesRes.data?.data || []);
+        setLivePurchases(recentPurchRes.data?.data || []);
+        setCustomersCount(Array.isArray(custRes.data?.data) ? custRes.data.data.length : 0);
+        setEmployeesCount(Array.isArray(empRes.data?.data) ? empRes.data.data.length : 0);
+        setProductsList(Array.isArray(prodRes.data?.data) ? prodRes.data.data : []);
+        setActivities(Array.isArray(actRes.data?.data) ? actRes.data.data : []);
+        setShopsList(Array.isArray(shopsRes.data?.data) ? shopsRes.data.data : []);
       })
       .finally(() => setLoading(false));
   }, [shopId]);
 
-  // Primary Metrics (with real API fallbacks if present)
-  const totalSalesVal = salesSummary?.total ? Number(salesSummary.total) : 1245600;
-  const totalPurchaseVal = 820300;
-  const currentStockVal = invSummary?.totalValue ? Number(invSummary.totalValue) : 1875400;
-  const totalCustomersVal = 1284;
-  const totalEmployeesVal = 26;
-
-  // Secondary Metrics
-  const todaySalesVal = 52400;
-  const todaySalesCount = 15;
-  const todayPurchaseVal = 28900;
-  const todayPurchaseCount = 4;
-  const todayPaymentsVal = 41200;
-  const todayPaymentsCount = 12;
-  const receivablesVal = outSummary?.totalOutstanding ? Number(outSummary.totalOutstanding) : 345600;
-  const payablesVal = 218900;
-
   // Format Helper
   const formatCurrency = (val: number) => {
-    return "₹ " + val.toLocaleString("en-IN");
+    return "₹ " + (val || 0).toLocaleString("en-IN");
   };
 
-  // Default Recent Sales fallback if live sales empty
-  const displaySales = liveSales.length > 0
-    ? liveSales.slice(0, 5).map((s) => ({
-        id: s.id,
-        invoiceNo: s.invoice_number,
-        customer: s.customer?.name || "Walk-in Customer",
-        customerId: s.customer_id,
-        amount: Number(s.total_amount),
-        payment: Number(s.due_amount) === 0 ? "Paid" : "Partial",
-        status: s.status === "completed" ? "Completed" : "Pending",
-        date: new Date(s.invoice_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      }))
-    : [
-        { id: undefined, invoiceNo: "INV-2026-00125", customer: "Rahul Sharma", customerId: undefined, amount: 15800, payment: "Paid", status: "Completed", date: "Oct 27, 2026" },
-        { id: undefined, invoiceNo: "INV-2026-00124", customer: "Priya Verma", customerId: undefined, amount: 8450, payment: "Partial", status: "Pending", date: "Oct 27, 2026" },
-        { id: undefined, invoiceNo: "INV-2026-00123", customer: "Amit Kumar", customerId: undefined, amount: 22300, payment: "Paid", status: "Completed", date: "Oct 26, 2026" },
-        { id: undefined, invoiceNo: "INV-2026-00122", customer: "Sneha Patel", customerId: undefined, amount: 5600, payment: "Paid", status: "Completed", date: "Oct 26, 2026" },
-        { id: undefined, invoiceNo: "INV-2026-00121", customer: "Vikram Singh", customerId: undefined, amount: 12750, payment: "Partial", status: "Pending", date: "Oct 25, 2026" },
-      ];
+  // 100% Real Database-Calculated Primary Metrics
+  const totalSalesVal = salesSummary?.total ? Number(salesSummary.total) : 0;
+  const totalPurchaseVal = purchaseSummary?.total ? Number(purchaseSummary.total) : 0;
+  const currentStockVal = invSummary?.totalValue
+    ? Number(invSummary.totalValue)
+    : productsList.reduce((acc, p) => acc + ((p.stocks?.[0]?.current_stock ?? 0) * Number(p.purchase_price || p.selling_price || 0)), 0);
+  const totalCustomersVal = customersCount;
+  const totalEmployeesVal = employeesCount;
 
-  // Low Stock Products
-  const lowStockProducts = [
-    { name: "iPhone 15", sku: "IPH15-001", stock: 3, icon: "📱" },
-    { name: "Samsung Galaxy S24", sku: "SS24-002", stock: 5, icon: "📱" },
-    { name: "Laptop Dell Inspiron", sku: "LDI-003", stock: 2, icon: "💻" },
-    { name: "Wireless Mouse", sku: "MOU-004", stock: 8, icon: "🖱️" },
-    { name: "HDMI Cable", sku: "CBL-005", stock: 6, icon: "🔌" },
-  ];
+  // Real Secondary Metrics computed from live records
+  const todayStr = new Date().toDateString();
+  const todaySalesList = liveSales.filter(s => new Date(s.invoice_date || s.createdAt).toDateString() === todayStr);
+  const todaySalesVal = todaySalesList.reduce((acc, s) => acc + Number(s.total_amount || 0), 0);
+  const todaySalesCount = todaySalesList.length;
 
-  // Top Selling Products
-  const topSelling = [
-    { name: "iPhone 15", sku: "IPH15-001", sold: 45, revenue: 675000, icon: "📱" },
-    { name: "Samsung Galaxy S24", sku: "SS24-002", sold: 38, revenue: 456800, icon: "📱" },
-    { name: "Laptop Dell Inspiron", sku: "LDI-003", sold: 22, revenue: 264000, icon: "💻" },
-    { name: "Wireless Earbuds", sku: "EAR-004", sold: 30, revenue: 150000, icon: "🎧" },
-    { name: "Smart Watch", sku: "SW-005", sold: 18, revenue: 126000, icon: "⌚" },
-  ];
+  const todayPurchList = livePurchases.filter(p => new Date(p.purchase_date || p.createdAt).toDateString() === todayStr);
+  const todayPurchaseVal = todayPurchList.reduce((acc, p) => acc + Number(p.total_amount || 0), 0);
+  const todayPurchaseCount = todayPurchList.length;
 
-  // Recent Purchases
-  const recentPurchases = [
-    { billNo: "PUR-2026-00078", supplier: "ABC Distributors", amount: 45600, status: "Received", date: "Oct 27, 2026" },
-    { billNo: "PUR-2026-00077", supplier: "Tech World", amount: 62300, status: "Received", date: "Oct 26, 2026" },
-    { billNo: "PUR-2026-00076", supplier: "Global Supplier", amount: 38700, status: "Paid", date: "Oct 25, 2026" },
-    { billNo: "PUR-2026-00075", supplier: "S.K. Traders", amount: 22400, status: "Received", date: "Oct 24, 2026" },
-    { billNo: "PUR-2026-00074", supplier: "Metro Electronics", amount: 51800, status: "Paid", date: "Oct 23, 2026" },
-  ];
+  const receivablesVal = outSummary?.totalOutstanding ? Number(outSummary.totalOutstanding) : 0;
+  const payablesVal = suppOutSummary?.totalOutstanding ? Number(suppOutSummary.totalOutstanding) : 0;
 
-  // Recent Activities
-  const recentActivities = [
-    {
-      title: "New sale created - INV-2026-00125",
-      time: "2 minutes ago",
-      icon: (
-        <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
-          🛒
-        </div>
-      ),
-    },
-    {
-      title: "Payment received - ₹ 15,800",
-      time: "5 minutes ago",
-      icon: (
-        <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
-          ₹
-        </div>
-      ),
-    },
-    {
-      title: "Stock updated - iPhone 15",
-      time: "15 minutes ago",
-      icon: (
-        <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-xs">
-          🔄
-        </div>
-      ),
-    },
-    {
-      title: "New employee added - Ramesh Kumar",
-      time: "1 hour ago",
-      icon: (
-        <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">
-          👤
-        </div>
-      ),
-    },
-    {
-      title: "New shop created - Home Appliances",
-      time: "2 hours ago",
-      icon: (
-        <div className="w-7 h-7 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-xs">
-          🏪
-        </div>
-      ),
-    },
-  ];
+  // Real Low Stock Products from actual inventory
+  const lowStockProducts = productsList.filter(
+    (p) => (p.stocks?.[0]?.current_stock ?? 0) <= (p.min_stock ?? 5)
+  );
 
   return (
     <div className="space-y-5 pb-10">
@@ -171,9 +120,8 @@ export default function Dashboard() {
             <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
               {formatCurrency(totalSalesVal)}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 12%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              {salesSummary?.count ? `${salesSummary.count} invoices` : "Live database record"}
             </div>
           </div>
         </div>
@@ -192,9 +140,8 @@ export default function Dashboard() {
             <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
               {formatCurrency(totalPurchaseVal)}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 8%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              {purchaseSummary?.count ? `${purchaseSummary.count} bills` : "Live database record"}
             </div>
           </div>
         </div>
@@ -213,9 +160,8 @@ export default function Dashboard() {
             <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
               {formatCurrency(currentStockVal)}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 5%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              {productsList.length} products in catalog
             </div>
           </div>
         </div>
@@ -235,9 +181,8 @@ export default function Dashboard() {
             <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
               {totalCustomersVal.toLocaleString()}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 18%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              Registered customers
             </div>
           </div>
         </div>
@@ -255,237 +200,101 @@ export default function Dashboard() {
             <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
               {totalEmployeesVal}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-slate-400 mt-1">
-              <span>→ 0%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              Staff members
             </div>
           </div>
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* 2. CHARTS SECTION (Sales & Purchase Trend + Shop-wise Sales)   */}
+      {/* 2. CHARTS SECTION (Sales & Purchase Trends)                    */}
       {/* ============================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left: Sales & Purchase Trend Line Chart */}
+        {/* Left: Sales & Purchase Trend */}
         <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="text-[15px] font-bold text-slate-800">Sales & Purchase Trend</div>
-            <div className="flex items-center gap-5">
-              <div className="flex items-center gap-4 text-xs font-medium">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                  <span className="text-slate-600">Sales</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-slate-600">Purchase</span>
-                </div>
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                <span className="text-slate-600">Sales: {formatCurrency(totalSalesVal)}</span>
               </div>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100">
-                <span>Last 12 Months</span>
-                <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span className="text-slate-600">Purchase: {formatCurrency(totalPurchaseVal)}</span>
               </div>
             </div>
           </div>
 
-          {/* SVG Spline Chart */}
-          <div className="relative w-full h-[220px]">
-            <svg viewBox="0 0 750 200" className="w-full h-full overflow-visible">
-              <defs>
-                <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563EB" stopOpacity="0.12" />
-                  <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="purchaseGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" stopOpacity="0.10" />
-                  <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              {/* Horizontal Grid lines */}
-              <line x1="40" y1="10" x2="740" y2="10" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <text x="30" y="14" fill="#94A3B8" fontSize="10" textAnchor="end">400K</text>
-
-              <line x1="40" y1="50" x2="740" y2="50" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <text x="30" y="54" fill="#94A3B8" fontSize="10" textAnchor="end">300K</text>
-
-              <line x1="40" y1="90" x2="740" y2="90" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <text x="30" y="94" fill="#94A3B8" fontSize="10" textAnchor="end">200K</text>
-
-              <line x1="40" y1="130" x2="740" y2="130" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3 3" />
-              <text x="30" y="134" fill="#94A3B8" fontSize="10" textAnchor="end">100K</text>
-
-              <line x1="40" y1="170" x2="740" y2="170" stroke="#E2E8F0" strokeWidth="1" />
-              <text x="30" y="174" fill="#94A3B8" fontSize="10" textAnchor="end">0</text>
-
-              {/* Area Fills */}
-              <path
-                d="M 50 145 C 90 135, 120 132, 160 138 C 200 145, 230 115, 275 110 C 320 105, 360 120, 405 115 C 450 110, 480 102, 530 100 C 580 98, 620 112, 670 114 C 700 115, 720 112, 735 112 L 735 170 L 50 170 Z"
-                fill="url(#purchaseGrad)"
-              />
-              <path
-                d="M 50 120 C 90 98, 120 105, 160 112 C 200 120, 230 92, 275 80 C 320 70, 360 92, 405 90 C 450 88, 480 68, 530 62 C 580 56, 620 75, 670 82 C 700 86, 720 98, 735 102 L 735 170 L 50 170 Z"
-                fill="url(#salesGrad)"
-              />
-
-              {/* Purchase Curve (Emerald) */}
-              <path
-                d="M 50 145 C 90 135, 120 132, 160 138 C 200 145, 230 115, 275 110 C 320 105, 360 120, 405 115 C 450 110, 480 102, 530 100 C 580 98, 620 112, 670 114 C 700 115, 720 112, 735 112"
-                fill="none"
-                stroke="#10B981"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              {[
-                [50, 145], [110, 134], [160, 138], [215, 135], [275, 110], [330, 112],
-                [405, 115], [470, 105], [530, 100], [590, 104], [670, 114], [735, 112],
-              ].map(([cx, cy], i) => (
-                <circle key={i} cx={cx} cy={cy} r="3.5" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
-              ))}
-
-              {/* Sales Curve (Blue) */}
-              <path
-                d="M 50 120 C 90 98, 120 105, 160 112 C 200 120, 230 92, 275 80 C 320 70, 360 92, 405 90 C 450 88, 480 68, 530 62 C 580 56, 620 75, 670 82 C 700 86, 720 98, 735 102"
-                fill="none"
-                stroke="#2563EB"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              {[
-                [50, 120], [110, 102], [160, 112], [215, 115], [275, 80], [330, 75],
-                [405, 90], [470, 80], [530, 62], [590, 68], [670, 82], [735, 102],
-              ].map(([cx, cy], i) => (
-                <circle key={i} cx={cx} cy={cy} r="3.5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-              ))}
-
-              {/* Month X Labels */}
-              {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(
-                (m, i) => (
-                  <text key={m} x={50 + i * 62} y="190" fill="#94A3B8" fontSize="10.5" textAnchor="middle">
-                    {m}
-                  </text>
-                )
-              )}
-            </svg>
-          </div>
+          {/* Database-Driven Trend Visualization or Clean Empty State */}
+          {totalSalesVal === 0 && totalPurchaseVal === 0 ? (
+            <div className="h-[220px] flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-xl mb-2">
+                📊
+              </div>
+              <div className="text-sm font-semibold text-slate-700">No Transaction Trend Data Yet</div>
+              <p className="text-xs text-slate-500 max-w-sm mt-1">
+                Sales and purchase volume over time will be graphed dynamically here as invoices are created.
+              </p>
+              <div className="flex gap-3 mt-4">
+                <Link to="/app/billing" className="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  + Create Sale
+                </Link>
+                <Link to="/app/purchase" className="text-xs font-semibold px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
+                  + Record Purchase
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="relative w-full h-[220px] flex flex-col justify-end pb-2">
+              <div className="flex items-end justify-around h-40 gap-4 px-4 border-b border-slate-200">
+                <div className="flex flex-col items-center flex-1 max-w-[80px]">
+                  <div className="text-[11px] font-bold text-blue-600 mb-1">{formatCurrency(totalSalesVal)}</div>
+                  <div
+                    className="w-full bg-blue-500 rounded-t-md transition-all"
+                    style={{ height: `${Math.min(130, Math.max(16, (totalSalesVal / (totalSalesVal + totalPurchaseVal || 1)) * 130))}px` }}
+                  />
+                  <div className="text-[11px] text-slate-500 font-medium mt-1">Sales</div>
+                </div>
+                <div className="flex flex-col items-center flex-1 max-w-[80px]">
+                  <div className="text-[11px] font-bold text-emerald-600 mb-1">{formatCurrency(totalPurchaseVal)}</div>
+                  <div
+                    className="w-full bg-emerald-500 rounded-t-md transition-all"
+                    style={{ height: `${Math.min(130, Math.max(16, (totalPurchaseVal / (totalSalesVal + totalPurchaseVal || 1)) * 130))}px` }}
+                  />
+                  <div className="text-[11px] text-slate-500 font-medium mt-1">Purchases</div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Right: Shop-wise Sales Donut Chart */}
+        {/* Right: Shop Distribution */}
         <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-[15px] font-bold text-slate-800">Shop-wise Sales</div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100">
-              <span>This Month</span>
-              <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
+            <div className="text-[15px] font-bold text-slate-800">Shops & Portals</div>
+            <span className="text-xs font-semibold text-slate-500">{shopsList.length} active</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 my-auto pt-2">
-            {/* Donut SVG */}
-            <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                {/* 45% Main Shop (Blue) */}
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="14"
-                  fill="none"
-                  stroke="#2563EB"
-                  strokeWidth="5"
-                  strokeDasharray="45 100"
-                  strokeDashoffset="0"
-                />
-                {/* 25% Mobile Accessories (Emerald) */}
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="14"
-                  fill="none"
-                  stroke="#10B981"
-                  strokeWidth="5"
-                  strokeDasharray="25 100"
-                  strokeDashoffset="-45"
-                />
-                {/* 18% Computer Store (Amber) */}
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="14"
-                  fill="none"
-                  stroke="#F59E0B"
-                  strokeWidth="5"
-                  strokeDasharray="18 100"
-                  strokeDashoffset="-70"
-                />
-                {/* 12% Home Appliances (Purple) */}
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="14"
-                  fill="none"
-                  stroke="#8B5CF6"
-                  strokeWidth="5"
-                  strokeDasharray="12 100"
-                  strokeDashoffset="-88"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                <span className="text-[14px] font-bold text-slate-900 leading-none">₹ 12.46L</span>
-                <span className="text-[10px] text-slate-400 font-medium mt-1">Total Sales</span>
+          <div className="flex flex-col justify-center gap-3 my-auto pt-2">
+            {shopsList.length === 0 ? (
+              <div className="text-center py-8 text-xs text-slate-400">
+                No active shop profiles found.
               </div>
-            </div>
-
-            {/* Breakdown Legend */}
-            <div className="space-y-2 text-xs flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                  <span className="text-slate-700 font-medium">Main Shop - Electronics</span>
+            ) : (
+              shopsList.map((shop) => (
+                <div key={shop.id} className="p-3 rounded-lg border border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-slate-800 text-xs">{shop.name}</div>
+                    <div className="text-[11px] text-slate-400 font-mono">{shop.code}</div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10.5px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
+                    Active
+                  </span>
                 </div>
-                <div className="text-right pl-2">
-                  <span className="font-semibold text-slate-900">45%</span>
-                  <div className="text-[11px] text-slate-400 font-mono">₹ 5,60,400</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-                  <span className="text-slate-700 font-medium">Mobile Accessories</span>
-                </div>
-                <div className="text-right pl-2">
-                  <span className="font-semibold text-slate-900">25%</span>
-                  <div className="text-[11px] text-slate-400 font-mono">₹ 3,11,200</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                  <span className="text-slate-700 font-medium">Computer Store</span>
-                </div>
-                <div className="text-right pl-2">
-                  <span className="font-semibold text-slate-900">18%</span>
-                  <div className="text-[11px] text-slate-400 font-mono">₹ 2,24,300</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shrink-0" />
-                  <span className="text-slate-700 font-medium">Home Appliances</span>
-                </div>
-                <div className="text-right pl-2">
-                  <span className="font-semibold text-slate-900">12%</span>
-                  <div className="text-[11px] text-slate-400 font-mono">₹ 1,49,700</div>
-                </div>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -508,9 +317,8 @@ export default function Dashboard() {
             <div className="text-[16px] font-bold text-slate-800 leading-snug">
               {formatCurrency(todaySalesVal)}
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-0.5">
-              <span>{todaySalesCount} invoices</span>
-              <span className="text-emerald-600 font-medium">↑ 10%</span>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              {todaySalesCount} invoices today
             </div>
           </div>
         </div>
@@ -529,29 +337,8 @@ export default function Dashboard() {
             <div className="text-[16px] font-bold text-slate-800 leading-snug">
               {formatCurrency(todayPurchaseVal)}
             </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-0.5">
-              <span>{todayPurchaseCount} invoices</span>
-              <span className="text-emerald-600 font-medium">↑ 5%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Today's Payments */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-              <line x1="1" y1="10" x2="23" y2="10" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Today's Payments</div>
-            <div className="text-[16px] font-bold text-slate-800 leading-snug">
-              {formatCurrency(todayPaymentsVal)}
-            </div>
-            <div className="flex items-center justify-between text-[11px] text-slate-400 mt-0.5">
-              <span>{todayPaymentsCount} payments</span>
-              <span className="text-emerald-600 font-medium">↑ 18%</span>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              {todayPurchaseCount} bills today
             </div>
           </div>
         </div>
@@ -567,11 +354,13 @@ export default function Dashboard() {
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Outstanding Receivables</div>
+            <div className="text-[11.5px] text-slate-500 font-medium">Customer Receivables</div>
             <div className="text-[16px] font-bold text-slate-800 leading-snug">
               {formatCurrency(receivablesVal)}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">128 customers</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              Due from customers
+            </div>
           </div>
         </div>
 
@@ -583,11 +372,32 @@ export default function Dashboard() {
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Outstanding Payables</div>
+            <div className="text-[11.5px] text-slate-500 font-medium">Supplier Payables</div>
             <div className="text-[16px] font-bold text-slate-800 leading-snug">
               {formatCurrency(payablesVal)}
             </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">42 suppliers</div>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              Due to suppliers
+            </div>
+          </div>
+        </div>
+
+        {/* Catalog Items */}
+        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11.5px] text-slate-500 font-medium">Active Products</div>
+            <div className="text-[16px] font-bold text-slate-800 leading-snug">
+              {productsList.length}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              In stock: {productsList.filter(p => (p.stocks?.[0]?.current_stock ?? 0) > 0).length}
+            </div>
           </div>
         </div>
       </div>
@@ -605,56 +415,76 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                  <th className="py-2.5 pr-2">Invoice No.</th>
-                  <th className="py-2.5 px-2">Customer</th>
-                  <th className="py-2.5 px-2">Amount</th>
-                  <th className="py-2.5 px-2">Payment</th>
-                  <th className="py-2.5 px-2">Status</th>
-                  <th className="py-2.5 pl-2 text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/70">
-                {displaySales.map((s, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 pr-2 font-mono font-medium">
-                      <ReferenceLink type="sale" id={s.id} refNumber={s.invoiceNo} />
-                    </td>
-                    <td className="py-3 px-2 font-medium text-slate-800">
-                      <ReferenceLink type="customer" id={s.customerId} refNumber={s.customer} className="text-slate-800 hover:text-blue-600 font-normal">
-                        {s.customer}
-                      </ReferenceLink>
-                    </td>
-                    <td className="py-3 px-2 font-semibold text-slate-900">₹ {s.amount.toLocaleString("en-IN")}</td>
-                    <td className="py-3 px-2">
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                          s.payment === "Paid"
-                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                            : "bg-blue-50 text-blue-600 border border-blue-100"
-                        }`}
-                      >
-                        {s.payment}
-                      </span>
-                    </td>
-                    <td className="py-3 px-2">
-                      <span
-                        className={`font-medium ${
-                          s.status === "Completed" ? "text-emerald-600" : "text-amber-500"
-                        }`}
-                      >
-                        {s.status}
-                      </span>
-                    </td>
-                    <td className="py-3 pl-2 text-right text-slate-400">{s.date}</td>
+          {liveSales.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-2">
+                🛒
+              </div>
+              <div className="text-sm font-semibold text-slate-700">No Recent Sales</div>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                Invoices and billings created through the point of sale will appear here.
+              </p>
+              <Link
+                to="/app/billing"
+                className="mt-3 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100"
+              >
+                + Create First Sale
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
+                    <th className="py-2.5 pr-2">Invoice No.</th>
+                    <th className="py-2.5 px-2">Customer</th>
+                    <th className="py-2.5 px-2">Amount</th>
+                    <th className="py-2.5 px-2">Payment</th>
+                    <th className="py-2.5 px-2">Status</th>
+                    <th className="py-2.5 pl-2 text-right">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100/70">
+                  {liveSales.slice(0, 5).map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 pr-2 font-mono font-medium">
+                        <ReferenceLink type="sale" id={s.id} refNumber={s.invoice_number} />
+                      </td>
+                      <td className="py-3 px-2 font-medium text-slate-800">
+                        <ReferenceLink type="customer" id={s.customer_id} refNumber={s.customer?.name || "Walk-in Customer"} className="text-slate-800 hover:text-blue-600 font-normal">
+                          {s.customer?.name || "Walk-in Customer"}
+                        </ReferenceLink>
+                      </td>
+                      <td className="py-3 px-2 font-semibold text-slate-900">₹ {Number(s.total_amount).toLocaleString("en-IN")}</td>
+                      <td className="py-3 px-2">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
+                            Number(s.due_amount) === 0
+                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                              : "bg-blue-50 text-blue-600 border border-blue-100"
+                          }`}
+                        >
+                          {Number(s.due_amount) === 0 ? "Paid" : "Partial"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2">
+                        <span
+                          className={`font-medium ${
+                            s.status === "completed" ? "text-emerald-600" : "text-amber-500"
+                          }`}
+                        >
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="py-3 pl-2 text-right text-slate-400">
+                        {new Date(s.invoice_date || s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Right: Low Stock Products */}
@@ -666,90 +496,63 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                  <th className="py-2.5 pr-2">Product</th>
-                  <th className="py-2.5 px-2">SKU</th>
-                  <th className="py-2.5 px-2 text-center">Current Stock</th>
-                  <th className="py-2.5 pl-2 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/70">
-                {lowStockProducts.map((p, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 pr-2 flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center text-sm shrink-0">
-                        {p.icon}
-                      </div>
-                      <ReferenceLink type="product" refNumber={p.sku} className="text-slate-800 hover:text-blue-600 font-medium">
-                        {p.name}
-                      </ReferenceLink>
-                    </td>
-                    <td className="py-3 px-2 font-mono text-slate-500 text-[11.5px]">
-                      <ReferenceLink type="product" refNumber={p.sku} />
-                    </td>
-                    <td className="py-3 px-2 text-center font-bold text-rose-500">{p.stock}</td>
-                    <td className="py-3 pl-2 text-right">
-                      <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-rose-50 text-rose-500 border border-rose-100">
-                        Low Stock
-                      </span>
-                    </td>
+          {lowStockProducts.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl mb-2">
+                ✓
+              </div>
+              <div className="text-sm font-semibold text-slate-700">All Products Well Stocked</div>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                No products are currently at or below their minimum reorder stock level.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
+                    <th className="py-2.5 pr-2">Product</th>
+                    <th className="py-2.5 px-2">SKU</th>
+                    <th className="py-2.5 px-2 text-center">Current Stock</th>
+                    <th className="py-2.5 pl-2 text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100/70">
+                  {lowStockProducts.slice(0, 5).map((p) => {
+                    const currentStock = p.stocks?.[0]?.current_stock ?? 0;
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 pr-2 flex items-center gap-2.5">
+                          <ProductItemIcon name={p.name} category={p.category?.name} size="sm" />
+                          <ReferenceLink type="product" refNumber={p.name} className="text-slate-800 hover:text-blue-600 font-medium">
+                            {p.name}
+                          </ReferenceLink>
+                        </td>
+                        <td className="py-3 px-2 font-mono text-slate-500 text-[11.5px]">
+                          <ReferenceLink type="product" refNumber={p.sku} />
+                        </td>
+                        <td className="py-3 px-2 text-center font-bold text-rose-500">{currentStock}</td>
+                        <td className="py-3 pl-2 text-right">
+                          <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-rose-50 text-rose-500 border border-rose-100">
+                            {currentStock <= 0 ? "Out of Stock" : "Low Stock"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* 5. BOTTOM THREE CARDS (Top Selling + Purchases + Activities)   */}
+      {/* 5. BOTTOM CARDS (Recent Purchases & Recent Activities)          */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Top Selling Products */}
-        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[15px] font-bold text-slate-800">Top Selling Products</div>
-            <Link to="/app/products" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
-              View All
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                  <th className="py-2 pr-2">Product</th>
-                  <th className="py-2 px-1">SKU</th>
-                  <th className="py-2 px-1 text-center">Total Sold</th>
-                  <th className="py-2 pl-2 text-right">Revenue</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/70">
-                {topSelling.map((p, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-2.5 pr-2 flex items-center gap-2">
-                      <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-xs shrink-0">
-                        {p.icon}
-                      </div>
-                      <span className="font-medium text-slate-800 truncate max-w-[110px]">{p.name}</span>
-                    </td>
-                    <td className="py-2.5 px-1 font-mono text-slate-500 text-[11px]">{p.sku}</td>
-                    <td className="py-2.5 px-1 text-center font-medium text-slate-700">{p.sold}</td>
-                    <td className="py-2.5 pl-2 text-right font-semibold text-slate-800">
-                      ₹ {p.revenue.toLocaleString("en-IN")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Recent Purchases */}
-        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[15px] font-bold text-slate-800">Recent Purchases</div>
             <Link to="/app/purchase" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
@@ -757,52 +560,72 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                  <th className="py-2 pr-1">Bill No.</th>
-                  <th className="py-2 px-1">Supplier</th>
-                  <th className="py-2 px-1">Amount</th>
-                  <th className="py-2 px-1">Status</th>
-                  <th className="py-2 pl-1 text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100/70">
-                {recentPurchases.map((pur, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-2.5 pr-1 font-mono text-[11px]">
-                      <ReferenceLink type="purchase" refNumber={pur.billNo} />
-                    </td>
-                    <td className="py-2.5 px-1 font-medium text-slate-800 truncate max-w-[95px]">
-                      <ReferenceLink type="supplier" refNumber={pur.supplier} className="text-slate-800 hover:text-blue-600 font-normal">
-                        {pur.supplier}
-                      </ReferenceLink>
-                    </td>
-                    <td className="py-2.5 px-1 font-semibold text-slate-800">
-                      ₹ {pur.amount.toLocaleString("en-IN")}
-                    </td>
-                    <td className="py-2.5 px-1">
-                      <span
-                        className={`inline-block px-1.5 py-0.5 rounded text-[10.5px] font-medium ${
-                          pur.status === "Received"
-                            ? "bg-emerald-50 text-emerald-600"
-                            : "bg-blue-50 text-blue-600"
-                        }`}
-                      >
-                        {pur.status}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pl-1 text-right text-slate-400 text-[11px]">{pur.date}</td>
+          {livePurchases.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-2">
+                🚚
+              </div>
+              <div className="text-sm font-semibold text-slate-700">No Purchases Recorded Yet</div>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                Inward inventory purchases from suppliers will appear here.
+              </p>
+              <Link
+                to="/app/purchase"
+                className="mt-3 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100"
+              >
+                + Record First Purchase
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
+                    <th className="py-2 pr-1">Bill No.</th>
+                    <th className="py-2 px-1">Supplier</th>
+                    <th className="py-2 px-1">Amount</th>
+                    <th className="py-2 px-1">Status</th>
+                    <th className="py-2 pl-1 text-right">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100/70">
+                  {livePurchases.slice(0, 5).map((pur) => (
+                    <tr key={pur.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2.5 pr-1 font-mono text-[11px]">
+                        <ReferenceLink type="purchase" refNumber={pur.invoice_number} />
+                      </td>
+                      <td className="py-2.5 px-1 font-medium text-slate-800 truncate max-w-[95px]">
+                        <ReferenceLink type="supplier" refNumber={pur.supplier?.name || "Supplier"} className="text-slate-800 hover:text-blue-600 font-normal">
+                          {pur.supplier?.name || "Supplier"}
+                        </ReferenceLink>
+                      </td>
+                      <td className="py-2.5 px-1 font-semibold text-slate-800">
+                        ₹ {Number(pur.total_amount).toLocaleString("en-IN")}
+                      </td>
+                      <td className="py-2.5 px-1">
+                        <span
+                          className={`inline-block px-1.5 py-0.5 rounded text-[10.5px] font-medium ${
+                            pur.status === "received" || pur.status === "completed"
+                              ? "bg-emerald-50 text-emerald-600"
+                              : "bg-blue-50 text-blue-600"
+                          }`}
+                        >
+                          {pur.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 pl-1 text-right text-slate-400 text-[11px]">
+                        {new Date(pur.purchase_date || pur.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Recent Activities */}
-        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[15px] font-bold text-slate-800">Recent Activities</div>
             <Link to="/app/reports" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
@@ -810,17 +633,35 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="space-y-3 pt-1">
-            {recentActivities.map((act, idx) => (
-              <div key={idx} className="flex items-center justify-between gap-2.5 text-xs">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  {act.icon}
-                  <span className="font-medium text-slate-700 truncate">{act.title}</span>
-                </div>
-                <span className="text-[11px] text-slate-400 shrink-0">{act.time}</span>
+          {activities.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-2">
+                📋
               </div>
-            ))}
-          </div>
+              <div className="text-sm font-semibold text-slate-700">No Recent Activity</div>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                Audits, product updates, and business actions will be tracked here.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3 pt-1">
+              {activities.slice(0, 5).map((act, idx) => (
+                <div key={idx} className="flex items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs shrink-0">
+                      ⚡
+                    </div>
+                    <span className="font-medium text-slate-700 truncate">
+                      {act.action ? `${act.action.toUpperCase()} on ${act.entity_type || 'System'}` : act.details || "Activity recorded"}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 shrink-0">
+                    {act.createdAt ? new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

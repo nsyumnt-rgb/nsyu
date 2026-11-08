@@ -84,83 +84,18 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                         'inv-${b.billNumber.toLowerCase()}' == widget.invoiceNo!.toLowerCase()),
                 orElse: () => null,
               );
-          final resolved = retryMatch ??
-              SavedBill(
-                billNumber: widget.invoiceNo ?? 'INV-NSYU-000010',
-                customerName: 'Amit Sharma',
-                customerPhone: '+91 98765 67890',
-                items: [
-                  SavedBillItem(
-                    desc: 'ERD LI-ION MOBILE BATTERY BT-144 MM A35',
-                    qty: 1,
-                    price: 80.0,
-                    sku: '8504',
-                  ),
-                  SavedBillItem(
-                    desc: 'ERD COMBO PACK GP-101',
-                    qty: 1,
-                    price: 1317.0,
-                    sku: '8601',
-                  ),
-                  SavedBillItem(
-                    desc: '20w C USB DOCK',
-                    qty: 1,
-                    price: 245.0,
-                    sku: '8703',
-                  ),
-                  SavedBillItem(
-                    desc: 'A531 85W USB-C (ABREE)',
-                    qty: 1,
-                    price: 65.0,
-                    sku: '8544',
-                  ),
-                ],
-                status: BillStatus.paid,
-                paidAmount: 1707.0,
-                date: DateTime(2026, 10, 31, 12, 33),
-              );
-
           setState(() {
-            _bill = resolved;
+            _bill = retryMatch;
+            if (retryMatch == null) {
+              _error = 'Bill #${widget.invoiceNo} not found.';
+            }
             _loading = false;
           });
         }).catchError((e) {
           if (!mounted) return;
           setState(() {
-            _bill = SavedBill(
-              billNumber: widget.invoiceNo ?? 'INV-NSYU-000010',
-              customerName: 'Amit Sharma',
-              customerPhone: '+91 98765 67890',
-              items: [
-                SavedBillItem(
-                  desc: 'ERD LI-ION MOBILE BATTERY BT-144 MM A35',
-                  qty: 1,
-                  price: 80.0,
-                  sku: '8504',
-                ),
-                SavedBillItem(
-                  desc: 'ERD COMBO PACK GP-101',
-                  qty: 1,
-                  price: 1317.0,
-                  sku: '8601',
-                ),
-                SavedBillItem(
-                  desc: '20w C USB DOCK',
-                  qty: 1,
-                  price: 245.0,
-                  sku: '8703',
-                ),
-                SavedBillItem(
-                  desc: 'A531 85W USB-C (ABREE)',
-                  qty: 1,
-                  price: 65.0,
-                  sku: '8544',
-                ),
-              ],
-              status: BillStatus.paid,
-              paidAmount: 1707.0,
-              date: DateTime(2026, 10, 31, 12, 33),
-            );
+            _bill = null;
+            _error = 'Failed to load bill: $e';
             _loading = false;
           });
         });
@@ -199,8 +134,12 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
   }
 
   void _sendWhatsApp(SavedBill bill) {
-    final phone = bill.customerPhone.isNotEmpty ? bill.customerPhone : '8800123456';
+    final phone = bill.customerPhone;
     final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer phone number not available')));
+      return;
+    }
     final msg = Uri.encodeComponent(
       'Hello ${bill.customerName},\n\nHere is your invoice Bill #${bill.billNumber} from NSYU.\n'
       'Total Bill Amount: ₹${_money.format(bill.total)}\n'

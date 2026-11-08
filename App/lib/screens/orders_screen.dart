@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/customer.dart';
 import '../models/saved_order.dart';
+import '../providers/auth_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/orders_provider.dart';
 import '../widgets/app_bottom_nav.dart';
@@ -58,144 +59,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
     return const Color(0xFFF43F5E); // Pink/Rose
   }
 
-  List<SavedOrder> _referenceMockOrders() {
-    return [
-      SavedOrder(
-        orderNumber: 'ORD-290407',
-        customerName: 'Amit Sharma',
-        customerPhone: '+91 98765 67890',
-        items: [
-          SavedOrderItem(desc: 'ERD LI-ION MOBILE BATTERY BT-144 MM A35', qty: 1, price: 80.0, sku: 'BT022'),
-          SavedOrderItem(desc: 'ERD LI-ION MOBILE BATTERY BT-422 SM A710', qty: 1, price: 80.0, sku: 'BT028'),
-          SavedOrderItem(desc: 'ERD LI-ION MOBILE BATTERY BT-47 SM W525', qty: 1, price: 80.0, sku: 'BT008'),
-        ],
-        subtotal: 240,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 240,
-        status: OrderStatus.convertedToBill,
-        date: DateTime(2026, 10, 31, 12, 34),
-      ),
-      SavedOrder(
-        orderNumber: 'ORD-290410',
-        customerName: 'Krishna Jasola',
-        customerPhone: '8800123456',
-        items: [
-          SavedOrderItem(desc: 'Mobile Battery', qty: 2, price: 611),
-          SavedOrderItem(desc: 'USB Adapter', qty: 1, price: 1000),
-        ],
-        subtotal: 2222,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 2222,
-        status: OrderStatus.pending,
-        date: DateTime(2026, 10, 29, 10, 30),
-      ),
-      SavedOrder(
-        orderNumber: 'ORD-290409',
-        customerName: 'GD SB',
-        customerPhone: '9811223344',
-        items: [
-          SavedOrderItem(desc: 'Combo Pack', qty: 3, price: 1000),
-          SavedOrderItem(desc: 'USB-C Cable', qty: 2, price: 750),
-        ],
-        subtotal: 4500,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 4500,
-        status: OrderStatus.confirmed,
-        date: DateTime(2026, 10, 28, 14, 20),
-      ),
-      SavedOrder(
-        orderNumber: 'ORD-290408',
-        customerName: 'Vijay sharma comm harkesh',
-        customerPhone: '9871100223',
-        items: [
-          SavedOrderItem(desc: 'Neckband Pro', qty: 4, price: 800),
-        ],
-        subtotal: 3200,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 3200,
-        status: OrderStatus.pending,
-        date: DateTime(2026, 10, 27, 11, 45),
-      ),
-      SavedOrder(
-        orderNumber: 'ORD-290406',
-        customerName: 'R K Comm SB',
-        customerPhone: '9810998877',
-        items: [
-          SavedOrderItem(desc: 'Fast Charger 20W', qty: 2, price: 925),
-        ],
-        subtotal: 1850,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 1850,
-        status: OrderStatus.delivered,
-        date: DateTime(2026, 10, 26, 16, 10),
-      ),
-      SavedOrder(
-        orderNumber: 'ORD-290405',
-        customerName: 'Siddique Sahab SB',
-        customerPhone: '9910223344',
-        items: [
-          SavedOrderItem(desc: 'Earbuds Wireless', qty: 6, price: 1000),
-        ],
-        subtotal: 6000,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 6000,
-        status: OrderStatus.confirmed,
-        date: DateTime(2026, 10, 25, 12, 00),
-      ),
-      SavedOrder(
-        orderNumber: 'ORD-290404',
-        customerName: 'Mohd Ali',
-        customerPhone: '9873344556',
-        items: [
-          SavedOrderItem(desc: 'Display Screen', qty: 7, price: 757.14),
-        ],
-        subtotal: 5300,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 5300,
-        status: OrderStatus.delivered,
-        date: DateTime(2026, 10, 23, 10, 15),
-      ),
-      SavedOrder(
-        orderNumber: 'ORD-290403',
-        customerName: 'Shakti Enterprise',
-        customerPhone: '9811556677',
-        items: [
-          SavedOrderItem(desc: 'USB Hub Multi-port', qty: 3, price: 1600),
-        ],
-        subtotal: 4800,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: 4800,
-        status: OrderStatus.pending,
-        date: DateTime(2026, 10, 22, 17, 40),
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
     final ordersProvider = context.watch<OrdersProvider>();
     final realOrders = ordersProvider.orders;
 
-    // Merge real database orders with reference orders
-    final Map<String, SavedOrder> allOrdersMap = {};
-    for (final o in realOrders) {
-      allOrdersMap[o.orderNumber] = o;
-    }
-    for (final mo in _referenceMockOrders()) {
-      if (!allOrdersMap.containsKey(mo.orderNumber)) {
-        allOrdersMap[mo.orderNumber] = mo;
-      }
-    }
+    final shopName = auth.shopName.isNotEmpty ? auth.shopName : 'NSYU';
+    final shopPhone = auth.shopPhone;
 
-    final allOrdersList = allOrdersMap.values.toList();
+    // Real database orders
+    final allOrdersList = List<SavedOrder>.from(realOrders);
     allOrdersList.sort((a, b) => b.date.compareTo(a.date));
 
     // Filter orders
@@ -255,7 +129,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   const SizedBox(width: 12),
 
                   // NSYU ▾ and Phone Number
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -264,62 +138,40 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'NSYU',
-                              style: TextStyle(
+                              shopName,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF0F172A),
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF64748B)),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF64748B)),
                           ],
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          '8801356002',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
+                        if (shopPhone.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            shopPhone,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
 
-                  // Share, Bell with red badge 2, Search
+                  // Share, Notifications, Search
                   IconButton(
                     icon: const Icon(Icons.share_outlined, color: Color(0xFF475569), size: 21),
                     onPressed: () {},
                   ),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
-                        onPressed: () {},
-                      ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(3.5),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '2',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
+                    onPressed: () {},
                   ),
                   IconButton(
                     icon: Icon(_searchOpen ? Icons.close : Icons.search, color: const Color(0xFF475569), size: 22),

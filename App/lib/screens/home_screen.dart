@@ -150,12 +150,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Dynamic calculations from actual database records
     final salesToday = bills.todaysSales;
-    final purchasesEstimate = bills.recentBills
-        .where((b) => b.date.year == DateTime.now().year && b.date.month == DateTime.now().month && b.date.day == DateTime.now().day)
-        .fold<double>(0.0, (sum, b) => sum + (b.total * 0.75));
-
+    final purchasesToday = 0.0;
     final totalOutstanding = customers.customers.fold<double>(0.0, (sum, c) => sum + (c.currentBalance > 0 ? c.currentBalance : 0.0));
-    final profitToday = (salesToday - purchasesEstimate) > 0 ? (salesToday - purchasesEstimate) : (salesToday * 0.25);
+    final profitToday = salesToday > 0 ? (salesToday - purchasesToday) : 0.0;
 
     final shopName = auth.shopName.isNotEmpty ? auth.shopName : 'NSYU Main Store';
 
@@ -312,8 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   _kpiCard(
                     title: 'Sales',
                     amount: '₹ ${money.format(salesToday)}',
-                    badge: '↑ 12%',
-                    isPositiveBadge: true,
                     icon: Icons.shopping_cart_outlined,
                     iconColor: const Color(0xFF16A34A),
                     iconBg: const Color(0xFFDCFCE7),
@@ -322,9 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   // 2. Purchases
                   _kpiCard(
                     title: 'Purchases',
-                    amount: '₹ ${money.format(purchasesEstimate)}',
-                    badge: '↑ 8%',
-                    isPositiveBadge: true,
+                    amount: '₹ ${money.format(purchasesToday)}',
                     icon: Icons.local_shipping_outlined,
                     iconColor: const Color(0xFF0284C7),
                     iconBg: const Color(0xFFE0F2FE),
@@ -343,8 +336,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   _kpiCard(
                     title: 'Total Profit',
                     amount: canViewProfit ? '₹ ${money.format(profitToday)}' : '•••',
-                    badge: canViewProfit ? '↑ 15%' : null,
-                    isPositiveBadge: true,
                     icon: Icons.bar_chart_rounded,
                     iconColor: const Color(0xFF16A34A),
                     iconBg: const Color(0xFFDCFCE7),
@@ -617,7 +608,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 for (int i = 0; i < 7; i++)
                   _chartBar(
                     day: days[i],
-                    heightRatio: (dailyTotals[i] / maxVal).clamp(0.08, 1.0),
+                    amount: dailyTotals[i],
+                    heightRatio: dailyTotals[i] > 0 ? (dailyTotals[i] / maxVal).clamp(0.08, 1.0) : 0.0,
                     isToday: (now.weekday - 1) == i,
                   ),
               ],
@@ -628,15 +620,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _chartBar({required String day, required double heightRatio, required bool isToday}) {
+  Widget _chartBar({required String day, required double amount, required double heightRatio, required bool isToday}) {
+    final hasSales = amount > 0;
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Container(
           width: 14,
-          height: 80 * heightRatio,
+          height: hasSales ? (80 * heightRatio).clamp(6.0, 80.0) : 3.0,
           decoration: BoxDecoration(
-            color: isToday ? const Color(0xFF1D4ED8) : const Color(0xFF93C5FD),
+            color: hasSales
+                ? (isToday ? const Color(0xFF1D4ED8) : const Color(0xFF93C5FD))
+                : const Color(0xFFE2E8F0),
             borderRadius: BorderRadius.circular(4),
           ),
         ),
