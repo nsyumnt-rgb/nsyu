@@ -49,6 +49,7 @@ web/.env
 api/uploads/
 uploads/
 backups/
+scripts/screenshots/
 
 
 # Office temporary lock files

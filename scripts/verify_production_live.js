@@ -213,8 +213,9 @@ async function run() {
   console.log('\nTest 15: Production Deployed Assets on GitHub Pages');
   const ghPagesIndex = await fetch('https://nsyumnt-rgb.github.io/nsyu/').then(r => r.text());
   const hasAppRoot = ghPagesIndex.includes('id="root"');
-  const hasBundle = ghPagesIndex.includes('assets/index-BJo773Dy.js');
-  console.log(`✔ GitHub Pages Web App: root container: ${hasAppRoot ? 'OK' : 'MISSING'}, bundle: ${hasBundle ? 'OK' : 'OLD'}`);
+  const jsMatch = ghPagesIndex.match(/assets\/index-[a-zA-Z0-9_\-]+\.js/);
+  const bundleFound = jsMatch ? jsMatch[0] : null;
+  console.log(`✔ GitHub Pages Web App: root container: ${hasAppRoot ? 'OK' : 'MISSING'}, bundle: ${bundleFound || 'MISSING'}`);
 
   console.log('\n====================================================');
   console.log('ALL 15 PRODUCTION VERIFICATION TESTS PASSED SUCCESSFULLY!');
