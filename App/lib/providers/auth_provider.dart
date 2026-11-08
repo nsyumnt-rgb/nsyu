@@ -247,15 +247,17 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
-  /// Customer Portal Phone + OTP Login
+  /// Customer Portal Email / Mobile + 4-Digit OTP Login
   Future<bool> loginAsCustomer({
-    required String phone,
+    String? identifier,
+    String? phone,
     required String otp,
     String? shopCode,
   }) async {
     try {
+      final effectiveId = (identifier ?? phone ?? '').trim();
       final res = await CustomerPortalService().verifyOtp(
-        phone: phone,
+        identifier: effectiveId,
         otp: otp,
         shopCode: shopCode,
       );
@@ -264,7 +266,7 @@ class AuthProvider extends ChangeNotifier {
       _isLoggedIn = true;
       _isCustomer = true;
       _userName = customer?['name']?.toString() ?? 'Customer';
-      _registeredMobile = customer?['phone']?.toString() ?? phone;
+      _registeredMobile = customer?['phone']?.toString() ?? effectiveId;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_loggedInKey, true);

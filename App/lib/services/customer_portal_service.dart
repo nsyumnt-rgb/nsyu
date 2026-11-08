@@ -66,12 +66,22 @@ class CustomerPortalService {
   }
 
   /* ---------------- Auth ---------------- */
-  Future<Map<String, dynamic>> requestOtp({required String phone, String? shopCode}) async {
+  Future<Map<String, dynamic>> requestOtp({
+    String? identifier,
+    String? phone,
+    String? shopCode,
+  }) async {
+    final effectiveId = (identifier ?? phone ?? '').trim();
+    final isEmail = effectiveId.contains('@');
     final url = Uri.parse('$_portalBaseUrl/auth/request-otp');
     final res = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'phone': phone.trim(), if (shopCode != null && shopCode.isNotEmpty) 'shopCode': shopCode.trim()}),
+      body: jsonEncode({
+        'identifier': effectiveId,
+        if (isEmail) 'email': effectiveId else 'phone': effectiveId,
+        if (shopCode != null && shopCode.isNotEmpty) 'shopCode': shopCode.trim(),
+      }),
     );
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -81,16 +91,20 @@ class CustomerPortalService {
   }
 
   Future<Map<String, dynamic>> verifyOtp({
-    required String phone,
+    String? identifier,
+    String? phone,
     required String otp,
     String? shopCode,
   }) async {
+    final effectiveId = (identifier ?? phone ?? '').trim();
+    final isEmail = effectiveId.contains('@');
     final url = Uri.parse('$_portalBaseUrl/auth/verify-otp');
     final res = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'phone': phone.trim(),
+        'identifier': effectiveId,
+        if (isEmail) 'email': effectiveId else 'phone': effectiveId,
         'otp': otp.trim(),
         if (shopCode != null && shopCode.isNotEmpty) 'shopCode': shopCode.trim(),
       }),

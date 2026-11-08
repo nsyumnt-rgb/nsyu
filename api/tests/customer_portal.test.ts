@@ -51,14 +51,14 @@ describe("Customer Portal Backend Tests (CP-A to CP-N & CP-I)", () => {
     const c1Res = await request(app)
       .post("/api/customers")
       .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ name: "Ramesh Sharma", phone: customer1Phone, address: "Shop 12, Main Market" });
+      .send({ name: "Ramesh Sharma", phone: customer1Phone, email: `ramesh_${seq}@example.com`, address: "Shop 12, Main Market" });
     customer1 = c1Res.body.data;
 
     // Create Customer 2
     const c2Res = await request(app)
       .post("/api/customers")
       .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ name: "Suresh Gupta", phone: customer2Phone, address: "Shop 45, Karol Bagh" });
+      .send({ name: "Suresh Gupta", phone: customer2Phone, email: `suresh_${seq}@example.com`, address: "Shop 45, Karol Bagh" });
     customer2 = c2Res.body.data;
 
     // Enable portal login for customer 1
@@ -125,8 +125,9 @@ describe("Customer Portal Backend Tests (CP-A to CP-N & CP-I)", () => {
         .send({ phone: customer1Phone, shopCode: shop.code });
       expect(knownRes.status).toBe(200);
       expect(knownRes.body.success).toBe(true);
-      expect(knownRes.body.message).toContain("If this phone number is registered");
+      expect(knownRes.body.message).toContain("registered with this shop");
       expect(knownRes.body.debugOtp).toBeDefined();
+      expect(knownRes.body.debugOtp).toHaveLength(4);
       validOtp = knownRes.body.debugOtp;
 
       const unknownRes = await request(app)
@@ -162,7 +163,7 @@ describe("Customer Portal Backend Tests (CP-A to CP-N & CP-I)", () => {
       for (let i = 1; i <= 5; i++) {
         const failRes = await request(app)
           .post("/api/customer-portal/auth/verify-otp")
-          .send({ phone: customer2Phone, shopCode: shop.code, otp: "000000" });
+          .send({ phone: customer2Phone, shopCode: shop.code, otp: "0000" });
         expect(failRes.status).toBe(400);
       }
 
@@ -264,6 +265,25 @@ describe("Customer Portal Backend Tests (CP-A to CP-N & CP-I)", () => {
         .get("/api/customer-portal/catalog/products")
         .set("Authorization", `Bearer ${ownerToken}`);
       expect(portalRouteRes.status).toBe(403);
+    });
+
+    it("CP-A08: Login using registered email directly with 4-digit OTP", async () => {
+      const email = `ramesh_${seq}@example.com`;
+      const reqRes = await request(app)
+        .post("/api/customer-portal/auth/request-otp")
+        .send({ email, shopCode: shop.code });
+      expect(reqRes.status).toBe(200);
+      expect(reqRes.body.debugOtp).toBeDefined();
+      expect(reqRes.body.debugOtp).toHaveLength(4);
+
+      const verifyRes = await request(app)
+        .post("/api/customer-portal/auth/verify-otp")
+        .send({ email, shopCode: shop.code, otp: reqRes.body.debugOtp });
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.success).toBe(true);
+      expect(verifyRes.body.data.accessToken).toBeDefined();
+      expect(verifyRes.body.data.customer.id).toBe(customer1.id);
+      expect(verifyRes.body.data.customer.name).toBe("Ramesh Sharma");
     });
   });
 

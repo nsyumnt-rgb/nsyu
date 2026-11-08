@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import sequelize from "../config/database";
+import type { Customer } from "./Customer";
 
 export const CUSTOMER_ACCOUNT_STATUSES = ["pending_approval", "active", "disabled"] as const;
 export type CustomerAccountStatus = (typeof CUSTOMER_ACCOUNT_STATUSES)[number];
@@ -39,6 +40,7 @@ export class CustomerAccount
   public last_login_at?: Date | null;
   public created_by?: number | null;
   public approved_by?: number | null;
+  public customer?: Customer;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 }

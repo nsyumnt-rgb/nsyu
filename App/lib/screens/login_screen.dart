@@ -24,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isCustomerMode = false;
   bool _otpSent = false;
+  String? _maskedEmail;
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _loading = false;
@@ -327,9 +328,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleCustomerRequestOtp() async {
-    final phone = _customerPhoneCtrl.text.trim();
-    if (phone.length < 10) {
-      setState(() => _error = 'Please enter a valid 10-digit mobile number.');
+    final input = _customerPhoneCtrl.text.trim();
+    if (input.isEmpty || (!input.contains('@') && input.replaceAll(RegExp(r'\D'), '').length < 10)) {
+      setState(() => _error = 'Please enter a valid 10-digit mobile number or email address.');
       return;
     }
     setState(() {
@@ -337,14 +338,15 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
-      await CustomerPortalService().requestOtp(
-        phone: phone,
+      final res = await CustomerPortalService().requestOtp(
+        identifier: input,
         shopCode: _customerShopCodeCtrl.text.trim().isNotEmpty ? _customerShopCodeCtrl.text.trim() : null,
       );
       if (!mounted) return;
       setState(() {
         _loading = false;
         _otpSent = true;
+        _maskedEmail = res['maskedEmail'] as String?;
       });
     } catch (e) {
       if (!mounted) return;
@@ -356,10 +358,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleCustomerVerifyOtp() async {
-    final phone = _customerPhoneCtrl.text.trim();
+    final input = _customerPhoneCtrl.text.trim();
     final otp = _customerOtpCtrl.text.trim();
-    if (otp.length < 4) {
-      setState(() => _error = 'Please enter the verification OTP.');
+    if (otp.length != 4) {
+      setState(() => _error = 'Please enter the 4-digit verification OTP.');
       return;
     }
     setState(() {
@@ -367,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     final success = await context.read<AuthProvider>().loginAsCustomer(
-      phone: phone,
+      identifier: input,
       otp: otp,
       shopCode: _customerShopCodeCtrl.text.trim().isNotEmpty ? _customerShopCodeCtrl.text.trim() : null,
     );
@@ -550,15 +552,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 child: TextField(
                                   controller: _customerPhoneCtrl,
-                                  keyboardType: TextInputType.phone,
+                                  keyboardType: TextInputType.emailAddress,
                                   style: const TextStyle(fontSize: 14),
-                                  decoration: const InputDecoration(
-                                    hintText: '10-digit Mobile Number',
-                                    prefixText: '+91 ',
-                                    prefixIcon: Icon(Icons.phone_outlined, size: 20, color: Color(0xFF64748B)),
+                                  decoration: InputDecoration(
+                                    hintText: 'Mobile Number or Email',
+                                    prefixIcon: Icon(
+                                      _customerPhoneCtrl.text.contains('@') ? Icons.alternate_email : Icons.phone_outlined,
+                                      size: 20,
+                                      color: const Color(0xFF64748B),
+                                    ),
                                     border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                                   ),
+                                  onChanged: (_) => setState(() {}),
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4, top: 4),
+                                child: Text(
+                                  '4-digit OTP will be sent to your registered email address.',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                                 ),
                               ),
                               const SizedBox(height: 14),
@@ -595,9 +608,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 child: _loading
                                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                    : const Text('Get Verification OTP >', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    : const Text('Get 4-Digit OTP >', style: TextStyle(fontWeight: FontWeight.bold)),
                               ),
                             ] else ...[
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  children: [
+                                    const Text('4-Digit Verification Code sent to email:', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _maskedEmail ?? _customerPhoneCtrl.text.trim(),
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                                    ),
+                                  ],
+                                ),
+                              ),
                               Container(
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFF8FAFC),
@@ -608,9 +634,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                   controller: _customerOtpCtrl,
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 8),
+                                  maxLength: 4,
+                                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 14),
                                   decoration: const InputDecoration(
-                                    hintText: '••••••',
+                                    hintText: '••••',
+                                    counterText: '',
                                     border: InputBorder.none,
                                     contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                                   ),
@@ -635,7 +663,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextButton(
                                 onPressed: () => setState(() => _otpSent = false),
-                                child: const Text('Change Mobile Number', style: TextStyle(color: Color(0xFF047857))),
+                                child: const Text('Change Mobile / Email', style: TextStyle(color: Color(0xFF047857))),
                               ),
                             ],
                           ] else ...[

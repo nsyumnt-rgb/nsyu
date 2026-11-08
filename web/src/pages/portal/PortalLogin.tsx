@@ -12,7 +12,10 @@ export default function PortalLogin() {
   const queryShop = searchParams.get("shop") || searchParams.get("shopCode") || "";
 
   const [step, setStep] = useState<"phone" | "otp" | "register">("phone");
-  const [phone, setPhone] = useState("");
+  const [identifier, setIdentifier] = useState(
+    searchParams.get("identifier") || searchParams.get("phone") || searchParams.get("email") || ""
+  );
+  const [maskedEmail, setMaskedEmail] = useState<string | null>(null);
   const [shopCode, setShopCode] = useState(queryShop);
   const [otp, setOtp] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -22,6 +25,7 @@ export default function PortalLogin() {
 
   // Registration state
   const [regName, setRegName] = useState("");
+  const [regPhone, setRegPhone] = useState("");
   const [regAddress, setRegAddress] = useState("");
   const [regEmail, setRegEmail] = useState("");
 
@@ -40,21 +44,29 @@ export default function PortalLogin() {
     setError(null);
     setSuccessMsg(null);
 
-    const cleanPhone = phone.trim();
-    if (!cleanPhone || cleanPhone.length < 10) {
-      setError("Please enter a valid 10-digit mobile number.");
+    const cleanInput = identifier.trim();
+    if (!cleanInput) {
+      setError("Please enter your mobile number or registered email address.");
+      return;
+    }
+
+    const isEmail = cleanInput.includes("@");
+    if (!isEmail && cleanInput.replace(/\D/g, "").length < 10) {
+      setError("Please enter a valid 10-digit mobile number or email address.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await requestOtpApi(cleanPhone, shopCode.trim() || undefined);
-      setSuccessMsg(res.message || "OTP sent successfully.");
+      const res = await requestOtpApi(cleanInput, shopCode.trim() || undefined);
+      setSuccessMsg(res.message || "4-digit OTP sent to your registered email.");
+      if (res.maskedEmail) {
+        setMaskedEmail(res.maskedEmail);
+      }
       setStep("otp");
       setResendCooldown(60);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Failed to send OTP.";
-      // If shop requires self-registration or not found
       if (err.response?.status === 404 && msg.includes("Customer account not found")) {
         setError(msg + " You can register below if self-registration is enabled.");
       } else {
@@ -68,14 +80,14 @@ export default function PortalLogin() {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!otp || otp.trim().length < 4) {
-      setError("Please enter the verification code.");
+    if (!otp || otp.trim().length !== 4) {
+      setError("Please enter the 4-digit verification code.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await verifyOtpApi(phone.trim(), otp.trim(), shopCode.trim() || undefined);
+      const res = await verifyOtpApi(identifier.trim(), otp.trim(), shopCode.trim() || undefined);
       const { accessToken, refreshToken, customer } = res.data;
       setCustomerSession(accessToken, refreshToken, customer);
       navigate("/portal/home", { replace: true });
@@ -90,8 +102,8 @@ export default function PortalLogin() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!regName.trim() || !phone.trim() || !shopCode.trim()) {
-      setError("Name, Phone, and Shop Code are required for registration.");
+    if (!regName.trim() || !regPhone.trim() || !regEmail.trim() || !shopCode.trim()) {
+      setError("Name, Mobile, Email, and Shop Code are required for registration.");
       return;
     }
 
@@ -100,11 +112,12 @@ export default function PortalLogin() {
       const res = await portalApi.post("/customer-portal/auth/register", {
         shopCode: shopCode.trim(),
         name: regName.trim(),
-        phone: phone.trim(),
-        email: regEmail.trim() || undefined,
+        phone: regPhone.trim(),
+        email: regEmail.trim(),
         address: regAddress.trim() || undefined,
       });
-      setSuccessMsg(res.data?.message || "Registered successfully! Verification OTP sent.");
+      setIdentifier(regEmail.trim() || regPhone.trim());
+      setSuccessMsg(res.data?.message || "Registered successfully! Verification 4-digit OTP sent to your email.");
       setStep("otp");
       setResendCooldown(60);
     } catch (err: any) {
@@ -148,27 +161,27 @@ export default function PortalLogin() {
             </div>
           )}
 
-          {/* STEP 1: Phone & Shop Code */}
+          {/* STEP 1: Phone or Email & Shop Code */}
           {step === "phone" && (
             <form onSubmit={handleRequestOtp} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Mobile Number <span className="text-rose-500">*</span>
+                  Mobile Number or Email <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 font-semibold text-sm">
-                    +91
+                    {identifier.includes("@") ? "✉️" : "📱"}
                   </span>
                   <input
-                    type="tel"
+                    type="text"
                     required
-                    maxLength={10}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    placeholder="9876543210"
-                    className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="9876543210 or customer@email.com"
+                    className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                   />
                 </div>
+                <p className="text-[11px] text-gray-400 mt-1">Enter your mobile or email. OTP will be sent to your registered email.</p>
               </div>
 
               <div>
@@ -187,7 +200,7 @@ export default function PortalLogin() {
 
               <button
                 type="submit"
-                disabled={loading || phone.length < 10}
+                disabled={loading || identifier.trim().length < 3}
                 className="w-full mt-2 py-3 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -196,10 +209,10 @@ export default function PortalLogin() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    <span>Sending OTP...</span>
+                    <span>Sending 4-Digit OTP...</span>
                   </>
                 ) : (
-                  <span>Continue with OTP &rarr;</span>
+                  <span>Continue with 4-Digit OTP &rarr;</span>
                 )}
               </button>
 
@@ -222,29 +235,31 @@ export default function PortalLogin() {
           {step === "otp" && (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div className="text-center pb-1">
-                <span className="text-xs text-gray-500">Verification code sent to</span>
-                <div className="font-bold text-gray-800 text-sm mt-0.5">+91 {phone}</div>
+                <span className="text-xs text-gray-500">4-digit verification code sent to registered email</span>
+                <div className="font-bold text-gray-800 text-sm mt-0.5">
+                  {maskedEmail ? maskedEmail : identifier}
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 text-center">
-                  Enter 6-Digit OTP
+                  Enter 4-Digit OTP
                 </label>
                 <input
                   type="text"
                   required
-                  maxLength={6}
+                  maxLength={4}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="&bull;&bull;&bull;&bull;&bull;&bull;"
-                  className="w-full text-center tracking-[0.5em] text-xl font-bold py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="&bull;&bull;&bull;&bull;"
+                  className="w-full text-center tracking-[0.8em] text-2xl font-bold py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                   autoFocus
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={loading || otp.length < 4}
+                disabled={loading || otp.length !== 4}
                 className="w-full py-3 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -269,7 +284,7 @@ export default function PortalLogin() {
                   }}
                   className="text-gray-500 hover:text-gray-800 font-medium"
                 >
-                  &larr; Change Number
+                  &larr; Change Email / Mobile
                 </button>
 
                 {resendCooldown > 0 ? (
@@ -335,12 +350,27 @@ export default function PortalLogin() {
                     type="tel"
                     required
                     maxLength={10}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     placeholder="9876543210"
                     className="w-full pl-11 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  placeholder="name@example.com (OTP is sent here)"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">Verification OTP will be sent strictly to this email.</p>
               </div>
 
               <div>
@@ -356,25 +386,12 @@ export default function PortalLogin() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                  Email (Optional)
-                </label>
-                <input
-                  type="email"
-                  value={regEmail}
-                  onChange={(e) => setRegEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-                />
-              </div>
-
               <button
                 type="submit"
-                disabled={loading || !regName || phone.length < 10 || !shopCode}
+                disabled={loading || !regName || regPhone.length < 10 || !regEmail || !shopCode}
                 className="w-full mt-2 py-2.5 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-lg text-sm shadow transition"
               >
-                {loading ? "Registering..." : "Register & Send OTP"}
+                {loading ? "Registering..." : "Register & Send 4-Digit OTP"}
               </button>
 
               <div className="text-center pt-2">

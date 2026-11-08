@@ -57,13 +57,27 @@ portalApi.interceptors.response.use(
 );
 
 /* ---------------- Auth API ---------------- */
-export async function requestOtpApi(phone: string, shopCode?: string, shopId?: number) {
-  const res = await portalApi.post("/customer-portal/auth/request-otp", { phone, shopCode, shopId });
+export async function requestOtpApi(identifier: string, shopCode?: string, shopId?: number) {
+  const isEmail = identifier.includes("@");
+  const payload: any = { identifier, shopCode, shopId };
+  if (isEmail) {
+    payload.email = identifier;
+  } else {
+    payload.phone = identifier;
+  }
+  const res = await portalApi.post("/customer-portal/auth/request-otp", payload);
   return res.data;
 }
 
-export async function verifyOtpApi(phone: string, otp: string, shopCode?: string, shopId?: number) {
-  const res = await portalApi.post("/customer-portal/auth/verify-otp", { phone, otp, shopCode, shopId });
+export async function verifyOtpApi(identifier: string, otp: string, shopCode?: string, shopId?: number) {
+  const isEmail = identifier.includes("@");
+  const payload: any = { identifier, otp, shopCode, shopId };
+  if (isEmail) {
+    payload.email = identifier;
+  } else {
+    payload.phone = identifier;
+  }
+  const res = await portalApi.post("/customer-portal/auth/verify-otp", payload);
   return res.data;
 }
 

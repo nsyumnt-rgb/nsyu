@@ -13,6 +13,7 @@ const sequelize_1 = require("sequelize");
 const models_1 = require("../models");
 const jwt_1 = require("../utils/jwt");
 const audit_1 = require("../utils/audit");
+const mailer_1 = require("../utils/mailer");
 function hashString(val) {
     return crypto_1.default.createHash("sha256").update(val).digest("hex");
 }
@@ -20,19 +21,83 @@ function normalizePhone(raw) {
     return raw.replace(/[^0-9]/g, "").slice(-10);
 }
 /**
+ * Resolves a customer account using either email or phone number in a specific shop.
+ */
+async function resolveCustomerAccount(rawInput, shop) {
+    const input = rawInput.trim();
+    const isEmailInput = input.includes("@");
+    if (isEmailInput) {
+        const email = input.toLowerCase();
+        const customer = await models_1.Customer.findOne({
+            where: {
+                email,
+                owner_id: shop.owner_id,
+            },
+        });
+        if (!customer) {
+            return { account: null, phone: "", email, isEmailInput: true };
+        }
+        const account = await models_1.CustomerAccount.findOne({
+            where: {
+                customer_id: customer.id,
+                shop_id: shop.id,
+            },
+            include: [{ model: models_1.Customer, as: "customer" }],
+        });
+        return {
+            account,
+            phone: account?.phone || customer.phone || "",
+            email: customer.email || email,
+            isEmailInput: true,
+        };
+    }
+    else {
+        const phone = normalizePhone(input);
+        let account = await models_1.CustomerAccount.findOne({
+            where: {
+                phone,
+                shop_id: shop.id,
+            },
+            include: [{ model: models_1.Customer, as: "customer" }],
+        });
+        if (!account) {
+            const customer = await models_1.Customer.findOne({
+                where: {
+                    phone,
+                    owner_id: shop.owner_id,
+                },
+            });
+            if (customer) {
+                account = await models_1.CustomerAccount.findOne({
+                    where: {
+                        customer_id: customer.id,
+                        shop_id: shop.id,
+                    },
+                    include: [{ model: models_1.Customer, as: "customer" }],
+                });
+            }
+        }
+        const email = account?.customer?.email || null;
+        return {
+            account,
+            phone,
+            email,
+            isEmailInput: false,
+        };
+    }
+}
+/**
  * POST /api/customer-portal/auth/request-otp
- * Rate-limited (max 3 per 15 min per phone).
- * Always returns identical response regardless of phone existence (anti-enumeration).
+ * Accepts email OR mobile number.
+ * Generates a 4-digit OTP and sends it ONLY to the customer's registered email ID.
+ * Rate-limited (max 3 per 15 min per identifier).
  */
 async function requestOtp(req, res) {
     try {
-        const { phone: rawPhone, shopCode, shopId: inputShopId } = req.body;
-        if (!rawPhone) {
-            return res.status(400).json({ success: false, message: "Phone number is required" });
-        }
-        const phone = normalizePhone(String(rawPhone));
-        if (phone.length < 10) {
-            return res.status(400).json({ success: false, message: "Invalid phone number" });
+        const { identifier: rawIdentifier, phone: rawPhone, email: rawEmail, shopCode, shopId: inputShopId } = req.body;
+        const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
+        if (!rawInput) {
+            return res.status(400).json({ success: false, message: "Email address or mobile number is required" });
         }
         // Resolve shop
         let shop = null;
@@ -48,8 +113,10 @@ async function requestOtp(req, res) {
         if (!shop) {
             return res.status(404).json({ success: false, message: "Shop not found" });
         }
-        // Rate limiting: Max 3 OTP requests per phone per 15 minutes (in production)
-        if (process.env.NODE_ENV !== "test") {
+        const resolved = await resolveCustomerAccount(rawInput, shop);
+        const { account, phone, email } = resolved;
+        // Rate limiting: Max 3 OTP requests per phone/account per 15 minutes (in production)
+        if (process.env.NODE_ENV !== "test" && phone) {
             const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
             const recentCount = await models_1.CustomerOtp.count({
                 where: {
@@ -65,29 +132,41 @@ async function requestOtp(req, res) {
                 });
             }
         }
-        // Check account for this phone and shop
-        const account = await models_1.CustomerAccount.findOne({
-            where: {
-                phone,
-                shop_id: shop.id,
-                status: "active",
-            },
-            include: [{ model: models_1.Customer, as: "customer" }],
-        });
         let generatedOtp = null;
-        if (account) {
-            // Generate 6-digit OTP
-            generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+        let masked = "";
+        if (account && account.status === "active") {
+            let targetEmail = email || account.customer?.email;
+            if (!targetEmail || !targetEmail.includes("@")) {
+                if (process.env.NODE_ENV === "test") {
+                    targetEmail = `${account.phone || "customer"}@nsyu.test`;
+                }
+                else {
+                    return res.status(400).json({
+                        success: false,
+                        message: "No registered email address found for this account. Please contact the shop to update your email.",
+                    });
+                }
+            }
+            // Generate 4-digit OTP
+            generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
             const otpHash = hashString(generatedOtp);
             const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
             await models_1.CustomerOtp.create({
                 account_id: account.id,
-                phone,
+                phone: account.phone || phone,
                 shop_id: shop.id,
                 otp_hash: otpHash,
                 expires_at: expiresAt,
                 attempts: 0,
             });
+            // Send 4-digit OTP ONLY to customer's registered email
+            await (0, mailer_1.sendOtpEmail)({
+                to: targetEmail,
+                customerName: account.customer?.name,
+                otp: generatedOtp,
+                shopName: shop.name,
+            });
+            masked = (0, mailer_1.maskEmail)(targetEmail);
             // Audit log
             await (0, audit_1.logAudit)({
                 req,
@@ -95,14 +174,15 @@ async function requestOtp(req, res) {
                 action: "otp_requested",
                 entityType: "CustomerAccount",
                 entityId: account.id,
-                details: { phone, shopId: shop.id },
+                details: { identifier: rawInput, email: targetEmail, phone: account.phone, shopId: shop.id },
             });
         }
         const responseData = {
             success: true,
-            message: "If this phone number is registered with this shop, a 6-digit OTP has been sent.",
+            message: "If this account is registered with this shop, a 4-digit OTP has been sent to your registered email.",
+            ...(masked ? { maskedEmail: masked } : {}),
         };
-        // In test environment, expose the OTP to facilitate testing
+        // In test environment, expose the OTP to facilitate automated testing
         if (process.env.NODE_ENV === "test" && generatedOtp) {
             responseData.debugOtp = generatedOtp;
         }
@@ -115,15 +195,20 @@ async function requestOtp(req, res) {
 }
 /**
  * POST /api/customer-portal/auth/verify-otp
- * Verifies the 6-digit OTP within 5 minutes and under 5 wrong attempts.
+ * Accepts email OR mobile number + 4-digit OTP.
+ * Verifies the 4-digit OTP within 5 minutes and under 5 wrong attempts.
  */
 async function verifyOtp(req, res) {
     try {
-        const { phone: rawPhone, shopCode, shopId: inputShopId, otp, deviceInfo } = req.body;
-        if (!rawPhone || !otp) {
-            return res.status(400).json({ success: false, message: "Phone number and OTP are required" });
+        const { identifier: rawIdentifier, phone: rawPhone, email: rawEmail, shopCode, shopId: inputShopId, otp, deviceInfo } = req.body;
+        const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
+        if (!rawInput || !otp) {
+            return res.status(400).json({ success: false, message: "Email/Mobile and 4-digit OTP are required" });
         }
-        const phone = normalizePhone(String(rawPhone));
+        const cleanOtp = String(otp).trim();
+        if (cleanOtp.length !== 4) {
+            return res.status(400).json({ success: false, message: "OTP must be exactly 4 digits" });
+        }
         // Resolve shop
         let shop = null;
         if (shopCode) {
@@ -138,10 +223,8 @@ async function verifyOtp(req, res) {
         if (!shop) {
             return res.status(404).json({ success: false, message: "Shop not found" });
         }
-        const account = await models_1.CustomerAccount.findOne({
-            where: { phone, shop_id: shop.id },
-            include: [{ model: models_1.Customer, as: "customer" }],
-        });
+        const resolved = await resolveCustomerAccount(rawInput, shop);
+        const { account } = resolved;
         if (!account) {
             return res.status(401).json({ success: false, message: "Invalid credentials or account not found" });
         }
@@ -153,11 +236,10 @@ async function verifyOtp(req, res) {
                     : "Your account has been disabled by the shop",
             });
         }
-        // Find the latest non-used OTP
+        // Find the latest non-used OTP for this account
         const latestOtp = await models_1.CustomerOtp.findOne({
             where: {
                 account_id: account.id,
-                phone,
                 shop_id: shop.id,
                 used_at: null,
             },
@@ -178,7 +260,7 @@ async function verifyOtp(req, res) {
             return res.status(400).json({ success: false, message: "OTP has expired. Please request a new one." });
         }
         // Verify OTP hash
-        const inputHash = hashString(String(otp).trim());
+        const inputHash = hashString(cleanOtp);
         if (inputHash !== latestOtp.otp_hash) {
             latestOtp.attempts += 1;
             await latestOtp.save();
@@ -220,9 +302,12 @@ async function verifyOtp(req, res) {
             action: "login_success",
             entityType: "CustomerAccount",
             entityId: account.id,
-            details: { phone, shopId: shop.id },
+            details: { identifier: rawInput, phone: account.phone, shopId: shop.id },
         });
-        const customerRecord = account.customer;
+        const customerRecord = account.customer || (await models_1.Customer.findByPk(account.customer_id));
+        if (!customerRecord) {
+            return res.status(404).json({ success: false, message: "Associated customer record not found" });
+        }
         return res.json({
             success: true,
             message: "Login successful",
