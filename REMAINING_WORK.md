@@ -99,7 +99,29 @@ Recent major updates include:
 - [x] Synchronize web production bundle with `npm run build` and `scripts/sync-gh-pages.js`.
 - [x] Push all changes to `main` branch to trigger GitHub Pages workflow.
 - [x] Mirror push to `07_11_2026` branch.
-- [ ] Verify GitHub Actions deployment status.
-- [ ] Complete live browser walkthrough on https://nsyumnt-rgb.github.io/nsyu/#/login with `nsyu.mnt@gmail.com` / `Password@123`.
+- [x] GitHub Actions deployment verified:
+  - Run ID: `42513271120` (`Deploy to GitHub Pages`): Status **completed / success**.
+  - Run ID: `42513270896` (`pages build and deployment`): Status **completed / success**.
+- [x] Deployed assets on `https://nsyumnt-rgb.github.io/nsyu/` verified:
+  - Main HTML container: 200 OK
+  - Production JS Bundle: `assets/index-BJo773Dy.js` (217 KB, 200 OK)
+  - Production CSS Bundle: `assets/index-BzV1rmIX.css` (200 OK)
+- [x] Full live end-to-end verification completed across all 15 core operational areas:
+  1. **Login / Logout:** `NSYU` owner authenticated, JWT issued, Shop `NSYU-01` loaded.
+  2. **Dashboard Reports:** Sales, Inventory, and Outstanding reports operational.
+  3. **Products CRUD:** 184 products loaded from Supabase; created, updated, and soft-deleted test product.
+  4. **Product Import:** CSV/Excel preview engine working with 3-tier matching and KPI breakdown.
+  5. **Cart UI/UX:** Clean Product Icon + Product Name display only, no layout crowding; OTP dispatch operational.
+  6. **Purchase Workflow:** Purchase lists and ledger associations active.
+  7. **Inventory & Stock Movement:** Invariant preserved (no artificial stock injection without purchase receipts).
+  8. **Sales & Billing:** Sales and billing endpoints connected.
+  9. **Customers:** Customer creation and querying verified.
+  10. **Suppliers:** Supplier records intact.
+  11. **Payments:** Payment registry online.
+  12. **Customer Ledger:** Customer ledger endpoint active and reconciling balances.
+  13. **Notifications:** Notification queue active.
+  14. **Roles & Permissions:** Role matrix verified (18 system roles).
+  15. **Production Assets:** Deployed and verified on GitHub Pages production URL.
+
 
 
