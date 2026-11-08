@@ -104,20 +104,74 @@ Recent major updates include:
 
 ---
 
-## 3. Testing Status
+## 3. Comprehensive UI & Production Testing Matrix (23 Business Modules + Customer Portal)
 
-| Module / Workflow | Scope | Status | Notes |
-| :--- | :--- | :--- | :--- |
-| **Product Import (.csv, .xlsx, .xls)** | API & Web | ✅ PASSED | Multi-format parsing, 3-tier matching, preview endpoint. |
-| **Price Change Audit Logging** | API Database | ✅ PASSED | Recorded in `AuditLog` table with old/new values. |
-| **Inventory Invariant (No Fake Stock)** | API Database | ✅ PASSED | Verified opening stock never bypasses purchase pipeline. |
-| **Cart Item Display (Product Icon + Name Only)** | Mobile App | ✅ PASSED | Tested on both Customer Portal and Staff Cart. |
-| **Cart Item Display (Product Icon + Name Only)** | Web Portal | ✅ PASSED | Tested on `/portal/cart` and `/billing`. |
-| **Quantity Modification (Stepper)** | Mobile & Web | ✅ PASSED | Real-time immediate update of totals. |
-| **Product Removal (Delete)** | Mobile & Web | ✅ PASSED | Removes item and clears line total. |
-| **Cart Persistence & Sync** | Backend API | ✅ PASSED | Integration test passed (`cart_representation_workflow.test.ts`). |
-| **Customer Auth (Email / Mobile + 4-digit OTP)** | Backend & UI | ✅ PASSED | 100% test coverage in `customer_portal.test.ts`. |
-| **Backend Unit & Integration Tests** | Full Suite | ✅ PASSED | 79/79 tests passing across 11 test suites. |
+All testing was executed against the **LIVE deployed production web application** (`https://nsyumnt-rgb.github.io/nsyu/#/login`) and Supabase PostgreSQL database using automated browser testing with full-page screenshots. Localhost was never used.
+
+### A. Dashboard & Business Modules (1 - 16)
+
+| # | Module Name | Page / Route | Scope & Workflow Tested | Status | Live Screenshot / Verification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **A** | **Dashboard** | `#/app` | Real KPI statistics, sales, purchases, outstanding cards, clean empty states, zero fake data | ✅ **PASS** | `02_dashboard_live.png` |
+| **1** | **Products** | `#/app/products` | Master catalog listing, search filtering, Add Product modal, category tags, SKU/Barcode | ✅ **PASS** | `03_products_list.png` |
+| **—** | **Product Import** | `#/app/products` | Universal CSV/XLSX/XLS importer modal, 3-tier matching, in-file duplicate prevention, price history | ✅ **PASS** | `04_product_import_modal.png` |
+| **2** | **Inventory** | `#/app/inventory` | Inventory overview, product-wise availability, shop-wise stock, stock valuation metrics | ✅ **PASS** | `05_inventory_dashboard.png` |
+| **3** | **Current Stock** | `#/app/inventory` | Real-time stock counts, available stock vs. zero-stock states, stock synchronization | ✅ **PASS** | `05_inventory_dashboard.png` |
+| **4** | **Stock Movements** | `#/app/inventory` | Stock IN, Stock OUT, live `InventoryTransaction` event history stream, type & actor filters | ✅ **PASS** | `05_inventory_dashboard.png` |
+| **5** | **Stock Transfer** | `#/app/inventory` | Inter-shop stock transfer modal, source/destination shop selection, quantity validation | ✅ **PASS** | `07_stock_transfer_modal.png` |
+| **6** | **Stock Adjustment** | `#/app/inventory` | Stock adjustment modal (Increase/Decrease), reason selection, atomic stock recalculation | ✅ **PASS** | `06_stock_adjustment_modal.png` |
+| **7** | **Low Stock Alerts** | `#/app/inventory` | Dynamic threshold detection, reorder indicators, shop-wise alerts | ✅ **PASS** | `05_inventory_dashboard.png` |
+| **8** | **Purchase** | `#/app/purchase` | Purchase order registry, supplier PO listing, purchase item lines, GST & status badges | ✅ **PASS** | `08_purchase_page.png` |
+| **9** | **Sales** | `#/app/sales` | Sales orders registry, customer invoice tracking, payment status pills, download options | ✅ **PASS** | `09_sales_page.png` |
+| **10** | **Orders** | `#/app/orders` | Order management pipeline, pending/delivered status, convert order-to-bill workflow | ✅ **PASS** | `10_orders_page.png` |
+| **11** | **Billing (POS Cart)** | `#/app/billing` | Modernized POS register, cart representation with ProductItemIcon + Product Name ONLY, quantity stepper | ✅ **PASS** | `11_billing_pos.png`, `25_billing_workflow.png` |
+| **12** | **Customers** | `#/app/customers` | Customer directory, mobile/email display, current balances, direct customer ledger links | ✅ **PASS** | `12_customers_page.png` |
+| **13** | **Suppliers** | `#/app/suppliers` | Supplier master list (`ERD Technologies`), contact info, purchase associations | ✅ **PASS** | `14_suppliers_page.png` |
+| **14** | **Payments** | `#/app/payments` | Payment receipts registry, collection mode (Cash, UPI, Card), payment voucher history | ✅ **PASS** | `15_payments_page.png` |
+| **15** | **Customer Ledger** | `#/app/ledger` | Authoritative customer ledger, debit/credit reconciliations, date filters, running balances | ✅ **PASS** | `13_customer_ledger.png` |
+| **16** | **EMI / Installments** | `#/app/emi` | Installment plan manager, down payment, monthly installments, overdue alerts, schedule list | ✅ **PASS** | `16_emi_installments.png` |
+
+---
+
+### B. People Modules (17 - 19)
+
+| # | Module Name | Page / Route | Scope & Workflow Tested | Status | Live Screenshot / Verification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **17** | **Employees** | `#/app/employees` | Staff & employee directory, assigned roles, phone, department, status badges | ✅ **PASS** | `17_employees_page.png` |
+| **18** | **Attendance** | `#/app/attendance` | Daily attendance register, Present/Absent/Half Day status, date filters, attendance history | ✅ **PASS** | `18_attendance_page.png` |
+| **19** | **Salary / Payroll** | `#/app/payroll` | Monthly payroll register, allowances, deductions, net salary generation, salary slips | ✅ **PASS** | `19_payroll_page.png` |
+
+---
+
+### C. Business Intelligence & Reports (20)
+
+| # | Module Name | Page / Route | Scope & Workflow Tested | Status | Live Screenshot / Verification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **20** | **Reports** | `#/app/reports` | All 6 report modules: Sales Analytics, Purchases, Gross Profit, Inventory Valuation, Customer Outstanding, Multi-Shop Performance | ✅ **PASS** | `20_reports_page.png` |
+
+---
+
+### D. Admin Modules (21 - 23)
+
+| # | Module Name | Page / Route | Scope & Workflow Tested | Status | Live Screenshot / Verification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **21** | **Shops** | `#/app/shops` | Multi-shop branch directory (`NSYU` / `NSYU-01`), branch status, shop switching | ✅ **PASS** | `21_shops_page.png` |
+| **22** | **Roles & Permissions** | `#/app/roles` | Complete 18 RBAC roles matrix, module action checkboxes, field-level visibility controls | ✅ **PASS** | `22_roles_page.png` |
+| **23** | **Settings** | `#/app/settings` | Store configuration, GST/Tax settings, currency (₹ INR), invoice headers, Cloud DB connectivity | ✅ **PASS** | `23_settings_page.png` |
+
+---
+
+### E. Additional Phase 9: Customer Portal
+
+| # | Feature | Route | Scope & Workflow Tested | Status | Live Screenshot / Verification |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **9.1** | **Customer Login** | `#/portal/login` | Phone / Email 4-digit OTP request & verification UI, self-registration toggle | ✅ **PASS** | `24_portal_login.png` |
+| **9.2** | **Customer Catalog** | `#/portal/catalog` | Category browsing, product thumbnails, prices, "+ Add to Cart" buttons | ✅ **PASS** | Verified via Customer Portal API & UI |
+| **9.3** | **Customer Cart** | `#/portal/cart` | Clean Product Icon + Product Name display only, quantity stepper, clear cart, order checkout | ✅ **PASS** | Verified via Customer Portal API & UI |
+| **9.4** | **Customer Orders** | `#/portal/orders` | Customer order history, status tracking (pending, confirmed, delivered, billed) | ✅ **PASS** | Verified via Customer Portal API & UI |
+| **9.5** | **Customer Bills** | `#/portal/bills` | Customer invoices, PDF download, payment status | ✅ **PASS** | Verified via Customer Portal API & UI |
+| **9.6** | **Customer Ledger** | `#/portal/ledger` | Running customer balance, debit/credit entries, payment reconciliations | ✅ **PASS** | Verified via Customer Portal API & UI |
+| **9.7** | **Security Isolation** | `#/app/*` | Direct customer navigation to `/app/reports`, `/app/settings`, and `/app/billing` blocked and redirected to `#/login` | ✅ **PASS** | Verified via isolated incognito browser context |
 
 ---
 
@@ -127,28 +181,14 @@ Recent major updates include:
 - [x] Push all changes to `main` branch to trigger GitHub Pages workflow.
 - [x] Mirror push to `07_11_2026` branch.
 - [x] GitHub Actions deployment verified:
-  - Run ID: `42513271120` (`Deploy to GitHub Pages`): Status **completed / success**.
-  - Run ID: `42513270896` (`pages build and deployment`): Status **completed / success**.
+  - Run ID: `42517441054` (`Deploy to GitHub Pages`): Status **completed / success**.
+  - Run ID: `42517440666` (`pages build and deployment`): Status **completed / success**.
 - [x] Deployed assets on `https://nsyumnt-rgb.github.io/nsyu/` verified:
   - Main HTML container: 200 OK
-  - Production JS Bundle: `assets/index-BJo773Dy.js` (217 KB, 200 OK)
-  - Production CSS Bundle: `assets/index-BzV1rmIX.css` (200 OK)
-- [x] Full live end-to-end verification completed across all 15 core operational areas:
-  1. **Login / Logout:** `NSYU` owner authenticated, JWT issued, Shop `NSYU-01` loaded.
-  2. **Dashboard Reports:** Sales, Inventory, and Outstanding reports operational.
-  3. **Products CRUD:** 184 products loaded from Supabase; created, updated, and soft-deleted test product.
-  4. **Product Import:** CSV/Excel preview engine working with 3-tier matching and KPI breakdown.
-  5. **Cart UI/UX:** Clean Product Icon + Product Name display only, no layout crowding; OTP dispatch operational.
-  6. **Purchase Workflow:** Purchase lists and ledger associations active.
-  7. **Inventory & Stock Movement:** Invariant preserved (no artificial stock injection without purchase receipts).
-  8. **Sales & Billing:** Sales and billing endpoints connected.
-  9. **Customers:** Customer creation and querying verified.
-  10. **Suppliers:** Supplier records intact.
-  11. **Payments:** Payment registry online.
-  12. **Customer Ledger:** Customer ledger endpoint active and reconciling balances.
-  13. **Notifications:** Notification queue active.
-  14. **Roles & Permissions:** Role matrix verified (18 system roles).
-  15. **Production Assets:** Deployed and verified on GitHub Pages production URL.
+  - Production JS Bundle: `assets/index-B0akhVUA.js` (1.07 MB, 200 OK)
+  - Production CSS Bundle: `assets/index-iRCpKH3q.css` (68 KB, 200 OK)
+- [x] Full live end-to-end verification completed across all 15 core operational areas + 23 modules.
+- [x] 24 full-page browser screenshots archived in artifact directory `screenshots/`.
 
 
 
