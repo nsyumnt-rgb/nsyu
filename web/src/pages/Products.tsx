@@ -4,6 +4,7 @@ import {
   deleteProduct,
   listProducts,
   updateProduct,
+  importProductsApi,
 } from "../api/products";
 import { listCategories } from "../api/categories";
 import { apiErrorMessage } from "../api/client";
@@ -150,6 +151,158 @@ function ProductsInner() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+
+  // Import Modal states
+  const [importMode, setImportMode] = useState<"file" | "paste">("file");
+  const [importCsvText, setImportCsvText] = useState("");
+  const [importFileName, setImportFileName] = useState("");
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importParsedItems, setImportParsedItems] = useState<any[]>([]);
+  const [importCategories, setImportCategories] = useState<string[]>([]);
+  const [importFormat, setImportFormat] = useState<"erd" | "standard" | null>(null);
+  const [importMarginPercent, setImportMarginPercent] = useState<number>(20);
+
+  function handleProcessCsv(rawText: string) {
+    setImportCsvText(rawText);
+    setImportError(null);
+    setImportSuccess(null);
+    if (!rawText.trim()) {
+      setImportParsedItems([]);
+      setImportCategories([]);
+      setImportFormat(null);
+      return;
+    }
+
+    const lines = rawText.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
+    const isErd = lines.some((l) => l.toUpperCase().includes("ERD ORDER FORMAT") || l.includes("S.No.,CODE NO."));
+    const items: any[] = [];
+    const cats = new Set<string>();
+
+    if (isErd) {
+      let curCat = "CHARGER";
+      cats.add(curCat);
+      for (const l of lines) {
+        const line = l.trim();
+        if (!line || line.includes("ERD ORDER FORMAT") || line.includes("S.No.,CODE NO.") || line.includes("Terms") || line.includes("Total,,")) continue;
+        
+        // Manual CSV line parser
+        const cols: string[] = [];
+        let cur = "", inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"') {
+            if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; }
+          } else if (c === "," && !inQuotes) { cols.push(cur); cur = ""; } else { cur += c; }
+        }
+        cols.push(cur);
+
+        const c0 = (cols[0] || "").trim();
+        const c1 = (cols[1] || "").trim();
+        const c2 = (cols[2] || "").trim();
+        const c3 = (cols[3] || "").trim();
+        const c4 = (cols[4] || "").trim();
+        const c6 = (cols[6] || "").trim();
+
+        if (!c0 && !c1 && c2 && !c2.toLowerCase().includes("total")) {
+          curCat = c2.replace(/^(TC|CC|DC)\s*-\s*/i, "").trim() || "CHARGER";
+          cats.add(curCat);
+          continue;
+        }
+
+        if (c0 && /^\d+$/.test(c0) && (c1 || c2)) {
+          const pur = parseFloat(c6.replace(/[^0-9.]/g, "")) || 0;
+          const margin = pur <= 100 ? 10 : pur <= 200 ? 15 : Math.round(pur * 0.2);
+          items.push({
+            sno: c0,
+            sku: c1 || `PRD-${c0}`,
+            name: c2,
+            spec: c3,
+            pkg: c4 || "20",
+            purchase_price: pur,
+            selling_price: pur + margin,
+            category: curCat,
+          });
+        }
+      }
+      setImportFormat("erd");
+      setImportParsedItems(items);
+      setImportCategories(Array.from(cats));
+    } else {
+      // Standard CSV fallback
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const cols = line.split(",");
+        const name = (cols[0] || "").trim();
+        const sku = (cols[1] || "").trim();
+        if (name || sku) {
+          const cat = (cols[2] || "General").trim();
+          cats.add(cat);
+          const pur = parseFloat(cols[4] || "0") || 0;
+          const sell = parseFloat(cols[5] || "0") || (pur + Math.round(pur * 0.2));
+          items.push({
+            sno: items.length + 1,
+            sku: sku || `SKU-${items.length + 1}`,
+            name: name || sku,
+            spec: "",
+            pkg: cols[6] || "20",
+            purchase_price: pur,
+            selling_price: sell,
+            category: cat,
+          });
+        }
+      }
+      setImportFormat("standard");
+      setImportParsedItems(items);
+      setImportCategories(Array.from(cats));
+    }
+  }
+
+  function handleFileSelected(file: File) {
+    setImportFile(file);
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = String(e.target?.result || "");
+      handleProcessCsv(text);
+    };
+    reader.readAsText(file);
+  }
+
+  async function handleExecuteImport() {
+    if (!importCsvText && !importFile && importParsedItems.length === 0) {
+      setImportError("Please select a file or paste CSV text first.");
+      return;
+    }
+    setImporting(true);
+    setImportError(null);
+    setImportSuccess(null);
+    try {
+      const res = await importProductsApi({
+        csvText: importCsvText,
+        file: importFile || undefined,
+        shopId: shopId || 1,
+        defaultMarginPercent: importMarginPercent,
+      });
+
+      if (res.data.success && res.data.data) {
+        const d = res.data.data;
+        setImportSuccess(
+          `Successfully imported ${d.total} products (${d.created} newly created, ${d.updated} updated) across ${d.categories} categories!`
+        );
+        loadData();
+      } else {
+        setImportError(res.data.message || "Import failed");
+      }
+    } catch (err: any) {
+      setImportError(apiErrorMessage(err, "Failed to import products"));
+    } finally {
+      setImporting(false);
+    }
+  }
 
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
 
@@ -1590,32 +1743,227 @@ function ProductsInner() {
 
       {/* IMPORT MODAL */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-800">Import Products (CSV)</h3>
-              <button onClick={() => setShowImportModal(false)} className="text-slate-400 hover:text-slate-600">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  📥
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Import Products (CSV / Excel Format)</h3>
+                  <p className="text-xs text-slate-500">Bulk import catalog products, wholesale price lists, and ERD order sheets</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportSuccess(null);
+                  setImportError(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100"
+              >
                 ✕
               </button>
             </div>
-            <p className="text-xs text-slate-500">
-              Upload a `.csv` file with columns: <code>name, sku, brand, purchase_price, selling_price, min_stock</code>.
-            </p>
-            <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-slate-50 cursor-pointer transition-colors">
-              <svg className="w-8 h-8 text-slate-400 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              <span className="text-xs text-blue-600 font-semibold">Click to select CSV</span>
-              <p className="text-[11px] text-slate-400 mt-1">Supports UTF-8 CSV up to 10MB</p>
+
+            {/* Success Banner */}
+            {importSuccess && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">✅</span>
+                  <span className="font-medium">{importSuccess}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportSuccess(null);
+                  }}
+                  className="px-2.5 py-1 bg-emerald-600 text-white font-semibold rounded-lg text-[11px] hover:bg-emerald-700"
+                >
+                  View Products
+                </button>
+              </div>
+            )}
+
+            {/* Error Banner */}
+            {importError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{importError}</span>
+              </div>
+            )}
+
+            {/* Mode Switcher */}
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setImportMode("file")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                    importMode === "file" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  📁 Upload File (.csv, .txt)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImportMode("paste")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                    importMode === "paste" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  📋 Paste Spreadsheet Rows
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] font-semibold text-slate-500">Margin Markup:</label>
+                <select
+                  value={importMarginPercent}
+                  onChange={(e) => setImportMarginPercent(Number(e.target.value))}
+                  className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium"
+                >
+                  <option value={15}>15% Margin</option>
+                  <option value={20}>20% Margin</option>
+                  <option value={25}>25% Margin</option>
+                  <option value={30}>30% Margin</option>
+                </select>
+              </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+
+            {/* Upload Area / Paste Area */}
+            {importMode === "file" ? (
+              <div
+                onClick={() => document.getElementById("csv-file-input")?.click()}
+                className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-xl p-6 text-center bg-slate-50/50 hover:bg-emerald-50/20 cursor-pointer transition-all"
               >
-                Close
+                <input
+                  id="csv-file-input"
+                  type="file"
+                  accept=".csv,.txt,.xlsx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelected(file);
+                  }}
+                />
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 mx-auto mb-2 flex items-center justify-center text-lg">
+                  ⬆️
+                </div>
+                <span className="text-xs text-emerald-700 font-bold block">
+                  {importFileName ? `Selected: ${importFileName}` : "Click to browse or drop CSV / Sheet file here"}
+                </span>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Supports ERD Price Lists and standard CSV catalogs (Auto-detects categories, SKUs & pricing)
+                </p>
+              </div>
+            ) : (
+              <div>
+                <textarea
+                  value={importCsvText}
+                  onChange={(e) => handleProcessCsv(e.target.value)}
+                  placeholder="Paste rows copied from Excel or CSV here..."
+                  rows={5}
+                  className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-emerald-500 focus:bg-white resize-none"
+                />
+              </div>
+            )}
+
+            {/* Live Parsing Summary Badges */}
+            {importParsedItems.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-md">
+                    ✓ Format: {importFormat === "erd" ? "ERD Order Sheet" : "Standard CSV"}
+                  </span>
+                  <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-[11px] font-bold rounded-md">
+                    📦 {importParsedItems.length} Products Detected
+                  </span>
+                  <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-[11px] font-bold rounded-md">
+                    🏷️ {importCategories.length} Categories: {importCategories.slice(0, 4).join(", ")}
+                    {importCategories.length > 4 ? ` +${importCategories.length - 4} more` : ""}
+                  </span>
+                </div>
+
+                {/* Preview Table */}
+                <div className="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                  <table className="w-full text-left text-[11px] border-collapse">
+                    <thead className="bg-slate-100/80 sticky top-0 text-slate-700 font-bold">
+                      <tr>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200">#</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200">SKU / Code</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200">Product Name</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200">Category</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200">Pkg</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200 text-right">Wholesale ₹</th>
+                        <th className="py-1.5 px-2.5 border-b border-slate-200 text-right">Selling ₹</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-600">
+                      {importParsedItems.slice(0, 6).map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="py-1.5 px-2.5">{item.sno || idx + 1}</td>
+                          <td className="py-1.5 px-2.5 font-bold text-slate-800">{item.sku}</td>
+                          <td className="py-1.5 px-2.5 truncate max-w-xs">{item.name}</td>
+                          <td className="py-1.5 px-2.5">
+                            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-medium">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2.5">{item.pkg}</td>
+                          <td className="py-1.5 px-2.5 text-right font-medium">₹{item.purchase_price}</td>
+                          <td className="py-1.5 px-2.5 text-right font-bold text-emerald-600">₹{item.selling_price}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {importParsedItems.length > 6 && (
+                    <div className="py-1 px-3 bg-slate-50 text-[10px] text-slate-500 text-center font-medium border-t border-slate-100">
+                      ...and {importParsedItems.length - 6} more products ready to import
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportSuccess(null);
+                  setImportError(null);
+                }}
+                disabled={importing}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteImport}
+                disabled={importing || importParsedItems.length === 0}
+                className={`px-5 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+                  importing || importParsedItems.length === 0
+                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                }`}
+              >
+                {importing ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span>Importing Products...</span>
+                  </>
+                ) : (
+                  <span>
+                    Import {importParsedItems.length > 0 ? `${importParsedItems.length} Products` : "Products"}
+                  </span>
+                )}
               </button>
             </div>
           </div>

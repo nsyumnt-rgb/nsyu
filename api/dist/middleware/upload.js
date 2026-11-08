@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.productImageUpload = void 0;
+exports.csvFileUpload = exports.productImageUpload = void 0;
 exports.publicUrlFor = publicUrlFor;
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
@@ -43,6 +43,18 @@ exports.productImageUpload = (0, multer_1.default)({
     storage,
     fileFilter,
     limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 10 }, // up to 10 images per upload call
+});
+const CSV_UPLOAD_DIR = path_1.default.join(__dirname, "..", "..", "uploads", "imports");
+fs_1.default.mkdirSync(CSV_UPLOAD_DIR, { recursive: true });
+exports.csvFileUpload = (0, multer_1.default)({
+    storage: multer_1.default.diskStorage({
+        destination: (_req, _file, cb) => cb(null, CSV_UPLOAD_DIR),
+        filename: (_req, file, cb) => {
+            const ext = path_1.default.extname(file.originalname).toLowerCase();
+            cb(null, `${(0, uuid_1.v4)()}${ext}`);
+        },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 function publicUrlFor(filename) {
     return `/uploads/products/${filename}`;

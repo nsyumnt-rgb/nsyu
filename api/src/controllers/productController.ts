@@ -17,6 +17,8 @@ import { publicUrlFor } from "../middleware/upload";
 import { recordStockMovement } from "../utils/inventory";
 import { logAudit } from "../utils/audit";
 
+import { parseProductsCsv, executeProductImport } from "../utils/productImporter";
+
 /**
  * OWNER-SIDE product create. Product itself is owner-level (see
  * models/Product.ts for why); an optional opening_stock + shop_id
@@ -397,4 +399,57 @@ export async function listProductsCustomerView(req: Request, res: Response) {
   });
 
   return res.json({ success: true, data });
+}
+
+/**
+ * Bulk import products via CSV file upload, pasted CSV text, or pre-parsed items.
+ * Supports ERD Order Sheets and standard product CSV formats.
+ */
+export async function importProducts(req: Request, res: Response) {
+  let csvText = req.body.csvText;
+  if (!csvText && req.file) {
+    csvText = fs.readFileSync(req.file.path, "utf-8");
+  }
+
+  if (!csvText && (!req.body.items || !Array.isArray(req.body.items))) {
+    return res.status(400).json({ success: false, message: "No CSV file, text, or items array provided for import" });
+  }
+
+  let items = req.body.items;
+
+  if (csvText) {
+    const parseResult = parseProductsCsv(csvText, {
+      defaultBrand: req.body.defaultBrand || "ERD",
+      defaultMarginPercent: req.body.defaultMarginPercent ? Number(req.body.defaultMarginPercent) : 20,
+    });
+    items = parseResult.items;
+  }
+
+  if (!items || items.length === 0) {
+    return res.status(400).json({ success: false, message: "No valid product rows could be parsed from the provided data" });
+  }
+
+  const shopId = Number(req.body.shopId || req.auth!.shopId || 1);
+  const result = await executeProductImport({
+    ownerId: req.auth!.ownerId,
+    shopId,
+    items,
+    actorType: req.auth!.isOwner ? "owner" : "employee",
+    actorId: req.auth!.isOwner ? req.auth!.ownerId : req.auth!.employeeId!,
+  });
+
+  await logAudit({
+    req,
+    module: "products",
+    action: "create",
+    entityType: "Product",
+    entityId: 0,
+    details: { notes: `Imported ${result.total} products (${result.created} created, ${result.updated} updated) across ${result.categories} categories` },
+  });
+
+  return res.json({
+    success: true,
+    message: `Successfully processed ${result.total} products (${result.created} new created, ${result.updated} updated) across ${result.categories} categories`,
+    data: result,
+  });
 }

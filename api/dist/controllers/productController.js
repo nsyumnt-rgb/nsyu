@@ -14,6 +14,7 @@ exports.deleteProductImage = deleteProductImage;
 exports.setProductLocation = setProductLocation;
 exports.getProductLocationHistory = getProductLocationHistory;
 exports.listProductsCustomerView = listProductsCustomerView;
+exports.importProducts = importProducts;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const models_1 = require("../models");
@@ -21,6 +22,7 @@ const permission_1 = require("../middleware/permission");
 const upload_1 = require("../middleware/upload");
 const inventory_1 = require("../utils/inventory");
 const audit_1 = require("../utils/audit");
+const productImporter_1 = require("../utils/productImporter");
 /**
  * OWNER-SIDE product create. Product itself is owner-level (see
  * models/Product.ts for why); an optional opening_stock + shop_id
@@ -327,5 +329,50 @@ async function listProductsCustomerView(req, res) {
         // internal notes, min_stock, raw stock count, location.
     });
     return res.json({ success: true, data });
+}
+/**
+ * Bulk import products via CSV file upload, pasted CSV text, or pre-parsed items.
+ * Supports ERD Order Sheets and standard product CSV formats.
+ */
+async function importProducts(req, res) {
+    let csvText = req.body.csvText;
+    if (!csvText && req.file) {
+        csvText = fs_1.default.readFileSync(req.file.path, "utf-8");
+    }
+    if (!csvText && (!req.body.items || !Array.isArray(req.body.items))) {
+        return res.status(400).json({ success: false, message: "No CSV file, text, or items array provided for import" });
+    }
+    let items = req.body.items;
+    if (csvText) {
+        const parseResult = (0, productImporter_1.parseProductsCsv)(csvText, {
+            defaultBrand: req.body.defaultBrand || "ERD",
+            defaultMarginPercent: req.body.defaultMarginPercent ? Number(req.body.defaultMarginPercent) : 20,
+        });
+        items = parseResult.items;
+    }
+    if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, message: "No valid product rows could be parsed from the provided data" });
+    }
+    const shopId = Number(req.body.shopId || req.auth.shopId || 1);
+    const result = await (0, productImporter_1.executeProductImport)({
+        ownerId: req.auth.ownerId,
+        shopId,
+        items,
+        actorType: req.auth.isOwner ? "owner" : "employee",
+        actorId: req.auth.isOwner ? req.auth.ownerId : req.auth.employeeId,
+    });
+    await (0, audit_1.logAudit)({
+        req,
+        module: "products",
+        action: "create",
+        entityType: "Product",
+        entityId: 0,
+        details: { notes: `Imported ${result.total} products (${result.created} created, ${result.updated} updated) across ${result.categories} categories` },
+    });
+    return res.json({
+        success: true,
+        message: `Successfully processed ${result.total} products (${result.created} new created, ${result.updated} updated) across ${result.categories} categories`,
+        data: result,
+    });
 }
 //# sourceMappingURL=productController.js.map

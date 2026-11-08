@@ -44,6 +44,20 @@ export const productImageUpload = multer({
   limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 10 }, // up to 10 images per upload call
 });
 
+const CSV_UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads", "imports");
+fs.mkdirSync(CSV_UPLOAD_DIR, { recursive: true });
+
+export const csvFileUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, CSV_UPLOAD_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${uuidv4()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
 export function publicUrlFor(filename: string): string {
   return `/uploads/products/${filename}`;
 }

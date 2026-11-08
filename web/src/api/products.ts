@@ -78,3 +78,34 @@ export function getProductLocationHistory(productId: number, shopId?: number) {
 export function listCustomerProducts(shopId: number) {
   return api.get<ApiEnvelope<CustomerProduct[]>>(`/products/public/shop/${shopId}`);
 }
+
+/* ---------------- Bulk Import ---------------- */
+
+export interface ImportProductsResult {
+  total: number;
+  created: number;
+  updated: number;
+  categories: number;
+  categoryNames?: string[];
+}
+
+export function importProductsApi(payload: {
+  csvText?: string;
+  file?: File;
+  shopId?: number;
+  defaultMarginPercent?: number;
+  defaultBrand?: string;
+}) {
+  if (payload.file) {
+    const formData = new FormData();
+    formData.append("file", payload.file);
+    if (payload.shopId) formData.append("shopId", String(payload.shopId));
+    if (payload.defaultMarginPercent) formData.append("defaultMarginPercent", String(payload.defaultMarginPercent));
+    if (payload.defaultBrand) formData.append("defaultBrand", payload.defaultBrand);
+    return api.post<ApiEnvelope<ImportProductsResult>>("/products/import", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  }
+
+  return api.post<ApiEnvelope<ImportProductsResult>>("/products/import", payload);
+}

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireShop } from "../middleware/auth";
 import { requirePermission } from "../middleware/permission";
-import { productImageUpload } from "../middleware/upload";
+import { productImageUpload, csvFileUpload } from "../middleware/upload";
 import { validate, createProductRules } from "../middleware/validate";
 import {
   createProduct,
@@ -15,6 +15,7 @@ import {
   setProductLocation,
   getProductLocationHistory,
   listProductsCustomerView,
+  importProducts,
 } from "../controllers/productController";
 
 const router = Router();
@@ -32,6 +33,7 @@ router.use(authenticate);
 router.use(requireShop);
 
 router.get("/", requirePermission("products", "view"), listProductsOwnerView);
+router.post("/import", requirePermission("products", "create"), csvFileUpload.single("file"), importProducts);
 router.get("/:productId", requirePermission("products", "view"), getProductOwnerView);
 router.post("/", requirePermission("products", "create"), validate(createProductRules), createProduct);
 router.put("/:productId", requirePermission("products", "edit"), updateProduct);
