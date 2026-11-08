@@ -7,6 +7,19 @@ const CREDENTIALS = {
   password: 'Password@123'
 };
 
+async function fetchWithRetry(url, options = {}, retries = 6, backoffMs = 5000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, { ...options, signal: AbortSignal.timeout(60000) });
+      return res;
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      console.log(`⏳ Waiting for backend instance (${err.code || err.message})... retrying in ${backoffMs / 1000}s (attempt ${i + 1}/${retries})`);
+      await new Promise(r => setTimeout(r, backoffMs));
+    }
+  }
+}
+
 async function run() {
   console.log('====================================================');
   console.log('NSYU Live Production Verification (15 Test Areas)');
@@ -19,7 +32,7 @@ async function run() {
 
   // 1. Login / Logout
   console.log('Test 1: Login / Logout');
-  const loginRes = await fetch(`${API_BASE}/auth/login`, {
+  const loginRes = await fetchWithRetry(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(CREDENTIALS)
