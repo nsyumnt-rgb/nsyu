@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CustomerCart, CustomerCartItem, Product, ProductStock, ProductImage } from "../models";
+import { CustomerCart, CustomerCartItem, Product, ProductStock, ProductImage, Category } from "../models";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -23,6 +23,7 @@ export async function getCart(req: Request, res: Response) {
           model: Product,
           as: "product",
           include: [
+            { model: Category, as: "category", attributes: ["id", "name"] },
             { model: ProductImage, as: "images", attributes: ["url", "is_primary"] },
             {
               model: ProductStock,
@@ -84,6 +85,7 @@ export async function getCart(req: Request, res: Response) {
         name: product.name,
         sku: product.sku,
         brand: product.brand,
+        category: (product as any).category?.name || product.brand || null,
         imageUrl: primaryImg ? primaryImg.url : null,
         quantity: qty,
         unitPrice: rate,

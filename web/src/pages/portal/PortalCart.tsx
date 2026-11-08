@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../../store/portalStore";
 import { setCartItemApi, removeCartItemApi, clearCartApi, placeOrderApi, getCartApi } from "../../api/portal";
+import ProductItemIcon from "../../components/ProductItemIcon";
 
 export default function PortalCart() {
   const navigate = useNavigate();
@@ -184,25 +185,18 @@ export default function PortalCart() {
             {/* Left: Product Icon & Name ONLY */}
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
               {/* Product Icon: attractive, properly aligned, 48x48 */}
-              <div className="w-12 h-12 rounded-xl bg-emerald-50/80 border border-emerald-100 flex items-center justify-center p-1.5 flex-shrink-0 overflow-hidden">
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLElement).style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <BoxIcon className="w-6 h-6 text-emerald-700" />
-                )}
-              </div>
+              <ProductItemIcon
+                name={item.name}
+                category={(item as any).category || item.brand}
+                sku={item.sku}
+                imageUrl={item.imageUrl}
+                size="md"
+              />
 
               {/* Product Name: Clear, readable, prominent */}
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug line-clamp-2">
-                  {item.name}
+                  {item.name.trim()}
                 </h3>
               </div>
             </div>
@@ -398,14 +392,6 @@ function UserIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
-}
-
-function BoxIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
     </svg>
   );
 }

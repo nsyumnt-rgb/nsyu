@@ -13,6 +13,7 @@ import '../providers/orders_provider.dart';
 import '../providers/bills_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/product_item_icon.dart';
 import 'customer_picker_screen.dart';
 
 /// Cart Screen matching Reference Image:
@@ -133,7 +134,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                         subtitle: Text('${p.code} • ${p.spec} • Stock: ${p.stock}'),
                         trailing: Text('₹${_money.format(p.slPrice)}', style: const TextStyle(fontWeight: FontWeight.bold)),
                         onTap: () {
-                          provider.addToOrder(p);
+                          if (_documentMode == 'Bill') {
+                            provider.addToBill(p);
+                          } else {
+                            provider.addToOrder(p);
+                          }
                           Navigator.pop(ctx);
                           showAppSnackBar(context, 'Added ${p.desc} to cart');
                         },
@@ -149,7 +154,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     );
   }
 
-  void _editQtyDialog(BuildContext context, BillItem it) {
+  void _editQtyDialog(BuildContext context, BillItem it, bool isOrder, CatalogProvider provider) {
     final ctrl = TextEditingController(text: it.qty.toString());
     showDialog(
       context: context,
@@ -168,7 +173,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
             onPressed: () {
               final q = int.tryParse(ctrl.text.trim());
               if (q != null && q > 0) {
-                setState(() => it.qty = q);
+                if (isOrder) {
+                  provider.updateOrderItemQty(it.code, q);
+                } else {
+                  provider.updateItemQty(it.code, q);
+                }
               }
               Navigator.pop(ctx);
             },
@@ -281,7 +290,10 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<CatalogProvider>();
-    final items = provider.orderItems.isNotEmpty ? provider.orderItems : provider.billItems;
+    final isOrder = _documentMode == 'Order';
+    final items = isOrder
+        ? (provider.orderItems.isNotEmpty ? provider.orderItems : provider.billItems)
+        : (provider.billItems.isNotEmpty ? provider.billItems : provider.orderItems);
 
     // Real customer from DB
     final customer = provider.selectedCustomer;
@@ -483,7 +495,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
             const SizedBox(height: 10),
 
             // ── 2. Items Spreadsheet Table matching screenshot ──
-            _buildSpreadsheetTable(context, provider, items),
+            _buildSpreadsheetTable(context, provider, items, isOrder),
             const SizedBox(height: 10),
 
             // ── 3. Add Product & Search Bar matching screenshot ──
@@ -605,7 +617,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
   // ──────────────────────────────────────────────────────────────────────────
   // 2. ITEMS CART LIST - Clean, Modern Representation (Icon & Name Only)
   // ──────────────────────────────────────────────────────────────────────────
-  Widget _buildSpreadsheetTable(BuildContext context, CatalogProvider provider, List<BillItem> items) {
+  Widget _buildSpreadsheetTable(BuildContext context, CatalogProvider provider, List<BillItem> items, bool isOrder) {
     if (items.isEmpty) {
       return Container(
         decoration: BoxDecoration(
@@ -652,28 +664,18 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // 1. Product Icon (attractive, properly aligned, 48x48)
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFD1FAE5)),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.inventory_2_outlined,
-                    size: 24,
-                    color: Color(0xFF006837),
-                  ),
-                ),
+              ProductItemIcon(
+                name: it.desc,
+                category: it.category,
+                sku: it.code,
+                size: 48,
               ),
               const SizedBox(width: 14),
 
               // 2. Product Name (clear, readable, fully visible)
               Expanded(
                 child: Text(
-                  it.desc,
+                  it.desc.trim(),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -698,13 +700,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                   children: [
                     InkWell(
                       onTap: () {
-                        setState(() {
-                          if (it.qty > 1) {
-                            it.qty--;
-                          } else {
-                            items.removeAt(i);
-                          }
-                        });
+                        if (isOrder) {
+                          provider.changeOrderQty(it.code, -1);
+                        } else {
+                          provider.changeQty(it.code, -1);
+                        }
                       },
                       borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
                       child: const Padding(
@@ -713,7 +713,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                       ),
                     ),
                     InkWell(
-                      onTap: () => _editQtyDialog(context, it),
+                      onTap: () => _editQtyDialog(context, it, isOrder, provider),
                       child: Container(
                         constraints: const BoxConstraints(minWidth: 28),
                         child: Center(
@@ -730,9 +730,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                     ),
                     InkWell(
                       onTap: () {
-                        setState(() {
-                          it.qty++;
-                        });
+                        if (isOrder) {
+                          provider.changeOrderQty(it.code, 1);
+                        } else {
+                          provider.changeQty(it.code, 1);
+                        }
                       },
                       borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
                       child: const Padding(
@@ -749,9 +751,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
                 onPressed: () {
-                  setState(() {
-                    items.removeAt(i);
-                  });
+                  if (isOrder) {
+                    provider.removeOrderItem(it.code);
+                  } else {
+                    provider.removeItem(it.code);
+                  }
                 },
                 tooltip: 'Remove',
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

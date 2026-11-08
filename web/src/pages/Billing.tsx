@@ -6,6 +6,7 @@ import { listSales, createSale, downloadInvoicePdf } from "../api/sales";
 import { apiErrorMessage } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
+import ProductItemIcon from "../components/ProductItemIcon";
 import type { Customer, Product, Sale } from "../types";
 import {
   SuccessModal,
@@ -426,17 +427,15 @@ function BillingInner() {
                   <div key={idx} className="p-2.5 flex items-center justify-between text-xs bg-white gap-2">
                     {/* Product Icon & Name ONLY */}
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1 flex-shrink-0 text-emerald-700">
-                        {item.product.images?.[0]?.url ? (
-                          <img src={item.product.images[0].url} alt={item.product.name} className="w-full h-full object-contain" />
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                          </svg>
-                        )}
-                      </div>
+                      <ProductItemIcon
+                        name={item.product.name}
+                        category={item.product.category?.name || item.product.brand}
+                        sku={item.product.sku}
+                        imageUrl={item.product.images?.[0]?.url}
+                        size="sm"
+                      />
                       <div className="font-semibold text-slate-800 truncate" title={item.product.name}>
-                        {item.product.name}
+                        {item.product.name.trim()}
                       </div>
                     </div>
 

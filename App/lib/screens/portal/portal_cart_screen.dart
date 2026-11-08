@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../providers/customer_portal_provider.dart';
+import '../../widgets/product_item_icon.dart';
 import 'portal_order_detail_screen.dart';
 
 class PortalCartScreen extends StatefulWidget {
@@ -27,19 +28,6 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
   void dispose() {
     _noteCtrl.dispose();
     super.dispose();
-  }
-
-  Widget _buildFallbackProductIcon() {
-    return Container(
-      color: const Color(0xFFECFDF5),
-      child: const Center(
-        child: Icon(
-          Icons.inventory_2_outlined,
-          size: 24,
-          color: Color(0xFF047857),
-        ),
-      ),
-    );
   }
 
   Future<void> _handlePlaceOrder() async {
@@ -277,39 +265,19 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             // 1. Product Icon (attractive, properly aligned, 48x48)
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: (img != null && img.isNotEmpty)
-                                  ? Image.network(
-                                      img,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (_, __, ___) => _buildFallbackProductIcon(),
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return const Center(
-                                          child: SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF047857)),
-                                          ),
-                                        );
-                                      },
-                                    )
-                                  : _buildFallbackProductIcon(),
+                            ProductItemIcon(
+                              name: name,
+                              category: item['category']?.toString() ?? item['brand']?.toString(),
+                              sku: item['sku']?.toString(),
+                              imageUrl: img,
+                              size: 48,
                             ),
                             const SizedBox(width: 14),
 
                             // 2. Product Name (clear, readable, fully visible)
                             Expanded(
                               child: Text(
-                                name,
+                                name.trim(),
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
