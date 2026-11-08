@@ -14,7 +14,10 @@ class SupabaseConfig {
   /// Supabase publishable / anon key (configurable via compile-time define or runtime prefs)
   static const String defaultPublishableKey = String.fromEnvironment(
     'SUPABASE_PUBLISHABLE_KEY',
-    defaultValue: String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
+    defaultValue: String.fromEnvironment(
+      'SUPABASE_ANON_KEY',
+      defaultValue: 'sb_publishable_RDa1A_btjBZApVlr1d0WFw_8HP2WZNU',
+    ),
   );
 
   /// Live 24/7 Cloud API URL hosted on Render

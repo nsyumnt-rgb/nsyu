@@ -18,6 +18,7 @@ router.get("/public/shop/:shopId", productController_1.listProductsCustomerView)
 router.use(auth_1.authenticate);
 router.use(auth_1.requireShop);
 router.get("/", (0, permission_1.requirePermission)("products", "view"), productController_1.listProductsOwnerView);
+router.post("/import/preview", (0, permission_1.requirePermission)("products", "create"), upload_1.csvFileUpload.single("file"), productController_1.previewProductImportController);
 router.post("/import", (0, permission_1.requirePermission)("products", "create"), upload_1.csvFileUpload.single("file"), productController_1.importProducts);
 router.get("/:productId", (0, permission_1.requirePermission)("products", "view"), productController_1.getProductOwnerView);
 router.post("/", (0, permission_1.requirePermission)("products", "create"), (0, validate_1.validate)(validate_1.createProductRules), productController_1.createProduct);

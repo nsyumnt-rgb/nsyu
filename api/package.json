@@ -42,7 +42,8 @@
     "postgres": "^3.4.9",
     "sequelize": "^6.37.3",
     "typescript": "^5.5.3",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

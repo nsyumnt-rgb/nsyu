@@ -1,11 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:csv/csv.dart';
 import 'package:excel/excel.dart' as xls;
 
 import '../models/product.dart';
 import 'supabase_service.dart';
 
-/// One row parsed out of the supplier's Excel file.
+/// One row parsed out of the supplier's Excel or CSV file.
 class ImportedProductRow {
   final String category;
   final String code;
@@ -13,6 +15,8 @@ class ImportedProductRow {
   final String spec;
   final String pkg;
   final double purchase;
+  final String? barcode;
+  final String? brand;
 
   ImportedProductRow({
     required this.category,
@@ -21,6 +25,8 @@ class ImportedProductRow {
     required this.spec,
     required this.pkg,
     required this.purchase,
+    this.barcode,
+    this.brand,
   });
 }
 
@@ -73,7 +79,7 @@ class ProductAdd {
   });
 }
 
-/// Full diff between an imported Excel file and what's currently live in
+/// Full diff between an imported file and what's currently live in
 /// the Supabase PostgreSQL database.
 class ImportPlan {
   final List<ProductUpdate> priceChanges;
@@ -96,15 +102,14 @@ class ExcelImportService {
   ExcelImportService({SupabaseService? supabase})
       : _supabase = supabase ?? SupabaseService();
 
-  static String _norm(dynamic v) => v
+  static String _norm(dynamic v) => (v ?? '')
       .toString()
       .replaceAll('\n', ' ')
       .trim()
       .toLowerCase()
       .replaceAll(RegExp(r'\s+'), ' ');
 
-  /// Pulls the raw value out of a cell regardless of which typed
-  /// CellValue subclass the `excel` package wrapped it in.
+  /// Pulls the raw value out of an excel cell.
   static dynamic _cellValue(xls.Data? cell) {
     final v = cell?.value;
     if (v == null) return null;
@@ -123,27 +128,37 @@ class ExcelImportService {
 
   static String _asString(dynamic v) => v == null ? '' : v.toString().trim();
 
-  /// Reads the .xlsx at [path] and parses it into flat product rows,
-  /// carrying along whichever category banner row it fell under.
+  /// Reads a .csv, .xlsx, or .xls file at [path] and parses it into product rows.
   List<ImportedProductRow> parseFile(String path) {
     final bytes = File(path).readAsBytesSync();
-    final book = xls.Excel.decodeBytes(bytes);
-    if (book.tables.isEmpty) {
-      throw const FormatException('The Excel file has no sheets.');
-    }
-    // Use whichever sheet has the most rows (the real data), rather than
-    // assuming a specific sheet name.
-    final sheet = book.tables.values.reduce((a, b) => a.rows.length >= b.rows.length ? a : b);
+    final lowerPath = path.toLowerCase();
 
-    // Find the header row: scan the first ~6 rows for one containing both
-    // a "code"-like and a "description"-like column.
+    List<List<dynamic>> allRows = [];
+
+    if (lowerPath.endsWith('.csv')) {
+      final content = utf8.decode(bytes).replaceAll('\uFEFF', '');
+      allRows = const CsvToListConverter().convert(content);
+    } else {
+      final book = xls.Excel.decodeBytes(bytes);
+      if (book.tables.isEmpty) {
+        throw const FormatException('The Excel file has no sheets.');
+      }
+      final sheet = book.tables.values.reduce((a, b) => a.rows.length >= b.rows.length ? a : b);
+      allRows = sheet.rows.map((row) => row.map(_cellValue).toList()).toList();
+    }
+
+    if (allRows.isEmpty) {
+      throw const FormatException('The file is empty.');
+    }
+
+    // Find the header row in first 15 rows
     var headerRowIndex = -1;
     var col = <String, int>{};
-    for (var i = 0; i < sheet.rows.length && i < 6; i++) {
-      final cells = sheet.rows[i].map(_cellValue).map(_norm).toList();
-      final hasCode = cells.any((c) => c.contains('code'));
-      final hasDesc = cells.any((c) => c.contains('description') || c.contains('product'));
-      if (hasCode && hasDesc) {
+    for (var i = 0; i < allRows.length && i < 15; i++) {
+      final cells = allRows[i].map(_norm).toList();
+      final hasCode = cells.any((c) => c.contains('code') || c == 'sku');
+      final hasDesc = cells.any((c) => c.contains('description') || c.contains('name') || c.contains('product'));
+      if (hasCode || hasDesc) {
         headerRowIndex = i;
         for (var c = 0; c < cells.length; c++) {
           col[cells[c]] = c;
@@ -151,9 +166,9 @@ class ExcelImportService {
         break;
       }
     }
+
     if (headerRowIndex == -1) {
-      throw const FormatException(
-          'Could not find a header row with "Code" and "Description" columns.');
+      throw const FormatException('Could not find a header row with Code/SKU or Product Name in the file.');
     }
 
     int? findCol(List<String> names) {
@@ -163,63 +178,90 @@ class ExcelImportService {
       return null;
     }
 
-    final codeCol = findCol(['code no.', 'code no', 'code', 'item code', 'product code']);
-    final descCol = findCol(['product description', 'description']);
-    final specCol = findCol(['voltage/amp/type', 'spec', 'specification']);
-    final pkgCol = findCol(['std.pkg.', 'std pkg', 'pkg']);
-    final priceCol = findCol(['price \n(incl. gst)', 'price (incl. gst)', 'price', 'purchase', 'purchase price']);
-
-    if (codeCol == null || descCol == null) {
-      throw const FormatException('Could not find Code / Description columns in the file.');
-    }
+    final codeCol = findCol(['sku', 'code no.', 'code no', 'code', 'item code', 'product code']);
+    final descCol = findCol(['product name', 'name', 'product description', 'description', 'title', 'product']);
+    final specCol = findCol(['voltage/amp/type', 'spec', 'specification', 'model']);
+    final pkgCol = findCol(['std.pkg.', 'std pkg', 'pkg', 'current stock', 'stock', 'qty']);
+    final priceCol = findCol(['purchase price', 'purchase', 'cost', 'price (incl. gst)', 'price \n(incl. gst)', 'price']);
+    final brandCol = findCol(['brand', 'brand name', 'make']);
+    final barcodeCol = findCol(['barcode', 'upc', 'ean']);
+    final catCol = findCol(['category', 'category name', 'cat']);
 
     final rows = <ImportedProductRow>[];
-    var currentCategory = 'Imported';
+    var currentCategory = 'General';
 
-    for (var i = headerRowIndex + 1; i < sheet.rows.length; i++) {
-      final row = sheet.rows[i];
-      dynamic cellAt(int? idx) => (idx == null || idx >= row.length) ? null : _cellValue(row[idx]);
+    for (var i = headerRowIndex + 1; i < allRows.length; i++) {
+      final row = allRows[i];
+      dynamic cellAt(int? idx) => (idx == null || idx >= row.length) ? null : row[idx];
 
       final code = _asString(cellAt(codeCol));
       final desc = _asString(cellAt(descCol));
+      final cat = _asString(cellAt(catCol));
 
-      // A category banner row: description present, but no code
-      if (code.isEmpty && desc.isNotEmpty) {
+      // Category banner row (ERD sheet format): description present, code empty
+      if (code.isEmpty && desc.isNotEmpty && cat.isEmpty && !desc.toLowerCase().contains('total')) {
         currentCategory = desc;
         continue;
       }
-      if (code.isEmpty) continue; // blank separator row
+      if (code.isEmpty && desc.isEmpty) continue; // blank row
 
       rows.add(ImportedProductRow(
-        category: currentCategory,
-        code: code,
-        desc: desc,
+        category: cat.isNotEmpty ? cat : currentCategory,
+        code: code.isNotEmpty ? code : desc,
+        desc: desc.isNotEmpty ? desc : code,
         spec: _asString(cellAt(specCol)),
         pkg: _asString(cellAt(pkgCol)),
         purchase: _asDouble(cellAt(priceCol)),
+        brand: _asString(cellAt(brandCol)),
+        barcode: _asString(cellAt(barcodeCol)),
       ));
     }
     return rows;
   }
 
-  /// Compares [imported] rows against what's currently live in the Supabase
-  /// PostgreSQL database and builds a plan of changes.
+  /// Compares [imported] rows against live database records using 3-tier matching
+  /// (Priority 1: SKU/Code -> Priority 2: Barcode -> Priority 3: Name+Brand)
+  /// and detects duplicates within the imported file.
   Future<ImportPlan> buildPlan(List<ImportedProductRow> imported) async {
     final liveProducts = await _supabase.fetchProducts();
 
     final liveByCode = <String, Product>{};
+    final liveByBarcode = <String, Product>{};
+    final liveByNameBrand = <String, Product>{};
+
     for (final p in liveProducts) {
       if (p.code.isNotEmpty) {
         liveByCode[p.code.trim().toLowerCase()] = p;
       }
+      if (p.barcode != null && p.barcode!.trim().isNotEmpty) {
+        liveByBarcode[p.barcode!.trim().toLowerCase()] = p;
+      }
+      final nameKey = '${_norm(p.desc)}|${_norm(p.brand ?? '')}';
+      liveByNameBrand[nameKey] = p;
     }
 
     final updates = <ProductUpdate>[];
     final adds = <ProductAdd>[];
     var unchanged = 0;
 
+    // Detect duplicate rows within the uploaded file
+    final seenSkus = <String>{};
+
     for (final r in imported) {
-      final live = liveByCode[r.code.trim().toLowerCase()];
+      final normCode = r.code.trim().toLowerCase();
+      if (normCode.isNotEmpty && seenSkus.contains(normCode)) {
+        continue; // skip in-file duplicate
+      }
+      if (normCode.isNotEmpty) seenSkus.add(normCode);
+
+      // 3-Tier Matching Priority
+      final normBarcode = (r.barcode ?? '').trim().toLowerCase();
+      final normNameKey = '${_norm(r.desc)}|${_norm(r.brand ?? '')}';
+
+      final live = liveByCode[normCode] ??
+          (normBarcode.isNotEmpty ? liveByBarcode[normBarcode] : null) ??
+          liveByNameBrand[normNameKey];
+
       if (live == null) {
         const marginPrice = _defaultMarginPrice;
         adds.add(ProductAdd(
@@ -246,7 +288,7 @@ class ExcelImportService {
       final newSelling = priceChanged ? r.purchase + marginPrice : live.sellingPrice;
 
       updates.add(ProductUpdate(
-        code: r.code,
+        code: live.code,
         desc: r.desc.isEmpty ? live.desc : r.desc,
         rowNumber: live.sno,
         oldPurchase: live.purchase,

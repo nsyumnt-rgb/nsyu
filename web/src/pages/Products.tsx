@@ -5,6 +5,8 @@ import {
   listProducts,
   updateProduct,
   importProductsApi,
+  previewImportProductsApi,
+  type ImportPreviewResult,
 } from "../api/products";
 import { listCategories } from "../api/categories";
 import { apiErrorMessage } from "../api/client";
@@ -153,155 +155,111 @@ function ProductsInner() {
   const [showImportModal, setShowImportModal] = useState(false);
 
   // Import Modal states
+  const [importStep, setImportStep] = useState<"upload" | "preview" | "success">("upload");
   const [importMode, setImportMode] = useState<"file" | "paste">("file");
   const [importCsvText, setImportCsvText] = useState("");
   const [importFileName, setImportFileName] = useState("");
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [importParsedItems, setImportParsedItems] = useState<any[]>([]);
-  const [importCategories, setImportCategories] = useState<string[]>([]);
-  const [importFormat, setImportFormat] = useState<"erd" | "standard" | null>(null);
+  const [previewResult, setPreviewResult] = useState<ImportPreviewResult | null>(null);
+  const [previewFilter, setPreviewFilter] = useState<"all" | "new" | "price_change" | "existing" | "duplicate" | "invalid">("all");
   const [importMarginPercent, setImportMarginPercent] = useState<number>(20);
+  const [updateExisting, setUpdateExisting] = useState<boolean>(true);
+  const [updatePurchasePrice, setUpdatePurchasePrice] = useState<boolean>(true);
+  const [updateSellingPrice, setUpdateSellingPrice] = useState<boolean>(false);
 
-  function handleProcessCsv(rawText: string) {
-    setImportCsvText(rawText);
-    setImportError(null);
-    setImportSuccess(null);
-    if (!rawText.trim()) {
-      setImportParsedItems([]);
-      setImportCategories([]);
-      setImportFormat(null);
+  async function handleAnalyze(fileToAnalyze?: File, textToAnalyze?: string) {
+    const file = fileToAnalyze !== undefined ? fileToAnalyze : importFile;
+    const text = textToAnalyze !== undefined ? textToAnalyze : importCsvText;
+
+    if (!file && !text?.trim()) {
+      setImportError("Please select an Excel/CSV file or paste CSV text first.");
       return;
     }
 
-    const lines = rawText.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
-    const isErd = lines.some((l) => l.toUpperCase().includes("ERD ORDER FORMAT") || l.includes("S.No.,CODE NO."));
-    const items: any[] = [];
-    const cats = new Set<string>();
+    setAnalyzing(true);
+    setImportError(null);
+    setImportSuccess(null);
 
-    if (isErd) {
-      let curCat = "CHARGER";
-      cats.add(curCat);
-      for (const l of lines) {
-        const line = l.trim();
-        if (!line || line.includes("ERD ORDER FORMAT") || line.includes("S.No.,CODE NO.") || line.includes("Terms") || line.includes("Total,,")) continue;
-        
-        // Manual CSV line parser
-        const cols: string[] = [];
-        let cur = "", inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-          const c = line[i];
-          if (c === '"') {
-            if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; }
-          } else if (c === "," && !inQuotes) { cols.push(cur); cur = ""; } else { cur += c; }
-        }
-        cols.push(cur);
+    try {
+      const res = await previewImportProductsApi({
+        file: file || undefined,
+        csvText: !file && text ? text : undefined,
+        shopId: shopId || 1,
+        defaultMarginPercent: importMarginPercent,
+        defaultBrand: "ERD",
+      });
 
-        const c0 = (cols[0] || "").trim();
-        const c1 = (cols[1] || "").trim();
-        const c2 = (cols[2] || "").trim();
-        const c3 = (cols[3] || "").trim();
-        const c4 = (cols[4] || "").trim();
-        const c6 = (cols[6] || "").trim();
-
-        if (!c0 && !c1 && c2 && !c2.toLowerCase().includes("total")) {
-          curCat = c2.replace(/^(TC|CC|DC)\s*-\s*/i, "").trim() || "CHARGER";
-          cats.add(curCat);
-          continue;
-        }
-
-        if (c0 && /^\d+$/.test(c0) && (c1 || c2)) {
-          const pur = parseFloat(c6.replace(/[^0-9.]/g, "")) || 0;
-          const margin = pur <= 100 ? 10 : pur <= 200 ? 15 : Math.round(pur * 0.2);
-          items.push({
-            sno: c0,
-            sku: c1 || `PRD-${c0}`,
-            name: c2,
-            spec: c3,
-            pkg: c4 || "20",
-            purchase_price: pur,
-            selling_price: pur + margin,
-            category: curCat,
-          });
-        }
+      if (res.data.success && res.data.data) {
+        setPreviewResult(res.data.data);
+        setImportStep("preview");
+      } else {
+        setImportError(res.data.message || "Failed to analyze spreadsheet");
       }
-      setImportFormat("erd");
-      setImportParsedItems(items);
-      setImportCategories(Array.from(cats));
-    } else {
-      // Standard CSV fallback
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        const cols = line.split(",");
-        const name = (cols[0] || "").trim();
-        const sku = (cols[1] || "").trim();
-        if (name || sku) {
-          const cat = (cols[2] || "General").trim();
-          cats.add(cat);
-          const pur = parseFloat(cols[4] || "0") || 0;
-          const sell = parseFloat(cols[5] || "0") || (pur + Math.round(pur * 0.2));
-          items.push({
-            sno: items.length + 1,
-            sku: sku || `SKU-${items.length + 1}`,
-            name: name || sku,
-            spec: "",
-            pkg: cols[6] || "20",
-            purchase_price: pur,
-            selling_price: sell,
-            category: cat,
-          });
-        }
-      }
-      setImportFormat("standard");
-      setImportParsedItems(items);
-      setImportCategories(Array.from(cats));
+    } catch (err: any) {
+      setImportError(apiErrorMessage(err, "Failed to analyze spreadsheet"));
+    } finally {
+      setAnalyzing(false);
     }
   }
 
   function handleFileSelected(file: File) {
     setImportFile(file);
     setImportFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = String(e.target?.result || "");
-      handleProcessCsv(text);
-    };
-    reader.readAsText(file);
+    setImportCsvText("");
+    setImportError(null);
+    handleAnalyze(file, "");
   }
 
-  async function handleExecuteImport() {
-    if (!importCsvText && !importFile && importParsedItems.length === 0) {
-      setImportError("Please select a file or paste CSV text first.");
+  async function handleConfirmImport() {
+    if (!previewResult || previewResult.items.length === 0) {
+      setImportError("No parsed items available to import.");
       return;
     }
+
     setImporting(true);
     setImportError(null);
     setImportSuccess(null);
+
     try {
       const res = await importProductsApi({
-        csvText: importCsvText,
-        file: importFile || undefined,
+        items: previewResult.items,
         shopId: shopId || 1,
+        updateExisting,
+        updatePurchasePrice,
+        updateSellingPrice,
         defaultMarginPercent: importMarginPercent,
       });
 
       if (res.data.success && res.data.data) {
         const d = res.data.data;
         setImportSuccess(
-          `Successfully imported ${d.total} products (${d.created} newly created, ${d.updated} updated) across ${d.categories} categories!`
+          `Successfully imported ${d.total} products: ${d.created} new created, ${d.updated} updated (${d.priceChanges} purchase price updates recorded) across ${d.categories} categories.`
         );
+        setImportStep("success");
         loadData();
       } else {
-        setImportError(res.data.message || "Import failed");
+        setImportError(res.data.message || "Import execution failed");
       }
     } catch (err: any) {
       setImportError(apiErrorMessage(err, "Failed to import products"));
     } finally {
       setImporting(false);
     }
+  }
+
+  function resetImportState() {
+    setShowImportModal(false);
+    setImportStep("upload");
+    setImportFile(null);
+    setImportFileName("");
+    setImportCsvText("");
+    setPreviewResult(null);
+    setImportError(null);
+    setImportSuccess(null);
   }
 
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
@@ -1744,228 +1702,518 @@ function ProductsInner() {
       {/* IMPORT MODAL */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-6 space-y-4 my-8">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
                   📥
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800">Import Products (CSV / Excel Format)</h3>
-                  <p className="text-xs text-slate-500">Bulk import catalog products, wholesale price lists, and ERD order sheets</p>
+                  <h3 className="text-base font-bold text-slate-800">Import Products (.csv, .xlsx, .xls)</h3>
+                  <p className="text-xs text-slate-500">
+                    Preview, validate, match against database, and import wholesale catalogs or ERD order sheets safely
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => {
-                  setShowImportModal(false);
-                  setImportSuccess(null);
-                  setImportError(null);
-                }}
+                onClick={resetImportState}
                 className="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100"
               >
                 ✕
               </button>
             </div>
 
-            {/* Success Banner */}
-            {importSuccess && (
-              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">✅</span>
-                  <span className="font-medium">{importSuccess}</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowImportModal(false);
-                    setImportSuccess(null);
-                  }}
-                  className="px-2.5 py-1 bg-emerald-600 text-white font-semibold rounded-lg text-[11px] hover:bg-emerald-700"
-                >
-                  View Products
-                </button>
-              </div>
-            )}
-
             {/* Error Banner */}
             {importError && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
-                <span>⚠️</span>
+                <span className="text-sm">⚠️</span>
                 <span>{importError}</span>
               </div>
             )}
 
-            {/* Mode Switcher */}
-            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setImportMode("file")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    importMode === "file" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  📁 Upload File (.csv, .txt)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImportMode("paste")}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    importMode === "paste" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  📋 Paste Spreadsheet Rows
-                </button>
-              </div>
+            {/* STEP 1: UPLOAD */}
+            {importStep === "upload" && (
+              <div className="space-y-4">
+                {/* Mode Switcher */}
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100/80 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setImportMode("file")}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                        importMode === "file" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      📁 Upload File (.csv, .xlsx, .xls)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportMode("paste")}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                        importMode === "paste" ? "bg-white text-slate-800 shadow-xs" : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      📋 Paste CSV / Spreadsheet Rows
+                    </button>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-[11px] font-semibold text-slate-500">Margin Markup:</label>
-                <select
-                  value={importMarginPercent}
-                  onChange={(e) => setImportMarginPercent(Number(e.target.value))}
-                  className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium"
-                >
-                  <option value={15}>15% Margin</option>
-                  <option value={20}>20% Margin</option>
-                  <option value={25}>25% Margin</option>
-                  <option value={30}>30% Margin</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Upload Area / Paste Area */}
-            {importMode === "file" ? (
-              <div
-                onClick={() => document.getElementById("csv-file-input")?.click()}
-                className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-xl p-6 text-center bg-slate-50/50 hover:bg-emerald-50/20 cursor-pointer transition-all"
-              >
-                <input
-                  id="csv-file-input"
-                  type="file"
-                  accept=".csv,.txt,.xlsx"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelected(file);
-                  }}
-                />
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 mx-auto mb-2 flex items-center justify-center text-lg">
-                  ⬆️
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-semibold text-slate-500">Default Markup:</label>
+                    <select
+                      value={importMarginPercent}
+                      onChange={(e) => setImportMarginPercent(Number(e.target.value))}
+                      className="px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium"
+                    >
+                      <option value={15}>15% Margin</option>
+                      <option value={20}>20% Margin</option>
+                      <option value={25}>25% Margin</option>
+                      <option value={30}>30% Margin</option>
+                    </select>
+                  </div>
                 </div>
-                <span className="text-xs text-emerald-700 font-bold block">
-                  {importFileName ? `Selected: ${importFileName}` : "Click to browse or drop CSV / Sheet file here"}
-                </span>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Supports ERD Price Lists and standard CSV catalogs (Auto-detects categories, SKUs & pricing)
-                </p>
-              </div>
-            ) : (
-              <div>
-                <textarea
-                  value={importCsvText}
-                  onChange={(e) => handleProcessCsv(e.target.value)}
-                  placeholder="Paste rows copied from Excel or CSV here..."
-                  rows={5}
-                  className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-emerald-500 focus:bg-white resize-none"
-                />
+
+                {/* Upload or Paste Area */}
+                {importMode === "file" ? (
+                  <div
+                    onClick={() => document.getElementById("csv-file-input")?.click()}
+                    className="border-2 border-dashed border-slate-200 hover:border-emerald-500 rounded-xl p-8 text-center bg-slate-50/50 hover:bg-emerald-50/20 cursor-pointer transition-all"
+                  >
+                    <input
+                      id="csv-file-input"
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelected(file);
+                      }}
+                    />
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 mx-auto mb-2.5 flex items-center justify-center text-xl">
+                      📊
+                    </div>
+                    <span className="text-sm text-emerald-800 font-bold block">
+                      {importFileName ? `Selected: ${importFileName}` : "Click to browse or drop CSV / Excel file here"}
+                    </span>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Supports Excel (.xlsx, .xls) and CSV (.csv) catalogs or ERD order sheets
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <textarea
+                      value={importCsvText}
+                      onChange={(e) => setImportCsvText(e.target.value)}
+                      placeholder="Paste CSV rows here (e.g. Product Name, SKU, Category, Brand, Purchase Price, Selling Price)..."
+                      rows={6}
+                      className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-emerald-500 focus:bg-white resize-none"
+                    />
+                  </div>
+                )}
+
+                {/* Action button to analyze */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={resetImportState}
+                    disabled={analyzing}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAnalyze()}
+                    disabled={analyzing || (!importFile && !importCsvText.trim())}
+                    className={`px-5 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+                      analyzing || (!importFile && !importCsvText.trim())
+                        ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                        : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                    }`}
+                  >
+                    {analyzing ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span>Analyzing & Matching Catalog...</span>
+                      </>
+                    ) : (
+                      <span>Analyze & Preview Catalog →</span>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Live Parsing Summary Badges */}
-            {importParsedItems.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-md">
-                    ✓ Format: {importFormat === "erd" ? "ERD Order Sheet" : "Standard CSV"}
-                  </span>
-                  <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-[11px] font-bold rounded-md">
-                    📦 {importParsedItems.length} Products Detected
-                  </span>
-                  <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-[11px] font-bold rounded-md">
-                    🏷️ {importCategories.length} Categories: {importCategories.slice(0, 4).join(", ")}
-                    {importCategories.length > 4 ? ` +${importCategories.length - 4} more` : ""}
-                  </span>
+            {/* STEP 2: PREVIEW */}
+            {importStep === "preview" && previewResult && (
+              <div className="space-y-4">
+                {/* Summary Metrics Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  <div
+                    onClick={() => setPreviewFilter("all")}
+                    className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      previewFilter === "all" ? "bg-slate-100 border-slate-400 shadow-xs" : "bg-slate-50 border-slate-200 hover:bg-slate-100/60"
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold text-slate-500 uppercase">Total Rows</div>
+                    <div className="text-lg font-bold text-slate-800">{previewResult.summary.total}</div>
+                  </div>
+
+                  <div
+                    onClick={() => setPreviewFilter("new")}
+                    className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      previewFilter === "new" ? "bg-emerald-100/60 border-emerald-500 shadow-xs" : "bg-emerald-50/50 border-emerald-200 hover:bg-emerald-100/40"
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold text-emerald-700 uppercase">New Products</div>
+                    <div className="text-lg font-bold text-emerald-700">{previewResult.summary.newCount}</div>
+                  </div>
+
+                  <div
+                    onClick={() => setPreviewFilter("price_change")}
+                    className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      previewFilter === "price_change" ? "bg-amber-100/60 border-amber-500 shadow-xs" : "bg-amber-50/50 border-amber-200 hover:bg-amber-100/40"
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold text-amber-700 uppercase">Price Changes</div>
+                    <div className="text-lg font-bold text-amber-700">{previewResult.summary.priceChangeCount}</div>
+                  </div>
+
+                  <div
+                    onClick={() => setPreviewFilter("existing")}
+                    className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      previewFilter === "existing" ? "bg-sky-100/60 border-sky-500 shadow-xs" : "bg-sky-50/50 border-sky-200 hover:bg-sky-100/40"
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold text-sky-700 uppercase">Existing</div>
+                    <div className="text-lg font-bold text-sky-700">{previewResult.summary.existingCount}</div>
+                  </div>
+
+                  <div
+                    onClick={() => setPreviewFilter("duplicate")}
+                    className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      previewFilter === "duplicate" ? "bg-purple-100/60 border-purple-500 shadow-xs" : "bg-purple-50/50 border-purple-200 hover:bg-purple-100/40"
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold text-purple-700 uppercase">Duplicates</div>
+                    <div className="text-lg font-bold text-purple-700">{previewResult.summary.duplicateCount}</div>
+                  </div>
+
+                  <div
+                    onClick={() => setPreviewFilter("invalid")}
+                    className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      previewFilter === "invalid" ? "bg-rose-100/60 border-rose-500 shadow-xs" : "bg-rose-50/50 border-rose-200 hover:bg-rose-100/40"
+                    }`}
+                  >
+                    <div className="text-[10px] font-semibold text-rose-700 uppercase">Invalid</div>
+                    <div className="text-lg font-bold text-rose-700">{previewResult.summary.invalidCount}</div>
+                  </div>
+                </div>
+
+                {/* Filter Tabs */}
+                <div className="flex items-center gap-1 border-b border-slate-200 pb-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewFilter("all")}
+                    className={`px-3 py-1 font-semibold rounded-lg ${
+                      previewFilter === "all" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    All ({previewResult.summary.total})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewFilter("new")}
+                    className={`px-3 py-1 font-semibold rounded-lg ${
+                      previewFilter === "new" ? "bg-emerald-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    New ({previewResult.summary.newCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewFilter("price_change")}
+                    className={`px-3 py-1 font-semibold rounded-lg ${
+                      previewFilter === "price_change" ? "bg-amber-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    Price Changes ({previewResult.summary.priceChangeCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewFilter("existing")}
+                    className={`px-3 py-1 font-semibold rounded-lg ${
+                      previewFilter === "existing" ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    Existing ({previewResult.summary.existingCount})
+                  </button>
+                  {previewResult.summary.duplicateCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewFilter("duplicate")}
+                      className={`px-3 py-1 font-semibold rounded-lg ${
+                        previewFilter === "duplicate" ? "bg-purple-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      Duplicates ({previewResult.summary.duplicateCount})
+                    </button>
+                  )}
+                  {previewResult.summary.invalidCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewFilter("invalid")}
+                      className={`px-3 py-1 font-semibold rounded-lg ${
+                        previewFilter === "invalid" ? "bg-rose-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      Invalid ({previewResult.summary.invalidCount})
+                    </button>
+                  )}
                 </div>
 
                 {/* Preview Table */}
-                <div className="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                <div className="border border-slate-200 rounded-xl overflow-hidden max-h-64 overflow-y-auto">
                   <table className="w-full text-left text-[11px] border-collapse">
-                    <thead className="bg-slate-100/80 sticky top-0 text-slate-700 font-bold">
+                    <thead className="bg-slate-100 sticky top-0 text-slate-700 font-bold z-10">
                       <tr>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200">#</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200">SKU / Code</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200">Product Name</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200">Category</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200">Pkg</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200 text-right">Wholesale ₹</th>
-                        <th className="py-1.5 px-2.5 border-b border-slate-200 text-right">Selling ₹</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200">#</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200">Status</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200">SKU / Code</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200">Product Name</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200">Category</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200">Brand</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200 text-right">Wholesale ₹</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200 text-right">Selling ₹</th>
+                        <th className="py-2 px-2.5 border-b border-slate-200">Details / Match</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-600">
-                      {importParsedItems.slice(0, 6).map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50">
-                          <td className="py-1.5 px-2.5">{item.sno || idx + 1}</td>
-                          <td className="py-1.5 px-2.5 font-bold text-slate-800">{item.sku}</td>
-                          <td className="py-1.5 px-2.5 truncate max-w-xs">{item.name}</td>
-                          <td className="py-1.5 px-2.5">
-                            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-medium">
-                              {item.category}
-                            </span>
-                          </td>
-                          <td className="py-1.5 px-2.5">{item.pkg}</td>
-                          <td className="py-1.5 px-2.5 text-right font-medium">₹{item.purchase_price}</td>
-                          <td className="py-1.5 px-2.5 text-right font-bold text-emerald-600">₹{item.selling_price}</td>
-                        </tr>
-                      ))}
+                      {previewResult.items
+                        .filter((item) => {
+                          if (previewFilter === "all") return true;
+                          return item.status === previewFilter;
+                        })
+                        .map((item, idx) => {
+                          const isPriceDiff = item.status === "price_change";
+                          return (
+                            <tr
+                              key={idx}
+                              className={`hover:bg-slate-50 ${
+                                item.status === "invalid"
+                                  ? "bg-rose-50/40"
+                                  : item.status === "duplicate"
+                                  ? "bg-purple-50/30"
+                                  : item.status === "price_change"
+                                  ? "bg-amber-50/30"
+                                  : ""
+                              }`}
+                            >
+                              <td className="py-1.5 px-2.5 text-slate-400 font-mono">{item.rowIndex}</td>
+                              <td className="py-1.5 px-2.5">
+                                {item.status === "new" && (
+                                  <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-semibold text-[10px]">
+                                    + New
+                                  </span>
+                                )}
+                                {item.status === "existing" && (
+                                  <span className="px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded font-semibold text-[10px]">
+                                    ✓ Match
+                                  </span>
+                                )}
+                                {item.status === "price_change" && (
+                                  <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-semibold text-[10px]">
+                                    ⚡ Price Diff
+                                  </span>
+                                )}
+                                {item.status === "duplicate" && (
+                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded font-semibold text-[10px]">
+                                    🔁 Duplicate
+                                  </span>
+                                )}
+                                {item.status === "invalid" && (
+                                  <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded font-semibold text-[10px]">
+                                    ✕ Invalid
+                                  </span>
+                                )}
+                                {item.status === "ambiguous" && (
+                                  <span className="px-1.5 py-0.5 bg-orange-100 text-orange-800 rounded font-semibold text-[10px]">
+                                    ❓ Ambiguous
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-1.5 px-2.5 font-bold text-slate-800">{item.sku || "—"}</td>
+                              <td className="py-1.5 px-2.5 truncate max-w-xs">{item.name || "—"}</td>
+                              <td className="py-1.5 px-2.5">
+                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px]">
+                                  {item.category}
+                                </span>
+                              </td>
+                              <td className="py-1.5 px-2.5">{item.brand || "—"}</td>
+                              <td className="py-1.5 px-2.5 text-right font-medium">
+                                {isPriceDiff ? (
+                                  <span>
+                                    <span className="line-through text-slate-400 mr-1">₹{item.oldPurchasePrice}</span>
+                                    <span className="font-bold text-amber-700">₹{item.newPurchasePrice}</span>
+                                  </span>
+                                ) : (
+                                  `₹${item.purchase_price}`
+                                )}
+                              </td>
+                              <td className="py-1.5 px-2.5 text-right font-bold text-emerald-600">
+                                ₹{item.selling_price || "—"}
+                              </td>
+                              <td className="py-1.5 px-2.5 text-[10px] text-slate-500 truncate max-w-xs">
+                                {item.validationError ? (
+                                  <span className="text-rose-600 font-medium">{item.validationError}</span>
+                                ) : item.ambiguityReason ? (
+                                  <span className="text-orange-600 font-medium">{item.ambiguityReason}</span>
+                                ) : item.matchedProductId ? (
+                                  <span>Matched via {item.matchTier} (ID #{item.matchedProductId})</span>
+                                ) : (
+                                  <span className="text-slate-400">Will be created as new product</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
-                  {importParsedItems.length > 6 && (
-                    <div className="py-1 px-3 bg-slate-50 text-[10px] text-slate-500 text-center font-medium border-t border-slate-100">
-                      ...and {importParsedItems.length - 6} more products ready to import
-                    </div>
-                  )}
+                </div>
+
+                {/* Import Invariant Options */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={updateExisting}
+                        onChange={(e) => setUpdateExisting(e.target.checked)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                      />
+                      <span className="font-medium text-slate-700">Update existing products</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={updatePurchasePrice}
+                        disabled={!updateExisting}
+                        onChange={(e) => setUpdatePurchasePrice(e.target.checked)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                      />
+                      <span className="font-medium text-slate-700">Update purchase prices</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={updateSellingPrice}
+                        disabled={!updateExisting}
+                        onChange={(e) => setUpdateSellingPrice(e.target.checked)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                      />
+                      <span className="font-medium text-slate-700">Update selling prices</span>
+                      <span className="text-[10px] text-slate-400">(Preserved by default)</span>
+                    </label>
+                  </div>
+
+                  <div className="text-[11px] text-slate-500 italic">
+                    ℹ️ Inventory stock is preserved without artificial inflation.
+                  </div>
+                </div>
+
+                {/* Confirm Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setImportStep("upload")}
+                    disabled={importing}
+                    className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors flex items-center gap-1"
+                  >
+                    ← Back to Upload
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={resetImportState}
+                      disabled={importing}
+                      className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmImport}
+                      disabled={
+                        importing ||
+                        previewResult.items.filter((i) => i.status !== "invalid" && !i.isDuplicateInFile).length === 0
+                      }
+                      className={`px-5 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
+                        importing ||
+                        previewResult.items.filter((i) => i.status !== "invalid" && !i.isDuplicateInFile).length === 0
+                          ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                      }`}
+                    >
+                      {importing ? (
+                        <>
+                          <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                          </svg>
+                          <span>Importing Products...</span>
+                        </>
+                      ) : (
+                        <span>
+                          Confirm & Import{" "}
+                          {previewResult.items.filter((i) => i.status !== "invalid" && !i.isDuplicateInFile).length} Products
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowImportModal(false);
-                  setImportSuccess(null);
-                  setImportError(null);
-                }}
-                disabled={importing}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteImport}
-                disabled={importing || importParsedItems.length === 0}
-                className={`px-5 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${
-                  importing || importParsedItems.length === 0
-                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
-                }`}
-              >
-                {importing ? (
-                  <>
-                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                    </svg>
-                    <span>Importing Products...</span>
-                  </>
-                ) : (
-                  <span>
-                    Import {importParsedItems.length > 0 ? `${importParsedItems.length} Products` : "Products"}
-                  </span>
-                )}
-              </button>
-            </div>
+            {/* STEP 3: SUCCESS */}
+            {importStep === "success" && (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mx-auto">
+                  ✓
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-800">Products Imported Successfully</h4>
+                  <p className="text-xs text-slate-600 mt-1 max-w-md mx-auto">{importSuccess}</p>
+                </div>
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImportStep("upload");
+                      setImportFile(null);
+                      setImportFileName("");
+                      setImportCsvText("");
+                      setPreviewResult(null);
+                      setImportSuccess(null);
+                    }}
+                    className="px-4 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  >
+                    Import Another File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetImportState}
+                    className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-colors"
+                  >
+                    Close & View Catalog
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

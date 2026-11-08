@@ -46,6 +46,7 @@ exports.productImageUpload = (0, multer_1.default)({
 });
 const CSV_UPLOAD_DIR = path_1.default.join(__dirname, "..", "..", "uploads", "imports");
 fs_1.default.mkdirSync(CSV_UPLOAD_DIR, { recursive: true });
+const ALLOWED_IMPORT_EXTENSIONS = [".csv", ".xlsx", ".xls"];
 exports.csvFileUpload = (0, multer_1.default)({
     storage: multer_1.default.diskStorage({
         destination: (_req, _file, cb) => cb(null, CSV_UPLOAD_DIR),
@@ -54,7 +55,14 @@ exports.csvFileUpload = (0, multer_1.default)({
             cb(null, `${(0, uuid_1.v4)()}${ext}`);
         },
     }),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (_req, file, cb) => {
+        const ext = path_1.default.extname(file.originalname).toLowerCase();
+        if (!ALLOWED_IMPORT_EXTENSIONS.includes(ext)) {
+            return cb(new Error(`Unsupported file format: ${ext}. Allowed formats: .csv, .xlsx, .xls`));
+        }
+        cb(null, true);
+    },
+    limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
 });
 function publicUrlFor(filename) {
     return `/uploads/products/${filename}`;

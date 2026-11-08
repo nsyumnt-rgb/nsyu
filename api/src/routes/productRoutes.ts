@@ -16,6 +16,7 @@ import {
   getProductLocationHistory,
   listProductsCustomerView,
   importProducts,
+  previewProductImportController,
 } from "../controllers/productController";
 
 const router = Router();
@@ -33,6 +34,7 @@ router.use(authenticate);
 router.use(requireShop);
 
 router.get("/", requirePermission("products", "view"), listProductsOwnerView);
+router.post("/import/preview", requirePermission("products", "create"), csvFileUpload.single("file"), previewProductImportController);
 router.post("/import", requirePermission("products", "create"), csvFileUpload.single("file"), importProducts);
 router.get("/:productId", requirePermission("products", "view"), getProductOwnerView);
 router.post("/", requirePermission("products", "create"), validate(createProductRules), createProduct);

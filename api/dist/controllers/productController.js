@@ -14,6 +14,7 @@ exports.deleteProductImage = deleteProductImage;
 exports.setProductLocation = setProductLocation;
 exports.getProductLocationHistory = getProductLocationHistory;
 exports.listProductsCustomerView = listProductsCustomerView;
+exports.previewProductImportController = previewProductImportController;
 exports.importProducts = importProducts;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
@@ -331,48 +332,111 @@ async function listProductsCustomerView(req, res) {
     return res.json({ success: true, data });
 }
 /**
- * Bulk import products via CSV file upload, pasted CSV text, or pre-parsed items.
- * Supports ERD Order Sheets and standard product CSV formats.
+ * Analyze an uploaded spreadsheet (.xlsx, .xls, .csv) or text and produce an Import Preview
+ * with 3-tier matching against database products, duplicate detection, and validation errors.
+ */
+async function previewProductImportController(req, res) {
+    try {
+        let buffer = null;
+        if (req.file) {
+            buffer = fs_1.default.readFileSync(req.file.path);
+        }
+        else if (req.body.csvText) {
+            buffer = Buffer.from(String(req.body.csvText), "utf-8");
+        }
+        if (!buffer) {
+            return res.status(400).json({
+                success: false,
+                message: "No spreadsheet file (.xlsx, .xls, .csv) or CSV text was provided for preview",
+            });
+        }
+        const defaultBrand = req.body.defaultBrand || "ERD";
+        const defaultMarginPercent = req.body.defaultMarginPercent ? Number(req.body.defaultMarginPercent) : 20;
+        const parsed = (0, productImporter_1.parseSpreadsheetBuffer)(buffer, { defaultBrand, defaultMarginPercent });
+        const previewResult = await (0, productImporter_1.previewProductImport)({
+            ownerId: req.auth.ownerId,
+            items: parsed.items,
+            invalidItems: parsed.invalidItems,
+            format: parsed.format,
+            categories: parsed.categories,
+        });
+        return res.json({
+            success: true,
+            data: previewResult,
+        });
+    }
+    catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: `Failed to analyze spreadsheet: ${err.message || String(err)}`,
+        });
+    }
+}
+/**
+ * Bulk import products via pre-validated items from preview, or direct spreadsheet file upload.
+ * Respects business rules:
+ *  - No fake inventory / opening stock inflation.
+ *  - Preserves selling prices by default (updateSellingPrice: false).
+ *  - Logs purchase price changes in AuditLog.
+ *  - Runs inside database transaction.
  */
 async function importProducts(req, res) {
-    let csvText = req.body.csvText;
-    if (!csvText && req.file) {
-        csvText = fs_1.default.readFileSync(req.file.path, "utf-8");
-    }
-    if (!csvText && (!req.body.items || !Array.isArray(req.body.items))) {
-        return res.status(400).json({ success: false, message: "No CSV file, text, or items array provided for import" });
-    }
-    let items = req.body.items;
-    if (csvText) {
-        const parseResult = (0, productImporter_1.parseProductsCsv)(csvText, {
-            defaultBrand: req.body.defaultBrand || "ERD",
-            defaultMarginPercent: req.body.defaultMarginPercent ? Number(req.body.defaultMarginPercent) : 20,
+    try {
+        let items = req.body.items;
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            let buffer = null;
+            if (req.file) {
+                buffer = fs_1.default.readFileSync(req.file.path);
+            }
+            else if (req.body.csvText) {
+                buffer = Buffer.from(String(req.body.csvText), "utf-8");
+            }
+            if (buffer) {
+                const parsed = (0, productImporter_1.parseSpreadsheetBuffer)(buffer, {
+                    defaultBrand: req.body.defaultBrand || "ERD",
+                    defaultMarginPercent: req.body.defaultMarginPercent ? Number(req.body.defaultMarginPercent) : 20,
+                });
+                const preview = await (0, productImporter_1.previewProductImport)({
+                    ownerId: req.auth.ownerId,
+                    items: parsed.items,
+                    invalidItems: parsed.invalidItems,
+                    format: parsed.format,
+                    categories: parsed.categories,
+                });
+                items = preview.items;
+            }
+        }
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No valid product rows could be parsed from the provided data",
+            });
+        }
+        const shopId = Number(req.body.shopId || req.auth.shopId || 1);
+        const updateExisting = req.body.updateExisting !== undefined ? Boolean(req.body.updateExisting) : true;
+        const updatePurchasePrice = req.body.updatePurchasePrice !== undefined ? Boolean(req.body.updatePurchasePrice) : true;
+        const updateSellingPrice = req.body.updateSellingPrice !== undefined ? Boolean(req.body.updateSellingPrice) : false;
+        const result = await (0, productImporter_1.executeProductImport)({
+            ownerId: req.auth.ownerId,
+            shopId,
+            items,
+            actorType: req.auth.isOwner ? "owner" : "employee",
+            actorId: req.auth.isOwner ? req.auth.ownerId : req.auth.employeeId,
+            updateExisting,
+            updatePurchasePrice,
+            updateSellingPrice,
         });
-        items = parseResult.items;
+        return res.json({
+            success: true,
+            message: `Successfully processed ${result.total} products (${result.created} new created, ${result.updated} updated, ${result.priceChanges} price changes) across ${result.categories} categories`,
+            data: result,
+        });
     }
-    if (!items || items.length === 0) {
-        return res.status(400).json({ success: false, message: "No valid product rows could be parsed from the provided data" });
+    catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: `Failed to import products: ${err.message || String(err)}`,
+        });
     }
-    const shopId = Number(req.body.shopId || req.auth.shopId || 1);
-    const result = await (0, productImporter_1.executeProductImport)({
-        ownerId: req.auth.ownerId,
-        shopId,
-        items,
-        actorType: req.auth.isOwner ? "owner" : "employee",
-        actorId: req.auth.isOwner ? req.auth.ownerId : req.auth.employeeId,
-    });
-    await (0, audit_1.logAudit)({
-        req,
-        module: "products",
-        action: "create",
-        entityType: "Product",
-        entityId: 0,
-        details: { notes: `Imported ${result.total} products (${result.created} created, ${result.updated} updated) across ${result.categories} categories` },
-    });
-    return res.json({
-        success: true,
-        message: `Successfully processed ${result.total} products (${result.created} new created, ${result.updated} updated) across ${result.categories} categories`,
-        data: result,
-    });
 }
 //# sourceMappingURL=productController.js.map

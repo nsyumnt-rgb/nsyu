@@ -31,8 +31,12 @@ function main() {
   // 1. Copy web/dist/assets to ./assets and ./docs/assets
   const distAssets = path.join(distDir, 'assets');
   if (fs.existsSync(distAssets)) {
-    copyDirRecursive(distAssets, path.join(rootDir, 'assets'));
-    copyDirRecursive(distAssets, path.join(docsDir, 'assets'));
+    const rootAssets = path.join(rootDir, 'assets');
+    const docsAssets = path.join(docsDir, 'assets');
+    if (fs.existsSync(rootAssets)) fs.rmSync(rootAssets, { recursive: true, force: true });
+    if (fs.existsSync(docsAssets)) fs.rmSync(docsAssets, { recursive: true, force: true });
+    copyDirRecursive(distAssets, rootAssets);
+    copyDirRecursive(distAssets, docsAssets);
     console.log('✔ Copied assets/ to root and docs/');
   }
 

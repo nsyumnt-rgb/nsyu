@@ -178,3 +178,4 @@ class ProductItemIcon extends StatelessWidget {
     );
   }
 }
+

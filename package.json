@@ -7,5 +7,9 @@
     "sync:pages": "node scripts/sync-gh-pages.js",
     "web:dev": "cd web && npm run dev",
     "api:start": "cd api && npm run start"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.0"
   }
 }

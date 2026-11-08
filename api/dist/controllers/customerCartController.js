@@ -24,6 +24,7 @@ async function getCart(req, res) {
                     model: models_1.Product,
                     as: "product",
                     include: [
+                        { model: models_1.Category, as: "category", attributes: ["id", "name"] },
                         { model: models_1.ProductImage, as: "images", attributes: ["url", "is_primary"] },
                         {
                             model: models_1.ProductStock,
@@ -76,6 +77,7 @@ async function getCart(req, res) {
                 name: product.name,
                 sku: product.sku,
                 brand: product.brand,
+                category: product.category?.name || product.brand || null,
                 imageUrl: primaryImg ? primaryImg.url : null,
                 quantity: qty,
                 unitPrice: rate,

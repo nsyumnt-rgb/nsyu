@@ -81,25 +81,102 @@ export function listCustomerProducts(shopId: number) {
 
 /* ---------------- Bulk Import ---------------- */
 
+export type ImportPreviewStatus = "new" | "existing" | "price_change" | "duplicate" | "invalid" | "ambiguous";
+
+export interface ImportPreviewItem {
+  rowIndex: number;
+  sno?: number | string;
+  sku: string;
+  name: string;
+  category: string;
+  brand?: string;
+  barcode?: string;
+  spec?: string;
+  purchase_price: number;
+  selling_price?: number;
+  mrp?: number;
+  tax_percent?: number;
+  min_stock?: number;
+  pkg?: number;
+  status: ImportPreviewStatus;
+  matchedProductId?: number;
+  matchedProductName?: string;
+  matchedSku?: string;
+  matchTier?: "sku" | "barcode" | "name_brand_model";
+  oldPurchasePrice?: number;
+  newPurchasePrice?: number;
+  oldSellingPrice?: number;
+  newSellingPrice?: number;
+  isDuplicateInFile?: boolean;
+  duplicateOfRow?: number;
+  validationError?: string;
+  ambiguityReason?: string;
+}
+
+export interface ImportPreviewSummary {
+  total: number;
+  newCount: number;
+  existingCount: number;
+  priceChangeCount: number;
+  duplicateCount: number;
+  invalidCount: number;
+  ambiguousCount: number;
+}
+
+export interface ImportPreviewResult {
+  format: "erd" | "standard";
+  summary: ImportPreviewSummary;
+  categories: string[];
+  items: ImportPreviewItem[];
+}
+
 export interface ImportProductsResult {
   total: number;
   created: number;
   updated: number;
+  priceChanges: number;
   categories: number;
   categoryNames?: string[];
 }
 
-export function importProductsApi(payload: {
-  csvText?: string;
+export function previewImportProductsApi(payload: {
   file?: File;
+  csvText?: string;
   shopId?: number;
-  defaultMarginPercent?: number;
   defaultBrand?: string;
+  defaultMarginPercent?: number;
 }) {
   if (payload.file) {
     const formData = new FormData();
     formData.append("file", payload.file);
     if (payload.shopId) formData.append("shopId", String(payload.shopId));
+    if (payload.defaultBrand) formData.append("defaultBrand", payload.defaultBrand);
+    if (payload.defaultMarginPercent) formData.append("defaultMarginPercent", String(payload.defaultMarginPercent));
+    return api.post<ApiEnvelope<ImportPreviewResult>>("/products/import/preview", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  }
+  return api.post<ApiEnvelope<ImportPreviewResult>>("/products/import/preview", payload);
+}
+
+export function importProductsApi(payload: {
+  items?: ImportPreviewItem[];
+  file?: File;
+  csvText?: string;
+  shopId?: number;
+  updateExisting?: boolean;
+  updatePurchasePrice?: boolean;
+  updateSellingPrice?: boolean;
+  defaultMarginPercent?: number;
+  defaultBrand?: string;
+}) {
+  if (payload.file && !payload.items) {
+    const formData = new FormData();
+    formData.append("file", payload.file);
+    if (payload.shopId) formData.append("shopId", String(payload.shopId));
+    if (payload.updateExisting !== undefined) formData.append("updateExisting", String(payload.updateExisting));
+    if (payload.updatePurchasePrice !== undefined) formData.append("updatePurchasePrice", String(payload.updatePurchasePrice));
+    if (payload.updateSellingPrice !== undefined) formData.append("updateSellingPrice", String(payload.updateSellingPrice));
     if (payload.defaultMarginPercent) formData.append("defaultMarginPercent", String(payload.defaultMarginPercent));
     if (payload.defaultBrand) formData.append("defaultBrand", payload.defaultBrand);
     return api.post<ApiEnvelope<ImportProductsResult>>("/products/import", formData, {

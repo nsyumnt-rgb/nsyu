@@ -34,7 +34,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
   Future<void> _pickAndParse() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['xlsx'],
+      allowedExtensions: ['xlsx', 'xls', 'csv'],
     );
     final path = result?.files.single.path;
     if (path == null) return; // user cancelled
@@ -129,11 +129,11 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
         const Text('Import an updated price list', style: AppTextStyles.section),
         const SizedBox(height: 8),
         const Text(
-          'Choose a .xlsx file with the same layout as your Product sheet '
-          '(Code, Description, Voltage/Amp/Type, STD.PKG., Price). Existing '
+          'Choose a .csv, .xlsx, or .xls file with catalog or order format '
+          '(Code/SKU, Description, Specification, Price). Existing '
           'products get their Purchase Price refreshed — their Margin Price is '
-          'kept, so Selling Price updates automatically. New product codes '
-          'are added at the end of the sheet. Nothing is written until you '
+          'kept, so Selling Price updates automatically. New products '
+          'are added to the catalog. Nothing is written until you '
           'review and confirm on the next screen.',
           style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.4),
         ),
@@ -143,7 +143,7 @@ class _ImportProductsScreenState extends State<ImportProductsScreen> {
           child: ElevatedButton.icon(
             onPressed: _pickAndParse,
             icon: const Icon(Icons.folder_open_outlined),
-            label: const Text('Choose Excel File'),
+            label: const Text('Choose CSV / Excel File'),
           ),
         ),
       ],

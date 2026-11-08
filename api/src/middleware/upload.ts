@@ -47,6 +47,8 @@ export const productImageUpload = multer({
 const CSV_UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads", "imports");
 fs.mkdirSync(CSV_UPLOAD_DIR, { recursive: true });
 
+const ALLOWED_IMPORT_EXTENSIONS = [".csv", ".xlsx", ".xls"];
+
 export const csvFileUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, CSV_UPLOAD_DIR),
@@ -55,7 +57,14 @@ export const csvFileUpload = multer({
       cb(null, `${uuidv4()}${ext}`);
     },
   }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_IMPORT_EXTENSIONS.includes(ext)) {
+      return cb(new Error(`Unsupported file format: ${ext}. Allowed formats: .csv, .xlsx, .xls`));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
 });
 
 export function publicUrlFor(filename: string): string {
