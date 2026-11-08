@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../../store/portalStore";
-import { setCartItemApi, removeCartItemApi, clearCartApi, placeOrderApi } from "../../api/portal";
+import { setCartItemApi, removeCartItemApi, clearCartApi, placeOrderApi, getCartApi } from "../../api/portal";
 
 export default function PortalCart() {
   const navigate = useNavigate();
@@ -14,6 +14,11 @@ export default function PortalCart() {
   const [shippingAddress, setShippingAddress] = useState(customer?.address || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Synchronize cart on entry / return to page
+  useEffect(() => {
+    getCartApi().then(setCart).catch(() => {});
+  }, [setCart]);
 
   const items = cart?.items || [];
 
@@ -169,108 +174,74 @@ export default function PortalCart() {
         </div>
       )}
 
-      {/* Cart Items Table / Cards */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        {/* Desktop Table Header */}
-        <div className="hidden sm:grid sm:grid-cols-12 bg-emerald-800 text-white text-[11px] font-bold uppercase tracking-wider px-4 py-3">
-          <div className="col-span-1 text-center">S.No.</div>
-          <div className="col-span-5">Product</div>
-          <div className="col-span-2 text-center">Req. Qty.</div>
-          <div className="col-span-2 text-right">Selling Price (Incl. GST)</div>
-          <div className="col-span-2 text-right pr-2">Total</div>
-        </div>
-
-        {/* Items Rows */}
-        <div className="divide-y divide-gray-100">
-          {items.map((item, idx) => (
-            <div
-              key={item.id || item.productId}
-              className={`p-4 sm:px-4 sm:py-3.5 flex flex-col sm:grid sm:grid-cols-12 sm:items-center gap-3 ${
-                item.isUnavailable || item.quantity > item.availableStock ? "bg-rose-50/50" : ""
-              }`}
-            >
-              {/* S.No */}
-              <div className="hidden sm:block col-span-1 text-center font-bold text-gray-400 text-xs">
-                {idx + 1}
-              </div>
-
-              {/* Product Info */}
-              <div className="col-span-5 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center p-1 flex-shrink-0">
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} className="max-h-full max-w-full object-contain" />
-                  ) : (
-                    <BoxIcon className="w-6 h-6 text-gray-300" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-xs leading-snug line-clamp-2">{item.name}</h3>
-                  <div className="text-[11px] text-gray-400 font-mono mt-0.5">SKU: {item.sku}</div>
-                  {item.warning && (
-                    <div className="text-[11px] font-bold text-rose-600 mt-1">{item.warning}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Quantity Stepper */}
-              <div className="col-span-2 flex items-center justify-between sm:justify-center">
-                <span className="sm:hidden text-xs text-gray-500 font-medium">Quantity:</span>
-                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateQty(item.productId, item.quantity - 1)}
-                    className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-sm"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      if (!isNaN(val)) handleUpdateQty(item.productId, val);
+      {/* Cart Items List - Clean, Modern Representation (Icon & Name Only) */}
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div
+            key={item.id || item.productId}
+            className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-200 shadow-xs hover:shadow-sm transition flex items-center justify-between gap-4"
+          >
+            {/* Left: Product Icon & Name ONLY */}
+            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+              {/* Product Icon: attractive, properly aligned, 48x48 */}
+              <div className="w-12 h-12 rounded-xl bg-emerald-50/80 border border-emerald-100 flex items-center justify-center p-1.5 flex-shrink-0 overflow-hidden">
+                {item.imageUrl ? (
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = "none";
                     }}
-                    className="w-10 h-7 text-center text-xs font-bold bg-white border-x border-gray-200 focus:outline-none"
                   />
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateQty(item.productId, item.quantity + 1)}
-                    className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-sm"
-                  >
-                    +
-                  </button>
-                </div>
+                ) : (
+                  <BoxIcon className="w-6 h-6 text-emerald-700" />
+                )}
               </div>
 
-              {/* Unit Price */}
-              <div className="col-span-2 flex items-center justify-between sm:justify-end text-right">
-                <span className="sm:hidden text-xs text-gray-500 font-medium">Unit Price:</span>
-                <span className="text-xs font-semibold text-gray-700">
-                  ₹{Number(item.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              {/* Line Total & Remove */}
-              <div className="col-span-2 flex items-center justify-between sm:justify-end gap-3 text-right">
-                <span className="sm:hidden text-xs text-gray-500 font-medium">Line Total:</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-black text-blue-600">
-                    ₹{Number(item.lineTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateQty(item.productId, 0)}
-                    className="p-1 text-rose-500 hover:text-rose-700 transition"
-                    title="Remove item"
-                  >
-                    <TrashIcon className="w-4 h-4" />
-                  </button>
-                </div>
+              {/* Product Name: Clear, readable, prominent */}
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-gray-900 text-sm sm:text-base leading-snug line-clamp-2">
+                  {item.name}
+                </h3>
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Right: Quantity Stepper & Remove Action */}
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
+              <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => handleUpdateQty(item.productId, item.quantity - 1)}
+                  className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-sm transition"
+                  title="Decrease"
+                >
+                  -
+                </button>
+                <span className="w-9 text-center text-xs sm:text-sm font-bold text-gray-900">
+                  {item.quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateQty(item.productId, item.quantity + 1)}
+                  className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-sm transition"
+                  title="Increase"
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleUpdateQty(item.productId, 0)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition"
+                title="Remove product"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Two Column Footer: Terms & Payment Notes vs Calculations */}

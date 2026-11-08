@@ -423,16 +423,30 @@ function BillingInner() {
                 <div className="text-center py-8 text-xs text-slate-400">Cart is empty. Click a product on the left to add.</div>
               ) : (
                 cart.map((item, idx) => (
-                  <div key={idx} className="p-2.5 flex items-center justify-between text-xs bg-white">
-                    <div className="truncate max-w-[170px]">
-                      <div className="font-semibold text-slate-800 truncate">{item.product.name}</div>
-                      <div className="font-mono text-[11px] text-slate-400">₹{item.unitPrice} each</div>
+                  <div key={idx} className="p-2.5 flex items-center justify-between text-xs bg-white gap-2">
+                    {/* Product Icon & Name ONLY */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1 flex-shrink-0 text-emerald-700">
+                        {item.product.images?.[0]?.url ? (
+                          <img src={item.product.images[0].url} alt={item.product.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="font-semibold text-slate-800 truncate" title={item.product.name}>
+                        {item.product.name}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Quantity Stepper & Remove Action */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
                         type="button"
                         onClick={() => updateQuantity(idx, -1)}
                         className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
+                        title="Decrease"
                       >
                         -
                       </button>
@@ -441,11 +455,21 @@ function BillingInner() {
                         type="button"
                         onClick={() => updateQuantity(idx, 1)}
                         className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
+                        title="Increase"
                       >
                         +
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setCart(cart.filter((_, i) => i !== idx))}
+                        className="w-6 h-6 rounded-md text-rose-500 hover:bg-rose-50 hover:text-rose-700 flex items-center justify-center cursor-pointer transition-colors"
+                        title="Remove product"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
-                    <div className="font-mono font-bold text-slate-900">₹{(item.quantity * item.unitPrice).toFixed(2)}</div>
                   </div>
                 ))
               )}

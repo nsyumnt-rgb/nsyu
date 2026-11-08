@@ -179,36 +179,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     );
   }
 
-  void _editPriceDialog(BuildContext context, BillItem it) {
-    final ctrl = TextEditingController(text: it.price.toStringAsFixed(2));
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Edit Price for ${it.code}'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Selling Price (Incl. GST) ₹', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF006837), foregroundColor: Colors.white),
-            onPressed: () {
-              final p = double.tryParse(ctrl.text.trim());
-              if (p != null && p >= 0) {
-                setState(() => it.price = p);
-              }
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _createBillOrOrder(
     BuildContext context,
     CatalogProvider provider,
@@ -633,188 +603,164 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 2. ITEMS SPREADSHEET TABLE matching Reference Image
-  // Header: S.No. | Product | Req. Qty. | Selling Price (Incl. GST) | Total | 🗑️
+  // 2. ITEMS CART LIST - Clean, Modern Representation (Icon & Name Only)
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildSpreadsheetTable(BuildContext context, CatalogProvider provider, List<BillItem> items) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // Header Row in Deep Forest Green #006837
-          Container(
-            color: const Color(0xFF006837),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            child: const Row(
-              children: [
-                SizedBox(width: 32, child: Text('S.No.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5))),
-                Expanded(flex: 5, child: Text('Product', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5))),
-                SizedBox(width: 58, child: Center(child: Text('Req. Qty.', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)))),
-                SizedBox(width: 86, child: Center(child: Text('Selling Price\n(Incl. GST)', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 9.5, height: 1.1)))),
-                SizedBox(width: 74, child: Center(child: Text('Total', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10.5)))),
-                SizedBox(width: 30, child: Center(child: Icon(Icons.delete_outline, color: Colors.white, size: 16))),
-              ],
-            ),
+    if (items.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 36),
+        child: const Center(
+          child: Column(
+            children: [
+              Icon(Icons.shopping_cart_outlined, size: 36, color: Color(0xFF94A3B8)),
+              SizedBox(height: 8),
+              Text('Cart is empty. Tap "+ Add Product" below.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
           ),
+        ),
+      );
+    }
 
-          if (items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 36),
-              child: Center(
-                child: Text('Cart is empty. Tap "+ Add Product" below.', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (ctx, i) {
+        final it = items[i];
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 4,
+                offset: Offset(0, 1),
               ),
-            )
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
-              itemBuilder: (ctx, i) {
-                final it = items[i];
-                final lineTotal = it.price * it.qty;
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // 1. Product Icon (attractive, properly aligned, 48x48)
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFD1FAE5)),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    size: 24,
+                    color: Color(0xFF006837),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // S.No.
-                      SizedBox(
-                        width: 32,
-                        child: Center(
-                          child: Text('${i + 1}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
-                        ),
+              // 2. Product Name (clear, readable, fully visible)
+              Expanded(
+                child: Text(
+                  it.desc,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                    height: 1.3,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // 3. Compact Quantity Stepper [-] [qty] [+]
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFCBD5E1)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          if (it.qty > 1) {
+                            it.qty--;
+                          } else {
+                            items.removeAt(i);
+                          }
+                        });
+                      },
+                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        child: Icon(Icons.remove, size: 14, color: Color(0xFF334155)),
                       ),
-
-                      // Product Thumbnail & Specs
-                      Expanded(
-                        flex: 5,
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: Center(
-                                child: _buildMiniChargerThumbnail(i),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    it.desc,
-                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11, color: Color(0xFF0F172A), height: 1.2),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text('Code: ${it.code}', style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
-                                  const SizedBox(height: 1),
-                                  Text(it.spec, style: const TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8))),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Req. Qty. (Editable boxed input)
-                      SizedBox(
-                        width: 58,
-                        child: Center(
-                          child: InkWell(
-                            onTap: () => _editQtyDialog(context, it),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              height: 32,
-                              width: 48,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFCBD5E1)),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${it.qty}',
-                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Selling Price (Incl. GST) (Editable boxed input)
-                      SizedBox(
-                        width: 86,
-                        child: Center(
-                          child: InkWell(
-                            onTap: () => _editPriceDialog(context, it),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFCBD5E1)),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '₹${_money.format(it.price)}',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Total (Royal Blue)
-                      SizedBox(
-                        width: 74,
+                    ),
+                    InkWell(
+                      onTap: () => _editQtyDialog(context, it),
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 28),
                         child: Center(
                           child: Text(
-                            '₹${_money.format(lineTotal)}',
-                            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8)),
+                            '${it.qty}',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
                           ),
                         ),
                       ),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          it.qty++;
+                        });
+                      },
+                      borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        child: Icon(Icons.add, size: 14, color: Color(0xFF334155)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
 
-                      // Delete Icon (Red Trash)
-                      SizedBox(
-                        width: 30,
-                        child: Center(
-                          child: InkWell(
-                            onTap: () {
-                              setState(() {
-                                items.removeAt(i);
-                              });
-                            },
-                            child: const Icon(Icons.delete_outline, color: Color(0xFFEF4444), size: 18),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
+              // 4. Delete Trash Button
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                onPressed: () {
+                  setState(() {
+                    items.removeAt(i);
+                  });
+                },
+                tooltip: 'Remove',
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                padding: EdgeInsets.zero,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1253,53 +1199,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
             Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF0F172A), fontWeight: FontWeight.w600)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMiniChargerThumbnail(int index) {
-    final isBlack = index == 1;
-    return SizedBox(
-      width: 28,
-      height: 28,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // AC Prongs
-          Positioned(
-            top: 2,
-            left: 9,
-            child: Container(width: 2, height: 5, color: const Color(0xFF94A3B8)),
-          ),
-          Positioned(
-            top: 2,
-            left: 17,
-            child: Container(width: 2, height: 5, color: const Color(0xFF94A3B8)),
-          ),
-          // Body
-          Positioned(
-            top: 6,
-            child: Container(
-              width: 20,
-              height: 18,
-              decoration: BoxDecoration(
-                color: isBlack ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: const Color(0xFFCBD5E1), width: 0.8),
-              ),
-              child: Center(
-                child: Text(
-                  'ERD',
-                  style: TextStyle(
-                    fontSize: 4.5,
-                    fontWeight: FontWeight.bold,
-                    color: isBlack ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -16,9 +16,30 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
   bool _submitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CustomerPortalProvider>().refreshCart();
+    });
+  }
+
+  @override
   void dispose() {
     _noteCtrl.dispose();
     super.dispose();
+  }
+
+  Widget _buildFallbackProductIcon() {
+    return Container(
+      color: const Color(0xFFECFDF5),
+      child: const Center(
+        child: Icon(
+          Icons.inventory_2_outlined,
+          size: 24,
+          color: Color(0xFF047857),
+        ),
+      ),
+    );
   }
 
   Future<void> _handlePlaceOrder() async {
@@ -225,144 +246,138 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
 
                   const SizedBox(height: 12),
 
-                  // Cart Items Table Header matching reference screenshot
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF047857),
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-                    ),
-                    child: const Row(
-                      children: [
-                        SizedBox(width: 28, child: Text('S.No.', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                        Expanded(flex: 4, child: Text('Product', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                        Expanded(flex: 2, child: Text('Req. Qty.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                        Expanded(flex: 2, child: Text('Selling Price\n(Incl. GST)', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold))),
-                        Expanded(flex: 2, child: Text('Total', textAlign: TextAlign.right, style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                        SizedBox(width: 30),
-                      ],
-                    ),
-                  ),
+                  // Cart Items List - Clean, Modern Representation (Icon & Name Only)
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (ctx, i) {
+                      final item = items[i] as Map<String, dynamic>;
+                      final prodId = (item['productId'] ?? item['product_id'] as num).toInt();
+                      final name = item['name']?.toString() ?? 'Product';
+                      final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+                      final img = item['imageUrl']?.toString();
 
-                  // Cart Items List
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
-                    ),
-                    child: Column(
-                      children: items.asMap().entries.map((entry) {
-                        final idx = entry.key + 1;
-                        final item = entry.value as Map<String, dynamic>;
-                        final prodId = (item['productId'] ?? item['product_id'] as num).toInt();
-                        final name = item['name']?.toString() ?? '';
-                        final qty = (item['quantity'] as num).toInt();
-                        final unitPrice = ((item['unitPrice'] ?? item['price'] ?? 0) as num).toDouble();
-                        final lineTotal = ((item['lineTotal'] ?? item['total'] ?? qty * unitPrice) as num).toDouble();
-                        final img = item['imageUrl']?.toString();
-
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                          decoration: const BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
-                          ),
-                          child: Row(
-                            children: [
-                              // S.No
-                              SizedBox(
-                                width: 28,
-                                child: Text('$idx', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x06000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // 1. Product Icon (attractive, properly aligned, 48x48)
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
                               ),
+                              clipBehavior: Clip.antiAlias,
+                              child: (img != null && img.isNotEmpty)
+                                  ? Image.network(
+                                      img,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (_, __, ___) => _buildFallbackProductIcon(),
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return const Center(
+                                          child: SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF047857)),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : _buildFallbackProductIcon(),
+                            ),
+                            const SizedBox(width: 14),
 
-                              // Product details with image thumbnail
-                              Expanded(
-                                flex: 4,
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      margin: const EdgeInsets.only(right: 6),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF8FAFC),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                                      ),
-                                      child: img != null && img.isNotEmpty
-                                          ? Image.network(img, fit: BoxFit.contain)
-                                          : const Icon(Icons.image, size: 16, color: Color(0xFFCBD5E1)),
+                            // 2. Product Name (clear, readable, fully visible)
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF0F172A),
+                                  height: 1.3,
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // 3. Compact Quantity Stepper [-] [qty] [+]
+                            Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  InkWell(
+                                    onTap: () => portal.setCartItem(prodId, qty - 1),
+                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      child: Icon(Icons.remove, size: 14, color: Color(0xFF334155)),
                                     ),
-                                    Expanded(
+                                  ),
+                                  Container(
+                                    constraints: const BoxConstraints(minWidth: 26),
+                                    child: Center(
                                       child: Text(
-                                        name,
-                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
+                                        '$qty',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0F172A),
+                                        ),
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-
-                              // Req Qty Stepper
-                              Expanded(
-                                flex: 2,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: const Color(0xFFCBD5E1)),
-                                    borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      InkWell(
-                                        onTap: () => portal.setCartItem(prodId, qty - 1),
-                                        child: const Icon(Icons.remove, size: 14, color: Color(0xFF475569)),
-                                      ),
-                                      Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                                      InkWell(
-                                        onTap: () => portal.setCartItem(prodId, qty + 1),
-                                        child: const Icon(Icons.add, size: 14, color: Color(0xFF475569)),
-                                      ),
-                                    ],
+                                  InkWell(
+                                    onTap: () => portal.setCartItem(prodId, qty + 1),
+                                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
+                                    child: const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      child: Icon(Icons.add, size: 14, color: Color(0xFF334155)),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
+                            ),
+                            const SizedBox(width: 6),
 
-                              // Unit price
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  '₹${unitPrice.toStringAsFixed(2)}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
-                                ),
-                              ),
-
-                              // Line total (in bold blue matching reference)
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  '₹${lineTotal.toStringAsFixed(2)}',
-                                  textAlign: TextAlign.right,
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF2563EB)),
-                                ),
-                              ),
-
-                              // Red trash icon
-                              SizedBox(
-                                width: 30,
-                                child: IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFE11D48)),
-                                  onPressed: () => portal.setCartItem(prodId, 0),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                            // 4. Remove / Delete Button
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                              onPressed: () => portal.setCartItem(prodId, 0),
+                              tooltip: 'Remove',
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 16),
