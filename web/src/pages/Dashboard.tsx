@@ -76,7 +76,9 @@ export default function Dashboard() {
   // 100% Real Database-Calculated Primary Metrics
   const totalSalesVal = salesSummary?.total ? Number(salesSummary.total) : 0;
   const totalPurchaseVal = purchaseSummary?.total ? Number(purchaseSummary.total) : 0;
-  const currentStockVal = invSummary?.totalValue
+  const currentStockVal = invSummary?.summary?.totalCostValue != null
+    ? Number(invSummary.summary.totalCostValue)
+    : invSummary?.totalValue
     ? Number(invSummary.totalValue)
     : productsList.reduce((acc, p) => acc + ((p.stocks?.[0]?.current_stock ?? 0) * Number(p.purchase_price || p.selling_price || 0)), 0);
   const totalCustomersVal = customersCount;
