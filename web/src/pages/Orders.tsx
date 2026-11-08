@@ -5,6 +5,7 @@ import {
   getOrderStats,
   createOrder,
   updateOrderStatus,
+  convertOrderToBill,
   type OrderRecord,
   type OrderStats,
 } from "../api/orders";
@@ -88,6 +89,31 @@ export default function Orders() {
     remarks: "Order is being processed.",
   });
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [convertingToBill, setConvertingToBill] = useState(false);
+
+  async function handleConvertToBill(orderId: number) {
+    if (
+      !window.confirm(
+        "Are you sure you want to convert this order into an official tax bill? This will deduct live inventory and post to the customer ledger."
+      )
+    ) {
+      return;
+    }
+    setConvertingToBill(true);
+    try {
+      const res = await convertOrderToBill(orderId);
+      alert("Order converted to official tax invoice successfully!");
+      loadOrdersData();
+      if (res?.data?.data) {
+        setSelectedOrder(res.data.data);
+      }
+      setStep("invoice");
+    } catch (err) {
+      alert(apiErrorMessage(err, "Could not convert order to bill"));
+    } finally {
+      setConvertingToBill(false);
+    }
+  }
 
   // Load Initial Data
   function loadOrdersData() {
@@ -694,6 +720,15 @@ export default function Orders() {
                                 >
                                   ✏️
                                 </button>
+                                {!(ord as any).converted_sale_id && (
+                                  <button
+                                    title="Convert to Official Bill"
+                                    onClick={() => handleConvertToBill(ord.id)}
+                                    className="text-slate-500 hover:text-emerald-700 text-sm"
+                                  >
+                                    🧾
+                                  </button>
+                                )}
                                 <button
                                   title="Print Invoice"
                                   onClick={() => {
@@ -1242,6 +1277,16 @@ export default function Orders() {
                 >
                   <span>🖨️</span> Print Invoice
                 </button>
+                {!(selectedOrder as any).converted_sale_id && (
+                  <button
+                    onClick={() => handleConvertToBill(selectedOrder.id)}
+                    disabled={convertingToBill}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span>🧾</span>
+                    <span>{convertingToBill ? "Converting..." : "Convert to Official Bill"}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setStatusUpdateForm({
