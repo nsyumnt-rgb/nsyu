@@ -1,0 +1,441 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../../models/customer.dart';
+import '../../../providers/catalog_provider.dart';
+import '../../../providers/customer_provider.dart';
+import '../../../theme/app_theme.dart';
+
+class CustomerAddSheet extends StatefulWidget {
+  final String prefillName;
+  final String prefillMobile;
+
+  const CustomerAddSheet({
+    super.key,
+    this.prefillName = '',
+    this.prefillMobile = '',
+  });
+
+  @override
+  State<CustomerAddSheet> createState() => _CustomerAddSheetState();
+}
+
+class _CustomerAddSheetState extends State<CustomerAddSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _mobileCtrl;
+  late final TextEditingController _addressCtrl;
+  late final TextEditingController _balanceCtrl;
+  bool _isSupplier = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.prefillName);
+    _mobileCtrl = TextEditingController(text: widget.prefillMobile);
+    _addressCtrl = TextEditingController();
+    _balanceCtrl = TextEditingController(text: '0.00');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _mobileCtrl.dispose();
+    _addressCtrl.dispose();
+    _balanceCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      showAppSnackBar(context, 'Please enter name', isError: true);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final provider = context.read<CustomerProvider>();
+      final openBal = double.tryParse(_balanceCtrl.text.trim()) ?? 0.0;
+      final newCust = await provider.addCustomer(
+        name,
+        _mobileCtrl.text.trim(),
+        address: _addressCtrl.text.trim(),
+        openingBalance: openBal,
+        isSupplier: _isSupplier,
+      );
+      if (!mounted) return;
+      Navigator.pop(context, newCust);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showAppSnackBar(context, 'Failed to add party: $e', isError: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.person_add,
+                      color: Color(0xFF1D4ED8), size: 22),
+                  const SizedBox(width: 8),
+                  Text(_isSupplier ? 'Add New Supplier' : 'Add New Customer',
+                      style: const TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ChoiceChip(
+                label: const Text('Customer'),
+                selected: !_isSupplier,
+                selectedColor: const Color(0xFFDBEAFE),
+                labelStyle: TextStyle(
+                  color: !_isSupplier
+                      ? const Color(0xFF1D4ED8)
+                      : const Color(0xFF475569),
+                  fontWeight: !_isSupplier ? FontWeight.w700 : FontWeight.w500,
+                ),
+                onSelected: (val) {
+                  setState(() => _isSupplier = !val);
+                },
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('Supplier'),
+                selected: _isSupplier,
+                selectedColor: const Color(0xFFDCFCE7),
+                labelStyle: TextStyle(
+                  color: _isSupplier
+                      ? const Color(0xFF16A34A)
+                      : const Color(0xFF475569),
+                  fontWeight: _isSupplier ? FontWeight.w700 : FontWeight.w500,
+                ),
+                onSelected: (val) {
+                  setState(() => _isSupplier = val);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _nameCtrl,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: _isSupplier ? 'Supplier Name *' : 'Customer Name *',
+              prefixIcon: const Icon(Icons.person_outline),
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _mobileCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Mobile Number',
+              prefixIcon: Icon(Icons.phone_outlined),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _addressCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Address / Location',
+              prefixIcon: Icon(Icons.location_on_outlined),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _balanceCtrl,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Opening Balance (₹)',
+              prefixIcon: Icon(Icons.currency_rupee),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D4ED8),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: _saving ? null : _handleSave,
+            child: _saving
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
+                  )
+                : Text(_isSupplier ? 'Save Supplier' : 'Save Customer',
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CustomerEditSheet extends StatefulWidget {
+  final Customer customer;
+
+  const CustomerEditSheet({super.key, required this.customer});
+
+  @override
+  State<CustomerEditSheet> createState() => _CustomerEditSheetState();
+}
+
+class _CustomerEditSheetState extends State<CustomerEditSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _mobileCtrl;
+  late final TextEditingController _addressCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.customer.name);
+    _mobileCtrl = TextEditingController(text: widget.customer.mobile);
+    _addressCtrl = TextEditingController(text: widget.customer.address);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _mobileCtrl.dispose();
+    _addressCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      showAppSnackBar(context, 'Please enter name', isError: true);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      widget.customer.name = name;
+      widget.customer.mobile = _mobileCtrl.text.trim();
+      widget.customer.address = _addressCtrl.text.trim();
+      final provider = context.read<CustomerProvider>();
+      await provider.updateCustomer(widget.customer);
+      if (!mounted) return;
+      context.read<CatalogProvider>().updateCustomerInfo(widget.customer);
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showAppSnackBar(context, 'Failed to update party: $e', isError: true);
+    }
+  }
+
+  Future<void> _handleDelete() async {
+    final custProv = context.read<CustomerProvider>();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx2) => AlertDialog(
+        title: const Text('Delete Party?'),
+        content: Text(
+            'Are you sure you want to delete ${widget.customer.name}? This action cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx2, false),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx2, true),
+            child: const Text('Delete',
+                style: TextStyle(color: Color(0xFFDC2626))),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true && mounted) {
+      await custProv.deleteCustomer(widget.customer.id);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final money = NumberFormat('#,##0');
+
+    return Container(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.edit,
+                      color: Color(0xFF1D4ED8), size: 22),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Edit Customer',
+                          style: TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.w700)),
+                      Text('ID: ${widget.customer.id}',
+                          style: const TextStyle(
+                              fontSize: 11.5, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameCtrl,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Customer Name *',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _mobileCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'Mobile Number',
+              prefixIcon: Icon(Icons.phone_outlined),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _addressCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Address / Location',
+              prefixIcon: Icon(Icons.location_on_outlined),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Current Balance',
+                    style:
+                        TextStyle(fontSize: 12.5, color: Color(0xFF475569))),
+                Text(
+                  '₹${money.format(widget.customer.currentBalance)}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: widget.customer.currentBalance > 0
+                        ? AppColors.red
+                        : AppColors.billGreen,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D4ED8),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: _saving ? null : _handleSave,
+            child: _saving
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
+                  )
+                : const Text('Save Changes',
+                    style:
+                        TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+              side: const BorderSide(color: Color(0xFFFCA5A5)),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('Delete Party',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            onPressed: _saving ? null : _handleDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
