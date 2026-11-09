@@ -485,6 +485,7 @@ export default function Login() {
                   </svg>
                 </div>
                 <input
+                  id="identifier-input"
                   type="text"
                   required
                   value={identifier}
@@ -503,6 +504,7 @@ export default function Login() {
                   </svg>
                 </div>
                 <input
+                  id="password-input"
                   type={showPassword ? "text" : "password"}
                   required={activeTab === "staff"}
                   value={password}
