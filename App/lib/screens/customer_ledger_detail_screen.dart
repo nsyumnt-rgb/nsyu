@@ -12,6 +12,7 @@ import '../providers/bills_provider.dart';
 import '../providers/catalog_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/orders_provider.dart';
+import '../providers/payments_provider.dart';
 import '../services/bill_pdf_service.dart';
 import '../services/supabase_service.dart';
 import '../theme/app_theme.dart';
@@ -91,6 +92,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
       if (mounted) {
         context.read<CustomerProvider>().syncFromSupabase();
         context.read<BillsProvider>().syncFromSupabase();
+        context.read<PaymentsProvider>().syncFromSupabase();
       }
     }
   }

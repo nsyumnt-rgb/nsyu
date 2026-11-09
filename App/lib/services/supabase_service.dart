@@ -588,13 +588,16 @@ class SupabaseService {
   Future<SavedPayment> recordPayment(SavedPayment payment) async {
     await ensureAuth();
     final url = Uri.parse('${SupabaseConfig.apiUrl}/payments');
-    final methodStr = payment.method.label.toLowerCase().replaceAll(' ', '_');
+    String methodStr = payment.method.label.toLowerCase().replaceAll(' ', '_');
+    if (methodStr == 'online') methodStr = 'upi';
+    const allowedMethods = ['cash', 'upi', 'bank_transfer', 'card', 'cheque', 'other'];
+    if (!allowedMethods.contains(methodStr)) methodStr = 'cash';
 
     final payload = {
       'shopId': SupabaseConfig.shopId,
-      'customerId': int.tryParse(payment.customerId) ?? 1,
+      'customerId': int.tryParse(payment.customerId),
       'amount': payment.amount,
-      'type': 'customer_receipt',
+      'type': 'sale_payment',
       'method': methodStr,
       'transactionId': payment.transactionId,
       'paymentDate': payment.date.toIso8601String(),
@@ -604,6 +607,7 @@ class SupabaseService {
     final res = await http.post(url, headers: _headers, body: jsonEncode(payload));
     if (res.statusCode >= 300) {
       debugPrint('⚠️ Notice: Could not sync payment to Supabase (${res.statusCode}): ${res.body}');
+      throw Exception('Failed to record payment in database (${res.statusCode})');
     }
     return payment;
   }

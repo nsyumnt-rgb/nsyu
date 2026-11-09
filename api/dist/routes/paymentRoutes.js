@@ -7,6 +7,7 @@ const paymentController_1 = require("../controllers/paymentController");
 const router = (0, express_1.Router)();
 router.use(auth_1.authenticate, auth_1.requireShop);
 router.get("/", (0, permission_1.requirePermission)("payments", "view"), paymentController_1.listPayments);
+router.post("/", (0, permission_1.requirePermission)("payments", "create"), paymentController_1.createPayment);
 router.get("/:paymentId", (0, permission_1.requirePermission)("payments", "view"), paymentController_1.getPayment);
 router.post("/:paymentId/cancel", (0, permission_1.requirePermission)("payments", "delete"), paymentController_1.cancelPayment);
 router.get("/:paymentId/receipt/pdf", (0, permission_1.requirePermission)("payments", "view"), paymentController_1.downloadReceiptPdf);

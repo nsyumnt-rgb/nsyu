@@ -86,25 +86,8 @@ function BillingInner() {
   }
 
   function addToCart(p: Product) {
-    const stock = getStock(p);
-    if (stock <= 0) {
-      setToast({
-        type: "error",
-        title: "Product Out of Stock",
-        subtitle: `No units available for "${p.name}".`,
-      });
-      return;
-    }
     const existingIndex = cart.findIndex((item) => item.product.id === p.id);
     if (existingIndex >= 0) {
-      if (cart[existingIndex].quantity >= stock) {
-        setToast({
-          type: "warning",
-          title: "Stock Limit Reached",
-          subtitle: `Only ${stock} unit(s) in inventory.`,
-        });
-        return;
-      }
       const updated = [...cart];
       updated[existingIndex].quantity += 1;
       setCart(updated);
@@ -124,21 +107,30 @@ function BillingInner() {
 
   function updateQuantity(idx: number, delta: number) {
     const item = cart[idx];
-    const stock = getStock(item.product);
     const newQty = item.quantity + delta;
     if (newQty <= 0) {
       setCart(cart.filter((_, i) => i !== idx));
-    } else if (newQty > stock) {
-      setToast({
-        type: "warning",
-        title: "Stock Limit Exceeded",
-        subtitle: `Maximum stock for "${item.product.name}" is ${stock}.`,
-      });
     } else {
       const updated = [...cart];
       updated[idx].quantity = newQty;
       setCart(updated);
     }
+  }
+
+  function updateQuantityDirect(idx: number, qty: number) {
+    if (qty <= 0) {
+      setCart(cart.filter((_, i) => i !== idx));
+    } else {
+      const updated = [...cart];
+      updated[idx].quantity = qty;
+      setCart(updated);
+    }
+  }
+
+  function updateUnitPrice(idx: number, price: number) {
+    const updated = [...cart];
+    updated[idx].unitPrice = Math.max(0, price);
+    setCart(updated);
   }
 
   const rawSubtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -342,12 +334,7 @@ function BillingInner() {
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
-                    disabled={stock <= 0}
-                    className={`text-left p-3 rounded-2xl border transition-all ${
-                      stock > 0
-                        ? "border-slate-200 bg-white hover:border-blue-400 hover:shadow-md cursor-pointer group"
-                        : "border-slate-100 bg-slate-50 opacity-40 cursor-not-allowed"
-                    }`}
+                    className="text-left p-3 rounded-2xl border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md cursor-pointer group transition-all"
                   >
                     <div className="font-semibold text-xs text-slate-800 truncate group-hover:text-blue-600">{p.name}</div>
                     <div className="text-[10px] font-mono text-slate-400 mt-0.5">{p.sku}</div>
@@ -355,10 +342,14 @@ function BillingInner() {
                       <span className="font-mono font-bold text-slate-900 text-xs">₹{p.selling_price}</span>
                       <span
                         className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-semibold ${
-                          stock > 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-rose-50 text-rose-600"
+                          stock > 0
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : stock < 0
+                            ? "bg-rose-50 text-rose-600 border border-rose-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
                         }`}
                       >
-                        {stock > 0 ? `Stock: ${stock}` : "Out of stock"}
+                        {stock > 0 ? `Stock: ${stock}` : stock < 0 ? `Stock: ${stock}` : "Stock: 0"}
                       </span>
                     </div>
                   </button>
@@ -424,40 +415,26 @@ function BillingInner() {
                 <div className="text-center py-8 text-xs text-slate-400">Cart is empty. Click a product on the left to add.</div>
               ) : (
                 cart.map((item, idx) => (
-                  <div key={idx} className="p-2.5 flex items-center justify-between text-xs bg-white gap-2">
-                    {/* Product Icon & Name ONLY */}
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <ProductItemIcon
-                        name={item.product.name}
-                        category={item.product.category?.name || item.product.brand}
-                        sku={item.product.sku}
-                        imageUrl={item.product.images?.[0]?.url}
-                        size="sm"
-                      />
-                      <div className="font-semibold text-slate-800 truncate" title={item.product.name}>
-                        {item.product.name.trim()}
+                  <div key={idx} className="p-3 bg-white space-y-2">
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      {/* Product Icon & Name */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <ProductItemIcon
+                          name={item.product.name}
+                          category={item.product.category?.name || item.product.brand}
+                          sku={item.product.sku}
+                          imageUrl={item.product.images?.[0]?.url}
+                          size="sm"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-800 truncate" title={item.product.name}>
+                            {item.product.name.trim()}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">{item.product.sku}</div>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Quantity Stepper & Remove Action */}
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(idx, -1)}
-                        className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
-                        title="Decrease"
-                      >
-                        -
-                      </button>
-                      <span className="font-mono font-bold text-slate-800 w-5 text-center">{item.quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(idx, 1)}
-                        className="w-6 h-6 rounded-md bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
-                        title="Increase"
-                      >
-                        +
-                      </button>
+                      {/* Remove Action */}
                       <button
                         type="button"
                         onClick={() => setCart(cart.filter((_, i) => i !== idx))}
@@ -468,6 +445,54 @@ function BillingInner() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
+                    </div>
+
+                    {/* Editable Price, Quantity & Subtotal Row */}
+                    <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-50 text-xs">
+                      {/* Price Input */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-slate-400 font-semibold">₹</span>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={item.unitPrice}
+                          onChange={(e) => updateUnitPrice(idx, Number(e.target.value) || 0)}
+                          className="w-16 px-1.5 py-0.5 text-xs font-semibold rounded border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-400 focus:outline-none"
+                          title="Edit Selling Price"
+                        />
+                      </div>
+
+                      {/* Quantity Input with Stepper */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(idx, -1)}
+                          className="w-5 h-5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateQuantityDirect(idx, parseInt(e.target.value) || 1)}
+                          className="w-10 px-1 py-0.5 text-xs font-bold text-center rounded border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-400 focus:outline-none"
+                          title="Edit Quantity"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(idx, 1)}
+                          className="w-5 h-5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Item Total */}
+                      <div className="font-bold text-emerald-700 text-xs">
+                        ₹{(item.quantity * item.unitPrice).toFixed(2)}
+                      </div>
                     </div>
                   </div>
                 ))

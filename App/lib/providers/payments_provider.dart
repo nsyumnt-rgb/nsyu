@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/payment.dart';
+import '../models/saved_payment.dart' as sp;
 import '../services/supabase_service.dart';
 
 class PaymentsProvider with ChangeNotifier {
@@ -24,14 +25,14 @@ class PaymentsProvider with ChangeNotifier {
     try {
       final savedPayments = await _supabaseService.fetchPayments();
       _payments = savedPayments
-          .map((sp) => Payment(
-                id: sp.receiptNumber,
-                customerName: sp.customerName,
-                date: sp.date,
-                amount: sp.amount,
-                method: PaymentMethod.fromLabel(sp.method.name),
-                transactionId: sp.transactionId,
-                remarks: sp.remarks,
+          .map((spItem) => Payment(
+                id: spItem.receiptNumber,
+                customerName: spItem.customerName,
+                date: spItem.date,
+                amount: spItem.amount,
+                method: PaymentMethod.fromLabel(spItem.method.name),
+                transactionId: spItem.transactionId,
+                remarks: spItem.remarks,
               ))
           .toList();
       _loaded = true;
@@ -51,7 +52,31 @@ class PaymentsProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _payments.add(payment);
+      sp.PaymentMethod spMethod = sp.PaymentMethod.cash;
+      final mName = payment.method.label.toLowerCase();
+      if (mName.contains('upi')) {
+        spMethod = sp.PaymentMethod.upi;
+      } else if (mName.contains('card')) {
+        spMethod = sp.PaymentMethod.card;
+      } else if (mName.contains('bank')) {
+        spMethod = sp.PaymentMethod.bankTransfer;
+      }
+
+      final spPayment = sp.SavedPayment(
+        receiptNumber: payment.id.isNotEmpty ? payment.id : 'RCP-${DateTime.now().millisecondsSinceEpoch}',
+        date: payment.date,
+        customerName: payment.customerName,
+        customerId: customerId ?? '',
+        billNumber: '',
+        amount: payment.amount,
+        method: spMethod,
+        transactionId: payment.transactionId ?? '',
+        remarks: payment.remarks ?? '',
+        outstandingBalanceAfter: 0.0,
+      );
+
+      await _supabaseService.recordPayment(spPayment);
+      _payments.insert(0, payment);
       _syncing = false;
       notifyListeners();
       return true;
@@ -59,7 +84,7 @@ class PaymentsProvider with ChangeNotifier {
       _syncError = 'Failed to save payment: $e';
       _syncing = false;
       notifyListeners();
-      return false;
+      rethrow;
     }
   }
 }

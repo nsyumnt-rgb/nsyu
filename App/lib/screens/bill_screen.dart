@@ -415,9 +415,6 @@ class _BillScreenState extends State<BillScreen> {
                           ),
                           InkWell(
                             onTap: () {
-                              if (item.availableStock > 0 && item.qty >= item.availableStock) {
-                                showAppSnackBar(context, 'Notice: Exceeding recorded stock (${item.availableStock} in stock)', isError: true);
-                              }
                               provider.changeQty(item.code, 1);
                             },
                             child: const Padding(

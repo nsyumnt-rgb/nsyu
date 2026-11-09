@@ -219,7 +219,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final provider = context.watch<CatalogProvider>();
     final icon = _getCategoryIcon(p);
     final color = _getCategoryColor(p);
-    final inStock = p.stock > 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -315,13 +314,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: inStock ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                        color: p.stock > 0
+                            ? const Color(0xFFDCFCE7)
+                            : (p.stock < 0 ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7)),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        inStock ? 'In Stock: ${p.stock}' : 'Out of Stock',
+                        p.stock < 0
+                            ? 'Stock: ${p.stock}'
+                            : (p.stock == 0 ? 'Stock: 0' : 'In Stock: ${p.stock}'),
                         style: TextStyle(
-                          color: inStock ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                          color: p.stock > 0
+                              ? const Color(0xFF16A34A)
+                              : (p.stock < 0 ? const Color(0xFFDC2626) : const Color(0xFFD97706)),
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
@@ -487,23 +492,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    if (p.stock <= 0) {
-                      AppToast.showError(
-                        context,
-                        title: 'Product Out of Stock',
-                        subtitle: '${p.desc} is currently out of stock.',
-                      );
-                      return;
-                    }
-                    final existing = provider.billItemFor(p.code);
-                    if (existing != null && p.stock > 0 && existing.qty >= p.stock) {
-                      AppToast.showWarning(
-                        context,
-                        title: 'Stock Limit Reached',
-                        subtitle: 'Cannot exceed available stock (${p.stock})',
-                      );
-                      return;
-                    }
                     provider.addToBill(p);
                     final count = provider.billItemFor(p.code)?.qty ?? 1;
                     AppToast.showAddedToBill(

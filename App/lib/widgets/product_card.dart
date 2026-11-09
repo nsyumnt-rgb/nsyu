@@ -29,30 +29,11 @@ class ProductCard extends StatelessWidget {
   }
 
   void _handleAddToCart(BuildContext context, CatalogProvider provider) {
-    // Validate stock
-    if (product.stock <= 0) {
-      AppToast.showError(
-        context,
-        title: 'Product Out of Stock',
-        subtitle: '${product.desc} is currently out of stock.',
-      );
-      return;
-    }
-
     final hasActiveBill = provider.billItems.isNotEmpty;
     final hasActiveOrder = provider.orderItems.isNotEmpty;
 
     if (hasActiveBill && !hasActiveOrder) {
-      // Direct add to active Bill
-      final existing = provider.billItemFor(product.code);
-      if (existing != null && product.stock > 0 && existing.qty >= product.stock) {
-        AppToast.showWarning(
-          context,
-          title: 'Stock Limit Reached',
-          subtitle: 'Cannot exceed available stock (${product.stock})',
-        );
-        return;
-      }
+      // Direct add to active Bill (supports negative / short stock)
       provider.addToBill(product);
       final count = provider.billItemFor(product.code)?.qty ?? 1;
       AppToast.showAddedToBill(
@@ -145,23 +126,6 @@ class ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   onTap: () {
                     Navigator.pop(ctx);
-                    if (product.stock <= 0) {
-                      AppToast.showError(
-                        context,
-                        title: 'Out of Stock',
-                        subtitle: '${product.desc} is out of stock.',
-                      );
-                      return;
-                    }
-                    final existing = provider.billItemFor(product.code);
-                    if (existing != null && product.stock > 0 && existing.qty >= product.stock) {
-                      AppToast.showWarning(
-                        context,
-                        title: 'Stock Limit Reached',
-                        subtitle: 'Cannot exceed available stock (${product.stock})',
-                      );
-                      return;
-                    }
                     provider.addToBill(product);
                     final count = provider.billItemFor(product.code)?.qty ?? 1;
                     AppToast.showAddedToBill(
@@ -469,11 +433,15 @@ class ProductCard extends StatelessWidget {
                           if (showStock) ...[
                             const SizedBox(height: 2),
                             Text(
-                              'In Stock: ${product.stock}',
-                              style: const TextStyle(
+                              product.stock < 0
+                                  ? 'Stock: ${product.stock}'
+                                  : (product.stock == 0 ? 'Stock: 0' : 'In Stock: ${product.stock}'),
+                              style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF16A34A),
+                                color: product.stock < 0
+                                    ? const Color(0xFFDC2626)
+                                    : (product.stock == 0 ? const Color(0xFFEA580C) : const Color(0xFF16A34A)),
                               ),
                             ),
                           ],

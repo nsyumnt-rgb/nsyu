@@ -263,6 +263,7 @@ export async function createSale(req: Request, res: Response) {
           referenceType: "Sale",
           referenceId: sale.id,
           notes: `Sale ${invoiceNumber}`,
+          allowNegative: true,
           externalTransaction: t,
         });
       }

@@ -84,7 +84,8 @@ export async function recordStockMovement(params: RecordMovementParams) {
 
     const newBalance = stock.current_stock + signedQuantity;
 
-    if (newBalance < 0 && !allowNegative) {
+    // Sales are allowed to create negative stock (short stock / backorders per business requirement)
+    if (newBalance < 0 && !allowNegative && type !== "sale") {
       throw Object.assign(
         new Error(
           `Insufficient stock: current ${stock.current_stock}, attempted change ${signedQuantity}. Negative stock is not allowed.`

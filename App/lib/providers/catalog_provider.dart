@@ -394,6 +394,13 @@ class CatalogProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateOrderItemPrice(String code, double newPrice) {
+    final item = orderItemFor(code);
+    if (item == null) return;
+    item.price = newPrice < 0 ? 0 : newPrice;
+    notifyListeners();
+  }
+
   void removeOrderItem(String code) {
     orderItems.removeWhere((i) => i.code == code);
     notifyListeners();

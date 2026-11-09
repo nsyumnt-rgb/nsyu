@@ -52,7 +52,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   void _changeQty(String code, int delta, int maxStock) {
     final current = _getQty(code);
-    final next = (current + delta).clamp(1, maxStock > 0 ? maxStock : 9999);
+    final next = (current + delta).clamp(1, 9999);
     setState(() => _quantities[code] = next);
   }
 
@@ -603,7 +603,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
     CatalogProvider provider,
     int index,
   ) {
-    final inStock = item.stock > 0;
     final isFav = _favorites.contains(item.code);
     final isExpanded = _expandedDescriptions.contains(item.code);
     final qty = _getQty(item.code);
@@ -658,10 +657,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
-                            color: inStock ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                            color: item.stock > 0
+                                ? const Color(0xFFDCFCE7)
+                                : (item.stock < 0 ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7)),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: inStock ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5),
+                              color: item.stock > 0
+                                  ? const Color(0xFF86EFAC)
+                                  : (item.stock < 0 ? const Color(0xFFFCA5A5) : const Color(0xFFFDE68A)),
                             ),
                           ),
                           child: Row(
@@ -670,13 +673,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
                               Icon(
                                 Icons.inventory_2_outlined,
                                 size: 11,
-                                color: inStock ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                                color: item.stock > 0
+                                    ? const Color(0xFF15803D)
+                                    : (item.stock < 0 ? const Color(0xFFDC2626) : const Color(0xFFD97706)),
                               ),
                               const SizedBox(width: 3),
                               Text(
-                                inStock ? 'In Stock' : 'Out of Stock',
+                                item.stock < 0
+                                    ? 'Stock: ${item.stock}'
+                                    : (item.stock == 0 ? 'Stock: 0' : 'In Stock: ${item.stock}'),
                                 style: TextStyle(
-                                  color: inStock ? const Color(0xFF15803D) : const Color(0xFFDC2626),
+                                  color: item.stock > 0
+                                      ? const Color(0xFF15803D)
+                                      : (item.stock < 0 ? const Color(0xFFDC2626) : const Color(0xFFD97706)),
                                   fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -827,8 +836,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             style: TextStyle(fontSize: 8.5, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            '${item.stock > 0 ? item.stock : 9}',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF15803D)),
+                            '${item.stock}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: item.stock < 0
+                                  ? const Color(0xFFDC2626)
+                                  : (item.stock == 0 ? const Color(0xFFD97706) : const Color(0xFF15803D)),
+                            ),
                           ),
                         ],
                       ),

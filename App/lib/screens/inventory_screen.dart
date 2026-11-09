@@ -402,7 +402,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  'Product ${_currentIndex + 1} of $totalItems',
+                                  '$totalItems Products Available',
                                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -575,26 +575,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ? _buildSpreadsheetTable(filtered)
                   : (totalItems == 0
                       ? _buildEmptyState()
-                      : PageView.builder(
-                          controller: _pageController,
-                          scrollDirection: Axis.vertical,
-                          physics: const PageScrollPhysics(parent: BouncingScrollPhysics()),
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 80),
                           itemCount: totalItems,
-                          onPageChanged: (idx) {
-                            setState(() {
-                              _currentIndex = idx;
-                              _selectedThumbnail = 0;
-                              _qtyCtrl.text = '1';
-                            });
-                          },
+                          separatorBuilder: (_, __) => const SizedBox(height: 14),
                           itemBuilder: (ctx, idx) {
-                            return Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-                              child: SingleChildScrollView(
-                                physics: const ClampingScrollPhysics(),
-                                child: _buildProductCatalogCard(filtered[idx]),
-                              ),
-                            );
+                            return _buildProductCatalogCard(filtered[idx]);
                           },
                         )),
             ),
@@ -612,12 +598,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
   // PRODUCT CATALOG CARD matching Reference Image
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildProductCatalogCard(_CatalogItem item) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE2E8F0)),
           boxShadow: [
             BoxShadow(
@@ -706,19 +690,35 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFECFDF5),
+                              color: item.qty > 0
+                                  ? const Color(0xFFECFDF5)
+                                  : (item.qty < 0 ? const Color(0xFFFEE2E2) : const Color(0xFFFEF3C7)),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF10B981)),
+                              border: Border.all(
+                                color: item.qty > 0
+                                    ? const Color(0xFF10B981)
+                                    : (item.qty < 0 ? const Color(0xFFEF4444) : const Color(0xFFF59E0B)),
+                              ),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.inventory_2_outlined, color: Color(0xFF059669), size: 12),
-                                SizedBox(width: 4),
+                                Icon(
+                                  Icons.inventory_2_outlined,
+                                  color: item.qty > 0
+                                      ? const Color(0xFF059669)
+                                      : (item.qty < 0 ? const Color(0xFFDC2626) : const Color(0xFFD97706)),
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 4),
                                 Text(
-                                  'In Stock',
+                                  item.qty < 0
+                                      ? 'Stock: ${item.qty}'
+                                      : (item.qty == 0 ? 'Stock: 0' : 'In Stock: ${item.qty}'),
                                   style: TextStyle(
-                                    color: Color(0xFF059669),
+                                    color: item.qty > 0
+                                        ? const Color(0xFF059669)
+                                        : (item.qty < 0 ? const Color(0xFFDC2626) : const Color(0xFFD97706)),
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -874,10 +874,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             ),
                             Text(
                               '${item.qty}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
-                                color: Color(0xFF15803D),
+                                color: item.qty < 0
+                                    ? const Color(0xFFDC2626)
+                                    : (item.qty == 0 ? const Color(0xFFD97706) : const Color(0xFF15803D)),
                               ),
                             ),
                           ],
@@ -1129,8 +1131,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildMetaRow(String label, String value, {bool hasChevron = false}) {

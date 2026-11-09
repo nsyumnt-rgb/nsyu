@@ -208,9 +208,12 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
       }
 
       if (!mounted) return;
-      Navigator.of(context).pop(amount);
+
       if (pdfFile != null) {
-        _showPostPaymentOptions(payment, pdfFile);
+        await _showPostPaymentOptions(payment, pdfFile);
+      }
+      if (mounted) {
+        Navigator.of(context).pop(amount);
       }
     } catch (e) {
       if (!mounted) return;
@@ -219,21 +222,35 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
     }
   }
 
-  void _showPostPaymentOptions(Payment payment, File pdfFile) {
-    showModalBottomSheet(
+  Future<void> _showPostPaymentOptions(Payment payment, File pdfFile) async {
+    await showModalBottomSheet(
       context: context,
+      isDismissible: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Wrap(
               children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Payment Received: ₹${_money.format(payment.amount)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(),
                 ListTile(
                   leading: const Icon(Icons.share_outlined, color: Color(0xFF16A34A)),
                   title: const Text('Share Receipt PDF', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () async {
-                    Navigator.of(ctx).pop();
                     await Printing.sharePdf(
                       bytes: await pdfFile.readAsBytes(),
                       filename: pdfFile.path.split('/').last,
@@ -244,7 +261,6 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   leading: const Icon(Icons.print_outlined, color: Color(0xFF2563EB)),
                   title: const Text('Print Payment Receipt', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () async {
-                    Navigator.of(ctx).pop();
                     await Printing.layoutPdf(onLayout: (_) => pdfFile.readAsBytes());
                   },
                 ),
@@ -252,7 +268,6 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   leading: const Icon(Icons.download_outlined, color: Color(0xFF0F172A)),
                   title: const Text('Download PDF', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () async {
-                    Navigator.of(ctx).pop();
                     try {
                       final downloadsDir = await getDownloadsDirectory();
                       if (downloadsDir != null) {
@@ -266,6 +281,20 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                       showAppSnackBar(context, 'Download failed: $e', isError: true);
                     }
                   },
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF006837),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Done', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ),
                 ),
               ],
             ),

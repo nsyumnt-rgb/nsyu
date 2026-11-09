@@ -16,7 +16,11 @@ function copyDirRecursive(src, dest) {
     if (entry.isDirectory()) {
       copyDirRecursive(srcPath, destPath);
     } else {
-      fs.copyFileSync(srcPath, destPath);
+      try {
+        fs.copyFileSync(srcPath, destPath);
+      } catch (e) {
+        console.warn(`Warning: Could not copy ${srcPath} to ${destPath}: ${e.message}`);
+      }
     }
   }
 }
