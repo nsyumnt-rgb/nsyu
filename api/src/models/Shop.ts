@@ -10,7 +10,7 @@ interface ShopAttributes {
   phone?: string;
   email?: string;
   logo?: string;
-  status: "active" | "inactive";
+  status: "active" | "inactive" | "suspended";
   reference_code?: string | null;
 }
 
@@ -28,7 +28,7 @@ export class Shop
   public phone?: string;
   public email?: string;
   public logo?: string;
-  public status!: "active" | "inactive";
+  public status!: "active" | "inactive" | "suspended";
   public reference_code?: string | null;
 }
 
@@ -42,7 +42,7 @@ Shop.init(
     phone: { type: DataTypes.STRING(20) },
     email: { type: DataTypes.STRING(150) },
     logo: { type: DataTypes.STRING(255) },
-    status: { type: DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
+    status: { type: DataTypes.ENUM("active", "inactive", "suspended"), defaultValue: "active" },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
   },
   {

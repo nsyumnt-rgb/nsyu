@@ -55,10 +55,15 @@ import { CustomerCart } from "./CustomerCart";
 import { CustomerCartItem } from "./CustomerCartItem";
 import { OrderStatusHistory } from "./OrderStatusHistory";
 import { ShopPortalSettings } from "./ShopPortalSettings";
+import { PlatformAuditLog } from "./PlatformAuditLog";
+import { StatusHistory } from "./StatusHistory";
 
 /* ---------------- Owner ---------------- */
 Owner.hasMany(Shop, { foreignKey: "owner_id", as: "shops" });
 Shop.belongsTo(Owner, { foreignKey: "owner_id", as: "owner" });
+
+Shop.hasMany(StatusHistory, { foreignKey: "shop_id", as: "statusHistories" });
+StatusHistory.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
 
 Owner.hasMany(Employee, { foreignKey: "owner_id", as: "employees" });
 Employee.belongsTo(Owner, { foreignKey: "owner_id", as: "owner" });
@@ -370,4 +375,6 @@ export {
   CustomerCartItem,
   OrderStatusHistory,
   ShopPortalSettings,
+  PlatformAuditLog,
+  StatusHistory,
 };

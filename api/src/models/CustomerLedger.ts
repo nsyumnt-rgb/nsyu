@@ -1,7 +1,7 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import sequelize from "../config/database";
 
-export const LEDGER_ENTRY_TYPES = ["debit", "credit"] as const;
+export const LEDGER_ENTRY_TYPES = ["debit", "credit", "reversal"] as const;
 export type LedgerEntryType = (typeof LEDGER_ENTRY_TYPES)[number];
 
 export const LEDGER_ENTRY_STATUSES = ["active", "reversed"] as const;

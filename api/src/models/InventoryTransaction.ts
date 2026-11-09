@@ -11,6 +11,12 @@ export const MOVEMENT_TYPES = [
   "adjustment",
   "transfer_in",
   "transfer_out",
+  "purchase_in",
+  "sale_out",
+  "adjustment_in",
+  "adjustment_out",
+  "damaged",
+  "sale_reversal",
 ] as const;
 export type MovementType = (typeof MOVEMENT_TYPES)[number];
 

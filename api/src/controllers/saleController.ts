@@ -12,6 +12,7 @@ import {
   SaleReturn,
   SaleReturnItem,
   Shop,
+  StatusHistory,
 } from "../models";
 import { PAYMENT_METHODS, PaymentMethod } from "../models/Sale";
 import { recordStockMovement } from "../utils/inventory";
@@ -612,23 +613,27 @@ export async function cancelSale(req: Request, res: Response) {
       }
       const sale = await Sale.findOne({
         where,
-        include: [{ model: SaleItem, as: "items" }, { model: EMIPlan, as: "emiPlan" }],
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
       if (!sale) throw Object.assign(new Error("Sale not found"), { status: 404 });
       if (sale.status === "cancelled") throw Object.assign(new Error("Sale is already cancelled"), { status: 400 });
 
-      const targetShopId = sale.shop_id; // Stock and ledger stay with the original shop
+      const items = await SaleItem.findAll({ where: { sale_id: sale.id }, transaction: t });
+      const emiPlan = await EMIPlan.findOne({ where: { sale_id: sale.id }, transaction: t });
 
-      for (const item of (sale as any).items as SaleItem[]) {
+      const targetShopId = sale.shop_id; // Stock and ledger stay with the original shop
+      const oldStatus = sale.status;
+
+      // 1. Restore stock with sale_reversal movement
+      for (const item of items) {
         const outstandingQty = item.quantity - item.returned_quantity;
         if (outstandingQty > 0) {
           await recordStockMovement({
             ownerId,
             shopId: targetShopId,
             productId: item.product_id,
-            type: "customer_return",
+            type: "sale_reversal",
             quantity: outstandingQty,
             actorType,
             actorId,
@@ -640,24 +645,50 @@ export async function cancelSale(req: Request, res: Response) {
         }
       }
 
-      if (Number(sale.due_amount) > 0) {
+      // 2. Reverse payments attached to this bill & post reversing ledger entries
+      const attachedPayments = await Payment.findAll({
+        where: { sale_id: sale.id, status: { [Op.ne]: "reversed" } },
+        transaction: t,
+      });
+
+      for (const p of attachedPayments) {
+        p.status = "reversed";
+        await p.save({ transaction: t });
+
         await recordLedgerEntry({
           ownerId,
           shopId: targetShopId,
           customerId: sale.customer_id,
-          entryType: "credit",
-          amount: Number(sale.due_amount),
-          referenceType: "SaleCancellation",
-          referenceId: sale.id,
-          description: `Cancellation of ${sale.invoice_number}`,
+          entryType: "reversal",
+          reversalDirection: "debit",
+          amount: Number(p.amount),
+          referenceType: "PaymentReversal",
+          referenceId: p.id,
+          description: `Payment reversal for cancelled bill ${sale.invoice_number}`,
           actorType,
           actorId,
           externalTransaction: t,
         });
       }
 
-      if ((sale as any).emiPlan) {
-        const plan = (sale as any).emiPlan as EMIPlan;
+      // 3. Reverse the bill's debit in customer ledger
+      await recordLedgerEntry({
+        ownerId,
+        shopId: targetShopId,
+        customerId: sale.customer_id,
+        entryType: "reversal",
+        reversalDirection: "credit",
+        amount: Number(sale.total_amount),
+        referenceType: "SaleCancellation",
+        referenceId: sale.id,
+        description: `Cancellation of bill ${sale.invoice_number}`,
+        actorType,
+        actorId,
+        externalTransaction: t,
+      });
+
+      if (emiPlan) {
+        const plan = emiPlan;
         plan.status = "cancelled";
         plan.cancel_reason = reason ?? "Sale cancelled";
         plan.outstanding_amount = 0;
@@ -672,6 +703,21 @@ export async function cancelSale(req: Request, res: Response) {
       sale.status = "cancelled";
       sale.cancel_reason = reason ?? null;
       await sale.save({ transaction: t });
+
+      // 4. Record status change in status_history
+      await StatusHistory.create(
+        {
+          shop_id: targetShopId,
+          entity_type: "bill",
+          entity_id: sale.id,
+          old_status: oldStatus,
+          new_status: "cancelled",
+          changed_by_id: actorId,
+          changed_by_role: actorType,
+          reason: reason || "Bill cancelled",
+        },
+        { transaction: t }
+      );
 
       await logAudit({ req, module: "sales", action: "cancel", entityType: "Sale", entityId: sale.id, details: { reason } });
     });

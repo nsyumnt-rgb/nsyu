@@ -2,8 +2,9 @@ import { api } from "./client";
 import type { ApiEnvelope, MeResponse } from "../types";
 
 export interface LoginResult {
-  accountType: "owner" | "employee";
-  owner?: { id: number; name: string; email: string };
+  accountType: "owner" | "employee" | "super_admin";
+  isSuperAdmin?: boolean;
+  owner?: { id: number; name: string; email: string; is_super_admin?: boolean; role?: string };
   employee?: { id: number; name: string; email: string };
   assignedShopIds?: number[];
   accessToken: string;

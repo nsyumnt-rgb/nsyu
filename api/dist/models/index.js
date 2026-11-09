@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Module = exports.DEFAULT_VISIBILITY_SETTINGS = exports.VisibilitySettings = exports.OrderItem = exports.Order = exports.PurchaseReturnItem = exports.PurchaseReturn = exports.SupplierLedger = exports.SupplierPayment = exports.PurchaseItem = exports.Purchase = exports.PurchaseCounter = exports.Notification = exports.EmployeeLedger = exports.SalaryPayment = exports.Payroll = exports.EmployeeIncentive = exports.EmployeeAdvance = exports.SalaryConfig = exports.LeaveRequest = exports.Attendance = exports.InvoiceCounter = exports.SaleReturnItem = exports.SaleReturn = exports.EMIInstallment = exports.EMIPlan = exports.CustomerLedger = exports.Payment = exports.SaleItem = exports.Sale = exports.Customer = exports.StockTransfer = exports.InventoryTransaction = exports.ProductLocation = exports.ProductStock = exports.ProductImage = exports.Supplier = exports.Subcategory = exports.Category = exports.Product = exports.AuditLog = exports.RefreshToken = exports.EmployeeShop = exports.Employee = exports.RoleFieldPermission = exports.RolePermission = exports.Role = exports.Shop = exports.Owner = exports.sequelize = void 0;
-exports.ShopPortalSettings = exports.OrderStatusHistory = exports.CustomerCartItem = exports.CustomerCart = exports.CustomerRefreshToken = exports.CustomerOtp = exports.CustomerAccount = exports.UserRole = exports.ShopModule = exports.Permission = void 0;
+exports.StatusHistory = exports.PlatformAuditLog = exports.ShopPortalSettings = exports.OrderStatusHistory = exports.CustomerCartItem = exports.CustomerCart = exports.CustomerRefreshToken = exports.CustomerOtp = exports.CustomerAccount = exports.UserRole = exports.ShopModule = exports.Permission = void 0;
 const database_1 = __importDefault(require("../config/database"));
 exports.sequelize = database_1.default;
 const Owner_1 = require("./Owner");
@@ -122,9 +122,15 @@ const OrderStatusHistory_1 = require("./OrderStatusHistory");
 Object.defineProperty(exports, "OrderStatusHistory", { enumerable: true, get: function () { return OrderStatusHistory_1.OrderStatusHistory; } });
 const ShopPortalSettings_1 = require("./ShopPortalSettings");
 Object.defineProperty(exports, "ShopPortalSettings", { enumerable: true, get: function () { return ShopPortalSettings_1.ShopPortalSettings; } });
+const PlatformAuditLog_1 = require("./PlatformAuditLog");
+Object.defineProperty(exports, "PlatformAuditLog", { enumerable: true, get: function () { return PlatformAuditLog_1.PlatformAuditLog; } });
+const StatusHistory_1 = require("./StatusHistory");
+Object.defineProperty(exports, "StatusHistory", { enumerable: true, get: function () { return StatusHistory_1.StatusHistory; } });
 /* ---------------- Owner ---------------- */
 Owner_1.Owner.hasMany(Shop_1.Shop, { foreignKey: "owner_id", as: "shops" });
 Shop_1.Shop.belongsTo(Owner_1.Owner, { foreignKey: "owner_id", as: "owner" });
+Shop_1.Shop.hasMany(StatusHistory_1.StatusHistory, { foreignKey: "shop_id", as: "statusHistories" });
+StatusHistory_1.StatusHistory.belongsTo(Shop_1.Shop, { foreignKey: "shop_id", as: "shop" });
 Owner_1.Owner.hasMany(Employee_1.Employee, { foreignKey: "owner_id", as: "employees" });
 Employee_1.Employee.belongsTo(Owner_1.Owner, { foreignKey: "owner_id", as: "owner" });
 Owner_1.Owner.hasMany(Role_1.Role, { foreignKey: "owner_id", as: "roles" });

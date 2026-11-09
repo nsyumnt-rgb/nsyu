@@ -67,7 +67,47 @@ export async function login(req: Request, res: Response) {
       if (owner.status !== "active") {
         return res.status(403).json({ success: false, message: "Account suspended" });
       }
-      const firstShop = await Shop.findOne({ where: { owner_id: owner.id, status: "active" }, order: [["id", "ASC"]] });
+
+      if (owner.is_super_admin) {
+        const accessToken = signAccessToken({
+          ownerId: owner.id,
+          isOwner: true,
+          isSuperAdmin: true,
+          roleName: "super_admin",
+          shopId: null,
+          roleId: null,
+        });
+        const refreshToken = signRefreshToken({ ownerId: owner.id });
+        await RefreshToken.create({ token: refreshToken, owner_id: owner.id, expires_at: refreshExpiryDate() });
+
+        return res.json({
+          success: true,
+          data: {
+            accountType: "super_admin",
+            isSuperAdmin: true,
+            owner: {
+              id: owner.id,
+              name: owner.name,
+              email: owner.email,
+              is_super_admin: true,
+              role: "super_admin",
+            },
+            shop: null,
+            accessToken,
+            refreshToken,
+          },
+        });
+      }
+
+      const shop = await Shop.findOne({ where: { owner_id: owner.id }, order: [["id", "ASC"]] });
+      if (shop && shop.status === "suspended") {
+        return res.status(403).json({
+          success: false,
+          message: "Shop is suspended. Access blocked. Contact system administrator.",
+        });
+      }
+
+      const firstShop = shop && shop.status === "active" ? shop : null;
       const defaultShopId = firstShop ? firstShop.id : null;
 
       const accessToken = signAccessToken({ ownerId: owner.id, isOwner: true, shopId: defaultShopId, roleId: null });
@@ -78,7 +118,8 @@ export async function login(req: Request, res: Response) {
         success: true,
         data: {
           accountType: "owner",
-          owner: { id: owner.id, name: owner.name, email: owner.email },
+          isSuperAdmin: false,
+          owner: { id: owner.id, name: owner.name, email: owner.email, is_super_admin: false, role: owner.role },
           shop: firstShop,
           accessToken,
           refreshToken,
@@ -102,6 +143,13 @@ export async function login(req: Request, res: Response) {
         include: [{ model: Shop, as: "shop" }, { model: Role, as: "role" }],
       });
       const firstAssignment = shopAssignments[0];
+      const assignedShop = (firstAssignment as any)?.shop;
+      if (assignedShop && assignedShop.status === "suspended") {
+        return res.status(403).json({
+          success: false,
+          message: "Shop is suspended. Access blocked. Contact system administrator.",
+        });
+      }
       const defaultShopId = firstAssignment?.shop_id ?? null;
       const defaultRoleId = firstAssignment?.role_id ?? null;
       const defaultRoleName = (firstAssignment as any)?.role?.name ?? null;
@@ -237,10 +285,27 @@ export async function getMe(req: Request, res: Response) {
 
   if (auth.isOwner) {
     const owner = await Owner.findByPk(auth.ownerId, { attributes: { exclude: ["password"] } });
+    if (owner?.is_super_admin || auth.isSuperAdmin) {
+      return res.json({
+        success: true,
+        data: {
+          accountType: "super_admin",
+          isSuperAdmin: true,
+          owner,
+          shopId: null,
+          roleId: null,
+          roleName: "super_admin",
+          permissions,
+          fieldPermissions,
+        },
+      });
+    }
+
     return res.json({
       success: true,
       data: {
         accountType: "owner",
+        isSuperAdmin: false,
         owner,
         shopId: auth.shopId ?? null,
         roleId: null,

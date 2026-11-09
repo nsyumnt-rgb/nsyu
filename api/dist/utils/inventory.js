@@ -2,8 +2,24 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.recordStockMovement = recordStockMovement;
 const models_1 = require("../models");
-const DECREASING_TYPES = ["sale", "purchase_return", "damage", "transfer_out"];
-const INCREASING_TYPES = ["opening", "purchase", "customer_return", "transfer_in"];
+const DECREASING_TYPES = [
+    "sale",
+    "sale_out",
+    "purchase_return",
+    "damage",
+    "damaged",
+    "transfer_out",
+    "adjustment_out",
+];
+const INCREASING_TYPES = [
+    "opening",
+    "purchase",
+    "purchase_in",
+    "customer_return",
+    "sale_reversal",
+    "transfer_in",
+    "adjustment_in",
+];
 /**
  * The ONLY function in the codebase allowed to change
  * ProductStock.current_stock. It:
@@ -53,8 +69,14 @@ async function recordStockMovement(params) {
             throw Object.assign(new Error(`Unknown movement type: ${type}`), { status: 400 });
         }
         const newBalance = stock.current_stock + signedQuantity;
-        // Sales are allowed to create negative stock (short stock / backorders per business requirement)
-        if (newBalance < 0 && !allowNegative && type !== "sale") {
+        // Sales and reversals are allowed to operate on negative stock (short stock / backorders per business requirement).
+        // Also, stock-increasing movements (signedQuantity > 0) restore inventory and must never be blocked by a negative starting balance.
+        if (newBalance < 0 &&
+            !allowNegative &&
+            type !== "sale" &&
+            type !== "sale_reversal" &&
+            type !== "customer_return" &&
+            signedQuantity < 0) {
             throw Object.assign(new Error(`Insufficient stock: current ${stock.current_stock}, attempted change ${signedQuantity}. Negative stock is not allowed.`), { status: 400 });
         }
         stock.current_stock = newBalance;

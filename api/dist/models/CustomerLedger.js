@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CustomerLedger = exports.LEDGER_ENTRY_STATUSES = exports.LEDGER_ENTRY_TYPES = void 0;
 const sequelize_1 = require("sequelize");
 const database_1 = __importDefault(require("../config/database"));
-exports.LEDGER_ENTRY_TYPES = ["debit", "credit"];
+exports.LEDGER_ENTRY_TYPES = ["debit", "credit", "reversal"];
 exports.LEDGER_ENTRY_STATUSES = ["active", "reversed"];
 class CustomerLedger extends sequelize_1.Model {
 }

@@ -5,7 +5,7 @@ import { PAYMENT_METHODS, PaymentMethod } from "./Sale";
 export const PAYMENT_TYPES = ["sale_payment", "down_payment", "emi_payment", "refund"] as const;
 export type PaymentType = (typeof PAYMENT_TYPES)[number];
 
-export const PAYMENT_STATUSES = ["completed", "cancelled"] as const;
+export const PAYMENT_STATUSES = ["completed", "cancelled", "received", "reversed"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 /**

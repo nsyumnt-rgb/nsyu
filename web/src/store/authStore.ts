@@ -56,6 +56,7 @@ interface AuthState {
 
   // helpers
   isOwner: () => boolean;
+  isSuperAdmin: () => boolean;
   can: (module: ModuleName, action: "view" | "create" | "edit" | "delete") => boolean;
   canField: (field: string) => boolean;
 }
@@ -125,7 +126,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   setHydrated: (v) => set({ hydrated: v }),
 
-  isOwner: () => get().accountType === "owner",
+  isOwner: () => get().accountType === "owner" || get().accountType === "super_admin",
+
+  isSuperAdmin: () => get().accountType === "super_admin" || Boolean(get().owner?.is_super_admin),
 
   can: (module, action) => {
     const state = get();

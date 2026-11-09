@@ -31,6 +31,8 @@ export interface OrderAttributes {
   shipping_address?: string | null;
   remarks?: string | null;
   converted_sale_id?: number | null;
+  billed_bill_id?: number | null;
+  advance_amount?: number;
   placed_by?: "customer" | "staff" | null;
   customer_account_id?: number | null;
   client_request_id?: string | null;
@@ -82,6 +84,8 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
   public shipping_address?: string | null;
   public remarks?: string | null;
   public converted_sale_id?: number | null;
+  public billed_bill_id?: number | null;
+  public advance_amount?: number;
   public placed_by?: "customer" | "staff" | null;
   public customer_account_id?: number | null;
   public client_request_id?: string | null;
@@ -110,6 +114,8 @@ Order.init(
     shipping_address: { type: DataTypes.TEXT, allowNull: true },
     remarks: { type: DataTypes.TEXT, allowNull: true },
     converted_sale_id: { type: DataTypes.BIGINT, allowNull: true },
+    billed_bill_id: { type: DataTypes.BIGINT, allowNull: true },
+    advance_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     placed_by: { type: DataTypes.ENUM("customer", "staff"), allowNull: true, defaultValue: "staff" },
     customer_account_id: { type: DataTypes.BIGINT, allowNull: true },
     client_request_id: { type: DataTypes.STRING(100), allowNull: true },

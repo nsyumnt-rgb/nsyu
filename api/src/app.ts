@@ -30,6 +30,7 @@ import activityRoutes from "./routes/activityRoutes";
 import backupRoutes from "./routes/backupRoutes";
 import settingsRoutes from "./routes/settingsRoutes";
 import customerPortalRoutes from "./routes/customerPortalRoutes";
+import adminRoutes from "./routes/adminRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import { sequelize } from "./models";
 
@@ -111,6 +112,7 @@ app.use("/api/activity", activityRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/customer-portal", customerPortalRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: "Route not found" }));
 app.use(errorHandler);

@@ -7,6 +7,7 @@ interface RecordLedgerEntryParams {
   shopId: number;
   customerId: number;
   entryType: LedgerEntryType;
+  reversalDirection?: "credit" | "debit"; // for 'reversal': 'credit' reduces customer owed (reversing debit), 'debit' increases (reversing credit)
   amount: number; // always a positive magnitude — direction comes from entryType
   referenceType: string;
   referenceId?: number;
@@ -59,7 +60,10 @@ export async function recordLedgerEntry(params: RecordLedgerEntryParams) {
       throw Object.assign(new Error("Customer not found"), { status: 404 });
     }
 
-    const signedAmount = entryType === "debit" ? amount : -amount;
+    let signedAmount = entryType === "debit" ? amount : -amount;
+    if (entryType === "reversal") {
+      signedAmount = params.reversalDirection === "debit" ? amount : -amount;
+    }
     const newBalance = Number(customer.current_balance) + signedAmount;
 
     customer.current_balance = newBalance;

@@ -18,7 +18,7 @@ Shop.init({
     phone: { type: sequelize_1.DataTypes.STRING(20) },
     email: { type: sequelize_1.DataTypes.STRING(150) },
     logo: { type: sequelize_1.DataTypes.STRING(255) },
-    status: { type: sequelize_1.DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
+    status: { type: sequelize_1.DataTypes.ENUM("active", "inactive", "suspended"), defaultValue: "active" },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,

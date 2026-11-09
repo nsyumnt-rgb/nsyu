@@ -132,27 +132,6 @@ const NAV_ITEMS: NavItem[] = [
   // 2. BUSINESS MANAGEMENT
   // =========================================================================
   {
-    to: "/app/purchase",
-    label: "Purchase",
-    module: "purchase",
-    group: "BUSINESS MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="9" cy="21" r="1" />
-        <circle cx="20" cy="21" r="1" />
-        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-      </svg>
-    ),
-  },
-  {
     to: "/app/inventory",
     label: "Inventory",
     module: "inventory",
@@ -192,28 +171,6 @@ const NAV_ITEMS: NavItem[] = [
         <circle cx="9" cy="7" r="4" />
         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/suppliers",
-    label: "Suppliers",
-    module: "suppliers",
-    group: "BUSINESS MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="1" y="3" width="15" height="13" rx="1.5" />
-        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-        <circle cx="5.5" cy="18.5" r="2.5" />
-        <circle cx="18.5" cy="18.5" r="2.5" />
       </svg>
     ),
   },
@@ -325,51 +282,10 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
-  {
-    to: "/app/reports",
-    label: "Reports",
-    module: "reports",
-    group: "MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <line x1="18" y1="20" x2="18" y2="10" />
-        <line x1="12" y1="20" x2="12" y2="4" />
-        <line x1="6" y1="20" x2="6" y2="14" />
-      </svg>
-    ),
-  },
 
   // =========================================================================
   // 4. ADMIN
   // =========================================================================
-  {
-    to: "/app/shops",
-    label: "Shops",
-    module: "shops",
-    group: "ADMIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-  },
   {
     to: "/app/roles",
     label: "Roles & Permissions",
@@ -537,7 +453,19 @@ export default function Sidebar() {
       </nav>
 
       {/* Compact Bottom Footer */}
-      <div className="p-2.5 border-t border-slate-100 bg-slate-50/50 shrink-0">
+      <div className="p-2.5 border-t border-slate-100 bg-slate-50/50 shrink-0 space-y-1.5">
+        {useAuthStore.getState().isSuperAdmin() && (
+          <NavLink
+            to="/admin"
+            className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 text-[11px] font-bold border border-purple-200 transition"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+              Super Admin Panel
+            </span>
+            <span className="font-mono text-[10px]">→</span>
+          </NavLink>
+        )}
         <div className="flex items-center justify-between px-2 py-1 text-[11px] text-slate-500">
           <span className="font-semibold text-slate-700 flex items-center gap-1.5 truncate">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />

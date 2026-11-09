@@ -37,6 +37,8 @@ Order.init({
     shipping_address: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
     remarks: { type: sequelize_1.DataTypes.TEXT, allowNull: true },
     converted_sale_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
+    billed_bill_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
+    advance_amount: { type: sequelize_1.DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     placed_by: { type: sequelize_1.DataTypes.ENUM("customer", "staff"), allowNull: true, defaultValue: "staff" },
     customer_account_id: { type: sequelize_1.DataTypes.BIGINT, allowNull: true },
     client_request_id: { type: sequelize_1.DataTypes.STRING(100), allowNull: true },

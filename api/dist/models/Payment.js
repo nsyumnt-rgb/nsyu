@@ -8,7 +8,7 @@ const sequelize_1 = require("sequelize");
 const database_1 = __importDefault(require("../config/database"));
 const Sale_1 = require("./Sale");
 exports.PAYMENT_TYPES = ["sale_payment", "down_payment", "emi_payment", "refund"];
-exports.PAYMENT_STATUSES = ["completed", "cancelled"];
+exports.PAYMENT_STATUSES = ["completed", "cancelled", "received", "reversed"];
 class Payment extends sequelize_1.Model {
 }
 exports.Payment = Payment;

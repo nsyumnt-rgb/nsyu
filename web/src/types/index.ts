@@ -75,7 +75,9 @@ export interface Owner {
   name: string;
   email: string;
   phone?: string;
-  status: "active" | "suspended";
+  status: "active" | "inactive" | "suspended";
+  is_super_admin?: boolean;
+  role?: string;
 }
 
 export interface Employee {
@@ -266,10 +268,11 @@ export interface ProductLocation {
   created_at: string;
 }
 
-export type AccountType = "owner" | "employee";
+export type AccountType = "owner" | "employee" | "super_admin";
 
 export interface MeResponse {
   accountType: AccountType;
+  isSuperAdmin?: boolean;
   owner?: Owner;
   employee?: Employee;
   shopId: number | null;

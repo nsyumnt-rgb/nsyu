@@ -16,14 +16,24 @@ Owner.init({
     password: { type: sequelize_1.DataTypes.STRING(255), allowNull: false },
     phone: { type: sequelize_1.DataTypes.STRING(20) },
     status: {
-        type: sequelize_1.DataTypes.ENUM("active", "suspended"),
+        type: sequelize_1.DataTypes.ENUM("active", "suspended", "inactive"),
         defaultValue: "active",
+    },
+    is_super_admin: {
+        type: sequelize_1.DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
+    role: {
+        type: sequelize_1.DataTypes.STRING(50),
+        allowNull: false,
+        defaultValue: "owner",
     },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
 }, {
     sequelize: database_1.default,
     modelName: "Owner",
     tableName: "owners",
-    indexes: [{ fields: ["reference_code"] }],
+    indexes: [{ fields: ["reference_code"] }, { fields: ["email"] }],
 });
 //# sourceMappingURL=Owner.js.map

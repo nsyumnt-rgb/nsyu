@@ -431,35 +431,10 @@ async function convertOrderToBill(req, res) {
             return res.status(400).json({ success: false, message: "Cannot convert an order with no items" });
         }
         const conversionResult = await models_1.sequelize.transaction(async (t) => {
-            // 1. Re-check stock for every line (CP-B03)
-            const shortLines = [];
-            const stockUpdates = [];
-            for (const item of items) {
-                if (!item.product_id)
-                    continue;
-                const stock = await models_1.ProductStock.findOne({
-                    where: { product_id: item.product_id, shop_id: shopId },
-                    lock: true,
-                    transaction: t,
-                });
-                const currentStock = stock ? Number(stock.current_stock || 0) : 0;
-                if (currentStock < item.quantity) {
-                    shortLines.push(`"${item.product_name}" has only ${currentStock} in stock (${item.quantity} required)`);
-                }
-                else if (stock) {
-                    const product = await models_1.Product.findByPk(item.product_id, { transaction: t });
-                    stockUpdates.push({ product: product, stock, quantity: item.quantity });
-                }
-            }
-            if (shortLines.length > 0) {
-                throw Object.assign(new Error(`Insufficient stock to convert order: ${shortLines.join("; ")}`), {
-                    status: 400,
-                    shortLines,
-                });
-            }
-            // 2. Generate invoice number
+            // 1. Generate invoice number
             const invoiceNumber = await (0, invoice_1.nextInvoiceNumber)({ ownerId, shopId, transaction: t });
-            const paid = Math.min(Number(paidAmount) || 0, Number(order.total_amount));
+            const advance = Number(order.advance_amount || 0);
+            const paid = Math.min(Math.max(Number(paidAmount) || 0, advance), Number(order.total_amount));
             const due = round2(Number(order.total_amount) - paid);
             let saleStatus = "unpaid";
             if (paid >= Number(order.total_amount) && Number(order.total_amount) > 0)
@@ -513,6 +488,7 @@ async function convertOrderToBill(req, res) {
                         referenceType: "Sale",
                         referenceId: sale.id,
                         notes: `Converted from Order ${order.order_number}`,
+                        allowNegative: true,
                         externalTransaction: t,
                     });
                 }
@@ -564,6 +540,7 @@ async function convertOrderToBill(req, res) {
             const prevStatus = order.status;
             order.status = "converted_to_bill";
             order.converted_sale_id = sale.id;
+            order.billed_bill_id = sale.id;
             await order.save({ transaction: t });
             // 8. OrderStatusHistory
             await models_1.OrderStatusHistory.create({

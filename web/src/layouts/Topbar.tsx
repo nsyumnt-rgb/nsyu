@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { listShops, switchShop } from "../api/shops";
+import { listShops } from "../api/shops";
 import { logout as logoutApi } from "../api/auth";
 import { resolveReferenceApi, type ResolvedReference } from "../api/reference";
 import type { Shop } from "../types";
@@ -15,20 +15,16 @@ export default function Topbar() {
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
-  const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const storeLogout = useAuthStore((s) => s.logout);
 
   const [shops, setShops] = useState<Shop[]>([]);
-  const [shopOpen, setShopOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
-  const [switching, setSwitching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState<ResolvedReference | null>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const shopMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,9 +39,6 @@ export default function Topbar() {
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (shopMenuRef.current && !shopMenuRef.current.contains(e.target as Node)) {
-        setShopOpen(false);
-      }
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setUserOpen(false);
       }
@@ -107,19 +100,6 @@ export default function Topbar() {
     }
   }
 
-  async function handleSwitch(id: number) {
-    setSwitching(true);
-    try {
-      const res = await switchShop(id);
-      const { accessToken, shop } = res.data.data!;
-      const employeeShopEntry = shops.find((s) => s.id === id);
-      setAccessToken(accessToken, shop.id, employeeShopEntry?.roleId ?? null, employeeShopEntry?.roleName ?? null);
-      setActiveShop(shop);
-      setShopOpen(false);
-    } finally {
-      setSwitching(false);
-    }
-  }
 
   async function handleLogout() {
     if (refreshToken) {
@@ -203,63 +183,16 @@ export default function Topbar() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-3 md:gap-4">
-        {/* Shop Switcher */}
+        {/* Active Shop Badge (Fixed: each user belongs to exactly one shop; no shop-switching UI) */}
         <div className="flex items-center gap-2">
-          <span className="text-[12px] font-medium text-slate-500 hidden sm:inline">Shop</span>
-          <div className="relative" ref={shopMenuRef}>
-            <button
-              onClick={() => setShopOpen((v) => !v)}
-              disabled={switching}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[13px] font-medium text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors shadow-xs"
-            >
-              <svg className="w-4 h-4 text-slate-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-              <span className="max-w-[160px] truncate">{activeShop?.name || "Main Shop - Electronics"}</span>
-              <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-
-            {shopOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-slate-200/90 p-2 z-50">
-                <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Switch Active Shop
-                </div>
-                {shops.length === 0 && <div className="px-2.5 py-2 text-xs text-slate-500">No shops available.</div>}
-                <div className="max-h-60 overflow-y-auto space-y-0.5">
-                  {shops.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => handleSwitch(s.id)}
-                      className={`w-full flex items-center justify-between rounded-lg px-2.5 py-2 text-[13px] transition-colors text-left ${
-                        s.id === shopId ? "bg-blue-50 text-blue-700 font-semibold" : "hover:bg-slate-50 text-slate-700"
-                      }`}
-                    >
-                      <div className="truncate">
-                        <span className="block truncate">{s.name}</span>
-                        <span className="text-[11px] text-slate-400 font-mono">{s.code}</span>
-                      </div>
-                      {s.id === shopId && (
-                        <span className="h-2 w-2 rounded-full bg-blue-600 shrink-0 ml-2" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-                {accountType === "owner" && (
-                  <button
-                    onClick={() => {
-                      setShopOpen(false);
-                      navigate("/app/shops");
-                    }}
-                    className="w-full text-left rounded-lg px-2.5 py-2 text-xs font-medium text-blue-600 hover:bg-blue-50 mt-1 border-t border-slate-100 pt-2 flex items-center gap-1.5"
-                  >
-                    <span>+</span> Manage All Shops
-                  </button>
-                )}
-              </div>
-            )}
+          <span className="text-[12px] font-medium text-slate-500 hidden sm:inline">Shop:</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-semibold text-slate-700 shadow-2xs">
+            <svg className="w-4 h-4 text-blue-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span className="max-w-[160px] truncate">{activeShop?.name || "Main Shop"}</span>
+            <span className="text-[11px] font-mono text-slate-400">({activeShop?.code || "NSYU-01"})</span>
           </div>
         </div>
 

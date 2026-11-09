@@ -53,6 +53,15 @@ import PortalLedger from "./pages/portal/PortalLedger";
 import PortalNotifications from "./pages/portal/PortalNotifications";
 import PortalProfile from "./pages/portal/PortalProfile";
 
+/* Super Admin Panel (Web Only) */
+import RequireSuperAdmin from "./components/RequireSuperAdmin";
+import AdminLayout from "./layouts/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminShops from "./pages/admin/AdminShops";
+import AdminOwners from "./pages/admin/AdminOwners";
+import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
+import AdminShopView from "./pages/admin/AdminShopView";
+
 export default function App() {
   return (
     <HashRouter>
@@ -76,6 +85,17 @@ export default function App() {
             <Route path="ledger" element={<PortalLedger />} />
             <Route path="notifications" element={<PortalNotifications />} />
             <Route path="profile" element={<PortalProfile />} />
+          </Route>
+        </Route>
+
+        {/* Super Admin Routes (Web Only) */}
+        <Route element={<RequireSuperAdmin />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="shops" element={<AdminShops />} />
+            <Route path="owners" element={<AdminOwners />} />
+            <Route path="audit-logs" element={<AdminAuditLogs />} />
+            <Route path="support" element={<AdminShopView />} />
           </Route>
         </Route>
 

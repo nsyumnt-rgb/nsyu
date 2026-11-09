@@ -32,6 +32,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
  * Verifies customer access token, verifies account is Active in DB,
  * and attaches req.customer.
  * Rejects staff tokens with 403, and deactivated accounts with 401.
+ * Suspended shop blocks customer access.
  */
 export async function requireCustomer(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
@@ -53,6 +54,15 @@ export async function requireCustomer(req: Request, res: Response, next: NextFun
       return res.status(401).json({ success: false, message: "Customer account is disabled or inactive" });
     }
 
+    // Check if shop is suspended
+    const shop = await Shop.findByPk(account.shop_id);
+    if (!shop || shop.status === "suspended") {
+      return res.status(403).json({
+        success: false,
+        message: "Shop is suspended. Access blocked. Contact system administrator.",
+      });
+    }
+
     req.customer = {
       customerId: account.customer_id,
       shopId: account.shop_id,
@@ -71,25 +81,45 @@ export async function requireCustomer(req: Request, res: Response, next: NextFun
  * Every module route (products, sales, billing...) needs an active
  * shop context. This guarantees req.auth.shopId is present before
  * the controller runs, so controllers never have to null-check it.
+ * If shop is suspended, rejects with 403.
  */
 export async function requireShop(req: Request, res: Response, next: NextFunction) {
+  if (req.auth?.isSuperAdmin) {
+    return next();
+  }
+
   if (!req.auth?.shopId) {
     if (req.auth?.isOwner) {
       try {
         const firstShop = await Shop.findOne({ where: { owner_id: req.auth.ownerId }, order: [["id", "ASC"]] });
         if (firstShop) {
           req.auth.shopId = firstShop.id;
-          return next();
         }
       } catch {
         // Proceed to rejection
       }
     }
+  }
+
+  if (!req.auth?.shopId) {
     return res.status(400).json({
       success: false,
       message: "No shop selected. Call /api/shops/switch first.",
     });
   }
+
+  try {
+    const shop = await Shop.findByPk(req.auth.shopId);
+    if (!shop || shop.status === "suspended") {
+      return res.status(403).json({
+        success: false,
+        message: "Shop is suspended. Access blocked. Contact system administrator.",
+      });
+    }
+  } catch (err) {
+    console.error("Error checking shop status:", err);
+  }
+
   return next();
 }
 
@@ -98,8 +128,21 @@ export async function requireShop(req: Request, res: Response, next: NextFunctio
  * (e.g. creating shops, creating roles, deleting employees).
  */
 export function requireOwner(req: Request, res: Response, next: NextFunction) {
+  if (req.auth?.isSuperAdmin) {
+    return next();
+  }
   if (!req.auth?.isOwner) {
     return res.status(403).json({ success: false, message: "Owner access required" });
+  }
+  return next();
+}
+
+/**
+ * Middleware strictly for Super Admin endpoints (/api/admin/*)
+ */
+export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.auth?.isSuperAdmin) {
+    return res.status(403).json({ success: false, message: "Super Admin access required" });
   }
   return next();
 }

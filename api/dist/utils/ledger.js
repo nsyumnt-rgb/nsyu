@@ -28,7 +28,10 @@ async function recordLedgerEntry(params) {
         if (!customer) {
             throw Object.assign(new Error("Customer not found"), { status: 404 });
         }
-        const signedAmount = entryType === "debit" ? amount : -amount;
+        let signedAmount = entryType === "debit" ? amount : -amount;
+        if (entryType === "reversal") {
+            signedAmount = params.reversalDirection === "debit" ? amount : -amount;
+        }
         const newBalance = Number(customer.current_balance) + signedAmount;
         customer.current_balance = newBalance;
         await customer.save({ transaction: t });

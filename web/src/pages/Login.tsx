@@ -143,7 +143,11 @@ export default function Login() {
           setActiveShop((data as any).shop);
         }
 
-        navigate("/app");
+        if ((data as any).accountType === "super_admin" || (data as any).isSuperAdmin) {
+          navigate("/admin");
+        } else {
+          navigate("/app");
+        }
       } catch (err: any) {
         const baseErr = apiErrorMessage(err, "Invalid email or password. Please try again.");
         if (err.message && err.message.toLowerCase().includes("network error")) {

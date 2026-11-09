@@ -515,39 +515,11 @@ export async function convertOrderToBill(req: Request, res: Response) {
     }
 
     const conversionResult = await sequelize.transaction(async (t) => {
-      // 1. Re-check stock for every line (CP-B03)
-      const shortLines: string[] = [];
-      const stockUpdates: { product: Product; stock: ProductStock; quantity: number }[] = [];
-
-      for (const item of items) {
-        if (!item.product_id) continue;
-
-        const stock = await ProductStock.findOne({
-          where: { product_id: item.product_id, shop_id: shopId },
-          lock: true,
-          transaction: t,
-        });
-
-        const currentStock = stock ? Number(stock.current_stock || 0) : 0;
-        if (currentStock < item.quantity) {
-          shortLines.push(`"${item.product_name}" has only ${currentStock} in stock (${item.quantity} required)`);
-        } else if (stock) {
-          const product = await Product.findByPk(item.product_id, { transaction: t });
-          stockUpdates.push({ product: product!, stock, quantity: item.quantity });
-        }
-      }
-
-      if (shortLines.length > 0) {
-        throw Object.assign(new Error(`Insufficient stock to convert order: ${shortLines.join("; ")}`), {
-          status: 400,
-          shortLines,
-        });
-      }
-
-      // 2. Generate invoice number
+      // 1. Generate invoice number
       const invoiceNumber = await nextInvoiceNumber({ ownerId, shopId, transaction: t });
 
-      const paid = Math.min(Number(paidAmount) || 0, Number(order.total_amount));
+      const advance = Number(order.advance_amount || 0);
+      const paid = Math.min(Math.max(Number(paidAmount) || 0, advance), Number(order.total_amount));
       const due = round2(Number(order.total_amount) - paid);
 
       let saleStatus: Sale["status"] = "unpaid";
@@ -609,6 +581,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
             referenceType: "Sale",
             referenceId: sale.id,
             notes: `Converted from Order ${order.order_number}`,
+            allowNegative: true,
             externalTransaction: t,
           });
         }
@@ -667,6 +640,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
       const prevStatus = order.status;
       order.status = "converted_to_bill";
       order.converted_sale_id = sale.id;
+      order.billed_bill_id = sale.id;
       await order.save({ transaction: t });
 
       // 8. OrderStatusHistory

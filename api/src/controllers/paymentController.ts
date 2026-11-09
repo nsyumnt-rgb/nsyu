@@ -139,8 +139,20 @@ export async function createPayment(req: Request, res: Response) {
       if (saleId) {
         const sale = await Sale.findOne({ where: { id: saleId, owner_id: ownerId }, transaction: t, lock: t.LOCK.UPDATE });
         if (sale) {
-          sale.paid_amount = Number(sale.paid_amount) + numAmount;
-          sale.due_amount = Math.max(0, Number(sale.total_amount) - sale.paid_amount);
+          if (sale.status === "cancelled") {
+            throw Object.assign(new Error("Cannot add payment to a cancelled bill"), { status: 400 });
+          }
+          const currentPaid = Number(sale.paid_amount || 0);
+          const total = Number(sale.total_amount || 0);
+          const newPaid = currentPaid + numAmount;
+          if (newPaid > total) {
+            throw Object.assign(
+              new Error(`Payment amount ₹${numAmount} exceeds remaining due amount of ₹${Math.max(0, total - currentPaid)}`),
+              { status: 400 }
+            );
+          }
+          sale.paid_amount = newPaid;
+          sale.due_amount = Math.max(0, total - newPaid);
           sale.status = sale.due_amount <= 0 ? "paid" : "partially_paid";
           await sale.save({ transaction: t });
         }
