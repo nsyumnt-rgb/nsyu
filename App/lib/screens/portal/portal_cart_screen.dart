@@ -290,49 +290,42 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                             ),
                             const SizedBox(width: 12),
 
-                            // 3. Compact Quantity Stepper [-] [qty] [+]
+                            // 3. Direct Editable Quantity Input [ Qty ] (No +/- buttons)
                             Container(
+                              width: 52,
+                              height: 36,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: const Color(0xFFCBD5E1)),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  InkWell(
-                                    onTap: () => portal.setCartItem(prodId, qty - 1),
-                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                      child: Icon(Icons.remove, size: 14, color: Color(0xFF334155)),
-                                    ),
-                                  ),
-                                  Container(
-                                    constraints: const BoxConstraints(minWidth: 26),
-                                    child: Center(
-                                      child: Text(
-                                        '$qty',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF0F172A),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () => portal.setCartItem(prodId, qty + 1),
-                                    borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                      child: Icon(Icons.add, size: 14, color: Color(0xFF334155)),
-                                    ),
-                                  ),
-                                ],
+                              alignment: Alignment.center,
+                              child: TextFormField(
+                                key: ValueKey('portal_cart_qty_${prodId}_$qty'),
+                                initialValue: '$qty',
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF0F172A),
+                                ),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                ),
+                                onChanged: (val) {
+                                  final trimmed = val.trim();
+                                  if (trimmed.isEmpty) return;
+                                  final q = int.tryParse(trimmed);
+                                  if (q != null && q >= 1) {
+                                    portal.setCartItem(prodId, q);
+                                  }
+                                },
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
 
                             // 4. Remove / Delete Button
                             IconButton(

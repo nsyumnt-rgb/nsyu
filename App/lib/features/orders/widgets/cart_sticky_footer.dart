@@ -60,6 +60,10 @@ class CartStickyFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isEmptyCart = (documentMode == 'Order'
+        ? (provider.orderItems.isEmpty && provider.billItems.isEmpty)
+        : (provider.billItems.isEmpty && provider.orderItems.isEmpty));
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: const BoxDecoration(
@@ -131,9 +135,10 @@ class CartStickyFooter extends StatelessWidget {
 
             // Create Bill > / Create Order > Button
             ElevatedButton(
-              onPressed: saving ? null : onCreateBillOrOrder,
+              onPressed: (saving || isEmptyCart) ? null : onCreateBillOrOrder,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF006837),
+                disabledBackgroundColor: const Color(0xFFCBD5E1),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -170,3 +175,4 @@ class CartStickyFooter extends StatelessWidget {
     );
   }
 }
+

@@ -165,3 +165,4 @@ class ChargerIllustration extends StatelessWidget {
     );
   }
 }
+

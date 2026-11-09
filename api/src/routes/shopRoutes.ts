@@ -10,6 +10,8 @@ import {
   switchShop,
   getShopPortalSettings,
   updateShopPortalSettings,
+  getShopSettings,
+  updateShopSettings,
 } from "../controllers/shopController";
 
 const router = Router();
@@ -21,6 +23,8 @@ router.post("/", requireOwner, createShop);
 router.post("/switch", switchShop);
 router.get("/:shopId", getShop);
 router.put("/:shopId", requireOwner, updateShop);
+router.get("/:shopId/settings", getShopSettings);
+router.put("/:shopId/settings", requireOwner, updateShopSettings);
 router.get("/:shopId/portal-settings", getShopPortalSettings);
 router.put("/:shopId/portal-settings", requireOwner, updateShopPortalSettings);
 router.patch("/:shopId/status", requireOwner, toggleShopStatus);

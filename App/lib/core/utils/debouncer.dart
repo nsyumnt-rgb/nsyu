@@ -19,3 +19,4 @@ class Debouncer {
     _timer = null;
   }
 }
+

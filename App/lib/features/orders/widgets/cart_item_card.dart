@@ -270,73 +270,38 @@ class _CartItemCardState extends State<CartItemCard> {
                     Container(
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: const Color(0xFFCBD5E1)),
                       ),
-                      child: Row(
-                        children: [
-                          InkWell(
-                            onTap: () {
-                              if (isOrder) {
-                                provider.changeOrderQty(it.code, -1);
-                              } else {
-                                provider.changeQty(it.code, -1);
-                              }
-                            },
-                            borderRadius:
-                                const BorderRadius.horizontal(left: Radius.circular(7)),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              child: Icon(Icons.remove, size: 15, color: Color(0xFF334155)),
-                            ),
-                          ),
-                          Expanded(
-                            child: Container(
-                              color: Colors.white,
-                              child: TextField(
-                                controller: _qtyCtrl,
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A),
-                                ),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 8),
-                                ),
-                                onChanged: (val) {
-                                  final q = int.tryParse(val.trim());
-                                  if (q != null && q > 0) {
-                                    if (isOrder) {
-                                      provider.updateOrderItemQty(it.code, q);
-                                    } else {
-                                      provider.updateItemQty(it.code, q);
-                                    }
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () {
-                              if (isOrder) {
-                                provider.changeOrderQty(it.code, 1);
-                              } else {
-                                provider.changeQty(it.code, 1);
-                              }
-                            },
-                            borderRadius:
-                                const BorderRadius.horizontal(right: Radius.circular(7)),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                              child: Icon(Icons.add, size: 15, color: Color(0xFF334155)),
-                            ),
-                          ),
-                        ],
+                      alignment: Alignment.center,
+                      child: TextField(
+                        controller: _qtyCtrl,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0F172A),
+                        ),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        ),
+                        onChanged: (val) {
+                          final trimmed = val.trim();
+                          if (trimmed.isEmpty) return;
+                          final q = int.tryParse(trimmed);
+                          if (q != null && q >= 1) {
+                            if (isOrder) {
+                              provider.updateOrderItemQty(it.code, q);
+                            } else {
+                              provider.updateItemQty(it.code, q);
+                            }
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -380,3 +345,4 @@ class _CartItemCardState extends State<CartItemCard> {
     );
   }
 }
+

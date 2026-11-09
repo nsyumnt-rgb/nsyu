@@ -12,9 +12,10 @@ interface ShopAttributes {
   logo?: string;
   status: "active" | "inactive" | "suspended";
   reference_code?: string | null;
+  settings?: Record<string, any>;
 }
 
-interface ShopCreationAttributes extends Optional<ShopAttributes, "id" | "status" | "reference_code"> {}
+interface ShopCreationAttributes extends Optional<ShopAttributes, "id" | "status" | "reference_code" | "settings"> {}
 
 export class Shop
   extends Model<ShopAttributes, ShopCreationAttributes>
@@ -30,6 +31,7 @@ export class Shop
   public logo?: string;
   public status!: "active" | "inactive" | "suspended";
   public reference_code?: string | null;
+  public settings?: Record<string, any>;
 }
 
 Shop.init(
@@ -44,6 +46,7 @@ Shop.init(
     logo: { type: DataTypes.STRING(255) },
     status: { type: DataTypes.ENUM("active", "inactive", "suspended"), defaultValue: "active" },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
+    settings: { type: DataTypes.JSONB, defaultValue: {} },
   },
   {
     sequelize,

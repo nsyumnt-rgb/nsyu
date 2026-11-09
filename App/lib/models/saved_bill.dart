@@ -32,6 +32,8 @@ class SavedBillItem {
   final String desc;
   final int qty;
   final double price;
+  final double discountPercent;
+  final double taxPercent;
 
   SavedBillItem({
     this.productId,
@@ -39,6 +41,8 @@ class SavedBillItem {
     required this.desc,
     required this.qty,
     required this.price,
+    this.discountPercent = 0.0,
+    this.taxPercent = 0.0,
   });
 
   double get amount => price * qty;
@@ -49,6 +53,8 @@ class SavedBillItem {
         'desc': desc,
         'qty': qty,
         'price': price,
+        'discountPercent': discountPercent,
+        'taxPercent': taxPercent,
       };
 
   factory SavedBillItem.fromJson(Map<String, dynamic> j) => SavedBillItem(
@@ -57,6 +63,8 @@ class SavedBillItem {
         desc: j['desc'] ?? '',
         qty: (j['qty'] ?? 0) as int,
         price: (j['price'] ?? 0).toDouble(),
+        discountPercent: (j['discountPercent'] ?? 0).toDouble(),
+        taxPercent: (j['taxPercent'] ?? 0).toDouble(),
       );
 }
 

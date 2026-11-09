@@ -106,7 +106,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       return true;
     }).toList();
 
-    final totalOutstanding = bills.totalPartyDue > 0 ? bills.totalPartyDue : 153058.0;
+    final totalOutstanding = bills.totalPartyDue;
     final auth = context.watch<AuthProvider>();
     final businessName = auth.shopName.isNotEmpty ? auth.shopName : 'NSYU';
     final businessPhone = auth.shopPhone.isNotEmpty ? auth.shopPhone : (auth.registeredMobile ?? '');

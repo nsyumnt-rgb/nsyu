@@ -23,7 +23,6 @@ class OrderCartScreen extends StatefulWidget {
 }
 
 class _OrderCartScreenState extends State<OrderCartScreen> {
-  final TextEditingController _searchCtrl = TextEditingController();
   final TextEditingController _notesCtrl = TextEditingController();
   final TextEditingController _discountValCtrl = TextEditingController(text: '0.00');
 
@@ -34,7 +33,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
     _notesCtrl.dispose();
     _discountValCtrl.dispose();
     super.dispose();
@@ -73,99 +71,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     if (picked != null) {
       provider.selectCustomer(picked);
     }
-  }
-
-  void _showAddProductDialog(BuildContext context, CatalogProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          final query = _searchCtrl.text.toLowerCase().trim();
-          final allProducts = provider.products;
-          final filtered = query.isEmpty
-              ? allProducts
-              : allProducts
-                  .where((p) =>
-                      p.desc.toLowerCase().contains(query) ||
-                      p.code.toLowerCase().contains(query) ||
-                      p.category.toLowerCase().contains(query))
-                  .toList();
-
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.75,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Add Product to Cart',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _searchCtrl,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: 'Search product...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  onChanged: (_) => setSheetState(() {}),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: filtered.isEmpty
-                      ? const Center(child: Text('No products found'))
-                      : ListView.separated(
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (c, idx) {
-                            final p = filtered[idx];
-                            final isAdded = provider.isItemInCart(p.code);
-                            return ListTile(
-                              title: Text(
-                                p.desc,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text('${p.code} • In Stock: ${p.stock}'),
-                              trailing: isAdded
-                                  ? const Icon(Icons.check_circle, color: Color(0xFF16A34A))
-                                  : ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF006837),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                                      ),
-                                      onPressed: () {
-                                        provider.addToOrder(p, qty: 1);
-                                        setSheetState(() {});
-                                      },
-                                      child: const Text('Add'),
-                                    ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
   }
 
   Future<void> _createBillOrOrder(
@@ -307,81 +212,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAddProductAndSearchRow(BuildContext context, CatalogProvider provider) {
-    return Row(
-      children: [
-        // + Add Product Button
-        InkWell(
-          onTap: () => _showAddProductDialog(context, provider),
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: const Row(
-              children: [
-                Icon(Icons.add_circle, color: Color(0xFF006837), size: 22),
-                SizedBox(width: 6),
-                Text(
-                  'Add Product',
-                  style: TextStyle(
-                    color: Color(0xFF006837),
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-
-        // Search Input with Barcode Scanner
-        Expanded(
-          child: Container(
-            height: 38,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _searchCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Search and add more products to cart',
-                      hintStyle: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 8),
-                    ),
-                    onSubmitted: (query) {
-                      if (query.isNotEmpty) {
-                        _showAddProductDialog(context, provider);
-                      }
-                    },
-                  ),
-                ),
-                InkWell(
-                  onTap: () => _showAddProductDialog(context, provider),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF006837)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -651,7 +481,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                           size: 36, color: Color(0xFF94A3B8)),
                       SizedBox(height: 8),
                       Text(
-                        'Cart is empty. Tap "+ Add Product" below.',
+                        'Cart is empty. Add products from the Catalog.',
                         style: TextStyle(
                           color: Color(0xFF64748B),
                           fontSize: 13,
@@ -678,13 +508,9 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                   );
                 },
               ),
-            const SizedBox(height: 10),
-
-            // 3. Add Product & Search Bar
-            _buildAddProductAndSearchRow(context, provider),
             const SizedBox(height: 14),
 
-            // 4. Terms & Conditions & Financial Summary
+            // Terms & Conditions & Financial Summary
             CartFinancialSummary(
               subtotal: subtotal,
               discountAmount: discountAmount,

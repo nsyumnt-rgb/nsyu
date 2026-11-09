@@ -99,6 +99,25 @@ export interface EmployeeShopAssignment {
   role?: Role;
 }
 
+export interface ShopSettings {
+  currency?: string;
+  timezone?: string;
+  defaultMargin?: number;
+  pricesIncludeTax?: boolean;
+  defaultGstRate?: number;
+  invoicePrefix?: string;
+  nextInvoiceNumber?: number;
+  invoiceTerms?: string;
+  allowNegativeStock?: boolean;
+  enableCash?: boolean;
+  enableUpi?: boolean;
+  enableBank?: boolean;
+  enableCredit?: boolean;
+  allowStaffDiscount?: boolean;
+  maxStaffDiscountPercent?: number;
+  [key: string]: any;
+}
+
 export interface Shop {
   id: number;
   owner_id: number;
@@ -111,6 +130,7 @@ export interface Shop {
   status: "active" | "inactive";
   roleId?: number;
   roleName?: string;
+  settings?: ShopSettings;
 }
 
 export interface Role {

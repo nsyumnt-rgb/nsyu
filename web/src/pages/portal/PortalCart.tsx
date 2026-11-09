@@ -201,28 +201,24 @@ export default function PortalCart() {
               </div>
             </div>
 
-            {/* Right: Quantity Stepper & Remove Action */}
+            {/* Right: Quantity Direct Input & Remove Action */}
             <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
-              <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 shadow-xs">
-                <button
-                  type="button"
-                  onClick={() => handleUpdateQty(item.productId, item.quantity - 1)}
-                  className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-sm transition"
-                  title="Decrease"
-                >
-                  -
-                </button>
-                <span className="w-9 text-center text-xs sm:text-sm font-bold text-gray-900">
-                  {item.quantity}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleUpdateQty(item.productId, item.quantity + 1)}
-                  className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-200 font-bold text-sm transition"
-                  title="Increase"
-                >
-                  +
-                </button>
+              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1 shadow-xs">
+                <span className="text-[11px] text-gray-500 font-semibold">Qty</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={item.quantity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val) && val >= 1) {
+                      handleUpdateQty(item.productId, val);
+                    }
+                  }}
+                  className="w-12 text-center text-xs sm:text-sm font-bold text-gray-900 bg-white border border-gray-300 rounded-lg py-0.5 focus:outline-none focus:border-blue-500"
+                  title="Direct Quantity"
+                />
               </div>
 
               <button

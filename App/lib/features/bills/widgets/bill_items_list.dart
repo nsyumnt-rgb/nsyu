@@ -119,44 +119,37 @@ class BillItemsList extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      height: 28,
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      height: 32,
+                      width: 64,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(color: const Color(0xFFCBD5E1)),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          InkWell(
-                            onTap: () => provider.changeQty(item.code, -1),
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 6),
-                              child: Icon(Icons.remove, size: 14, color: Color(0xFF475569)),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              '${item.qty}',
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () {
-                              provider.changeQty(item.code, 1);
-                            },
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 6),
-                              child: Icon(Icons.add, size: 14, color: Color(0xFF475569)),
-                            ),
-                          ),
-                        ],
+                      alignment: Alignment.center,
+                      child: TextFormField(
+                        initialValue: '${item.qty}',
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding:
+                              EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        ),
+                        onChanged: (val) {
+                          final trimmed = val.trim();
+                          if (trimmed.isEmpty) return;
+                          final q = int.tryParse(trimmed);
+                          if (q != null && q >= 1) {
+                            provider.updateItemQty(item.code, q);
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -192,3 +185,4 @@ class BillItemsList extends StatelessWidget {
     );
   }
 }
+

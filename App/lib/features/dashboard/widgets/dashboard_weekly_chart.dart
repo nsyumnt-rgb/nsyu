@@ -98,3 +98,4 @@ class DashboardWeeklyChart extends StatelessWidget {
     );
   }
 }
+

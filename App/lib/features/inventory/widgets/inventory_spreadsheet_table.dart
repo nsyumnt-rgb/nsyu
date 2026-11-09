@@ -277,3 +277,4 @@ class InventorySpreadsheetTable extends StatelessWidget {
     );
   }
 }
+

@@ -32,7 +32,9 @@ export async function nextInvoiceNumber(params: {
   await counter.save({ transaction: t });
 
   const shop = await Shop.findByPk(shopId, { transaction: t });
-  const prefix = (shop?.code || "SHOP").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const rawPrefix = (shop?.settings?.invoicePrefix || "INV-").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  const codePrefix = (shop?.code || "SHOP").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  return `INV-${prefix}-${String(counter.last_number).padStart(6, "0")}`;
+  const cleanPrefix = rawPrefix.endsWith("-") ? rawPrefix : `${rawPrefix}-`;
+  return `${cleanPrefix}${codePrefix}-${String(counter.last_number).padStart(6, "0")}`;
 }

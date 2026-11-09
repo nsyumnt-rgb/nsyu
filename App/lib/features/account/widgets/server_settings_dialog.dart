@@ -223,3 +223,4 @@ class _ServerSettingsDialogState extends State<ServerSettingsDialog> {
     );
   }
 }
+

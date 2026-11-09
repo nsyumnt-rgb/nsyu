@@ -347,6 +347,26 @@ function SettingsInner() {
 
   useEffect(() => {
     setSettings(getInitialState());
+    if (activeShop?.id) {
+      api.get(`/shops/${activeShop.id}/settings`).then((res) => {
+        if (res.data?.data) {
+          const s = res.data.data;
+          setSettings((prev) => ({
+            ...prev,
+            pricesIncludeTax: s.pricesIncludeTax ?? prev.pricesIncludeTax,
+            defaultGstRate: s.defaultGstRate ?? prev.defaultGstRate,
+            invoicePrefix: s.invoicePrefix ?? prev.invoicePrefix,
+            allowNegativeStock: s.allowNegativeStock ?? prev.allowNegativeStock,
+            enableCash: s.enableCash ?? prev.enableCash,
+            enableUpi: s.enableUpi ?? prev.enableUpi,
+            enableCustomerCredit: s.enableCredit ?? prev.enableCustomerCredit,
+            invoiceTermsAndConditions: s.invoiceTerms ?? prev.invoiceTermsAndConditions,
+            timezone: s.timezone ?? prev.timezone,
+            currency: s.currency ?? prev.currency,
+          }));
+        }
+      }).catch(() => {});
+    }
   }, [activeShop, owner, employee, accountType]);
 
   const handleTextChange = (field: keyof FullSettingsState, value: any) => {
@@ -391,6 +411,26 @@ function SettingsInner() {
             address: settings.address || settings.branchAddress,
             logo: settings.businessLogo,
             code: settings.shopCode,
+            settings: {
+              currency: settings.currency,
+              timezone: settings.timezone,
+              defaultMargin: 20,
+              pricesIncludeTax: settings.pricesIncludeTax,
+              defaultGstRate: settings.defaultGstRate,
+              gstin: settings.gstin,
+              invoicePrefix: settings.invoicePrefix,
+              nextInvoiceNumber: settings.nextInvoiceNumber,
+              allowNegativeStock: settings.allowNegativeStock,
+              autoDeductStockOnBill: settings.autoDeductStockOnBill,
+              enableCash: settings.enableCash,
+              enableUpi: settings.enableUpi,
+              enableBank: settings.enableNetBanking,
+              enableCredit: settings.enableCustomerCredit,
+              allowStaffDiscount: settings.allowStaffDiscount,
+              maxStaffDiscountPercent: settings.maxStaffDiscountPercent,
+              invoiceTerms: settings.invoiceTermsAndConditions,
+              lowStockAlert: settings.lowStockAlert,
+            },
           });
           if (res.data?.data) {
             setActiveShop(res.data.data);

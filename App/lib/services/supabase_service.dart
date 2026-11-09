@@ -391,11 +391,12 @@ class SupabaseService {
         'name': i.desc,
         'quantity': i.qty,
         'rate': i.price,
-        'discountPercent': 0,
-        'taxPercent': 0,
+        'discountPercent': i.discountPercent,
+        'taxPercent': i.taxPercent,
       };
     }).toList();
 
+    final clientRequestId = 'mob-${DateTime.now().millisecondsSinceEpoch}-${bill.billNumber}';
     final url = Uri.parse('${SupabaseConfig.apiUrl}/sales');
     final payload = <String, dynamic>{
       'shopId': SupabaseConfig.shopId,
@@ -403,7 +404,8 @@ class SupabaseService {
       'billDiscount': billDiscount,
       'paymentMethod': paymentMethod.toLowerCase(),
       'paidAmount': bill.paidAmount,
-      'notes': 'Created from Flutter App',
+      'notes': 'Created from Flutter App [req:$clientRequestId]',
+      'clientRequestId': clientRequestId,
     };
 
     if (resolvedCustomerId != null && resolvedCustomerId > 0) {
@@ -706,13 +708,7 @@ class SupabaseService {
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body)['data'] ?? {};
-        return AppSettings(
-          company: data['name']?.toString() ?? 'NSYU Mobile Accessories',
-          phone: data['phone']?.toString() ?? '',
-          email: data['email']?.toString() ?? '',
-          logo: data['logo']?.toString() ?? '',
-          terms: 'Thank you for your business! Goods once sold cannot be returned.',
-        );
+        return AppSettings.fromJson(data);
       }
     } catch (_) {}
     return AppSettings();

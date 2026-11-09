@@ -418,3 +418,4 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
     }
   }
 }
+

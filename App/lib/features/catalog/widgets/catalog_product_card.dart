@@ -646,3 +646,4 @@ class ProductThumbnail extends StatelessWidget {
     );
   }
 }
+

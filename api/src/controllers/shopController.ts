@@ -106,12 +106,15 @@ export async function updateShop(req: Request, res: Response) {
     return res.status(404).json({ success: false, message: "Shop not found" });
   }
 
-  const { name, phone, email, address, logo, code } = req.body;
+  const { name, phone, email, address, logo, code, settings } = req.body;
   if (name !== undefined) shop.name = String(name).trim();
   if (phone !== undefined) shop.phone = phone;
   if (email !== undefined) shop.email = email;
   if (address !== undefined) shop.address = address;
   if (logo !== undefined) shop.logo = logo;
+  if (settings !== undefined && typeof settings === "object") {
+    shop.settings = { ...(shop.settings || {}), ...settings };
+  }
 
   if (code !== undefined && String(code).trim().toUpperCase() !== shop.code) {
     const newCode = String(code).trim().toUpperCase();
@@ -327,4 +330,63 @@ export async function updateShopPortalSettings(req: Request, res: Response) {
     return res.status(500).json({ success: false, message: err.message || "Failed to update portal settings" });
   }
 }
+
+export async function getShopSettings(req: Request, res: Response) {
+  try {
+    const shopId = Number(req.params.shopId || req.params.id || req.auth!.shopId);
+    const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } });
+    if (!shop) return res.status(404).json({ success: false, message: "Shop not found" });
+
+    const settings = {
+      currency: "INR (₹)",
+      timezone: "Asia/Kolkata",
+      defaultMargin: 20,
+      pricesIncludeTax: false,
+      defaultGstRate: 18,
+      gstin: "",
+      invoicePrefix: "INV-",
+      nextInvoiceNumber: 1,
+      allowNegativeStock: true,
+      autoDeductStockOnBill: true,
+      enableCash: true,
+      enableUpi: true,
+      enableBank: true,
+      enableCredit: true,
+      allowStaffDiscount: true,
+      maxStaffDiscountPercent: 10,
+      invoiceTerms: "1. Warranty as per manufacturer terms.\n2. Goods once sold are subject to standard return policy.\n3. Original invoice required for all claims.",
+      ...(shop.settings || {}),
+    };
+
+    return res.json({ success: true, data: settings });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to load shop settings" });
+  }
+}
+
+export async function updateShopSettings(req: Request, res: Response) {
+  try {
+    const shopId = Number(req.params.shopId || req.params.id || req.auth!.shopId);
+    const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } });
+    if (!shop) return res.status(404).json({ success: false, message: "Shop not found" });
+
+    const incoming = req.body.settings || req.body;
+    shop.settings = { ...(shop.settings || {}), ...incoming };
+    await shop.save();
+
+    await logAudit({
+      req,
+      module: "shops",
+      action: "update_settings",
+      entityType: "Shop",
+      entityId: shop.id,
+      details: { shopId, updatedKeys: Object.keys(incoming) },
+    });
+
+    return res.json({ success: true, message: "Shop settings updated successfully", data: shop.settings });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to update shop settings" });
+  }
+}
+
 

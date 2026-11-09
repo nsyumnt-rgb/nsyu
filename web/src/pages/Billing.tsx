@@ -105,26 +105,11 @@ function BillingInner() {
     });
   }
 
-  function updateQuantity(idx: number, delta: number) {
-    const item = cart[idx];
-    const newQty = item.quantity + delta;
-    if (newQty <= 0) {
-      setCart(cart.filter((_, i) => i !== idx));
-    } else {
-      const updated = [...cart];
-      updated[idx].quantity = newQty;
-      setCart(updated);
-    }
-  }
-
   function updateQuantityDirect(idx: number, qty: number) {
-    if (qty <= 0) {
-      setCart(cart.filter((_, i) => i !== idx));
-    } else {
-      const updated = [...cart];
-      updated[idx].quantity = qty;
-      setCart(updated);
-    }
+    const validQty = Math.max(1, Math.floor(qty));
+    const updated = [...cart];
+    updated[idx].quantity = validQty;
+    setCart(updated);
   }
 
   function updateUnitPrice(idx: number, price: number) {
@@ -133,8 +118,37 @@ function BillingInner() {
     setCart(updated);
   }
 
+  const pricesIncludeTax = Boolean(activeShop?.settings?.pricesIncludeTax);
+  const defaultGstRate = Number(activeShop?.settings?.defaultGstRate) || 18;
+
   const rawSubtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const grandTotal = Math.max(0, rawSubtotal - discountAmount);
+  const discount = Math.min(rawSubtotal, Number(discountAmount) || 0);
+
+  let totalTax = 0;
+  let taxableSubtotal = 0;
+  let grandTotal = 0;
+
+  if (pricesIncludeTax) {
+    grandTotal = Math.max(0, rawSubtotal - discount);
+    totalTax = cart.reduce((sum, item) => {
+      const lineTotal = item.quantity * item.unitPrice;
+      const rate = Number(item.product.tax_percent) || defaultGstRate || 0;
+      if (rate <= 0) return sum;
+      const base = lineTotal / (1 + rate / 100);
+      return sum + (lineTotal - base);
+    }, 0);
+    taxableSubtotal = grandTotal - totalTax;
+  } else {
+    taxableSubtotal = Math.max(0, rawSubtotal - discount);
+    totalTax = cart.reduce((sum, item) => {
+      const lineSubtotal = item.quantity * item.unitPrice;
+      const proportion = rawSubtotal > 0 ? lineSubtotal / rawSubtotal : 0;
+      const lineTaxable = lineSubtotal - (discount * proportion);
+      const rate = Number(item.product.tax_percent) || defaultGstRate || 0;
+      return sum + (lineTaxable * rate / 100);
+    }, 0);
+    grandTotal = taxableSubtotal + totalTax;
+  }
 
   async function handleQuickAddCustomer(e: React.FormEvent) {
     e.preventDefault();
@@ -463,30 +477,21 @@ function BillingInner() {
                         />
                       </div>
 
-                      {/* Quantity Input with Stepper */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(idx, -1)}
-                          className="w-5 h-5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
-                        >
-                          -
-                        </button>
+                      {/* Quantity Input - Single Direct Field (No Stepper) */}
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-slate-400 font-semibold">Qty</span>
                         <input
                           type="number"
                           min="1"
+                          step="1"
                           value={item.quantity}
-                          onChange={(e) => updateQuantityDirect(idx, parseInt(e.target.value) || 1)}
-                          className="w-10 px-1 py-0.5 text-xs font-bold text-center rounded border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-400 focus:outline-none"
-                          title="Edit Quantity"
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            updateQuantityDirect(idx, isNaN(val) || val < 1 ? 1 : val);
+                          }}
+                          className="w-12 px-1 py-0.5 text-xs font-bold text-center rounded border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:outline-none"
+                          title="Enter Quantity"
                         />
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(idx, 1)}
-                          className="w-5 h-5 rounded bg-slate-100 border border-slate-200 hover:bg-slate-200 flex items-center justify-center font-bold text-slate-700 cursor-pointer"
-                        >
-                          +
-                        </button>
                       </div>
 
                       {/* Item Total */}
@@ -499,7 +504,7 @@ function BillingInner() {
               )}
             </div>
 
-            {/* Calculations Breakdown */}
+            {/* Calculations Breakdown Following Shop Settings */}
             <div className="space-y-2 border-t border-slate-100 pt-3 text-xs">
               <div className="flex justify-between text-slate-500">
                 <span>Subtotal:</span>
@@ -515,6 +520,12 @@ function BillingInner() {
                   value={discountAmount}
                   onChange={(e) => setDiscountAmount(Number(e.target.value) || 0)}
                 />
+              </div>
+              <div className="flex justify-between text-slate-500">
+                <span>
+                  GST {pricesIncludeTax ? "(Included)" : "(Added)"}:
+                </span>
+                <span className="font-mono font-medium">₹{totalTax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-bold text-sm text-slate-900 border-t border-slate-100 pt-2">
                 <span>Grand Total:</span>
