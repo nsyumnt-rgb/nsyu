@@ -660,9 +660,8 @@ function ProductsInner() {
             <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
               {totalCount.toLocaleString()}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 12%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              Catalog products
             </div>
           </div>
         </div>
@@ -681,9 +680,8 @@ function ProductsInner() {
             <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
               {activeCount.toLocaleString()}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 10%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              Available for sale
             </div>
           </div>
         </div>
@@ -702,9 +700,8 @@ function ProductsInner() {
             <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
               {lowStockCount.toLocaleString()}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 8%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              At/below threshold
             </div>
           </div>
         </div>
@@ -723,9 +720,8 @@ function ProductsInner() {
             <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
               {outOfStockCount.toLocaleString()}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-              <span>↑ 3%</span>
-              <span className="text-slate-400">vs last month</span>
+            <div className="text-[11px] font-medium text-slate-400 mt-1">
+              Zero units
             </div>
           </div>
         </div>

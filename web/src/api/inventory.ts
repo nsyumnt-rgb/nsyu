@@ -25,6 +25,32 @@ export function getTransfer(transferId: number | string) {
   return api.get<ApiEnvelope<StockTransfer & { transactions?: any[] }>>(`/inventory/transfers/${transferId}`);
 }
 
+export function listTransfers(params?: {
+  status?: string;
+  shopId?: number | string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+}) {
+  return api.get<ApiEnvelope<{
+    transfers: any[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    metrics: {
+      totalTransfers: number;
+      totalItemsTransferred: number;
+      pendingTransfers: number;
+      completedTransfers: number;
+    };
+    monthlyTrends: { month: string; transfers: number; items: number }[];
+    recentTransfers: any[];
+  }>>("/inventory/transfers", { params });
+}
+
 export function getMovement(movementId: number | string) {
   return api.get<ApiEnvelope<InventoryTransaction>>(`/inventory/movement/${movementId}`);
 }

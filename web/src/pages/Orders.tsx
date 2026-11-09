@@ -381,9 +381,8 @@ export default function Orders() {
                   <div className="text-2xl font-extrabold text-slate-900">
                     {stats.totalOrders.toLocaleString()}
                   </div>
-                  <div className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-0.5">
-                    <span>↑ 12%</span>
-                    <span className="text-slate-400 font-normal">vs last month</span>
+                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    All-time orders
                   </div>
                 </div>
               </div>
@@ -398,9 +397,8 @@ export default function Orders() {
                 </div>
                 <div className="mt-2">
                   <div className="text-2xl font-extrabold text-slate-900">{stats.pendingOrders}</div>
-                  <div className="text-[11px] text-red-500 font-semibold mt-0.5 flex items-center gap-0.5">
-                    <span>↑ 8%</span>
-                    <span className="text-slate-400 font-normal">vs last month</span>
+                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    Needs action
                   </div>
                 </div>
               </div>
@@ -415,9 +413,8 @@ export default function Orders() {
                 </div>
                 <div className="mt-2">
                   <div className="text-2xl font-extrabold text-slate-900">{stats.processingOrders}</div>
-                  <div className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-0.5">
-                    <span>↑ 15%</span>
-                    <span className="text-slate-400 font-normal">vs last month</span>
+                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    In fulfillment
                   </div>
                 </div>
               </div>
@@ -434,9 +431,8 @@ export default function Orders() {
                   <div className="text-2xl font-extrabold text-slate-900">
                     {stats.deliveredOrders.toLocaleString()}
                   </div>
-                  <div className="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-0.5">
-                    <span>↑ 18%</span>
-                    <span className="text-slate-400 font-normal">vs last month</span>
+                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    Successfully delivered
                   </div>
                 </div>
               </div>
@@ -451,9 +447,8 @@ export default function Orders() {
                 </div>
                 <div className="mt-2">
                   <div className="text-2xl font-extrabold text-slate-900">{stats.cancelledOrders}</div>
-                  <div className="text-[11px] text-red-500 font-semibold mt-0.5 flex items-center gap-0.5">
-                    <span>↓ 5%</span>
-                    <span className="text-slate-400 font-normal">vs last month</span>
+                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                    Voided orders
                   </div>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import {
   getInventoryHistory,
   recordMovement,
   transferStock,
+  listTransfers,
 } from "../api/inventory";
 import { listProducts } from "../api/products";
 import { listShops } from "../api/shops";
@@ -191,6 +192,20 @@ function InventoryInner() {
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
 
+  // Real Database Transfers State
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [transferMetrics, setTransferMetrics] = useState({
+    totalTransfers: 0,
+    totalItemsTransferred: 0,
+    pendingTransfers: 0,
+    completedTransfers: 0,
+  });
+  const [transferTrends, setTransferTrends] = useState<{ month: string; transfers: number; items: number }[]>([]);
+  const [recentTransfers, setRecentTransfers] = useState<any[]>([]);
+  const [transferSearch, setTransferSearch] = useState("");
+  const [transferShopFilter, setTransferShopFilter] = useState("All");
+  const [transferStatusFilter, setTransferStatusFilter] = useState("All");
+
   // Load Data
   function loadAll() {
     setLoading(true);
@@ -199,13 +214,22 @@ function InventoryInner() {
       listShops(),
       listCategories(),
       getInventoryHistory({ limit: 100 }),
+      listTransfers().catch(() => ({ data: { data: { transfers: [], metrics: { totalTransfers: 0, totalItemsTransferred: 0, pendingTransfers: 0, completedTransfers: 0 }, monthlyTrends: [], recentTransfers: [] } } })),
     ])
-      .then(([pRes, sRes, cRes, hRes]) => {
+      .then(([pRes, sRes, cRes, hRes, tRes]) => {
         const prodList = pRes.data.data ?? [];
         setProducts(prodList);
         setShops(sRes.data.data ?? []);
         setCategories(cRes.data.data ?? []);
         setHistory(hRes.data.data ?? []);
+
+        const tData = tRes?.data?.data;
+        if (tData) {
+          setTransfers(tData.transfers || []);
+          if (tData.metrics) setTransferMetrics(tData.metrics);
+          if (tData.monthlyTrends) setTransferTrends(tData.monthlyTrends);
+          if (tData.recentTransfers) setRecentTransfers(tData.recentTransfers);
+        }
 
         if (prodList.length > 0 && !selectedProduct) {
           setSelectedProduct(prodList[0]);
@@ -283,6 +307,86 @@ function InventoryInner() {
     (p) => (p.stocks?.[0]?.current_stock ?? 0) <= p.min_stock && (p.stocks?.[0]?.current_stock ?? 0) > 0
   ).length;
   const outOfStockCount = products.filter((p) => (p.stocks?.[0]?.current_stock ?? 0) <= 0).length;
+
+  // Filtered Stock Transfers from real database records
+  const filteredTransfers = useMemo(() => {
+    return transfers.filter((t) => {
+      if (transferStatusFilter !== "All" && t.status?.toLowerCase() !== transferStatusFilter.toLowerCase()) {
+        return false;
+      }
+      if (transferShopFilter !== "All") {
+        const matchShop = t.fromShop?.name === transferShopFilter || t.toShop?.name === transferShopFilter;
+        if (!matchShop) return false;
+      }
+      if (transferSearch.trim()) {
+        const s = transferSearch.toLowerCase().trim();
+        const noMatch = t.transfer_no?.toLowerCase().includes(s);
+        const notesMatch = t.notes?.toLowerCase().includes(s);
+        const fromMatch = t.fromShop?.name?.toLowerCase().includes(s);
+        const toMatch = t.toShop?.name?.toLowerCase().includes(s);
+        const prodMatch = t.product?.name?.toLowerCase().includes(s);
+        if (!noMatch && !notesMatch && !fromMatch && !toMatch && !prodMatch) return false;
+      }
+      return true;
+    });
+  }, [transfers, transferStatusFilter, transferShopFilter, transferSearch]);
+
+  // Real Stock Movement Metrics from inventory transaction ledger
+  const movementMetrics = useMemo(() => {
+    let inward = 0;
+    let outward = 0;
+    const today = new Date().toDateString();
+    let todayCount = 0;
+    history.forEach((m: any) => {
+      const qty = Math.abs(Number(m.quantity || 0));
+      const type = (m.movement_type || m.type || "").toLowerCase();
+      const isInc = ["opening", "purchase", "customer_return", "transfer_in"].includes(type);
+      if (isInc) inward += qty;
+      else outward += qty;
+      if (new Date(m.created_at || m.createdAt).toDateString() === today) {
+        todayCount++;
+      }
+    });
+    return {
+      total: history.length,
+      inward,
+      outward,
+      net: inward - outward,
+      today: todayCount,
+    };
+  }, [history]);
+
+  // Real Category Distribution computed from products
+  const categoryStockBreakdown = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach((p) => {
+      const catName = p.category?.name || "Uncategorized";
+      const stock = (p as any).stocks?.[0]?.current_stock ?? (p as any).current_stock ?? 0;
+      map[catName] = (map[catName] || 0) + stock;
+    });
+    const total = Object.values(map).reduce((sum, v) => sum + v, 0);
+    return Object.entries(map).map(([name, count]) => ({
+      name,
+      count,
+      pct: total > 0 ? Math.round((count / total) * 100) : 0,
+    })).sort((a, b) => b.count - a.count);
+  }, [products]);
+
+  // Real Shop Distribution computed from shops and products
+  const shopStockBreakdown = useMemo(() => {
+    return shops.map((s) => {
+      const totalUnits = products.reduce((sum, p) => {
+        const matchStock = (p as any).stocks?.find((st: any) => st.shop_id === s.id);
+        return sum + (matchStock?.current_stock ?? (s.id === shopId ? ((p as any).stocks?.[0]?.current_stock ?? (p as any).current_stock ?? 0) : 0));
+      }, 0);
+      return {
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        units: totalUnits,
+      };
+    });
+  }, [shops, products, shopId]);
 
   // Toggle selection
   function handleSelectRow(id: number) {
@@ -447,7 +551,7 @@ function InventoryInner() {
       {/* 2. TOP METRIC CARDS                                            */}
       {/* ============================================================== */}
       {activeTab === "Stock Transfer" ? (
-        // 4 KPI Cards for Stock Transfer
+        // 4 KPI Cards for Stock Transfer (100% Real Database Metrics)
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -460,8 +564,8 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Total Transfers</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">186</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 12% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{transferMetrics.totalTransfers.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">All-time transfer records</div>
             </div>
           </div>
 
@@ -475,8 +579,8 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Total Items Transferred</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">2,846</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 18% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{transferMetrics.totalItemsTransferred.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Units moved between shops</div>
             </div>
           </div>
 
@@ -491,8 +595,8 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Pending Transfers</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">12</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 50% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{transferMetrics.pendingTransfers.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Awaiting shop receipt</div>
             </div>
           </div>
 
@@ -505,13 +609,13 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Completed Transfers</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">168</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 10% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{transferMetrics.completedTransfers.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Successfully fulfilled</div>
             </div>
           </div>
         </div>
       ) : activeTab === "Stock Movements" ? (
-        // 5 KPI Cards for Stock Movements
+        // 5 KPI Cards for Stock Movements (100% Real Database Metrics)
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -522,8 +626,8 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Total Movements</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">12,486</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 12% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{movementMetrics.total.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Ledger transactions</div>
             </div>
           </div>
 
@@ -536,8 +640,8 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Inward Qty</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">28,560</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 8% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{movementMetrics.inward.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Units received into stock</div>
             </div>
           </div>
 
@@ -550,8 +654,8 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Outward Qty</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">20,134</div>
-              <div className="text-[11px] font-medium text-rose-500 mt-1">↑ 15% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{movementMetrics.outward.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Units issued or sold</div>
             </div>
           </div>
 
@@ -565,8 +669,8 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Net Stock Change</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">8,426</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 5% vs last month</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{movementMetrics.net.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Inward vs outward delta</div>
             </div>
           </div>
 
@@ -579,13 +683,13 @@ function InventoryInner() {
             </div>
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Today's Movements</div>
-              <div className="text-[20px] font-bold text-slate-800 mt-1">186</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 18% vs yesterday</div>
+              <div className="text-[20px] font-bold text-slate-800 mt-1">{movementMetrics.today.toLocaleString()}</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Movements logged today</div>
             </div>
           </div>
         </div>
       ) : (
-        // Standard 5 Metric Cards
+        // Standard 5 Metric Cards (100% Real Database Metrics)
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
@@ -597,7 +701,7 @@ function InventoryInner() {
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Total Products</div>
               <div className="text-[20px] font-bold text-slate-800 mt-1">{totalProductsCount.toLocaleString()}</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 12% vs last month</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Catalog items</div>
             </div>
           </div>
 
@@ -612,7 +716,7 @@ function InventoryInner() {
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Current Stock Qty</div>
               <div className="text-[20px] font-bold text-slate-800 mt-1">{totalStockQty.toLocaleString()}</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 8% vs last month</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Total units in stock</div>
             </div>
           </div>
 
@@ -627,7 +731,7 @@ function InventoryInner() {
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Stock Value</div>
               <div className="text-[20px] font-bold text-slate-800 mt-1">{formatINR(stockValue)}</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 5% vs last month</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Cost valuation</div>
             </div>
           </div>
 
@@ -642,7 +746,7 @@ function InventoryInner() {
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Low Stock Items</div>
               <div className="text-[20px] font-bold text-slate-800 mt-1">{lowStockCount.toLocaleString()}</div>
-              <div className="text-[11px] font-medium text-emerald-600 mt-1">↑ 18% vs last month</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">At/below minimum</div>
             </div>
           </div>
 
@@ -657,7 +761,7 @@ function InventoryInner() {
             <div>
               <div className="text-[12px] text-slate-500 font-medium">Out of Stock</div>
               <div className="text-[20px] font-bold text-slate-800 mt-1">{outOfStockCount.toLocaleString()}</div>
-              <div className="text-[11px] font-medium text-slate-400 mt-1">→ 4% vs last month</div>
+              <div className="text-[11px] font-medium text-slate-400 mt-1">Zero inventory</div>
             </div>
           </div>
         </div>
@@ -1461,24 +1565,34 @@ function InventoryInner() {
                   </span>
                   <input
                     type="text"
-                    placeholder="Search by transfer no, product, SKU..."
+                    value={transferSearch}
+                    onChange={(e) => setTransferSearch(e.target.value)}
+                    placeholder="Search by transfer no, product, remarks..."
                     className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs focus:border-blue-500 focus:outline-none"
                   />
                 </div>
 
-                <select className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700">
-                  <option>All Shops</option>
+                <select
+                  value={transferShopFilter}
+                  onChange={(e) => setTransferShopFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700"
+                >
+                  <option value="All">All Shops</option>
                   {shops.map((s) => (
-                    <option key={s.id}>{s.name}</option>
+                    <option key={s.id} value={s.name}>{s.name}</option>
                   ))}
                 </select>
 
-                <select className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700">
-                  <option>All Status</option>
-                  <option>Completed</option>
-                  <option>In Transit</option>
-                  <option>Pending</option>
-                  <option>Cancelled</option>
+                <select
+                  value={transferStatusFilter}
+                  onChange={(e) => setTransferStatusFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700"
+                >
+                  <option value="All">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="in_transit">In Transit</option>
+                  <option value="pending">Pending</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
             </div>
@@ -1502,54 +1616,72 @@ function InventoryInner() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-[11.5px]">
-                    {[
-                      { id: 1, no: "TRF-2026-00125", date: "Oct 27, 2026", from: "Main Shop", to: "Branch Shop 1", items: "5 items", qty: 50, status: "Completed", remarks: "Regular transfer" },
-                      { id: 2, no: "TRF-2026-00124", date: "Oct 26, 2026", from: "Main Shop", to: "Branch Shop 2", items: "3 items", qty: 28, status: "In Transit", remarks: "For sales demand" },
-                      { id: 3, no: "TRF-2026-00123", date: "Oct 26, 2026", from: "Branch Shop 1", to: "Main Shop", items: "4 items", qty: 36, status: "Pending", remarks: "Requested by store" },
-                      { id: 4, no: "TRF-2026-00122", date: "Oct 25, 2026", from: "Main Shop", to: "Branch Shop 3", items: "2 items", qty: 20, status: "Completed", remarks: "Stock reallocation" },
-                      { id: 5, no: "TRF-2026-00121", date: "Oct 25, 2026", from: "Branch Shop 2", to: "Main Shop", items: "6 items", qty: 75, status: "Completed", remarks: "Return transfer" },
-                      { id: 6, no: "TRF-2026-00120", date: "Oct 24, 2026", from: "Main Shop", to: "Branch Shop 1", items: "4 items", qty: 40, status: "Cancelled", remarks: "Damaged in transit" },
-                    ].map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-2 text-slate-400">{row.id}</td>
-                        <td className="py-2.5 px-2 font-mono font-medium">
-                          <ReferenceLink type="transfer" refNumber={row.no} />
-                        </td>
-                        <td className="py-2.5 px-2 text-slate-400 whitespace-nowrap">{row.date}</td>
-                        <td className="py-2.5 px-2 text-slate-700 font-medium">{row.from}</td>
-                        <td className="py-2.5 px-2 text-slate-700 font-medium">{row.to}</td>
-                        <td className="py-2.5 px-2 text-slate-600">{row.items}</td>
-                        <td className="py-2.5 px-2 text-center font-bold text-slate-800">{row.qty}</td>
-                        <td className="py-2.5 px-2">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10.5px] font-semibold ${
-                              row.status === "Completed"
-                                ? "bg-emerald-50 text-emerald-600"
-                                : row.status === "In Transit"
-                                ? "bg-blue-50 text-blue-600"
-                                : row.status === "Pending"
-                                ? "bg-amber-50 text-amber-600"
-                                : "bg-rose-50 text-rose-500"
-                            }`}
-                          >
-                            {row.status}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-2 text-slate-500">{row.remarks}</td>
-                        <td className="py-2.5 pl-2 text-right">
-                          <Link
-                            to={`/app/inventory/transfers/${encodeURIComponent(row.no)}`}
-                            className="p-1 rounded text-slate-400 hover:text-blue-600 inline-block"
-                            title="View Transfer Details"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </Link>
+                    {filteredTransfers.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-12 text-center text-slate-400">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-2">
+                              🔄
+                            </div>
+                            <div className="text-sm font-semibold text-slate-700">No Stock Transfers Recorded</div>
+                            <p className="text-xs text-slate-400 max-w-xs mt-1">
+                              Stock transfers between your shop branches will appear here as they are created.
+                            </p>
+                          </div>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredTransfers.map((row, idx) => {
+                        const tNo = row.transfer_no || `TRF-${row.id}`;
+                        const tDate = new Date(row.created_at || row.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                        const fromShopName = row.fromShop?.name || `Shop #${row.from_shop_id}`;
+                        const toShopName = row.toShop?.name || `Shop #${row.to_shop_id}`;
+                        const itemCount = Array.isArray(row.items) ? `${row.items.length} item(s)` : (row.product?.name ? row.product.name : "1 item");
+                        const totalQty = row.quantity || (Array.isArray(row.items) ? row.items.reduce((acc: number, it: any) => acc + (Number(it.quantity) || 0), 0) : 0);
+                        const status = row.status || "completed";
+                        return (
+                          <tr key={row.id || idx} className="hover:bg-slate-50">
+                            <td className="py-2.5 px-2 text-slate-400">{idx + 1}</td>
+                            <td className="py-2.5 px-2 font-mono font-medium">
+                              <ReferenceLink type="transfer" refNumber={tNo} />
+                            </td>
+                            <td className="py-2.5 px-2 text-slate-400 whitespace-nowrap">{tDate}</td>
+                            <td className="py-2.5 px-2 text-slate-700 font-medium">{fromShopName}</td>
+                            <td className="py-2.5 px-2 text-slate-700 font-medium">{toShopName}</td>
+                            <td className="py-2.5 px-2 text-slate-600 truncate max-w-[120px]">{itemCount}</td>
+                            <td className="py-2.5 px-2 text-center font-bold text-slate-800">{totalQty}</td>
+                            <td className="py-2.5 px-2">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10.5px] font-semibold capitalize ${
+                                  status === "completed"
+                                    ? "bg-emerald-50 text-emerald-600"
+                                    : status === "in_transit"
+                                    ? "bg-blue-50 text-blue-600"
+                                    : status === "pending"
+                                    ? "bg-amber-50 text-amber-600"
+                                    : "bg-rose-50 text-rose-500"
+                                }`}
+                              >
+                                {status.replace("_", " ")}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-2 text-slate-500 truncate max-w-[120px]">{row.notes || row.cancellation_reason || "—"}</td>
+                            <td className="py-2.5 pl-2 text-right">
+                              <Link
+                                to={`/app/inventory/transfers/${encodeURIComponent(tNo)}`}
+                                className="p-1 rounded text-slate-400 hover:text-blue-600 inline-block"
+                                title="View Transfer Details"
+                              >
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1559,31 +1691,49 @@ function InventoryInner() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4">
                 <div className="text-xs font-bold text-slate-800 mb-2">Recent Transfers</div>
-                <div className="text-xs space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="font-semibold text-slate-800">TRF-2026-00125</div>
-                      <div className="text-[10.5px] text-slate-400">Main Shop → Branch Shop 1</div>
-                    </div>
-                    <span className="font-bold text-emerald-600">50 items</span>
+                {recentTransfers.length === 0 ? (
+                  <div className="text-xs text-slate-400 py-4 text-center">No recent transfers recorded.</div>
+                ) : (
+                  <div className="text-xs space-y-2">
+                    {recentTransfers.slice(0, 3).map((rt: any) => (
+                      <div key={rt.id} className="flex justify-between items-center">
+                        <div>
+                          <div className="font-semibold text-slate-800">{rt.transfer_no || `TRF-${rt.id}`}</div>
+                          <div className="text-[10.5px] text-slate-400">
+                            {rt.fromShop?.name || `Shop #${rt.from_shop_id}`} → {rt.toShop?.name || `Shop #${rt.to_shop_id}`}
+                          </div>
+                        </div>
+                        <span className="font-bold text-blue-600">{rt.quantity || 0} items</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="font-semibold text-slate-800">TRF-2026-00124</div>
-                      <div className="text-[10.5px] text-slate-400">Main Shop → Branch Shop 2</div>
-                    </div>
-                    <span className="font-bold text-blue-600">28 items</span>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs p-4">
                 <div className="text-xs font-bold text-slate-800 mb-2">Transfer Trend (Monthly)</div>
-                <div className="h-24 flex items-end gap-1.5 pt-2">
-                  {[20, 35, 45, 60, 80, 75, 90, 85, 110, 130, 140, 160].map((v, i) => (
-                    <div key={i} className="flex-1 bg-blue-600 rounded-t" style={{ height: `${v * 0.5}%` }} />
-                  ))}
-                </div>
+                {transferTrends.length === 0 || transferTrends.every((t) => t.transfers === 0) ? (
+                  <div className="h-24 flex flex-col items-center justify-center text-xs text-slate-400">
+                    No transfers recorded this year.
+                  </div>
+                ) : (
+                  <div className="h-24 flex items-end gap-1.5 pt-2">
+                    {transferTrends.map((t, i) => {
+                      const maxT = Math.max(1, ...transferTrends.map((x) => x.transfers));
+                      const h = (t.transfers / maxT) * 100;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center h-full justify-end">
+                          <div
+                            className="w-full bg-blue-600 rounded-t transition-all"
+                            style={{ height: `${Math.max(4, h)}%` }}
+                            title={`${t.month}: ${t.transfers} transfers`}
+                          />
+                          <span className="text-[9px] text-slate-400 mt-1">{t.month}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1608,8 +1758,8 @@ function InventoryInner() {
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">From Shop *</label>
                 <div className="px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 font-semibold text-slate-800 flex items-center justify-between">
-                  <span>🏪 {activeShop?.name || "Main Shop - Electronics"}</span>
-                  <span className="text-slate-400">✕</span>
+                  <span>🏪 {activeShop?.name || "NSYU"}</span>
+                  <span className="text-slate-400">✓</span>
                 </div>
               </div>
 
@@ -1958,96 +2108,62 @@ function InventoryInner() {
             </div>
           </div>
 
-          {/* Bottom 3 Analytics Cards (Exact Match to Screenshot 1) */}
+          {/* Bottom 3 Analytics Cards (100% Real Database-Driven) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-2">
             <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
               <div className="text-[15px] font-bold text-slate-800 mb-3">Stock by Category</div>
-              <div className="flex items-center gap-5 my-auto">
-                <div className="relative w-32 h-32 shrink-0">
-                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#2563EB" strokeWidth="5" strokeDasharray="28 100" strokeDashoffset="0" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#F97316" strokeWidth="5" strokeDasharray="18 100" strokeDashoffset="-28" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#A855F7" strokeWidth="5" strokeDasharray="22 100" strokeDashoffset="-46" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#1E40AF" strokeWidth="5" strokeDasharray="12 100" strokeDashoffset="-68" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#06B6D4" strokeWidth="5" strokeDasharray="10 100" strokeDashoffset="-80" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#94A3B8" strokeWidth="5" strokeDasharray="10 100" strokeDashoffset="-90" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                    <span className="text-[13px] font-bold text-slate-900 leading-none">8,426</span>
-                    <span className="text-[9.5px] text-slate-400 font-medium mt-0.5">Total Stock</span>
+              {categoryStockBreakdown.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-400">No categories found.</div>
+              ) : (
+                <div className="space-y-3 my-auto">
+                  <div className="text-center pb-1">
+                    <span className="text-xl font-extrabold text-slate-800">{totalStockQty.toLocaleString()}</span>
+                    <span className="text-xs text-slate-400 ml-1.5 font-medium">Total Units</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {categoryStockBreakdown.slice(0, 5).map((cat, idx) => {
+                      const colors = ["bg-blue-600", "bg-emerald-500", "bg-purple-600", "bg-amber-500", "bg-cyan-500"];
+                      const color = colors[idx % colors.length];
+                      return (
+                        <div key={cat.name}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-medium text-slate-700">{cat.name}</span>
+                            <span className="font-semibold text-slate-800">{cat.pct}% ({cat.count.toLocaleString()})</span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5">
+                            <div className={`${color} h-1.5 rounded-full`} style={{ width: `${Math.max(3, cat.pct)}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-
-                <div className="space-y-1.5 text-xs flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                      <span className="text-slate-600">Mobile Phone</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">28% (2,356)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-                      <span className="text-slate-600">Laptop</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">18% (1,516)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-                      <span className="text-slate-600">Accessories</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">22% (1,853)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-800" />
-                      <span className="text-slate-600">Cables</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">12% (1,011)</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
-                      <span className="text-slate-600">Monitor</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">10% (842)</span>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
             <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
               <div className="text-[15px] font-bold text-slate-800 mb-4">Stock by Shop</div>
               <div className="space-y-4 my-auto">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="font-medium text-slate-700">Main Shop - Electronics</span>
-                    <span className="font-bold text-slate-900">3,786</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: "45%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="font-medium text-slate-700">Mobile Accessories</span>
-                    <span className="font-bold text-slate-900">2,105</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
-                    <div className="bg-sky-500 h-2 rounded-full" style={{ width: "25%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="font-medium text-slate-700">Computer Store</span>
-                    <span className="font-bold text-slate-900">1,517</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-2">
-                    <div className="bg-blue-400 h-2 rounded-full" style={{ width: "18%" }} />
-                  </div>
-                </div>
+                {shopStockBreakdown.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-400">No registered shops found.</div>
+                ) : (
+                  shopStockBreakdown.map((s, idx) => {
+                    const colors = ["bg-blue-600", "bg-emerald-500", "bg-amber-500", "bg-purple-600"];
+                    const color = colors[idx % colors.length];
+                    const pct = totalStockQty > 0 ? Math.round((s.units / totalStockQty) * 100) : (idx === 0 ? 100 : 0);
+                    return (
+                      <div key={s.id}>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="font-medium text-slate-700">{s.name} ({s.code})</span>
+                          <span className="font-bold text-slate-900">{s.units.toLocaleString()}</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2">
+                          <div className={`${color} h-2 rounded-full`} style={{ width: `${Math.max(4, pct)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
