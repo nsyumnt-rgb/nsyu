@@ -401,6 +401,7 @@ export default function Login() {
               {/* Staff / Owner Tab */}
               <button
                 type="button"
+                id="staff-tab-btn"
                 onClick={() => handleTabChange("staff")}
                 className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   activeTab === "staff"
@@ -418,6 +419,7 @@ export default function Login() {
               {/* Customer Portal Tab */}
               <button
                 type="button"
+                id="customer-tab-btn"
                 onClick={() => handleTabChange("customer")}
                 className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   activeTab === "customer"
@@ -546,6 +548,7 @@ export default function Login() {
               {/* Solid Gradient Blue Login Button */}
               <button
                 type="submit"
+                id="login-submit-btn"
                 disabled={loading}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-60 text-white font-bold text-[14.5px] shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer mt-1"
               >
@@ -571,6 +574,7 @@ export default function Login() {
               {/* Outlined Blue Create Account Button */}
               <button
                 type="button"
+                id="create-account-btn"
                 onClick={() => setShowRegisterModal(true)}
                 className="w-full py-2.5 rounded-xl border-2 border-blue-600 hover:bg-blue-50/70 text-blue-600 font-bold text-[14px] flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
               >
@@ -584,7 +588,9 @@ export default function Login() {
               </button>
 
               {/* Connected Status Pill at bottom of card (Clickable to open server settings) */}
-              <div
+              <button
+                type="button"
+                id="supabase-status-pill"
                 onClick={() => setShowApiModal(true)}
                 title="Click to view API Server & Supabase Database Configuration"
                 className="w-full mt-4 py-2 px-3.5 rounded-full bg-[#DCFCE7]/75 hover:bg-[#DCFCE7] border border-[#86EFAC]/80 flex items-center justify-between text-[11.5px] font-semibold text-[#166534] transition-all cursor-pointer shadow-2xs"
@@ -600,7 +606,7 @@ export default function Login() {
                   <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
                   <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
                 </svg>
-              </div>
+              </button>
 
             </form>
 
@@ -722,6 +728,7 @@ export default function Login() {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4 max-h-[90vh] overflow-y-auto">
             <button
               type="button"
+              id="close-register-modal"
               onClick={() => setShowRegisterModal(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100"
             >
@@ -836,6 +843,7 @@ export default function Login() {
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
             <button
               type="button"
+              id="close-api-modal"
               onClick={() => setShowApiModal(false)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100"
             >
