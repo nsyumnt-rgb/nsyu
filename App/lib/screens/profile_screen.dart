@@ -132,7 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -247,7 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -353,11 +353,11 @@ class _HeaderWavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint1 = Paint()
-      ..color = const Color(0xFFE2EDFB).withOpacity(0.6)
+      ..color = const Color(0xFFE2EDFB).withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
 
     final paint2 = Paint()
-      ..color = const Color(0xFFD4E6FA).withOpacity(0.4)
+      ..color = const Color(0xFFD4E6FA).withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
 
     final path1 = Path();

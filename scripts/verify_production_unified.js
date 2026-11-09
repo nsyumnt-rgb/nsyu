@@ -76,8 +76,8 @@ async function run() {
 
     // ── 2. Super Admin Login ──
     console.log('\nStep 2: Logging in as Platform Super Admin (superadmin@nsyu.com)...');
-    await fillReactInput(page, '#identifier-input', 'superadmin@nsyu.com');
-    await fillReactInput(page, '#password-input', 'SuperAdmin@123');
+    await fillReactInput(page, 'input[placeholder*="Email"], #identifier-input', 'superadmin@nsyu.com');
+    await fillReactInput(page, 'input[type="password"], #password-input', 'SuperAdmin@123');
 
     await page.click('#login-submit-btn');
     await new Promise(r => setTimeout(r, 4500));
@@ -135,8 +135,8 @@ async function run() {
     await page.goto(BASE_URL, { waitUntil: 'networkidle2' });
     await new Promise(r => setTimeout(r, 2000));
 
-    await fillReactInput(page, '#identifier-input', 'nsyu.mnt@gmail.com');
-    await fillReactInput(page, '#password-input', 'Password@123');
+    await fillReactInput(page, 'input[placeholder*="Email"], #identifier-input', 'nsyu.mnt@gmail.com');
+    await fillReactInput(page, 'input[type="password"], #password-input', 'Password@123');
 
     await page.click('#login-submit-btn');
     await new Promise(r => setTimeout(r, 4500));

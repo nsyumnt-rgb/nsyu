@@ -99,8 +99,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.person_add_alt_1, color: Color(0xFF1D4ED8)),
               SizedBox(width: 8),
               Text('Add New Employee', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),

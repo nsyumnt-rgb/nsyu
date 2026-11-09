@@ -130,7 +130,7 @@ class ReferenceLink extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: color,
                       decoration: TextDecoration.underline,
-                      decorationColor: color.withOpacity(0.4),
+                      decorationColor: color.withValues(alpha: 0.4),
                     ),
               ),
             ),

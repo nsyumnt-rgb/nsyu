@@ -147,3 +147,4 @@ export function fetchAdminAuditLogs(page = 1, limit = 20) {
 export function fetchAdminShopSupportData(id: number) {
   return api.get<ApiEnvelope<AdminShopSupportData>>(`/admin/shops/${id}/data`);
 }
+

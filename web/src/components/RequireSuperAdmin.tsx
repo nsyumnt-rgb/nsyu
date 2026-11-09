@@ -37,3 +37,4 @@ export const RequireSuperAdmin: React.FC = () => {
 };
 
 export default RequireSuperAdmin;
+

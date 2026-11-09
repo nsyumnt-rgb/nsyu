@@ -193,11 +193,11 @@ class _BillsListScreenState extends State<BillsListScreen> {
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
               child: Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Bills',
                           style: TextStyle(
                             fontSize: 18,
@@ -207,7 +207,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
                         ),
                         Text(
                           'All Bills ($totalCount)',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF64748B),

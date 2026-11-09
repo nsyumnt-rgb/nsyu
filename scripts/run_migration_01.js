@@ -42,3 +42,4 @@ const { sequelize } = require('../api/dist/config/database');
     process.exit(1);
   }
 })();
+

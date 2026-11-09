@@ -200,7 +200,7 @@ class PaymentReceiptPdfService {
       children: [
         pw.Text(
           'Company Name',
-          style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
         ),
         pw.SizedBox(height: 2),
         pw.Text(
@@ -285,7 +285,7 @@ class PaymentReceiptPdfService {
               ),
               if (settled)
                 pw.Text('(Fully Paid)',
-                    style: pw.TextStyle(fontSize: 8, color: _green)),
+                    style: const pw.TextStyle(fontSize: 8, color: _green)),
             ],
           ),
         ],
@@ -358,7 +358,7 @@ class PaymentReceiptPdfService {
                 style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: _navy)),
             pw.SizedBox(height: 1),
             pw.Text('AUTHORIZED',
-                style: pw.TextStyle(fontSize: 4, color: _navy)),
+                style: const pw.TextStyle(fontSize: 4, color: _navy)),
           ],
         ),
       ),
@@ -450,7 +450,7 @@ class PaymentReceiptPdfService {
   static pw.Widget _personIcon() {
     return _iconBadge(_glyphBox(children: [
       _dot(6, 6, top: 0, left: 3.5),
-      _bar(13, 6, bottom: 0, left: 0, radius: pw.BorderRadius.only(topLeft: pw.Radius.circular(6), topRight: pw.Radius.circular(6))),
+      _bar(13, 6, bottom: 0, left: 0, radius: const pw.BorderRadius.only(topLeft: pw.Radius.circular(6), topRight: pw.Radius.circular(6))),
     ]));
   }
 

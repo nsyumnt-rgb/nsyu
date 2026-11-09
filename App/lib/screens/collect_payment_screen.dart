@@ -41,7 +41,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
 
   DateTime _paymentDate = DateTime.now();
   String _notes = '';
-  PaymentMethod _method = PaymentMethod.cash;
+  final PaymentMethod _method = PaymentMethod.cash;
 
   @override
   void initState() {
@@ -196,6 +196,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
         remainingAmt -= payAmt;
       }
 
+      if (!mounted) return;
       showAppSnackBar(context, 'Payment of ₹${_money.format(amount)} recorded successfully!');
 
       File? pdfFile;
@@ -527,9 +528,9 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                               height: 22,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                             )
-                          : Row(
+                          : const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
+                              children: [
                                 Icon(Icons.check, size: 20, color: Colors.white),
                                 SizedBox(width: 8),
                                 Text(

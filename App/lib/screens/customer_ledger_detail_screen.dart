@@ -394,9 +394,9 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   ),
                 ),
                 const SizedBox(height: 4),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Text(
                       '14 Oct 2026',
                       style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
@@ -613,10 +613,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Invoice.pdf',
                           style: TextStyle(
@@ -644,9 +644,9 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: const Color(0xFF16A34A), width: 1.2),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Icon(Icons.visibility_outlined, size: 14, color: Color(0xFF16A34A)),
                           SizedBox(width: 4),
                           Text(
@@ -856,9 +856,9 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     color: const Color(0xFF16A34A),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(Icons.add, color: Colors.white, size: 18),
                       SizedBox(width: 4),
                       Text(

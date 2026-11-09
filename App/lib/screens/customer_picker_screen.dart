@@ -803,6 +803,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                 onPressed: saving
                     ? null
                     : () async {
+                        final custProv = context.read<CustomerProvider>();
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (ctx2) => AlertDialog(
@@ -817,10 +818,11 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                             ],
                           ),
                         );
-                        if (confirm == true) {
-                          await context.read<CustomerProvider>().deleteCustomer(customer.id);
-                          if (!context.mounted) return;
+                        if (confirm == true && mounted) {
+                          await custProv.deleteCustomer(customer.id);
+                          if (!ctx.mounted) return;
                           Navigator.pop(ctx);
+                          if (!mounted) return;
                           showAppSnackBar(context, '${customer.name} deleted successfully');
                           setState(() {});
                         }

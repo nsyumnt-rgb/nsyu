@@ -151,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Dynamic calculations from actual database records
     final salesToday = bills.todaysSales;
-    final purchasesToday = 0.0;
+    const purchasesToday = 0.0;
     final totalOutstanding = customers.customers.fold<double>(0.0, (sum, c) => sum + (c.currentBalance > 0 ? c.currentBalance : 0.0));
     final profitToday = salesToday > 0 ? (salesToday - purchasesToday) : 0.0;
 

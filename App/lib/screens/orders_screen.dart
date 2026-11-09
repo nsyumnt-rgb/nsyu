@@ -191,11 +191,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
               child: Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Orders',
                           style: TextStyle(
                             fontSize: 18,
@@ -205,7 +205,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                         Text(
                           'All Orders ($totalCount)',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF64748B),

@@ -82,8 +82,8 @@ class PaymentDetailScreen extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFDCFCE7),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.check, color: Color(0xFF16A34A), size: 32),

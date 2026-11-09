@@ -350,10 +350,10 @@ class _ReportModalViewerState extends State<_ReportModalViewer> {
 
   Widget _buildContent() {
     if (_data == null || (_data is List && (_data as List).isEmpty)) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.assessment_outlined, size: 48, color: Color(0xFF94A3B8)),
             SizedBox(height: 12),
             Text('No records found for this period', style: TextStyle(color: Color(0xFF64748B))),
