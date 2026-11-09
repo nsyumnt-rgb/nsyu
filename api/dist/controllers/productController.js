@@ -128,8 +128,12 @@ async function updateProduct(req, res) {
 }
 /** Owner/employee view — full data including price, profit, supplier, stock, location. */
 async function listProductsOwnerView(req, res) {
+    const limit = req.query.limit ? Math.min(Math.max(Number(req.query.limit), 1), 500) : undefined;
+    const offset = req.query.offset ? Math.max(Number(req.query.offset), 0) : undefined;
     const products = await models_1.Product.findAll({
         where: { owner_id: req.auth.ownerId },
+        limit,
+        offset,
         include: [
             { model: models_1.Category, as: "category" },
             { model: models_1.Subcategory, as: "subcategory" },

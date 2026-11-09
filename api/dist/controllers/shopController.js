@@ -9,6 +9,8 @@ exports.deleteShop = deleteShop;
 exports.switchShop = switchShop;
 exports.getShopPortalSettings = getShopPortalSettings;
 exports.updateShopPortalSettings = updateShopPortalSettings;
+exports.getShopSettings = getShopSettings;
+exports.updateShopSettings = updateShopSettings;
 const sequelize_1 = require("sequelize");
 const models_1 = require("../models");
 const jwt_1 = require("../utils/jwt");
@@ -88,7 +90,7 @@ async function updateShop(req, res) {
     if (!shop) {
         return res.status(404).json({ success: false, message: "Shop not found" });
     }
-    const { name, phone, email, address, logo, code } = req.body;
+    const { name, phone, email, address, logo, code, settings } = req.body;
     if (name !== undefined)
         shop.name = String(name).trim();
     if (phone !== undefined)
@@ -99,6 +101,9 @@ async function updateShop(req, res) {
         shop.address = address;
     if (logo !== undefined)
         shop.logo = logo;
+    if (settings !== undefined && typeof settings === "object") {
+        shop.settings = { ...(shop.settings || {}), ...settings };
+    }
     if (code !== undefined && String(code).trim().toUpperCase() !== shop.code) {
         const newCode = String(code).trim().toUpperCase();
         const existing = await models_1.Shop.findOne({
@@ -281,6 +286,61 @@ async function updateShopPortalSettings(req, res) {
     }
     catch (err) {
         return res.status(500).json({ success: false, message: err.message || "Failed to update portal settings" });
+    }
+}
+async function getShopSettings(req, res) {
+    try {
+        const shopId = Number(req.params.shopId || req.params.id || req.auth.shopId);
+        const shop = await models_1.Shop.findOne({ where: { id: shopId, owner_id: req.auth.ownerId } });
+        if (!shop)
+            return res.status(404).json({ success: false, message: "Shop not found" });
+        const settings = {
+            currency: "INR (₹)",
+            timezone: "Asia/Kolkata",
+            defaultMargin: 20,
+            pricesIncludeTax: false,
+            defaultGstRate: 18,
+            gstin: "",
+            invoicePrefix: "INV-",
+            nextInvoiceNumber: 1,
+            allowNegativeStock: true,
+            autoDeductStockOnBill: true,
+            enableCash: true,
+            enableUpi: true,
+            enableBank: true,
+            enableCredit: true,
+            allowStaffDiscount: true,
+            maxStaffDiscountPercent: 10,
+            invoiceTerms: "1. Warranty as per manufacturer terms.\n2. Goods once sold are subject to standard return policy.\n3. Original invoice required for all claims.",
+            ...(shop.settings || {}),
+        };
+        return res.json({ success: true, data: settings });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message || "Failed to load shop settings" });
+    }
+}
+async function updateShopSettings(req, res) {
+    try {
+        const shopId = Number(req.params.shopId || req.params.id || req.auth.shopId);
+        const shop = await models_1.Shop.findOne({ where: { id: shopId, owner_id: req.auth.ownerId } });
+        if (!shop)
+            return res.status(404).json({ success: false, message: "Shop not found" });
+        const incoming = req.body.settings || req.body;
+        shop.settings = { ...(shop.settings || {}), ...incoming };
+        await shop.save();
+        await (0, audit_1.logAudit)({
+            req,
+            module: "shops",
+            action: "update_settings",
+            entityType: "Shop",
+            entityId: shop.id,
+            details: { shopId, updatedKeys: Object.keys(incoming) },
+        });
+        return res.json({ success: true, message: "Shop settings updated successfully", data: shop.settings });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message || "Failed to update shop settings" });
     }
 }
 //# sourceMappingURL=shopController.js.map

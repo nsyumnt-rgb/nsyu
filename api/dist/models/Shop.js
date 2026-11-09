@@ -20,6 +20,7 @@ Shop.init({
     logo: { type: sequelize_1.DataTypes.STRING(255) },
     status: { type: sequelize_1.DataTypes.ENUM("active", "inactive", "suspended"), defaultValue: "active" },
     reference_code: { type: sequelize_1.DataTypes.STRING(50), allowNull: true },
+    settings: { type: sequelize_1.DataTypes.JSONB, defaultValue: {} },
 }, {
     sequelize: database_1.default,
     modelName: "Shop",

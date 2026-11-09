@@ -320,17 +320,18 @@ class CatalogProvider extends ChangeNotifier {
   }
 
   void updateItemPrice(String code, double newPrice) {
-    final item = billItemFor(code);
+    final item = billItemFor(code) ?? orderItemFor(code);
     if (item == null) return;
     item.price = newPrice < 0 ? 0 : newPrice;
     notifyListeners();
   }
 
   void updateItemQty(String code, int newQty) {
-    final item = billItemFor(code);
+    final item = billItemFor(code) ?? orderItemFor(code);
     if (item == null) return;
     if (newQty <= 0) {
       billItems.removeWhere((i) => i.code == code);
+      orderItems.removeWhere((i) => i.code == code);
     } else {
       item.qty = newQty;
     }
@@ -339,6 +340,7 @@ class CatalogProvider extends ChangeNotifier {
 
   void removeItem(String code) {
     billItems.removeWhere((i) => i.code == code);
+    orderItems.removeWhere((i) => i.code == code);
     notifyListeners();
   }
 
@@ -384,10 +386,11 @@ class CatalogProvider extends ChangeNotifier {
   }
 
   void updateOrderItemQty(String code, int newQty) {
-    final item = orderItemFor(code);
+    final item = orderItemFor(code) ?? billItemFor(code);
     if (item == null) return;
     if (newQty <= 0) {
       orderItems.removeWhere((i) => i.code == code);
+      billItems.removeWhere((i) => i.code == code);
     } else {
       item.qty = newQty;
     }
@@ -395,7 +398,7 @@ class CatalogProvider extends ChangeNotifier {
   }
 
   void updateOrderItemPrice(String code, double newPrice) {
-    final item = orderItemFor(code);
+    final item = orderItemFor(code) ?? billItemFor(code);
     if (item == null) return;
     item.price = newPrice < 0 ? 0 : newPrice;
     notifyListeners();
@@ -403,6 +406,7 @@ class CatalogProvider extends ChangeNotifier {
 
   void removeOrderItem(String code) {
     orderItems.removeWhere((i) => i.code == code);
+    billItems.removeWhere((i) => i.code == code);
     notifyListeners();
   }
 

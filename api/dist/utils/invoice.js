@@ -25,7 +25,9 @@ async function nextInvoiceNumber(params) {
     counter.last_number += 1;
     await counter.save({ transaction: t });
     const shop = await models_1.Shop.findByPk(shopId, { transaction: t });
-    const prefix = (shop?.code || "SHOP").toUpperCase().replace(/[^A-Z0-9]/g, "");
-    return `INV-${prefix}-${String(counter.last_number).padStart(6, "0")}`;
+    const rawPrefix = (shop?.settings?.invoicePrefix || "INV-").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+    const codePrefix = (shop?.code || "SHOP").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const cleanPrefix = rawPrefix.endsWith("-") ? rawPrefix : `${rawPrefix}-`;
+    return `${cleanPrefix}${codePrefix}-${String(counter.last_number).padStart(6, "0")}`;
 }
 //# sourceMappingURL=invoice.js.map

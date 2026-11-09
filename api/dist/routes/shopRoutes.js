@@ -10,6 +10,8 @@ router.post("/", auth_1.requireOwner, shopController_1.createShop);
 router.post("/switch", shopController_1.switchShop);
 router.get("/:shopId", shopController_1.getShop);
 router.put("/:shopId", auth_1.requireOwner, shopController_1.updateShop);
+router.get("/:shopId/settings", shopController_1.getShopSettings);
+router.put("/:shopId/settings", auth_1.requireOwner, shopController_1.updateShopSettings);
 router.get("/:shopId/portal-settings", shopController_1.getShopPortalSettings);
 router.put("/:shopId/portal-settings", auth_1.requireOwner, shopController_1.updateShopPortalSettings);
 router.patch("/:shopId/status", auth_1.requireOwner, shopController_1.toggleShopStatus);

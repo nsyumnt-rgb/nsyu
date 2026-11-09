@@ -89,8 +89,31 @@ async function createSale(req, res) {
         shopId = firstShop ? firstShop.id : 1;
     }
     const { actorType, actorId } = actorFromReq(req);
+    // Idempotency protection against duplicate requests
+    const clientRequestId = String(req.headers["x-idempotency-key"] || req.body.clientRequestId || req.body.idempotencyKey || "").trim();
+    if (clientRequestId) {
+        const existingSale = await models_1.Sale.findOne({
+            where: {
+                owner_id: ownerId,
+                shop_id: shopId,
+                notes: { [sequelize_1.Op.like]: `%[req:${clientRequestId}]%` },
+            },
+            include: saleIncludes,
+        });
+        if (existingSale) {
+            return res.status(200).json({ success: true, data: existingSale, message: "Sale already processed (idempotent)" });
+        }
+    }
     try {
         const result = await models_1.sequelize.transaction(async (t) => {
+            // 0. Load applicable Shop and Shop Settings
+            const shop = await models_1.Shop.findOne({ where: { id: shopId, owner_id: ownerId }, transaction: t });
+            if (!shop)
+                throw Object.assign(new Error("Shop not found"), { status: 404 });
+            const shopSettings = (shop.settings || {});
+            const pricesIncludeTax = Boolean(shopSettings.pricesIncludeTax);
+            const allowNegativeStock = shopSettings.allowNegativeStock !== undefined ? Boolean(shopSettings.allowNegativeStock) : true;
+            const enableCredit = shopSettings.enableCredit !== false;
             // 1. Customer
             let customer;
             if (customerId) {
@@ -130,15 +153,41 @@ async function createSale(req, res) {
                 }
                 if (!product)
                     throw Object.assign(new Error(`Product "${rawProductId}" not found`), { status: 404 });
-                const qty = Number(rawQuantity);
+                const qty = Math.max(1, Math.floor(Number(rawQuantity)));
                 const rate = raw.rate !== undefined ? Number(raw.rate) : (raw.unitPrice !== undefined ? Number(raw.unitPrice) : Number(product.selling_price));
-                const discountPercent = raw.discountPercent !== undefined ? Number(raw.discountPercent) : (raw.discount_percent !== undefined ? Number(raw.discount_percent) : Number(product.discount));
-                const taxPercent = raw.taxPercent !== undefined ? Number(raw.taxPercent) : (raw.tax_percent !== undefined ? Number(raw.tax_percent) : Number(product.tax_percent));
-                const lineSubtotal = round2(rate * qty);
-                const lineDiscountAmount = round2((lineSubtotal * discountPercent) / 100);
-                const afterDiscount = round2(lineSubtotal - lineDiscountAmount);
-                const lineTaxAmount = round2((afterDiscount * taxPercent) / 100);
-                const lineTotal = round2(afterDiscount + lineTaxAmount);
+                const discountPercent = raw.discountPercent !== undefined ? Number(raw.discountPercent) : (raw.discount_percent !== undefined ? Number(raw.discount_percent) : (Number(product.discount) || 0));
+                const taxPercent = raw.taxPercent !== undefined ? Number(raw.taxPercent) : (raw.tax_percent !== undefined ? Number(raw.tax_percent) : (Number(product.tax_percent) || Number(shopSettings.defaultGstRate) || 0));
+                let lineSubtotal = 0;
+                let lineDiscountAmount = 0;
+                let lineTaxAmount = 0;
+                let lineTotal = 0;
+                if (pricesIncludeTax) {
+                    // Tax-inclusive pricing: unit rate already includes GST
+                    lineSubtotal = round2(rate * qty);
+                    lineDiscountAmount = round2((lineSubtotal * discountPercent) / 100);
+                    lineTotal = round2(lineSubtotal - lineDiscountAmount);
+                    const taxableAmount = taxPercent > 0 ? round2(lineTotal / (1 + taxPercent / 100)) : lineTotal;
+                    lineTaxAmount = round2(lineTotal - taxableAmount);
+                }
+                else {
+                    // Tax-exclusive pricing: GST is calculated on taxable amount and added on top
+                    lineSubtotal = round2(rate * qty);
+                    lineDiscountAmount = round2((lineSubtotal * discountPercent) / 100);
+                    const taxableAmount = round2(lineSubtotal - lineDiscountAmount);
+                    lineTaxAmount = round2((taxableAmount * taxPercent) / 100);
+                    lineTotal = round2(taxableAmount + lineTaxAmount);
+                }
+                // Validate stock if shop settings restrict negative stock
+                if (!allowNegativeStock) {
+                    const stockRow = await models_1.ProductStock.findOne({
+                        where: { product_id: product.id, shop_id: shopId },
+                        transaction: t,
+                    });
+                    const currentStock = stockRow ? stockRow.current_stock : 0;
+                    if (currentStock < qty) {
+                        throw Object.assign(new Error(`Insufficient stock for "${product.name}". Available stock: ${currentStock}, Requested quantity: ${qty}. Selling beyond stock is restricted by shop settings.`), { status: 400 });
+                    }
+                }
                 subtotal = round2(subtotal + lineSubtotal);
                 totalDiscount = round2(totalDiscount + lineDiscountAmount);
                 totalTax = round2(totalTax + lineTaxAmount);
@@ -158,6 +207,10 @@ async function createSale(req, res) {
             const extraDiscount = round2(Number(rawDiscount) || 0);
             totalDiscount = round2(totalDiscount + extraDiscount);
             const totalAmount = Math.max(0, round2(grandTotal - extraDiscount));
+            // Overpayment check
+            if (paidAmount !== undefined && Number(paidAmount) > totalAmount) {
+                throw Object.assign(new Error(`Overpayment is not allowed. Paid amount (₹${Number(paidAmount)}) cannot exceed grand total (₹${totalAmount}).`), { status: 400 });
+            }
             // 3. EMI split (down payment now, rest financed) vs regular partial payment
             let downPayment = 0;
             if (isEmi) {
@@ -168,6 +221,9 @@ async function createSale(req, res) {
             }
             const initialPaid = isEmi ? downPayment : round2(Math.min(Number(paidAmount) || 0, totalAmount));
             const dueAmount = round2(totalAmount - initialPaid);
+            if (!enableCredit && dueAmount > 0) {
+                throw Object.assign(new Error("Customer credit is disabled in shop settings. Full payment is required."), { status: 400 });
+            }
             let status = "unpaid";
             if (initialPaid >= totalAmount && totalAmount > 0)
                 status = "paid";
@@ -175,6 +231,7 @@ async function createSale(req, res) {
                 status = "partially_paid";
             // 4. Invoice number + Sale header
             const invoiceNumber = await (0, invoice_1.nextInvoiceNumber)({ ownerId, shopId, transaction: t });
+            const finalNotes = [notes, clientRequestId ? `[req:${clientRequestId}]` : null].filter(Boolean).join(" ");
             const sale = await models_1.Sale.create({
                 owner_id: ownerId,
                 shop_id: shopId,
@@ -190,7 +247,7 @@ async function createSale(req, res) {
                 payment_method: normalizedPaymentMethod,
                 is_emi: Boolean(isEmi),
                 status,
-                notes: notes ?? null,
+                notes: finalNotes || null,
                 actor_type: actorType,
                 actor_id: actorId,
             }, { transaction: t });
@@ -220,7 +277,7 @@ async function createSale(req, res) {
                     referenceType: "Sale",
                     referenceId: sale.id,
                     notes: `Sale ${invoiceNumber}`,
-                    allowNegative: true,
+                    allowNegative: allowNegativeStock,
                     externalTransaction: t,
                 });
             }

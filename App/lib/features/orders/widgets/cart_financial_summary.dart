@@ -118,10 +118,12 @@ class CartFinancialSummary extends StatelessWidget {
                 const SizedBox(height: 6),
 
                 // Discount Row with Toggle (₹ | %)
+                // Discount Row with Mode Toggle & Value Input
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
                           'Discount',
@@ -132,63 +134,20 @@ class CartFinancialSummary extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
+                        // Mini Toggle [ ₹ | % ]
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: Text(
-                            isDiscountPercent ? '%' : '₹',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 22,
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: TextField(
-                            controller: discountValCtrl,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(decimal: true),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                fontSize: 10.5, fontWeight: FontWeight.bold),
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onChanged: onDiscountChanged,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-
-                        Container(
-                          height: 22,
+                          height: 20,
                           decoration: BoxDecoration(
                             border: Border.all(color: const Color(0xFF006837)),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(3),
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               InkWell(
                                 onTap: () => onToggleDiscountType(false),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
                                   color: !isDiscountPercent
                                       ? const Color(0xFF006837)
                                       : Colors.white,
@@ -196,7 +155,7 @@ class CartFinancialSummary extends StatelessWidget {
                                     child: Text(
                                       '₹',
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                         color: !isDiscountPercent
                                             ? Colors.white
@@ -209,7 +168,7 @@ class CartFinancialSummary extends StatelessWidget {
                               InkWell(
                                 onTap: () => onToggleDiscountType(true),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
                                   color: isDiscountPercent
                                       ? const Color(0xFF006837)
                                       : Colors.white,
@@ -217,7 +176,7 @@ class CartFinancialSummary extends StatelessWidget {
                                     child: Text(
                                       '%',
                                       style: TextStyle(
-                                        fontSize: 10,
+                                        fontSize: 9,
                                         fontWeight: FontWeight.bold,
                                         color: isDiscountPercent
                                             ? Colors.white
@@ -230,26 +189,42 @@ class CartFinancialSummary extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '₹${_money.format(discountAmount)}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0F172A),
-                          ),
-                        ),
                       ],
+                    ),
+
+                    // Value Input
+                    Container(
+                      width: 52,
+                      height: 22,
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: TextField(
+                        controller: discountValCtrl,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        onChanged: onDiscountChanged,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
 
-                _calcRow('Tax (GST)', '₹${_money.format(taxAmount)}'),
+                _calcRow('Tax (GST)', '₹ ${_money.format(taxAmount)}'),
                 const SizedBox(height: 8),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
                   decoration: BoxDecoration(
                     color: const Color(0xFF006837),
                     borderRadius: BorderRadius.circular(6),
@@ -260,15 +235,16 @@ class CartFinancialSummary extends StatelessWidget {
                       const Text(
                         'Grand Total',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w800,
                           color: Colors.white,
                         ),
                       ),
+                      const SizedBox(width: 6),
                       Text(
-                        '₹${_money.format(grandTotal)}',
+                        '₹ ${_money.format(grandTotal)}',
                         style: const TextStyle(
-                          fontSize: 13.5,
+                          fontSize: 13,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
