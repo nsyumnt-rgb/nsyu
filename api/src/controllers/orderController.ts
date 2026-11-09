@@ -406,7 +406,7 @@ export async function updateOrderStatus(req: Request, res: Response) {
       note: remarks || `Status changed to ${targetStatus}`,
     });
 
-    // Notify customer
+    // Notify customer and owner
     try {
       await Notification.create({
         owner_id: ownerId,
@@ -416,6 +416,19 @@ export async function updateOrderStatus(req: Request, res: Response) {
         type: "order_status_changed",
         title: `Order Status: ${targetStatus}`,
         message: `Your order #${order.order_number} status has been updated to ${targetStatus}.`,
+        reference_type: "order",
+        reference_id: order.id,
+        is_read: false,
+      });
+
+      await Notification.create({
+        owner_id: ownerId,
+        shop_id: order.shop_id,
+        recipient_type: "owner",
+        recipient_id: ownerId,
+        type: "order_status_changed",
+        title: `Order ${targetStatus}: ${order.order_number}`,
+        message: `Order #${order.order_number} status changed to ${targetStatus}.`,
         reference_type: "order",
         reference_id: order.id,
         is_read: false,
@@ -656,7 +669,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
         { transaction: t }
       );
 
-      // 9. Notifications to customer
+      // 9. Notifications to customer and owner
       try {
         await Notification.create(
           {
@@ -667,6 +680,22 @@ export async function convertOrderToBill(req: Request, res: Response) {
             type: "bill_created",
             title: `Bill Generated: ${invoiceNumber}`,
             message: `Your order #${order.order_number} has been billed (Invoice #${invoiceNumber}, Total: ₹${order.total_amount}).`,
+            reference_type: "sale",
+            reference_id: sale.id,
+            is_read: false,
+          },
+          { transaction: t }
+        );
+
+        await Notification.create(
+          {
+            owner_id: ownerId,
+            shop_id: shopId,
+            recipient_type: "owner",
+            recipient_id: ownerId,
+            type: "bill_created",
+            title: `Order Converted: ${invoiceNumber}`,
+            message: `Order #${order.order_number} converted to Invoice #${invoiceNumber} (Total: ₹${order.total_amount}).`,
             reference_type: "sale",
             reference_id: sale.id,
             is_read: false,

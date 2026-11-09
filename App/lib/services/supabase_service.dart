@@ -960,4 +960,71 @@ class SupabaseService {
     }
     return jsonDecode(res.body);
   }
+
+  /* ---------------- Notifications ---------------- */
+
+  /// Fetches unread notifications count for the authenticated staff/owner
+  Future<int> getUnreadNotificationCount() async {
+    try {
+      await ensureAuth();
+      final url = Uri.parse('${SupabaseConfig.apiUrl}/notifications/unread-count');
+      final res = await _getWithRetry(url);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        return (decoded['data']?['unreadCount'] as num?)?.toInt() ?? 0;
+      }
+    } catch (e) {
+      debugPrint('Error getting unread notification count: $e');
+    }
+    return 0;
+  }
+
+  /// Lists notifications for the authenticated staff/owner
+  Future<List<Map<String, dynamic>>> fetchNotifications({bool unreadOnly = false, int limit = 50}) async {
+    try {
+      await ensureAuth();
+      final qParams = <String, String>{
+        'limit': limit.toString(),
+        if (unreadOnly) 'unreadOnly': 'true',
+      };
+      final url = Uri.parse('${SupabaseConfig.apiUrl}/notifications').replace(queryParameters: qParams);
+      final res = await _getWithRetry(url);
+      if (res.statusCode == 200) {
+        final decoded = jsonDecode(res.body);
+        final list = decoded['data']?['notifications'] as List?;
+        if (list != null) {
+          return list.map((item) => Map<String, dynamic>.from(item as Map)).toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching notifications: $e');
+    }
+    return [];
+  }
+
+  /// Marks a specific notification as read
+  Future<bool> markNotificationRead(dynamic notificationId) async {
+    try {
+      await ensureAuth();
+      final url = Uri.parse('${SupabaseConfig.apiUrl}/notifications/$notificationId/read');
+      final res = await _postWithRetry(url, {});
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error marking notification read: $e');
+      return false;
+    }
+  }
+
+  /// Marks all notifications for this user as read
+  Future<bool> markAllNotificationsRead() async {
+    try {
+      await ensureAuth();
+      final url = Uri.parse('${SupabaseConfig.apiUrl}/notifications/read-all');
+      final res = await _postWithRetry(url, {});
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('Error marking all notifications read: $e');
+      return false;
+    }
+  }
 }

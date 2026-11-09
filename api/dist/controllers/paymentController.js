@@ -185,6 +185,26 @@ async function createPayment(req, res) {
                 entityId: payment.id,
                 details: { amount: numAmount, method: cleanMethod, customerId: targetCustId },
             });
+            // In-app notification for payment received
+            try {
+                const targetCust = await models_1.Customer.findByPk(targetCustId, { transaction: t });
+                const custName = targetCust ? targetCust.name : "Customer";
+                await models_1.Notification.create({
+                    owner_id: ownerId,
+                    shop_id: shopId,
+                    recipient_type: "owner",
+                    recipient_id: ownerId,
+                    type: "payment_received",
+                    title: `Payment Received: ₹${numAmount}`,
+                    message: `₹${numAmount} received via ${cleanMethod.toUpperCase()} from ${custName}.`,
+                    reference_type: "Payment",
+                    reference_id: payment.id,
+                    is_read: false,
+                }, { transaction: t });
+            }
+            catch (notifErr) {
+                console.error("Failed to create payment notification:", notifErr);
+            }
             return payment;
         });
         const fullPayment = await models_1.Payment.findByPk(result.id, {
@@ -265,6 +285,24 @@ async function cancelPayment(req, res) {
                 }
             }
             await (0, audit_1.logAudit)({ req, module: "payments", action: "cancel", entityType: "Payment", entityId: payment.id, details: { reason } });
+            // In-app notification for payment voided
+            try {
+                await models_1.Notification.create({
+                    owner_id: ownerId,
+                    shop_id: shopId,
+                    recipient_type: "owner",
+                    recipient_id: ownerId,
+                    type: "general",
+                    title: `Payment Voided: ₹${payment.amount}`,
+                    message: `Payment #${payment.id} for ₹${payment.amount} was voided (${reason || "No reason specified"}).`,
+                    reference_type: "Payment",
+                    reference_id: payment.id,
+                    is_read: false,
+                }, { transaction: t });
+            }
+            catch (notifErr) {
+                console.error("Failed to create payment cancellation notification:", notifErr);
+            }
         });
         const payment = await models_1.Payment.findByPk(req.params.paymentId, {
             include: [

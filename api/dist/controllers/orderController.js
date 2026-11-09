@@ -332,7 +332,7 @@ async function updateOrderStatus(req, res) {
             changed_by_id: req.auth.isOwner ? req.auth.ownerId : (req.auth.employeeId || req.auth.ownerId),
             note: remarks || `Status changed to ${targetStatus}`,
         });
-        // Notify customer
+        // Notify customer and owner
         try {
             await models_1.Notification.create({
                 owner_id: ownerId,
@@ -342,6 +342,18 @@ async function updateOrderStatus(req, res) {
                 type: "order_status_changed",
                 title: `Order Status: ${targetStatus}`,
                 message: `Your order #${order.order_number} status has been updated to ${targetStatus}.`,
+                reference_type: "order",
+                reference_id: order.id,
+                is_read: false,
+            });
+            await models_1.Notification.create({
+                owner_id: ownerId,
+                shop_id: order.shop_id,
+                recipient_type: "owner",
+                recipient_id: ownerId,
+                type: "order_status_changed",
+                title: `Order ${targetStatus}: ${order.order_number}`,
+                message: `Order #${order.order_number} status changed to ${targetStatus}.`,
                 reference_type: "order",
                 reference_id: order.id,
                 is_read: false,
@@ -551,7 +563,7 @@ async function convertOrderToBill(req, res) {
                 changed_by_id: actorId,
                 note: `Converted to Bill #${invoiceNumber}`,
             }, { transaction: t });
-            // 9. Notifications to customer
+            // 9. Notifications to customer and owner
             try {
                 await models_1.Notification.create({
                     owner_id: ownerId,
@@ -561,6 +573,18 @@ async function convertOrderToBill(req, res) {
                     type: "bill_created",
                     title: `Bill Generated: ${invoiceNumber}`,
                     message: `Your order #${order.order_number} has been billed (Invoice #${invoiceNumber}, Total: ₹${order.total_amount}).`,
+                    reference_type: "sale",
+                    reference_id: sale.id,
+                    is_read: false,
+                }, { transaction: t });
+                await models_1.Notification.create({
+                    owner_id: ownerId,
+                    shop_id: shopId,
+                    recipient_type: "owner",
+                    recipient_id: ownerId,
+                    type: "bill_created",
+                    title: `Order Converted: ${invoiceNumber}`,
+                    message: `Order #${order.order_number} converted to Invoice #${invoiceNumber} (Total: ₹${order.total_amount}).`,
                     reference_type: "sale",
                     reference_id: sale.id,
                     is_read: false,

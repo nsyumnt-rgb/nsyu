@@ -23,6 +23,8 @@ import 'bill_screen.dart';
 import 'inventory_screen.dart';
 import 'order_cart_screen.dart';
 import 'profile_screen.dart';
+import 'notifications_screen.dart';
+import '../services/supabase_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final ValueChanged<int> onNavigate;
@@ -37,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _selectedPeriod = 'Today'; // Today, This Week, This Month
   final String _chartPeriod = 'This Week';
+  int _unreadNotifs = 0;
 
   @override
   void initState() {
@@ -51,7 +54,15 @@ class _HomeScreenState extends State<HomeScreen> {
         catalogProvider.loadProducts();
       }
       if (!customerProvider.loaded) customerProvider.load();
+      _loadUnreadNotifs();
     });
+  }
+
+  Future<void> _loadUnreadNotifs() async {
+    try {
+      final count = await SupabaseService().getUnreadNotificationCount();
+      if (mounted) setState(() => _unreadNotifs = count);
+    } catch (_) {}
   }
 
   void _showAddProductDialog(BuildContext context, CatalogProvider catalog) {
@@ -249,8 +260,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 8),
                       // Notification Bell with Red Badge matching Image 2
                       InkWell(
-                        onTap: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityLogScreen()));
+                        onTap: () async {
+                          await Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                          _loadUnreadNotifs();
                         },
                         borderRadius: BorderRadius.circular(20),
                         child: Stack(
@@ -264,15 +276,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               child: const Icon(Icons.notifications_none_rounded, size: 20, color: Color(0xFF334155)),
                             ),
-                            Positioned(
-                              top: 2,
-                              right: 2,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle),
+                            if (_unreadNotifs > 0)
+                              Positioned(
+                                top: 2,
+                                right: 2,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(color: Color(0xFFEF4444), shape: BoxShape.circle),
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),

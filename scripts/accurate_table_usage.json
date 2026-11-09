@@ -1,0 +1,1078 @@
+{
+  "attendance": {
+    "table": "attendance",
+    "rowCount": 0,
+    "model": "Attendance",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/Attendance.ts",
+      "api/src/controllers/attendanceController.ts:3",
+      "api/src/controllers/employeeController.ts:3",
+      "api/src/controllers/leaveController.ts:2",
+      "api/src/controllers/payrollController.ts:6"
+    ]
+  },
+  "audit_logs": {
+    "table": "audit_logs",
+    "rowCount": 0,
+    "model": "AuditLog",
+    "inFKs": [],
+    "outFKs": [
+      "owners.id",
+      "shops.id"
+    ],
+    "refs": [
+      "api/src/models/AuditLog.ts",
+      "api/src/controllers/activityController.ts:3",
+      "api/src/controllers/adminController.ts:14",
+      "api/src/controllers/productController.ts:459",
+      "api/src/routes/adminRoutes.ts:13"
+    ]
+  },
+  "categories": {
+    "table": "categories",
+    "rowCount": 8,
+    "model": "Category",
+    "inFKs": [
+      "products.category_id",
+      "subcategories.category_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "refs": [
+      "api/src/models/Category.ts",
+      "api/src/controllers/backupController.ts:2",
+      "api/src/controllers/categoryController.ts:2",
+      "api/src/controllers/customerCartController.ts:2",
+      "api/src/controllers/customerCatalogController.ts:3"
+    ]
+  },
+  "customer_accounts": {
+    "table": "customer_accounts",
+    "rowCount": 0,
+    "model": "CustomerAccount",
+    "inFKs": [
+      "customer_refresh_tokens.account_id"
+    ],
+    "outFKs": [
+      "customers.id",
+      "shops.id"
+    ],
+    "refs": [
+      "api/src/models/CustomerAccount.ts",
+      "api/src/controllers/adminController.ts:16",
+      "api/src/controllers/customerAuthController.ts:5",
+      "api/src/controllers/customerController.ts:3",
+      "api/src/middleware/auth.ts:3"
+    ]
+  },
+  "customer_cart_items": {
+    "table": "customer_cart_items",
+    "rowCount": 0,
+    "model": "CustomerCartItem",
+    "inFKs": [],
+    "outFKs": [
+      "customer_carts.id",
+      "products.id"
+    ],
+    "refs": [
+      "api/src/models/CustomerCartItem.ts",
+      "api/src/controllers/customerCartController.ts:2",
+      "api/src/controllers/customerOrderController.ts:12"
+    ]
+  },
+  "customer_carts": {
+    "table": "customer_carts",
+    "rowCount": 0,
+    "model": "CustomerCart",
+    "inFKs": [
+      "customer_cart_items.cart_id"
+    ],
+    "outFKs": [
+      "customers.id"
+    ],
+    "refs": [
+      "api/src/models/CustomerCart.ts",
+      "api/src/controllers/customerCartController.ts:2",
+      "api/src/controllers/customerOrderController.ts:11"
+    ]
+  },
+  "customer_ledger": {
+    "table": "customer_ledger",
+    "rowCount": 0,
+    "model": "CustomerLedger",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "customers.id"
+    ],
+    "refs": [
+      "api/src/models/CustomerLedger.ts",
+      "api/src/controllers/customerController.ts:3",
+      "api/src/controllers/customerFinancialsController.ts:8",
+      "api/src/controllers/ledgerController.ts:2",
+      "api/src/controllers/orderController.ts:590"
+    ]
+  },
+  "customer_otps": {
+    "table": "customer_otps",
+    "rowCount": 0,
+    "model": "CustomerOtp",
+    "inFKs": [],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/CustomerOtp.ts",
+      "api/src/controllers/customerAuthController.ts:6"
+    ]
+  },
+  "customer_refresh_tokens": {
+    "table": "customer_refresh_tokens",
+    "rowCount": 0,
+    "model": "CustomerRefreshToken",
+    "inFKs": [],
+    "outFKs": [
+      "customer_accounts.id"
+    ],
+    "refs": [
+      "api/src/models/CustomerRefreshToken.ts",
+      "api/src/controllers/customerAuthController.ts:7",
+      "api/src/controllers/customerController.ts:3"
+    ]
+  },
+  "customers": {
+    "table": "customers",
+    "rowCount": 1,
+    "model": "Customer",
+    "inFKs": [
+      "sales.customer_id",
+      "emi_plans.customer_id",
+      "payments.customer_id",
+      "customer_ledger.customer_id",
+      "sale_returns.customer_id",
+      "orders.customer_id",
+      "customer_accounts.customer_id",
+      "customer_carts.customer_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "refs": [
+      "api/src/models/Customer.ts",
+      "api/src/controllers/adminController.ts:9",
+      "api/src/controllers/backupController.ts:2",
+      "api/src/controllers/customerAuthController.ts:5",
+      "api/src/controllers/customerCartController.ts:2"
+    ]
+  },
+  "emi_installments": {
+    "table": "emi_installments",
+    "rowCount": 0,
+    "model": "EMIInstallment",
+    "inFKs": [
+      "payments.emi_installment_id"
+    ],
+    "outFKs": [
+      "emi_plans.id"
+    ],
+    "refs": [
+      "api/src/models/EMIInstallment.ts",
+      "api/src/controllers/emiController.ts:3",
+      "api/src/controllers/paymentController.ts:2",
+      "api/src/controllers/reportController.ts:24",
+      "api/src/controllers/saleController.ts:11"
+    ]
+  },
+  "emi_plans": {
+    "table": "emi_plans",
+    "rowCount": 0,
+    "model": "EMIPlan",
+    "inFKs": [
+      "emi_installments.emi_plan_id"
+    ],
+    "outFKs": [
+      "shops.id",
+      "sales.id",
+      "customers.id"
+    ],
+    "refs": [
+      "api/src/models/EMIPlan.ts",
+      "api/src/controllers/customerController.ts:3",
+      "api/src/controllers/emiController.ts:3",
+      "api/src/controllers/referenceController.ts:12",
+      "api/src/controllers/reportController.ts:23"
+    ]
+  },
+  "employee_advances": {
+    "table": "employee_advances",
+    "rowCount": 0,
+    "model": "EmployeeAdvance",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/EmployeeAdvance.ts",
+      "api/src/controllers/employeeAdvanceController.ts:2",
+      "api/src/controllers/payrollController.ts:2",
+      "api/src/controllers/reportController.ts:20",
+      "api/src/utils/payroll.ts:2"
+    ]
+  },
+  "employee_incentives": {
+    "table": "employee_incentives",
+    "rowCount": 0,
+    "model": "EmployeeIncentive",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/EmployeeIncentive.ts",
+      "api/src/controllers/employeeIncentiveController.ts:2",
+      "api/src/controllers/payrollController.ts:2",
+      "api/src/utils/payroll.ts:2"
+    ]
+  },
+  "employee_ledger": {
+    "table": "employee_ledger",
+    "rowCount": 0,
+    "model": "EmployeeLedger",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/EmployeeLedger.ts",
+      "api/src/controllers/employeeAdvanceController.ts:3",
+      "api/src/controllers/employeeLedgerController.ts:2",
+      "api/src/controllers/payrollController.ts:12",
+      "api/src/routes/payrollRoutes.ts:8"
+    ]
+  },
+  "employee_shops": {
+    "table": "employee_shops",
+    "rowCount": 0,
+    "model": "EmployeeShop",
+    "inFKs": [],
+    "outFKs": [
+      "employees.id",
+      "shops.id",
+      "roles.id"
+    ],
+    "refs": [
+      "api/src/models/EmployeeShop.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/employeeController.ts:3",
+      "api/src/controllers/reportController.ts:22",
+      "api/src/controllers/shopController.ts:6"
+    ]
+  },
+  "employees": {
+    "table": "employees",
+    "rowCount": 0,
+    "model": "Employee",
+    "inFKs": [
+      "attendance.employee_id",
+      "leave_requests.employee_id",
+      "salary_configs.employee_id",
+      "employee_advances.employee_id",
+      "employee_incentives.employee_id",
+      "payrolls.employee_id",
+      "salary_payments.employee_id",
+      "employee_ledger.employee_id",
+      "employee_shops.employee_id",
+      "refresh_tokens.employee_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "refs": [
+      "api/src/models/Employee.ts",
+      "api/src/controllers/activityController.ts:3",
+      "api/src/controllers/adminController.ts:8",
+      "api/src/controllers/attendanceController.ts:3",
+      "api/src/controllers/authController.ts:3"
+    ]
+  },
+  "inventory_transactions": {
+    "table": "inventory_transactions",
+    "rowCount": 0,
+    "model": "InventoryTransaction",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "products.id"
+    ],
+    "refs": [
+      "api/src/models/InventoryTransaction.ts",
+      "api/src/controllers/inventoryController.ts:2",
+      "api/src/controllers/referenceController.ts:14",
+      "api/src/controllers/reportController.ts:12",
+      "api/src/controllers/shopController.ts:9"
+    ]
+  },
+  "invoice_counters": {
+    "table": "invoice_counters",
+    "rowCount": 1,
+    "model": "InvoiceCounter",
+    "inFKs": [],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/InvoiceCounter.ts",
+      "api/src/utils/invoice.ts:2"
+    ]
+  },
+  "leave_requests": {
+    "table": "leave_requests",
+    "rowCount": 0,
+    "model": "LeaveRequest",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/LeaveRequest.ts",
+      "api/src/controllers/leaveController.ts:2",
+      "api/src/utils/notifications.ts:2",
+      "api/src/utils/payroll.ts:2"
+    ]
+  },
+  "modules": {
+    "table": "modules",
+    "rowCount": 0,
+    "model": "Module",
+    "inFKs": [
+      "role_permissions.module_id",
+      "permissions.module_id",
+      "shop_modules.module_id"
+    ],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/Module.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/roleController.ts:3",
+      "api/src/routes/roleRoutes.ts:4",
+      "api/src/middleware/permission.ts:3"
+    ]
+  },
+  "notifications": {
+    "table": "notifications",
+    "rowCount": 3,
+    "model": "Notification",
+    "inFKs": [],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/Notification.ts",
+      "api/src/controllers/customerAuthController.ts:11",
+      "api/src/controllers/customerFinancialsController.ts:9",
+      "api/src/controllers/customerOrderController.ts:14",
+      "api/src/controllers/notificationController.ts:2"
+    ]
+  },
+  "order_items": {
+    "table": "order_items",
+    "rowCount": 0,
+    "model": "OrderItem",
+    "inFKs": [],
+    "outFKs": [
+      "orders.id"
+    ],
+    "refs": [
+      "api/src/models/OrderItem.ts",
+      "api/src/controllers/customerOrderController.ts:6",
+      "api/src/controllers/orderController.ts:6",
+      "web/src/api/orders.ts:4",
+      "App/lib/screens/order_cart_screen.dart:184"
+    ]
+  },
+  "order_status_history": {
+    "table": "order_status_history",
+    "rowCount": 0,
+    "model": "OrderStatusHistory",
+    "inFKs": [],
+    "outFKs": [
+      "orders.id"
+    ],
+    "refs": [
+      "api/src/models/OrderStatusHistory.ts",
+      "api/src/controllers/customerOrderController.ts:7",
+      "api/src/controllers/orderController.ts:7"
+    ]
+  },
+  "orders": {
+    "table": "orders",
+    "rowCount": 0,
+    "model": "Order",
+    "inFKs": [
+      "order_items.order_id",
+      "order_status_history.order_id"
+    ],
+    "outFKs": [
+      "owners.id",
+      "shops.id",
+      "customers.id",
+      "sales.id",
+      "sales.id"
+    ],
+    "refs": [
+      "api/src/models/Order.ts",
+      "api/src/controllers/adminController.ts:11",
+      "api/src/controllers/customerOrderController.ts:5",
+      "api/src/controllers/orderController.ts:5",
+      "api/src/controllers/reportController.ts:325"
+    ]
+  },
+  "owners": {
+    "table": "owners",
+    "rowCount": 2,
+    "model": "Owner",
+    "inFKs": [
+      "customers.owner_id",
+      "sales.owner_id",
+      "shops.owner_id",
+      "purchases.owner_id",
+      "roles.owner_id",
+      "orders.owner_id",
+      "employees.owner_id",
+      "refresh_tokens.owner_id",
+      "audit_logs.owner_id",
+      "categories.owner_id",
+      "suppliers.owner_id",
+      "products.owner_id"
+    ],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/Owner.ts",
+      "api/src/controllers/activityController.ts:3",
+      "api/src/controllers/adminController.ts:7",
+      "api/src/controllers/attendanceController.ts:10",
+      "api/src/controllers/authController.ts:3"
+    ]
+  },
+  "payments": {
+    "table": "payments",
+    "rowCount": 0,
+    "model": "Payment",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "customers.id",
+      "sales.id",
+      "emi_installments.id"
+    ],
+    "refs": [
+      "api/src/models/Payment.ts",
+      "api/src/controllers/backupController.ts:2",
+      "api/src/controllers/customerFinancialsController.ts:6",
+      "api/src/controllers/emiController.ts:3",
+      "api/src/controllers/orderController.ts:13"
+    ]
+  },
+  "payrolls": {
+    "table": "payrolls",
+    "rowCount": 0,
+    "model": "Payroll",
+    "inFKs": [
+      "salary_payments.payroll_id"
+    ],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/Payroll.ts",
+      "api/src/controllers/employeeController.ts:3",
+      "api/src/controllers/employeeLedgerController.ts:2",
+      "api/src/controllers/payrollController.ts:2",
+      "api/src/controllers/referenceController.ts:13"
+    ]
+  },
+  "permissions": {
+    "table": "permissions",
+    "rowCount": 0,
+    "model": "Permission",
+    "inFKs": [],
+    "outFKs": [
+      "modules.id"
+    ],
+    "refs": [
+      "api/src/models/Permission.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/roleController.ts:3",
+      "api/src/routes/attendanceRoutes.ts:3",
+      "api/src/routes/categoryRoutes.ts:3"
+    ]
+  },
+  "platform_audit_log": {
+    "table": "platform_audit_log",
+    "rowCount": 0,
+    "model": "PlatformAuditLog",
+    "inFKs": [],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/PlatformAuditLog.ts",
+      "api/src/controllers/adminController.ts:14",
+      "web/src/pages/admin/AdminAuditLogs.tsx:2",
+      "web/src/api/admin.ts:14"
+    ]
+  },
+  "product_images": {
+    "table": "product_images",
+    "rowCount": 0,
+    "model": "ProductImage",
+    "inFKs": [],
+    "outFKs": [
+      "products.id"
+    ],
+    "refs": [
+      "api/src/models/ProductImage.ts",
+      "api/src/controllers/customerCartController.ts:2",
+      "api/src/controllers/customerCatalogController.ts:3",
+      "api/src/controllers/productController.ts:7",
+      "api/src/routes/productRoutes.ts:12"
+    ]
+  },
+  "product_locations": {
+    "table": "product_locations",
+    "rowCount": 0,
+    "model": "ProductLocation",
+    "inFKs": [],
+    "outFKs": [
+      "products.id",
+      "shops.id"
+    ],
+    "refs": [
+      "api/src/models/ProductLocation.ts",
+      "api/src/controllers/productController.ts:9",
+      "api/src/routes/productRoutes.ts:15",
+      "web/src/api/products.ts:2"
+    ]
+  },
+  "product_stocks": {
+    "table": "product_stocks",
+    "rowCount": 184,
+    "model": "ProductStock",
+    "inFKs": [],
+    "outFKs": [
+      "products.id",
+      "shops.id"
+    ],
+    "refs": [
+      "api/src/models/ProductStock.ts",
+      "api/src/controllers/adminController.ts:13",
+      "api/src/controllers/customerCartController.ts:2",
+      "api/src/controllers/customerCatalogController.ts:3",
+      "api/src/controllers/customerOrderController.ts:10"
+    ]
+  },
+  "products": {
+    "table": "products",
+    "rowCount": 184,
+    "model": "Product",
+    "inFKs": [
+      "product_images.product_id",
+      "product_stocks.product_id",
+      "product_locations.product_id",
+      "inventory_transactions.product_id",
+      "stock_transfers.product_id",
+      "sale_items.product_id",
+      "purchase_items.product_id",
+      "customer_cart_items.product_id"
+    ],
+    "outFKs": [
+      "categories.id",
+      "subcategories.id",
+      "suppliers.id",
+      "owners.id"
+    ],
+    "refs": [
+      "api/src/models/Product.ts",
+      "api/src/controllers/adminController.ts:12",
+      "api/src/controllers/backupController.ts:2",
+      "api/src/controllers/categoryController.ts:13",
+      "api/src/controllers/customerCartController.ts:2"
+    ]
+  },
+  "purchase_counters": {
+    "table": "purchase_counters",
+    "rowCount": 0,
+    "model": "PurchaseCounter",
+    "inFKs": [],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/PurchaseCounter.ts",
+      "api/src/utils/purchaseNumber.ts:2"
+    ]
+  },
+  "purchase_items": {
+    "table": "purchase_items",
+    "rowCount": 0,
+    "model": "PurchaseItem",
+    "inFKs": [
+      "purchase_return_items.purchase_item_id"
+    ],
+    "outFKs": [
+      "purchases.id",
+      "products.id"
+    ],
+    "refs": [
+      "api/src/models/PurchaseItem.ts",
+      "api/src/controllers/purchaseController.ts:6",
+      "api/src/controllers/reportController.ts:115"
+    ]
+  },
+  "purchase_return_items": {
+    "table": "purchase_return_items",
+    "rowCount": 0,
+    "model": null,
+    "inFKs": [],
+    "outFKs": [
+      "purchase_returns.id",
+      "purchase_items.id"
+    ],
+    "refs": []
+  },
+  "purchase_returns": {
+    "table": "purchase_returns",
+    "rowCount": 0,
+    "model": "PurchaseReturn",
+    "inFKs": [
+      "purchase_return_items.purchase_return_id"
+    ],
+    "outFKs": [
+      "purchases.id",
+      "suppliers.id"
+    ],
+    "refs": [
+      "api/src/models/PurchaseReturn.ts",
+      "api/src/controllers/purchaseController.ts:11",
+      "api/src/utils/supplierLedger.ts:25"
+    ]
+  },
+  "purchases": {
+    "table": "purchases",
+    "rowCount": 0,
+    "model": "Purchase",
+    "inFKs": [
+      "purchase_items.purchase_id",
+      "purchase_returns.purchase_id",
+      "supplier_payments.purchase_id"
+    ],
+    "outFKs": [
+      "owners.id",
+      "shops.id",
+      "suppliers.id"
+    ],
+    "refs": [
+      "api/src/models/Purchase.ts",
+      "api/src/controllers/productController.ts:499",
+      "api/src/controllers/purchaseController.ts:5",
+      "api/src/controllers/referenceController.ts:5",
+      "api/src/controllers/reportController.ts:15"
+    ]
+  },
+  "reference_counters": {
+    "table": "reference_counters",
+    "rowCount": 0,
+    "model": null,
+    "inFKs": [],
+    "outFKs": [],
+    "refs": []
+  },
+  "refresh_tokens": {
+    "table": "refresh_tokens",
+    "rowCount": 0,
+    "model": "RefreshToken",
+    "inFKs": [],
+    "outFKs": [
+      "owners.id",
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/RefreshToken.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/customerAuthController.ts:7",
+      "api/src/controllers/customerController.ts:3",
+      "api/src/utils/jwt.ts:36"
+    ]
+  },
+  "role_field_permissions": {
+    "table": "role_field_permissions",
+    "rowCount": 112,
+    "model": "RoleFieldPermission",
+    "inFKs": [],
+    "outFKs": [
+      "roles.id"
+    ],
+    "refs": [
+      "api/src/models/RoleFieldPermission.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/roleController.ts:3",
+      "api/src/routes/roleRoutes.ts:8",
+      "api/src/middleware/permission.ts:3"
+    ]
+  },
+  "role_permissions": {
+    "table": "role_permissions",
+    "rowCount": 448,
+    "model": "RolePermission",
+    "inFKs": [],
+    "outFKs": [
+      "roles.id",
+      "modules.id"
+    ],
+    "refs": [
+      "api/src/models/RolePermission.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/roleController.ts:3",
+      "api/src/routes/roleRoutes.ts:7",
+      "api/src/middleware/permission.ts:3"
+    ]
+  },
+  "roles": {
+    "table": "roles",
+    "rowCount": 18,
+    "model": "Role",
+    "inFKs": [
+      "role_permissions.role_id",
+      "role_field_permissions.role_id",
+      "user_roles.role_id",
+      "employee_shops.role_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "refs": [
+      "api/src/models/Role.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/employeeController.ts:3",
+      "api/src/controllers/roleController.ts:3",
+      "api/src/controllers/shopController.ts:5"
+    ]
+  },
+  "salary_configs": {
+    "table": "salary_configs",
+    "rowCount": 0,
+    "model": "SalaryConfig",
+    "inFKs": [],
+    "outFKs": [
+      "employees.id"
+    ],
+    "refs": [
+      "api/src/models/SalaryConfig.ts",
+      "api/src/controllers/employeeController.ts:3",
+      "api/src/controllers/payrollController.ts:5",
+      "api/src/controllers/salaryConfigController.ts:3",
+      "api/src/routes/payrollRoutes.ts:4"
+    ]
+  },
+  "salary_payments": {
+    "table": "salary_payments",
+    "rowCount": 0,
+    "model": "SalaryPayment",
+    "inFKs": [],
+    "outFKs": [
+      "employees.id",
+      "payrolls.id"
+    ],
+    "refs": [
+      "api/src/models/SalaryPayment.ts",
+      "api/src/controllers/payrollController.ts:2",
+      "api/src/controllers/reportController.ts:19",
+      "api/src/utils/salaryLedger.ts:11"
+    ]
+  },
+  "sale_items": {
+    "table": "sale_items",
+    "rowCount": 0,
+    "model": "SaleItem",
+    "inFKs": [
+      "sale_return_items.sale_item_id"
+    ],
+    "outFKs": [
+      "sales.id",
+      "products.id"
+    ],
+    "refs": [
+      "api/src/models/SaleItem.ts",
+      "api/src/controllers/backupController.ts:2",
+      "api/src/controllers/customerFinancialsController.ts:5",
+      "api/src/controllers/orderController.ts:12",
+      "api/src/controllers/reportController.ts:5"
+    ]
+  },
+  "sale_return_items": {
+    "table": "sale_return_items",
+    "rowCount": 0,
+    "model": null,
+    "inFKs": [],
+    "outFKs": [
+      "sale_returns.id",
+      "sale_items.id"
+    ],
+    "refs": []
+  },
+  "sale_returns": {
+    "table": "sale_returns",
+    "rowCount": 0,
+    "model": "SaleReturn",
+    "inFKs": [
+      "sale_return_items.sale_return_id"
+    ],
+    "outFKs": [
+      "sales.id",
+      "customers.id"
+    ],
+    "refs": [
+      "api/src/models/SaleReturn.ts",
+      "api/src/controllers/reportController.ts:6",
+      "api/src/controllers/saleController.ts:12",
+      "App/lib/models/customer_ledger_entry.dart:10"
+    ]
+  },
+  "sales": {
+    "table": "sales",
+    "rowCount": 19,
+    "model": "Sale",
+    "inFKs": [
+      "sale_items.sale_id",
+      "emi_plans.sale_id",
+      "payments.sale_id",
+      "sale_returns.sale_id",
+      "orders.converted_sale_id",
+      "orders.billed_bill_id"
+    ],
+    "outFKs": [
+      "owners.id",
+      "shops.id",
+      "customers.id"
+    ],
+    "refs": [
+      "api/src/models/Sale.ts",
+      "api/src/controllers/adminController.ts:10",
+      "api/src/controllers/authController.ts:29",
+      "api/src/controllers/backupController.ts:2",
+      "api/src/controllers/customerController.ts:3"
+    ]
+  },
+  "shop_modules": {
+    "table": "shop_modules",
+    "rowCount": 0,
+    "model": "ShopModule",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "modules.id"
+    ],
+    "refs": [
+      "api/src/models/ShopModule.ts",
+      "api/src/controllers/authController.ts:3",
+      "api/src/controllers/roleController.ts:3",
+      "api/src/routes/roleRoutes.ts:10",
+      "api/src/middleware/permission.ts:3"
+    ]
+  },
+  "shop_portal_settings": {
+    "table": "shop_portal_settings",
+    "rowCount": 1,
+    "model": "ShopPortalSettings",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id"
+    ],
+    "refs": [
+      "api/src/models/ShopPortalSettings.ts",
+      "api/src/controllers/customerAuthController.ts:10",
+      "api/src/controllers/customerCatalogController.ts:3",
+      "api/src/controllers/customerOrderController.ts:13",
+      "api/src/controllers/shopController.ts:16"
+    ]
+  },
+  "shops": {
+    "table": "shops",
+    "rowCount": 1,
+    "model": "Shop",
+    "inFKs": [
+      "product_stocks.shop_id",
+      "product_locations.shop_id",
+      "inventory_transactions.shop_id",
+      "stock_transfers.from_shop_id",
+      "stock_transfers.to_shop_id",
+      "sales.shop_id",
+      "emi_plans.shop_id",
+      "payments.shop_id",
+      "customer_ledger.shop_id",
+      "attendance.shop_id",
+      "leave_requests.shop_id",
+      "employee_advances.shop_id",
+      "employee_incentives.shop_id",
+      "payrolls.shop_id",
+      "employee_ledger.shop_id",
+      "purchases.shop_id",
+      "supplier_ledger.shop_id",
+      "orders.shop_id",
+      "supplier_payments.shop_id",
+      "shop_modules.shop_id",
+      "user_roles.shop_id",
+      "customer_accounts.shop_id",
+      "employee_shops.shop_id",
+      "audit_logs.shop_id",
+      "shop_portal_settings.shop_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "refs": [
+      "api/src/models/Shop.ts",
+      "api/src/controllers/activityController.ts:3",
+      "api/src/controllers/adminController.ts:6",
+      "api/src/controllers/attendanceController.ts:3",
+      "api/src/controllers/authController.ts:3"
+    ]
+  },
+  "status_history": {
+    "table": "status_history",
+    "rowCount": 0,
+    "model": "StatusHistory",
+    "inFKs": [],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/StatusHistory.ts",
+      "api/src/controllers/adminController.ts:15",
+      "api/src/controllers/customerOrderController.ts:7",
+      "api/src/controllers/orderController.ts:7",
+      "api/src/controllers/saleController.ts:15"
+    ]
+  },
+  "stock_transfers": {
+    "table": "stock_transfers",
+    "rowCount": 0,
+    "model": "StockTransfer",
+    "inFKs": [],
+    "outFKs": [
+      "products.id",
+      "shops.id",
+      "shops.id"
+    ],
+    "refs": [
+      "api/src/models/StockTransfer.ts",
+      "api/src/controllers/inventoryController.ts:2",
+      "api/src/controllers/referenceController.ts:7",
+      "web/src/pages/details/MovementDetail.tsx:143",
+      "web/src/api/inventory.ts:2"
+    ]
+  },
+  "subcategories": {
+    "table": "subcategories",
+    "rowCount": 0,
+    "model": "Subcategory",
+    "inFKs": [
+      "products.subcategory_id"
+    ],
+    "outFKs": [
+      "categories.id"
+    ],
+    "refs": [
+      "api/src/models/Subcategory.ts",
+      "api/src/controllers/categoryController.ts:2",
+      "api/src/controllers/productController.ts:11",
+      "api/src/routes/categoryRoutes.ts:9",
+      "web/src/api/categories.ts:2"
+    ]
+  },
+  "supplier_ledger": {
+    "table": "supplier_ledger",
+    "rowCount": 0,
+    "model": "SupplierLedger",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "suppliers.id"
+    ],
+    "refs": [
+      "api/src/models/SupplierLedger.ts",
+      "api/src/controllers/purchaseController.ts:16",
+      "api/src/controllers/reportController.ts:14",
+      "api/src/controllers/shopController.ts:11",
+      "api/src/controllers/supplierController.ts:3"
+    ]
+  },
+  "supplier_payments": {
+    "table": "supplier_payments",
+    "rowCount": 0,
+    "model": "SupplierPayment",
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "suppliers.id",
+      "purchases.id"
+    ],
+    "refs": [
+      "api/src/models/SupplierPayment.ts",
+      "api/src/controllers/purchaseController.ts:10",
+      "api/src/controllers/reportController.ts:329",
+      "api/src/controllers/supplierController.ts:3",
+      "api/src/controllers/supplierLedgerController.ts:2"
+    ]
+  },
+  "suppliers": {
+    "table": "suppliers",
+    "rowCount": 1,
+    "model": "Supplier",
+    "inFKs": [
+      "products.supplier_id",
+      "purchases.supplier_id",
+      "supplier_ledger.supplier_id",
+      "purchase_returns.supplier_id",
+      "supplier_payments.supplier_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "refs": [
+      "api/src/models/Supplier.ts",
+      "api/src/controllers/productController.ts:12",
+      "api/src/controllers/purchaseController.ts:8",
+      "api/src/controllers/referenceController.ts:10",
+      "api/src/controllers/reportController.ts:13"
+    ]
+  },
+  "user_roles": {
+    "table": "user_roles",
+    "rowCount": 0,
+    "model": "UserRole",
+    "inFKs": [],
+    "outFKs": [
+      "roles.id",
+      "shops.id"
+    ],
+    "refs": [
+      "api/src/models/UserRole.ts",
+      "api/src/controllers/roleController.ts:3",
+      "web/src/pages/Roles.tsx:139"
+    ]
+  },
+  "visibility_settings": {
+    "table": "visibility_settings",
+    "rowCount": 0,
+    "model": "VisibilitySettings",
+    "inFKs": [],
+    "outFKs": [],
+    "refs": [
+      "api/src/models/VisibilitySettings.ts",
+      "api/src/controllers/settingsController.ts:2",
+      "api/src/routes/settingsRoutes.ts:4",
+      "App/lib/screens/home_screen.dart:773",
+      "App/lib/screens/profile_screen.dart:270"
+    ]
+  }
+}

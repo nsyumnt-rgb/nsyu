@@ -10,6 +10,7 @@ import '../providers/orders_provider.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'customer_ledger_detail_screen.dart';
 import 'order_cart_screen.dart';
+import 'notifications_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final ValueChanged<int> onNavigate;
@@ -171,7 +172,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                    },
                   ),
                   IconButton(
                     icon: Icon(_searchOpen ? Icons.close : Icons.search, color: const Color(0xFF475569), size: 22),

@@ -4,7 +4,102 @@ import { useAuthStore } from "../store/authStore";
 import { listShops } from "../api/shops";
 import { logout as logoutApi } from "../api/auth";
 import { resolveReferenceApi, type ResolvedReference } from "../api/reference";
+import {
+  listNotificationsApi,
+  getUnreadCountApi,
+  markNotificationReadApi,
+  markAllNotificationsReadApi,
+  type AppNotification,
+} from "../api/notifications";
 import type { Shop } from "../types";
+
+function formatTimeAgo(dateStr: string): string {
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return "Just now";
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    const days = Math.floor(hr / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString();
+  } catch {
+    return "";
+  }
+}
+
+function getNotifVisuals(type: string) {
+  switch (type) {
+    case "bill_created":
+      return {
+        bg: "bg-blue-50 text-blue-600 border-blue-200",
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg>
+        ),
+      };
+    case "sale_cancelled":
+      return {
+        bg: "bg-rose-50 text-rose-600 border-rose-200",
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+        ),
+      };
+    case "payment_received":
+      return {
+        bg: "bg-emerald-50 text-emerald-600 border-emerald-200",
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+        ),
+      };
+    case "low_stock":
+      return {
+        bg: "bg-amber-50 text-amber-600 border-amber-200",
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        ),
+      };
+    case "order_placed":
+    case "order_status_changed":
+      return {
+        bg: "bg-indigo-50 text-indigo-600 border-indigo-200",
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+        ),
+      };
+    default:
+      return {
+        bg: "bg-slate-100 text-slate-600 border-slate-200",
+        icon: (
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+        ),
+      };
+  }
+}
 
 export default function Topbar() {
   const navigate = useNavigate();
@@ -27,6 +122,14 @@ export default function Topbar() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  // Notification state
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<"all" | "unread">("all");
+  const notifMenuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     listShops().then((res) => setShops(res.data.data ?? []));
   }, []);
@@ -37,6 +140,7 @@ export default function Topbar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shops, shopId]);
 
+  // Click outside listener for all popovers
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
@@ -45,10 +149,101 @@ export default function Topbar() {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
       }
+      if (notifMenuRef.current && !notifMenuRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
+
+  // Poll unread notification count
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await getUnreadCountApi();
+      setUnreadCount(count);
+    } catch {
+      // Ignore background poll errors
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadNotifications = async () => {
+    setLoadingNotifs(true);
+    try {
+      const data = await listNotificationsApi();
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unreadCount || 0);
+    } catch (err) {
+      console.error("Failed to load notifications:", err);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  };
+
+  const toggleNotifDropdown = () => {
+    if (!notifOpen) {
+      setNotifOpen(true);
+      loadNotifications();
+    } else {
+      setNotifOpen(false);
+    }
+  };
+
+  const handleMarkAsRead = async (e: React.MouseEvent, n: AppNotification) => {
+    e.stopPropagation();
+    if (n.is_read) return;
+    try {
+      await markNotificationReadApi(n.id);
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, is_read: true } : item))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch (err) {
+      console.error("Failed to mark notification read:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsReadApi();
+      setNotifications((prev) => prev.map((item) => ({ ...item, is_read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all read:", err);
+    }
+  };
+
+  const handleNotifClick = async (n: AppNotification) => {
+    if (!n.is_read) {
+      try {
+        await markNotificationReadApi(n.id);
+        setNotifications((prev) =>
+          prev.map((item) => (item.id === n.id ? { ...item, is_read: true } : item))
+        );
+        setUnreadCount((c) => Math.max(0, c - 1));
+      } catch {}
+    }
+
+    setNotifOpen(false);
+
+    // Contextual routing based on reference
+    const refType = (n.reference_type || "").toLowerCase();
+    if (refType === "sale") {
+      navigate("/app/sales");
+    } else if (refType === "order") {
+      navigate("/app/orders");
+    } else if (refType === "payment") {
+      navigate("/app/payments");
+    } else if (refType === "product") {
+      navigate("/app/inventory");
+    }
+  };
 
   // Debounced search on input
   useEffect(() => {
@@ -86,7 +281,6 @@ export default function Topbar() {
         setSearchOpen(false);
         setSearchQuery("");
       } else {
-        // Resolve immediately
         resolveReferenceApi(searchQuery.trim())
           .then((res) => {
             if (res.data.success && res.data.data) {
@@ -100,14 +294,11 @@ export default function Topbar() {
     }
   }
 
-
   async function handleLogout() {
     if (refreshToken) {
       try {
         await logoutApi(refreshToken);
-      } catch {
-        // best-effort — clear local session regardless
-      }
+      } catch {}
     }
     storeLogout();
     navigate("/login");
@@ -123,6 +314,11 @@ export default function Topbar() {
 
   const displayName = accountType === "owner" ? (owner?.name || "Owner") : (employee?.name || "Staff");
   const displayRole = accountType === "owner" ? "Owner" : (roleName || "Staff");
+
+  const displayedNotifications =
+    notifFilter === "unread"
+      ? notifications.filter((n) => !n.is_read)
+      : notifications;
 
   return (
     <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 sticky top-0 z-30 shadow-xs">
@@ -183,7 +379,7 @@ export default function Topbar() {
 
       {/* Right Controls */}
       <div className="flex items-center gap-3 md:gap-4">
-        {/* Active Shop Badge (Fixed: each user belongs to exactly one shop; no shop-switching UI) */}
+        {/* Active Shop Badge */}
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-medium text-slate-500 hidden sm:inline">Shop:</span>
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-semibold text-slate-700 shadow-2xs">
@@ -196,19 +392,151 @@ export default function Topbar() {
           </div>
         </div>
 
-        {/* Notification Bell */}
-        <button
-          className="relative p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-          title="Notifications"
-        >
-          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-xs">
-            3
-          </span>
-        </button>
+        {/* Notification Bell with Real Live Dropdown */}
+        <div className="relative" ref={notifMenuRef}>
+          <button
+            onClick={toggleNotifDropdown}
+            className={`relative p-2 rounded-lg transition-colors ${
+              notifOpen ? "bg-slate-100 text-blue-600" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            }`}
+            title="Notifications"
+            aria-label="Notifications"
+          >
+            <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 flex min-w-[16px] h-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-xs leading-none">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {/* Interactive Notifications Dropdown */}
+          {notifOpen && (
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              {/* Header */}
+              <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900">Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold text-[11px]">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex border-b border-slate-100 px-3 pt-2 bg-slate-50/50">
+                <button
+                  onClick={() => setNotifFilter("all")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-colors border-b-2 ${
+                    notifFilter === "all"
+                      ? "border-blue-600 text-blue-600 bg-white"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  All ({notifications.length})
+                </button>
+                <button
+                  onClick={() => setNotifFilter("unread")}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-t-lg transition-colors border-b-2 ${
+                    notifFilter === "unread"
+                      ? "border-blue-600 text-blue-600 bg-white"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Unread ({unreadCount})
+                </button>
+              </div>
+
+              {/* Notification List Body */}
+              <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100">
+                {loadingNotifs ? (
+                  <div className="py-12 flex flex-col items-center justify-center text-slate-400 gap-2">
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs">Loading notifications...</span>
+                  </div>
+                ) : displayedNotifications.length === 0 ? (
+                  <div className="py-12 px-4 flex flex-col items-center justify-center text-center text-slate-400">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                      </svg>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700">No notifications</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {notifFilter === "unread" ? "You have read all your notifications!" : "You're all caught up."}
+                    </p>
+                  </div>
+                ) : (
+                  displayedNotifications.map((n) => {
+                    const visuals = getNotifVisuals(n.type);
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotifClick(n)}
+                        className={`p-3.5 flex items-start gap-3 hover:bg-slate-50/80 cursor-pointer transition-colors relative group ${
+                          !n.is_read ? "bg-blue-50/30" : "bg-white"
+                        }`}
+                      >
+                        {/* Icon */}
+                        <div
+                          className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 ${visuals.bg}`}
+                        >
+                          {visuals.icon}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <h4
+                              className={`text-[12px] truncate ${
+                                !n.is_read ? "font-bold text-slate-900" : "font-semibold text-slate-700"
+                              }`}
+                            >
+                              {n.title}
+                            </h4>
+                            <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
+                              {formatTimeAgo(n.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                            {n.message}
+                          </p>
+                        </div>
+
+                        {/* Status Dot / Mark as read trigger */}
+                        <div className="shrink-0 flex items-center self-center">
+                          {!n.is_read ? (
+                            <button
+                              onClick={(e) => handleMarkAsRead(e, n)}
+                              title="Mark as read"
+                              className="w-2.5 h-2.5 rounded-full bg-blue-600 hover:ring-4 hover:ring-blue-100 transition-all"
+                            />
+                          ) : (
+                            <div className="w-1.5 h-1.5 rounded-full bg-transparent" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Fullscreen Expand Icon */}
         <button
@@ -270,4 +598,3 @@ export default function Topbar() {
     </header>
   );
 }
-

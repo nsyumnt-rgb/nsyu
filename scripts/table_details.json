@@ -1,0 +1,936 @@
+[
+  {
+    "table": "attendance",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:102",
+      "api/src/config/permissions.ts:45",
+      "api/src/config/permissions.ts:61",
+      "api/src/controllers/attendanceController.ts:3",
+      "api/src/controllers/attendanceController.ts:4"
+    ]
+  },
+  {
+    "table": "audit_logs",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "owners.id",
+      "shops.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/AuditLog.ts:65"
+    ]
+  },
+  {
+    "table": "categories",
+    "rows": 8,
+    "inFKs": [
+      "products.category_id",
+      "subcategories.category_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:94",
+      "api/src/controllers/backupController.ts:11",
+      "api/src/controllers/backupController.ts:37",
+      "api/src/controllers/backupController.ts:45",
+      "api/src/controllers/backupController.ts:78"
+    ]
+  },
+  {
+    "table": "customer_accounts",
+    "rows": 0,
+    "inFKs": [
+      "customer_refresh_tokens.account_id"
+    ],
+    "outFKs": [
+      "customers.id",
+      "shops.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/CustomerAccount.ts:68"
+    ]
+  },
+  {
+    "table": "customer_cart_items",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "customer_carts.id",
+      "products.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/CustomerCartItem.ts:38"
+    ]
+  },
+  {
+    "table": "customer_carts",
+    "rows": 0,
+    "inFKs": [
+      "customer_cart_items.cart_id"
+    ],
+    "outFKs": [
+      "customers.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/CustomerCart.ts:35"
+    ]
+  },
+  {
+    "table": "customer_ledger",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "customers.id"
+    ],
+    "sampleRefs": [
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:167",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:178",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:188",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:206",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:250"
+    ]
+  },
+  {
+    "table": "customer_otps",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/models/CustomerOtp.ts:48"
+    ]
+  },
+  {
+    "table": "customer_refresh_tokens",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "customer_accounts.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/CustomerRefreshToken.ts:42"
+    ]
+  },
+  {
+    "table": "customers",
+    "rows": 1,
+    "inFKs": [
+      "sales.customer_id",
+      "emi_plans.customer_id",
+      "payments.customer_id",
+      "customer_ledger.customer_id",
+      "sale_returns.customer_id",
+      "orders.customer_id",
+      "customer_accounts.customer_id",
+      "customer_carts.customer_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:97",
+      "api/src/config/permissions.ts:22",
+      "api/src/config/permissions.ts:72",
+      "api/src/controllers/backupController.ts:11",
+      "api/src/controllers/backupController.ts:39"
+    ]
+  },
+  {
+    "table": "emi_installments",
+    "rows": 0,
+    "inFKs": [
+      "payments.emi_installment_id"
+    ],
+    "outFKs": [
+      "emi_plans.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/EMIInstallment.ts:87"
+    ]
+  },
+  {
+    "table": "emi_plans",
+    "rows": 0,
+    "inFKs": [
+      "emi_installments.emi_plan_id"
+    ],
+    "outFKs": [
+      "shops.id",
+      "sales.id",
+      "customers.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/EMIPlan.ts:106",
+      "api/src/scripts/migrate_reference_codes.ts:43"
+    ]
+  },
+  {
+    "table": "employee_advances",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/EmployeeAdvance.ts:72"
+    ]
+  },
+  {
+    "table": "employee_incentives",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/EmployeeIncentive.ts:103"
+    ]
+  },
+  {
+    "table": "employee_ledger",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/EmployeeLedger.ts:88",
+      "api/src/scripts/migrate_reference_codes.ts:40"
+    ]
+  },
+  {
+    "table": "employee_shops",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "employees.id",
+      "shops.id",
+      "roles.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/EmployeeShop.ts:38"
+    ]
+  },
+  {
+    "table": "employees",
+    "rows": 0,
+    "inFKs": [
+      "attendance.employee_id",
+      "leave_requests.employee_id",
+      "salary_configs.employee_id",
+      "employee_advances.employee_id",
+      "employee_incentives.employee_id",
+      "payrolls.employee_id",
+      "salary_payments.employee_id",
+      "employee_ledger.employee_id",
+      "employee_shops.employee_id",
+      "refresh_tokens.employee_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:92",
+      "api/src/config/permissions.ts:44",
+      "api/src/config/permissions.ts:60",
+      "api/src/controllers/activityController.ts:42",
+      "api/src/controllers/activityController.ts:49"
+    ]
+  },
+  {
+    "table": "inventory_transactions",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "products.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/InventoryTransaction.ts:97",
+      "api/src/scripts/migrate_reference_codes.ts:37"
+    ]
+  },
+  {
+    "table": "invoice_counters",
+    "rows": 1,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/models/InvoiceCounter.ts:39"
+    ]
+  },
+  {
+    "table": "leave_requests",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/LeaveRequest.ts:95"
+    ]
+  },
+  {
+    "table": "modules",
+    "rows": 0,
+    "inFKs": [
+      "role_permissions.module_id",
+      "permissions.module_id",
+      "shop_modules.module_id"
+    ],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/config/permissions.ts:2",
+      "api/src/config/permissions.ts:3",
+      "api/src/config/permissions.ts:4",
+      "api/src/config/permissions.ts:12",
+      "api/src/config/permissions.ts:33"
+    ]
+  },
+  {
+    "table": "notifications",
+    "rows": 3,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/app.ts:105",
+      "api/src/controllers/customerFinancialsController.ts:232",
+      "api/src/controllers/customerFinancialsController.ts:270",
+      "api/src/controllers/customerFinancialsController.ts:275",
+      "api/src/controllers/customerFinancialsController.ts:295"
+    ]
+  },
+  {
+    "table": "order_items",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "orders.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/OrderItem.ts:62"
+    ]
+  },
+  {
+    "table": "order_status_history",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "orders.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/OrderStatusHistory.ts:48"
+    ]
+  },
+  {
+    "table": "orders",
+    "rows": 0,
+    "inFKs": [
+      "order_items.order_id",
+      "order_status_history.order_id"
+    ],
+    "outFKs": [
+      "owners.id",
+      "shops.id",
+      "customers.id",
+      "sales.id",
+      "sales.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:110",
+      "api/src/config/permissions.ts:23",
+      "api/src/config/permissions.ts:73",
+      "api/src/controllers/customerOrderController.ts:23",
+      "api/src/controllers/customerOrderController.ts:160"
+    ]
+  },
+  {
+    "table": "owners",
+    "rows": 2,
+    "inFKs": [
+      "customers.owner_id",
+      "sales.owner_id",
+      "shops.owner_id",
+      "purchases.owner_id",
+      "roles.owner_id",
+      "orders.owner_id",
+      "employees.owner_id",
+      "refresh_tokens.owner_id",
+      "audit_logs.owner_id",
+      "categories.owner_id",
+      "suppliers.owner_id",
+      "products.owner_id"
+    ],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/controllers/activityController.ts:42",
+      "api/src/controllers/activityController.ts:48",
+      "api/src/controllers/adminController.ts:300",
+      "api/src/controllers/adminController.ts:301",
+      "api/src/controllers/adminController.ts:305"
+    ]
+  },
+  {
+    "table": "payments",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "customers.id",
+      "sales.id",
+      "emi_installments.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:99",
+      "api/src/config/permissions.ts:41",
+      "api/src/config/permissions.ts:75",
+      "api/src/controllers/backupController.ts:11",
+      "api/src/controllers/backupController.ts:41"
+    ]
+  },
+  {
+    "table": "payrolls",
+    "rows": 0,
+    "inFKs": [
+      "salary_payments.payroll_id"
+    ],
+    "outFKs": [
+      "shops.id",
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/controllers/employeeController.ts:81",
+      "api/src/controllers/employeeLedgerController.ts:54",
+      "api/src/controllers/employeeLedgerController.ts:58",
+      "api/src/controllers/payrollController.ts:324",
+      "api/src/controllers/payrollController.ts:333"
+    ]
+  },
+  {
+    "table": "permissions",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "modules.id"
+    ],
+    "sampleRefs": [
+      "api/src/config/permissions.ts:2",
+      "api/src/config/permissions.ts:3",
+      "api/src/config/permissions.ts:5",
+      "api/src/controllers/adminController.ts:356",
+      "api/src/controllers/authController.ts:6"
+    ]
+  },
+  {
+    "table": "platform_audit_log",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:43",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:44",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:57",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:58",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:59"
+    ]
+  },
+  {
+    "table": "product_images",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "products.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/ProductImage.ts:34"
+    ]
+  },
+  {
+    "table": "product_locations",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "products.id",
+      "shops.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/ProductLocation.ts:59"
+    ]
+  },
+  {
+    "table": "product_stocks",
+    "rows": 184,
+    "inFKs": [],
+    "outFKs": [
+      "products.id",
+      "shops.id"
+    ],
+    "sampleRefs": [
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:169",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:180",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:190",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:212",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:262"
+    ]
+  },
+  {
+    "table": "products",
+    "rows": 184,
+    "inFKs": [
+      "product_images.product_id",
+      "product_stocks.product_id",
+      "product_locations.product_id",
+      "inventory_transactions.product_id",
+      "stock_transfers.product_id",
+      "sale_items.product_id",
+      "purchase_items.product_id",
+      "customer_cart_items.product_id"
+    ],
+    "outFKs": [
+      "categories.id",
+      "subcategories.id",
+      "suppliers.id",
+      "owners.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:93",
+      "api/src/config/permissions.ts:18",
+      "api/src/config/permissions.ts:65",
+      "api/src/controllers/authController.ts:11",
+      "api/src/controllers/backupController.ts:11"
+    ]
+  },
+  {
+    "table": "purchase_counters",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/models/PurchaseCounter.ts:33"
+    ]
+  },
+  {
+    "table": "purchase_items",
+    "rows": 0,
+    "inFKs": [
+      "purchase_return_items.purchase_item_id"
+    ],
+    "outFKs": [
+      "purchases.id",
+      "products.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/PurchaseItem.ts:61"
+    ]
+  },
+  {
+    "table": "purchase_return_items",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "purchase_returns.id",
+      "purchase_items.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/PurchaseReturn.ts:109"
+    ]
+  },
+  {
+    "table": "purchase_returns",
+    "rows": 0,
+    "inFKs": [
+      "purchase_return_items.purchase_return_id"
+    ],
+    "outFKs": [
+      "purchases.id",
+      "suppliers.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/PurchaseReturn.ts:61",
+      "api/src/scripts/migrate_reference_codes.ts:45"
+    ]
+  },
+  {
+    "table": "purchases",
+    "rows": 0,
+    "inFKs": [
+      "purchase_items.purchase_id",
+      "purchase_returns.purchase_id",
+      "supplier_payments.purchase_id"
+    ],
+    "outFKs": [
+      "owners.id",
+      "shops.id",
+      "suppliers.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:107",
+      "api/src/controllers/purchaseController.ts:271",
+      "api/src/controllers/purchaseController.ts:282",
+      "api/src/controllers/reportController.ts:127",
+      "api/src/controllers/reportController.ts:133"
+    ]
+  },
+  {
+    "table": "reference_counters",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/scripts/migrate_reference_codes.ts:7",
+      "api/src/scripts/migrate_reference_codes.ts:8",
+      "api/src/scripts/migrate_reference_codes.ts:10",
+      "api/src/scripts/migrate_reference_codes.ts:20",
+      "api/src/scripts/migrate_reference_codes.ts:88"
+    ]
+  },
+  {
+    "table": "refresh_tokens",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "owners.id",
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/RefreshToken.ts:37"
+    ]
+  },
+  {
+    "table": "role_field_permissions",
+    "rows": 112,
+    "inFKs": [],
+    "outFKs": [
+      "roles.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/RoleFieldPermission.ts:35"
+    ]
+  },
+  {
+    "table": "role_permissions",
+    "rows": 448,
+    "inFKs": [],
+    "outFKs": [
+      "roles.id",
+      "modules.id"
+    ],
+    "sampleRefs": [
+      "api/src/config/permissions.ts:7",
+      "api/src/config/permissions.ts:17",
+      "api/src/config/permissions.ts:63",
+      "api/src/config/permissions.ts:64",
+      "api/src/controllers/roleController.ts:82"
+    ]
+  },
+  {
+    "table": "roles",
+    "rows": 18,
+    "inFKs": [
+      "role_permissions.role_id",
+      "role_field_permissions.role_id",
+      "user_roles.role_id",
+      "employee_shops.role_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:91",
+      "api/src/config/permissions.ts:2",
+      "api/src/config/permissions.ts:6",
+      "api/src/config/permissions.ts:64",
+      "api/src/config/permissions.ts:107"
+    ]
+  },
+  {
+    "table": "salary_configs",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "employees.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/SalaryConfig.ts:87"
+    ]
+  },
+  {
+    "table": "salary_payments",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "employees.id",
+      "payrolls.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/SalaryPayment.ts:75"
+    ]
+  },
+  {
+    "table": "sale_items",
+    "rows": 0,
+    "inFKs": [
+      "sale_return_items.sale_item_id"
+    ],
+    "outFKs": [
+      "sales.id",
+      "products.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/SaleItem.ts:69",
+      "App/lib/models/saved_bill.dart:242"
+    ]
+  },
+  {
+    "table": "sale_return_items",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "sale_returns.id",
+      "sale_items.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/SaleReturn.ts:119"
+    ]
+  },
+  {
+    "table": "sale_returns",
+    "rows": 0,
+    "inFKs": [
+      "sale_return_items.sale_return_id"
+    ],
+    "outFKs": [
+      "sales.id",
+      "customers.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/SaleReturn.ts:70",
+      "api/src/scripts/migrate_reference_codes.ts:44"
+    ]
+  },
+  {
+    "table": "sales",
+    "rows": 19,
+    "inFKs": [
+      "sale_items.sale_id",
+      "emi_plans.sale_id",
+      "payments.sale_id",
+      "sale_returns.sale_id",
+      "orders.converted_sale_id",
+      "orders.billed_bill_id"
+    ],
+    "outFKs": [
+      "owners.id",
+      "shops.id",
+      "customers.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:98",
+      "api/src/config/permissions.ts:39",
+      "api/src/config/permissions.ts:70",
+      "api/src/config/permissions.ts:112",
+      "api/src/controllers/adminController.ts:53"
+    ]
+  },
+  {
+    "table": "shop_modules",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "modules.id"
+    ],
+    "sampleRefs": [
+      "api/src/config/permissions.ts:8",
+      "api/src/controllers/authController.ts:274",
+      "api/src/middleware/permission.ts:12",
+      "api/src/middleware/permission.ts:62",
+      "api/src/middleware/permission.ts:78"
+    ]
+  },
+  {
+    "table": "shop_portal_settings",
+    "rows": 1,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/ShopPortalSettings.ts:57"
+    ]
+  },
+  {
+    "table": "shops",
+    "rows": 1,
+    "inFKs": [
+      "product_stocks.shop_id",
+      "product_locations.shop_id",
+      "inventory_transactions.shop_id",
+      "stock_transfers.from_shop_id",
+      "stock_transfers.to_shop_id",
+      "sales.shop_id",
+      "emi_plans.shop_id",
+      "payments.shop_id",
+      "customer_ledger.shop_id",
+      "attendance.shop_id",
+      "leave_requests.shop_id",
+      "employee_advances.shop_id",
+      "employee_incentives.shop_id",
+      "payrolls.shop_id",
+      "employee_ledger.shop_id",
+      "purchases.shop_id",
+      "supplier_ledger.shop_id",
+      "orders.shop_id",
+      "supplier_payments.shop_id",
+      "shop_modules.shop_id",
+      "user_roles.shop_id",
+      "customer_accounts.shop_id",
+      "employee_shops.shop_id",
+      "audit_logs.shop_id",
+      "shop_portal_settings.shop_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:90",
+      "api/src/config/permissions.ts:36",
+      "api/src/config/permissions.ts:56",
+      "api/src/controllers/activityController.ts:42",
+      "api/src/controllers/activityController.ts:50"
+    ]
+  },
+  {
+    "table": "status_history",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/controllers/adminController.ts:260",
+      "api/src/controllers/saleController.ts:707",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:61",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:62",
+      "api/src/migrations/01_unified_schema_and_super_admin.sql:75"
+    ]
+  },
+  {
+    "table": "stock_transfers",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "products.id",
+      "shops.id",
+      "shops.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/StockTransfer.ts:95",
+      "api/src/scripts/migrateTransfers.ts:4",
+      "api/src/scripts/migrateTransfers.ts:5",
+      "api/src/scripts/migrateTransfers.ts:6",
+      "api/src/scripts/migrateTransfers.ts:7"
+    ]
+  },
+  {
+    "table": "subcategories",
+    "rows": 0,
+    "inFKs": [
+      "products.subcategory_id"
+    ],
+    "outFKs": [
+      "categories.id"
+    ],
+    "sampleRefs": [
+      "api/src/controllers/categoryController.ts:20",
+      "api/src/models/index.ts:119",
+      "api/src/models/Subcategory.ts:39",
+      "api/src/routes/categoryRoutes.ts:22",
+      "api/src/routes/categoryRoutes.ts:23"
+    ]
+  },
+  {
+    "table": "supplier_ledger",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "suppliers.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/SupplierLedger.ts:82",
+      "api/src/scripts/migrate_reference_codes.ts:39"
+    ]
+  },
+  {
+    "table": "supplier_payments",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "shops.id",
+      "suppliers.id",
+      "purchases.id"
+    ],
+    "sampleRefs": [
+      "api/src/models/SupplierPayment.ts:78"
+    ]
+  },
+  {
+    "table": "suppliers",
+    "rows": 1,
+    "inFKs": [
+      "products.supplier_id",
+      "purchases.supplier_id",
+      "supplier_ledger.supplier_id",
+      "purchase_returns.supplier_id",
+      "supplier_payments.supplier_id"
+    ],
+    "outFKs": [
+      "owners.id"
+    ],
+    "sampleRefs": [
+      "api/src/app.ts:95",
+      "api/src/config/permissions.ts:40",
+      "api/src/config/permissions.ts:79",
+      "api/src/controllers/referenceController.ts:188",
+      "api/src/controllers/reportController.ts:339"
+    ]
+  },
+  {
+    "table": "user_roles",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [
+      "roles.id",
+      "shops.id"
+    ],
+    "sampleRefs": [
+      "api/src/config/permissions.ts:9",
+      "api/src/models/UserRole.ts:44"
+    ]
+  },
+  {
+    "table": "visibility_settings",
+    "rows": 0,
+    "inFKs": [],
+    "outFKs": [],
+    "sampleRefs": [
+      "api/src/models/VisibilitySettings.ts:120",
+      "api/src/scripts/migrate_visibility_settings.ts:4",
+      "api/src/scripts/migrate_visibility_settings.ts:6",
+      "api/src/scripts/migrate_visibility_settings.ts:16",
+      "api/src/scripts/migrate_visibility_settings.ts:61"
+    ]
+  }
+]

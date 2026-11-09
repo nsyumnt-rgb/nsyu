@@ -13,6 +13,8 @@ import {
   SaleReturnItem,
   Shop,
   StatusHistory,
+  Notification,
+  ProductStock,
 } from "../models";
 import { PAYMENT_METHODS, PaymentMethod } from "../models/Sale";
 import { recordStockMovement } from "../utils/inventory";
@@ -423,6 +425,54 @@ export async function createSale(req: Request, res: Response) {
         details: { invoiceNumber, totalAmount, paidAmount: initialPaid, isEmi: Boolean(isEmi) },
       });
 
+      // In-app notifications: bill created & low stock alerts
+      try {
+        await Notification.create(
+          {
+            owner_id: ownerId,
+            shop_id: shopId,
+            recipient_type: "owner",
+            recipient_id: ownerId,
+            type: "bill_created",
+            title: `New Bill: ${invoiceNumber}`,
+            message: `Invoice #${invoiceNumber} for ₹${totalAmount} created for ${customer.name || customer.phone || "Walk-in"}.`,
+            reference_type: "Sale",
+            reference_id: sale.id,
+            is_read: false,
+          },
+          { transaction: t }
+        );
+
+        for (const pi of pricedItems) {
+          const minStock = Number(pi.product.min_stock || 0);
+          if (minStock > 0) {
+            const stock = await ProductStock.findOne({
+              where: { product_id: pi.product.id, shop_id: shopId, owner_id: ownerId },
+              transaction: t,
+            });
+            if (stock && Number(stock.current_stock) <= minStock) {
+              await Notification.create(
+                {
+                  owner_id: ownerId,
+                  shop_id: shopId,
+                  recipient_type: "owner",
+                  recipient_id: ownerId,
+                  type: "low_stock",
+                  title: `Low Stock: ${pi.product.name}`,
+                  message: `${pi.product.name} (SKU: ${pi.product.sku || "N/A"}) has ${stock.current_stock} left (minimum: ${minStock}).`,
+                  reference_type: "Product",
+                  reference_id: pi.product.id,
+                  is_read: false,
+                },
+                { transaction: t }
+              );
+            }
+          }
+        }
+      } catch (notifErr) {
+        console.error("Failed to record bill notification:", notifErr);
+      }
+
       return sale.id;
     });
 
@@ -720,6 +770,27 @@ export async function cancelSale(req: Request, res: Response) {
       );
 
       await logAudit({ req, module: "sales", action: "cancel", entityType: "Sale", entityId: sale.id, details: { reason } });
+
+      // In-app notification: bill cancelled
+      try {
+        await Notification.create(
+          {
+            owner_id: ownerId,
+            shop_id: targetShopId,
+            recipient_type: "owner",
+            recipient_id: ownerId,
+            type: "sale_cancelled",
+            title: `Bill Cancelled: ${sale.invoice_number}`,
+            message: `Invoice #${sale.invoice_number} has been cancelled (${reason || "No reason specified"}). Stock restored.`,
+            reference_type: "Sale",
+            reference_id: sale.id,
+            is_read: false,
+          },
+          { transaction: t }
+        );
+      } catch (notifErr) {
+        console.error("Failed to record bill cancellation notification:", notifErr);
+      }
     });
 
     const sale = await Sale.findByPk(req.params.saleId, { include: saleIncludes });

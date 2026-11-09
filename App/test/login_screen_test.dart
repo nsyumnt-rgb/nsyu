@@ -50,3 +50,4 @@ void main() {
     expect(find.text('Log in to view your bills, payments and ledger details.'), findsOneWidget);
   });
 }
+
