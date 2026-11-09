@@ -181,14 +181,18 @@ All testing was executed against the **LIVE deployed production web application*
 - [x] Push all changes to `main` branch to trigger GitHub Pages workflow.
 - [x] Mirror push to `07_11_2026` branch.
 - [x] GitHub Actions deployment verified:
-  - Run ID: `42517441054` (`Deploy to GitHub Pages`): Status **completed / success**.
-  - Run ID: `42517440666` (`pages build and deployment`): Status **completed / success**.
+  - Latest Commit: `58a097f` / `f93c309` (`fix(inventory): connect Stock Transfer and Movements to real database API and eliminate mock data`).
+  - Run ID: `42548189766` (`Deploy to GitHub Pages`): Status **completed / success**.
+  - Run ID: `42548189453` (`pages build and deployment`): Status **completed / success**.
 - [x] Deployed assets on `https://nsyumnt-rgb.github.io/nsyu/` verified:
   - Main HTML container: 200 OK
-  - Production JS Bundle: `assets/index-B0akhVUA.js` (1.07 MB, 200 OK)
-  - Production CSS Bundle: `assets/index-iRCpKH3q.css` (68 KB, 200 OK)
+  - Production JS Bundle: `assets/index-B4D_K_vk.js` (1.07 MB, 200 OK)
+  - Production CSS Bundle: `assets/index-CdFaJEOU.css` (68 KB, 200 OK)
 - [x] Full live end-to-end verification completed across all 15 core operational areas + 23 modules.
-- [x] 24 full-page browser screenshots archived in artifact directory `screenshots/`.
+- [x] Stock Transfer module completely decoupled from prototype mock data and connected 100% to live Supabase backend API (`/api/inventory/transfers`).
+- [x] Stock Movements KPI cards dynamically driven by real inventory transaction ledger (`inventory_transactions`).
+- [x] Stock by Category & Stock by Shop converted to 100% dynamic database aggregations.
+- [x] 25 full-page browser screenshots archived in artifact directory `screenshots/`.
 
 
 
