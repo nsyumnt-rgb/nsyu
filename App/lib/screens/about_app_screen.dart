@@ -29,7 +29,7 @@ class AboutAppScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF1565C0).withOpacity(0.3),
+                        color: const Color(0xFF1565C0).withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
@@ -54,7 +54,7 @@ class AboutAppScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Version 1.0.0 (Build 1)',
+                  'Version 1.0.7 (Build 9)',
                   style: TextStyle(fontSize: 13, color: AppColors.muted, fontWeight: FontWeight.w500),
                 ),
               ],

@@ -20,6 +20,7 @@ import '../screens/help_support_screen.dart';
 import '../screens/about_app_screen.dart';
 import '../screens/login_screen.dart';
 import 'bill_screen.dart';
+import 'inventory_screen.dart';
 import 'order_cart_screen.dart';
 import 'profile_screen.dart';
 
@@ -719,6 +720,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
 
+          _drawerSectionHeader('BUSINESS MANAGEMENT'),
           _drawerItem(
             icon: Icons.people_alt_outlined,
             title: 'Customers',
@@ -736,21 +738,33 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           _drawerItem(
+            icon: Icons.inventory_2_outlined,
+            title: 'Inventory & Stock',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const InventoryScreen()));
+            },
+          ),
+          _drawerItem(
             icon: Icons.bar_chart_rounded,
-            title: 'Reports',
+            title: 'Reports & Analytics',
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
             },
           ),
+
+          _drawerSectionHeader('MANAGEMENT'),
           _drawerItem(
             icon: Icons.badge_outlined,
-            title: 'Employees',
+            title: 'Employees & Staff',
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const EmployeesScreen()));
             },
           ),
+
+          _drawerSectionHeader('ADMIN & SETTINGS'),
           _drawerItem(
             icon: Icons.visibility_outlined,
             title: 'Visibility & Display Settings',
@@ -759,7 +773,6 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const VisibilitySettingsScreen()));
             },
           ),
-          const Divider(height: 16),
           _drawerItem(
             icon: Icons.storefront_outlined,
             title: 'Business Information',
@@ -817,6 +830,21 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _drawerSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF94A3B8),
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }

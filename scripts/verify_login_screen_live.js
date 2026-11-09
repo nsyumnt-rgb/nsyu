@@ -147,29 +147,44 @@ async function run() {
 
     // Close registration modal
     await page.click('#close-register-modal');
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 600));
 
     // ── 5. Switch back to Staff / Owner and Login ──
     console.log('\n5. Performing Live Staff / Owner Login to Dashboard...');
     await page.click('#staff-tab-btn');
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 500));
 
-    // Clear and type username
-    await page.click('input[placeholder="Email / Username"]', { clickCount: 3 });
-    await page.keyboard.press('Backspace');
-    await page.type('input[placeholder="Email / Username"]', 'nsyu.mnt@gmail.com');
+    // Check if error is on screen or inputs
+    const inputsInfo = await page.evaluate(() => {
+      const inputs = Array.from(document.querySelectorAll('input')).map(i => ({
+        type: i.type,
+        placeholder: i.placeholder,
+        value: i.value,
+        visible: i.offsetParent !== null
+      }));
+      return inputs;
+    });
+    console.log('Inputs found before submitting:', JSON.stringify(inputsInfo));
 
-    // Clear and type password
-    await page.click('input[placeholder="Password"]', { clickCount: 3 });
-    await page.keyboard.press('Backspace');
-    await page.type('input[placeholder="Password"]', 'Password@123');
+    // Screenshot before login click
+    await page.screenshot({ path: path.join(ARTIFACT_SCREENSHOT_DIR, 'live_login_before_submit.png') });
 
     // Click submit
     await page.click('#login-submit-btn');
+    console.log('✔ Clicked #login-submit-btn. Waiting for navigation or error...');
 
-    // Wait for redirect to /app
-    await page.waitForFunction(() => window.location.hash.includes('/app'), { timeout: 25000 });
-    await new Promise(r => setTimeout(r, 2000));
+    // Wait up to 10s and check if error or navigation occurred
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+      const state = await page.evaluate(() => {
+        const url = window.location.hash;
+        const err = document.querySelector('div.bg-rose-50')?.textContent?.trim() || null;
+        const btnText = document.querySelector('#login-submit-btn')?.textContent?.trim() || null;
+        return { url, err, btnText };
+      });
+      console.log(`[T+${i + 1}s] Hash: ${state.url} | Error: ${state.err || 'none'} | Btn: ${state.btnText}`);
+      if (state.url.includes('/app')) break;
+    }
 
     console.log('✔ Authenticated successfully! Current URL:', page.url());
 
