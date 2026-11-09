@@ -49,14 +49,14 @@ class _BillsListScreenState extends State<BillsListScreen> {
 
   Color _avatarBgForName(String name) {
     final lower = name.toLowerCase();
-    if (lower.startsWith('k')) return const Color(0xFF38BDF8); // Light Blue (Krishna Jasola)
-    if (lower.startsWith('g')) return const Color(0xFF14B8A6); // Teal (GD SB)
-    if (lower.startsWith('v')) return const Color(0xFF8B5CF6); // Purple (Vijay sharma)
-    if (lower.startsWith('r')) return const Color(0xFF9333EA); // Purple dark (R K Comm)
-    if (lower.startsWith('s')) return const Color(0xFF78716C); // Brown/Grey (Siddique Sahab)
-    if (lower.startsWith('a')) return const Color(0xFFF87171); // Coral/Red (Aalam Near RG / Amit Sharma)
-    if (lower.startsWith('m')) return const Color(0xFF2563EB); // Royal Blue (Mohd Ali)
-    return const Color(0xFFF43F5E); // Pink/Rose (Shakti Enterprise)
+    if (lower.startsWith('k')) return const Color(0xFF38BDF8); // Light Blue
+    if (lower.startsWith('g')) return const Color(0xFF14B8A6); // Teal
+    if (lower.startsWith('v')) return const Color(0xFF8B5CF6); // Purple
+    if (lower.startsWith('r')) return const Color(0xFF9333EA); // Purple dark
+    if (lower.startsWith('s')) return const Color(0xFF78716C); // Brown/Grey
+    if (lower.startsWith('a')) return const Color(0xFFF87171); // Coral/Red
+    if (lower.startsWith('m')) return const Color(0xFF2563EB); // Royal Blue
+    return const Color(0xFFF43F5E); // Pink/Rose
   }
 
   @override
@@ -432,7 +432,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
             Customer(
               id: '0',
               name: b.customerName,
-              mobile: b.customerPhone.isNotEmpty ? b.customerPhone : '8800123456',
+              mobile: b.customerPhone,
               currentBalance: b.due,
             );
 
@@ -532,7 +532,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
                       const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
                       const SizedBox(width: 4),
                       Text(
-                        '${b.items.isNotEmpty ? b.items.length : 3} items',
+                        '${b.items.length} ${b.items.length == 1 ? "item" : "items"}',
                         style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                       ),
                       const Spacer(),

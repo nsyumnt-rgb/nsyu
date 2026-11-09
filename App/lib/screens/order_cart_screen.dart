@@ -1133,7 +1133,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
             // Send on WhatsApp Button (Mint pill)
             InkWell(
               onTap: () {
-                final phone = provider.selectedCustomer?.mobile ?? '9876543210';
+                final phone = provider.selectedCustomer?.mobile ?? '';
+                if (phone.isEmpty) {
+                  showAppSnackBar(context, 'Please select a customer with a valid mobile number');
+                  return;
+                }
                 final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
                 launchUrl(
                   Uri.parse('https://wa.me/$digits?text=Hello,%20your%20bill%20total%20is%20%E2%82%B9${_money.format(grandTotal)}'),

@@ -1,0 +1,859 @@
+[
+  {
+    "table": "attendance",
+    "rowCount": 0,
+    "model": "Attendance.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "employees.id"
+    ]
+  },
+  {
+    "table": "audit_logs",
+    "rowCount": 0,
+    "model": "AuditLog.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "owners.id",
+      "shops.id"
+    ]
+  },
+  {
+    "table": "categories",
+    "rowCount": 7,
+    "model": "Category.ts",
+    "hasModel": true,
+    "incomingFkCount": 2,
+    "incomingFks": [
+      "products.category_id",
+      "subcategories.category_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "owners.id"
+    ]
+  },
+  {
+    "table": "customer_accounts",
+    "rowCount": 0,
+    "model": "CustomerAccount.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "customer_refresh_tokens.account_id"
+    ],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "customers.id",
+      "shops.id"
+    ]
+  },
+  {
+    "table": "customer_cart_items",
+    "rowCount": 0,
+    "model": "CustomerCartItem.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "customer_carts.id",
+      "products.id"
+    ]
+  },
+  {
+    "table": "customer_carts",
+    "rowCount": 0,
+    "model": "CustomerCart.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "customer_cart_items.cart_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "customers.id"
+    ]
+  },
+  {
+    "table": "customer_ledger",
+    "rowCount": 0,
+    "model": "CustomerLedger.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "customers.id"
+    ]
+  },
+  {
+    "table": "customer_otps",
+    "rowCount": 0,
+    "model": "CustomerOtp.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  },
+  {
+    "table": "customer_refresh_tokens",
+    "rowCount": 0,
+    "model": "CustomerRefreshToken.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "customer_accounts.id"
+    ]
+  },
+  {
+    "table": "customers",
+    "rowCount": 1,
+    "model": "Customer.ts",
+    "hasModel": true,
+    "incomingFkCount": 8,
+    "incomingFks": [
+      "sales.customer_id",
+      "emi_plans.customer_id",
+      "payments.customer_id",
+      "customer_ledger.customer_id",
+      "sale_returns.customer_id",
+      "orders.customer_id",
+      "customer_accounts.customer_id",
+      "customer_carts.customer_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "owners.id"
+    ]
+  },
+  {
+    "table": "emi_installments",
+    "rowCount": 0,
+    "model": "EMIInstallment.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "payments.emi_installment_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "emi_plans.id"
+    ]
+  },
+  {
+    "table": "emi_plans",
+    "rowCount": 0,
+    "model": "EMIPlan.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "emi_installments.emi_plan_id"
+    ],
+    "outgoingFkCount": 3,
+    "outgoingFks": [
+      "shops.id",
+      "sales.id",
+      "customers.id"
+    ]
+  },
+  {
+    "table": "employee_advances",
+    "rowCount": 0,
+    "model": "EmployeeAdvance.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "employees.id"
+    ]
+  },
+  {
+    "table": "employee_incentives",
+    "rowCount": 0,
+    "model": "EmployeeIncentive.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "employees.id"
+    ]
+  },
+  {
+    "table": "employee_ledger",
+    "rowCount": 0,
+    "model": "EmployeeLedger.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "employees.id"
+    ]
+  },
+  {
+    "table": "employee_shops",
+    "rowCount": 0,
+    "model": "EmployeeShop.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 3,
+    "outgoingFks": [
+      "employees.id",
+      "shops.id",
+      "roles.id"
+    ]
+  },
+  {
+    "table": "employees",
+    "rowCount": 0,
+    "model": "Employee.ts",
+    "hasModel": true,
+    "incomingFkCount": 10,
+    "incomingFks": [
+      "attendance.employee_id",
+      "leave_requests.employee_id",
+      "salary_configs.employee_id",
+      "employee_advances.employee_id",
+      "employee_incentives.employee_id",
+      "payrolls.employee_id",
+      "salary_payments.employee_id",
+      "employee_ledger.employee_id",
+      "employee_shops.employee_id",
+      "refresh_tokens.employee_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "owners.id"
+    ]
+  },
+  {
+    "table": "inventory_transactions",
+    "rowCount": 0,
+    "model": "InventoryTransaction.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "products.id"
+    ]
+  },
+  {
+    "table": "invoice_counters",
+    "rowCount": 0,
+    "model": "InvoiceCounter.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  },
+  {
+    "table": "leave_requests",
+    "rowCount": 0,
+    "model": "LeaveRequest.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "employees.id"
+    ]
+  },
+  {
+    "table": "modules",
+    "rowCount": 0,
+    "model": "Module.ts",
+    "hasModel": true,
+    "incomingFkCount": 3,
+    "incomingFks": [
+      "role_permissions.module_id",
+      "permissions.module_id",
+      "shop_modules.module_id"
+    ],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  },
+  {
+    "table": "notifications",
+    "rowCount": 0,
+    "model": "Notification.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  },
+  {
+    "table": "order_items",
+    "rowCount": 0,
+    "model": "OrderItem.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "orders.id"
+    ]
+  },
+  {
+    "table": "order_status_history",
+    "rowCount": 0,
+    "model": "OrderStatusHistory.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "orders.id"
+    ]
+  },
+  {
+    "table": "orders",
+    "rowCount": 0,
+    "model": "Order.ts",
+    "hasModel": true,
+    "incomingFkCount": 2,
+    "incomingFks": [
+      "order_items.order_id",
+      "order_status_history.order_id"
+    ],
+    "outgoingFkCount": 4,
+    "outgoingFks": [
+      "owners.id",
+      "shops.id",
+      "customers.id",
+      "sales.id"
+    ]
+  },
+  {
+    "table": "owners",
+    "rowCount": 1,
+    "model": "Owner.ts",
+    "hasModel": true,
+    "incomingFkCount": 12,
+    "incomingFks": [
+      "customers.owner_id",
+      "sales.owner_id",
+      "shops.owner_id",
+      "purchases.owner_id",
+      "roles.owner_id",
+      "orders.owner_id",
+      "employees.owner_id",
+      "refresh_tokens.owner_id",
+      "audit_logs.owner_id",
+      "categories.owner_id",
+      "suppliers.owner_id",
+      "products.owner_id"
+    ],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  },
+  {
+    "table": "payments",
+    "rowCount": 0,
+    "model": "Payment.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 4,
+    "outgoingFks": [
+      "shops.id",
+      "customers.id",
+      "sales.id",
+      "emi_installments.id"
+    ]
+  },
+  {
+    "table": "payrolls",
+    "rowCount": 0,
+    "model": "Payroll.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "salary_payments.payroll_id"
+    ],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "employees.id"
+    ]
+  },
+  {
+    "table": "permissions",
+    "rowCount": 0,
+    "model": "Permission.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "modules.id"
+    ]
+  },
+  {
+    "table": "product_images",
+    "rowCount": 0,
+    "model": "ProductImage.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "products.id"
+    ]
+  },
+  {
+    "table": "product_locations",
+    "rowCount": 0,
+    "model": "ProductLocation.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "products.id",
+      "shops.id"
+    ]
+  },
+  {
+    "table": "product_stocks",
+    "rowCount": 1,
+    "model": "ProductStock.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "products.id",
+      "shops.id"
+    ]
+  },
+  {
+    "table": "products",
+    "rowCount": 1,
+    "model": "Product.ts",
+    "hasModel": true,
+    "incomingFkCount": 8,
+    "incomingFks": [
+      "product_images.product_id",
+      "product_stocks.product_id",
+      "product_locations.product_id",
+      "inventory_transactions.product_id",
+      "stock_transfers.product_id",
+      "sale_items.product_id",
+      "purchase_items.product_id",
+      "customer_cart_items.product_id"
+    ],
+    "outgoingFkCount": 4,
+    "outgoingFks": [
+      "categories.id",
+      "subcategories.id",
+      "suppliers.id",
+      "owners.id"
+    ]
+  },
+  {
+    "table": "purchase_counters",
+    "rowCount": 0,
+    "model": "PurchaseCounter.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  },
+  {
+    "table": "purchase_items",
+    "rowCount": 0,
+    "model": "PurchaseItem.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "purchase_return_items.purchase_item_id"
+    ],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "purchases.id",
+      "products.id"
+    ]
+  },
+  {
+    "table": "purchase_return_items",
+    "rowCount": 0,
+    "model": "(None/Untyped)",
+    "hasModel": false,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "purchase_returns.id",
+      "purchase_items.id"
+    ]
+  },
+  {
+    "table": "purchase_returns",
+    "rowCount": 0,
+    "model": "PurchaseReturn.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "purchase_return_items.purchase_return_id"
+    ],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "purchases.id",
+      "suppliers.id"
+    ]
+  },
+  {
+    "table": "purchases",
+    "rowCount": 0,
+    "model": "Purchase.ts",
+    "hasModel": true,
+    "incomingFkCount": 3,
+    "incomingFks": [
+      "purchase_items.purchase_id",
+      "purchase_returns.purchase_id",
+      "supplier_payments.purchase_id"
+    ],
+    "outgoingFkCount": 3,
+    "outgoingFks": [
+      "owners.id",
+      "shops.id",
+      "suppliers.id"
+    ]
+  },
+  {
+    "table": "reference_counters",
+    "rowCount": 0,
+    "model": "(None/Untyped)",
+    "hasModel": false,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  },
+  {
+    "table": "refresh_tokens",
+    "rowCount": 3,
+    "model": "RefreshToken.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "owners.id",
+      "employees.id"
+    ]
+  },
+  {
+    "table": "role_field_permissions",
+    "rowCount": 112,
+    "model": "RoleFieldPermission.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "roles.id"
+    ]
+  },
+  {
+    "table": "role_permissions",
+    "rowCount": 448,
+    "model": "RolePermission.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "roles.id",
+      "modules.id"
+    ]
+  },
+  {
+    "table": "roles",
+    "rowCount": 18,
+    "model": "Role.ts",
+    "hasModel": true,
+    "incomingFkCount": 4,
+    "incomingFks": [
+      "role_permissions.role_id",
+      "role_field_permissions.role_id",
+      "user_roles.role_id",
+      "employee_shops.role_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "owners.id"
+    ]
+  },
+  {
+    "table": "salary_configs",
+    "rowCount": 0,
+    "model": "SalaryConfig.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "employees.id"
+    ]
+  },
+  {
+    "table": "salary_payments",
+    "rowCount": 0,
+    "model": "SalaryPayment.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "employees.id",
+      "payrolls.id"
+    ]
+  },
+  {
+    "table": "sale_items",
+    "rowCount": 0,
+    "model": "SaleItem.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "sale_return_items.sale_item_id"
+    ],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "sales.id",
+      "products.id"
+    ]
+  },
+  {
+    "table": "sale_return_items",
+    "rowCount": 0,
+    "model": "(None/Untyped)",
+    "hasModel": false,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "sale_returns.id",
+      "sale_items.id"
+    ]
+  },
+  {
+    "table": "sale_returns",
+    "rowCount": 0,
+    "model": "SaleReturn.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "sale_return_items.sale_return_id"
+    ],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "sales.id",
+      "customers.id"
+    ]
+  },
+  {
+    "table": "sales",
+    "rowCount": 0,
+    "model": "Sale.ts",
+    "hasModel": true,
+    "incomingFkCount": 5,
+    "incomingFks": [
+      "sale_items.sale_id",
+      "emi_plans.sale_id",
+      "payments.sale_id",
+      "sale_returns.sale_id",
+      "orders.converted_sale_id"
+    ],
+    "outgoingFkCount": 3,
+    "outgoingFks": [
+      "owners.id",
+      "shops.id",
+      "customers.id"
+    ]
+  },
+  {
+    "table": "shop_modules",
+    "rowCount": 0,
+    "model": "ShopModule.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "modules.id"
+    ]
+  },
+  {
+    "table": "shop_portal_settings",
+    "rowCount": 1,
+    "model": "ShopPortalSettings.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "shops.id"
+    ]
+  },
+  {
+    "table": "shops",
+    "rowCount": 1,
+    "model": "Shop.ts",
+    "hasModel": true,
+    "incomingFkCount": 25,
+    "incomingFks": [
+      "product_stocks.shop_id",
+      "product_locations.shop_id",
+      "inventory_transactions.shop_id",
+      "stock_transfers.from_shop_id",
+      "stock_transfers.to_shop_id",
+      "sales.shop_id",
+      "emi_plans.shop_id",
+      "payments.shop_id",
+      "customer_ledger.shop_id",
+      "attendance.shop_id",
+      "leave_requests.shop_id",
+      "employee_advances.shop_id",
+      "employee_incentives.shop_id",
+      "payrolls.shop_id",
+      "employee_ledger.shop_id",
+      "purchases.shop_id",
+      "supplier_ledger.shop_id",
+      "orders.shop_id",
+      "supplier_payments.shop_id",
+      "shop_modules.shop_id",
+      "user_roles.shop_id",
+      "customer_accounts.shop_id",
+      "employee_shops.shop_id",
+      "audit_logs.shop_id",
+      "shop_portal_settings.shop_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "owners.id"
+    ]
+  },
+  {
+    "table": "stock_transfers",
+    "rowCount": 0,
+    "model": "StockTransfer.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 3,
+    "outgoingFks": [
+      "products.id",
+      "shops.id",
+      "shops.id"
+    ]
+  },
+  {
+    "table": "subcategories",
+    "rowCount": 0,
+    "model": "Subcategory.ts",
+    "hasModel": true,
+    "incomingFkCount": 1,
+    "incomingFks": [
+      "products.subcategory_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "categories.id"
+    ]
+  },
+  {
+    "table": "supplier_ledger",
+    "rowCount": 0,
+    "model": "SupplierLedger.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "shops.id",
+      "suppliers.id"
+    ]
+  },
+  {
+    "table": "supplier_payments",
+    "rowCount": 0,
+    "model": "SupplierPayment.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 3,
+    "outgoingFks": [
+      "shops.id",
+      "suppliers.id",
+      "purchases.id"
+    ]
+  },
+  {
+    "table": "suppliers",
+    "rowCount": 1,
+    "model": "Supplier.ts",
+    "hasModel": true,
+    "incomingFkCount": 5,
+    "incomingFks": [
+      "products.supplier_id",
+      "purchases.supplier_id",
+      "supplier_ledger.supplier_id",
+      "purchase_returns.supplier_id",
+      "supplier_payments.supplier_id"
+    ],
+    "outgoingFkCount": 1,
+    "outgoingFks": [
+      "owners.id"
+    ]
+  },
+  {
+    "table": "user_roles",
+    "rowCount": 0,
+    "model": "UserRole.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 2,
+    "outgoingFks": [
+      "roles.id",
+      "shops.id"
+    ]
+  },
+  {
+    "table": "visibility_settings",
+    "rowCount": 0,
+    "model": "VisibilitySettings.ts",
+    "hasModel": true,
+    "incomingFkCount": 0,
+    "incomingFks": [],
+    "outgoingFkCount": 0,
+    "outgoingFks": []
+  }
+]

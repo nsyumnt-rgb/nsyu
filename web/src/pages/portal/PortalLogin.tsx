@@ -177,7 +177,7 @@ export default function PortalLogin() {
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="9876543210 or customer@email.com"
+                    placeholder="Enter mobile number or email"
                     className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                   />
                 </div>
@@ -352,7 +352,7 @@ export default function PortalLogin() {
                     maxLength={10}
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    placeholder="9876543210"
+                    placeholder="10-digit mobile"
                     className="w-full pl-11 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
                   />
                 </div>

@@ -435,7 +435,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             Customer(
               id: '0',
               name: o.customerName,
-              mobile: o.customerPhone.isNotEmpty ? o.customerPhone : '8800123456',
+              mobile: o.customerPhone,
               currentBalance: 0.0,
             );
 
@@ -535,7 +535,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
                       const SizedBox(width: 4),
                       Text(
-                        '${o.items.isNotEmpty ? o.items.length : 3} items',
+                        '${o.items.length} ${o.items.length == 1 ? "item" : "items"}',
                         style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                       ),
                       const Spacer(),

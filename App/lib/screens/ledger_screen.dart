@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/customer.dart';
 import '../models/saved_bill.dart';
+import '../providers/auth_provider.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../widgets/app_bottom_nav.dart';
@@ -106,7 +107,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
     }).toList();
 
     final totalOutstanding = bills.totalPartyDue > 0 ? bills.totalPartyDue : 153058.0;
-    final totalAccountsCount = bills.totalPartyCount > 0 ? bills.totalPartyCount : (customers.customers.isNotEmpty ? customers.customers.length : 195);
+    final auth = context.watch<AuthProvider>();
+    final businessName = auth.shopName.isNotEmpty ? auth.shopName : 'NSYU';
+    final businessPhone = auth.shopPhone.isNotEmpty ? auth.shopPhone : (auth.registeredMobile ?? '');
+    final initialLetter = businessName.isNotEmpty ? businessName[0].toUpperCase() : 'N';
+    final totalAccountsCount = bills.totalPartyCount > 0 ? bills.totalPartyCount : customers.customers.length;
     final defaultersCount = allParties.where((p) => p.totalDue > 5000).length;
 
     return Scaffold(
@@ -115,19 +120,19 @@ class _LedgerScreenState extends State<LedgerScreen> {
         top: false,
         child: Column(
           children: [
-            // Top Green Status Banner matching Image 1
+            // Top Green Status Banner
             Container(
               height: MediaQuery.of(context).padding.top,
               color: const Color(0xFF16A34A),
             ),
 
-            // Top App Bar matching Image 1
+            // Top App Bar
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: Row(
                 children: [
-                  // Circle Avatar 'N' in Amber matching Image 1
+                  // Circle Avatar in Amber
                   Container(
                     width: 40,
                     height: 40,
@@ -136,9 +141,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      'N',
-                      style: TextStyle(
+                    child: Text(
+                      initialLetter,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
@@ -147,8 +152,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   ),
                   const SizedBox(width: 12),
 
-                  // NSYU ▾ and Phone Number
-                  const Expanded(
+                  // Business Name ▾ and Phone Number
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
@@ -157,30 +162,31 @@ class _LedgerScreenState extends State<LedgerScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'NSYU',
-                              style: TextStyle(
+                              businessName,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF0F172A),
                               ),
                             ),
-                            SizedBox(width: 4),
-                            Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF0F172A)),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF0F172A)),
                           ],
                         ),
-                        Text(
-                          '8800503662',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
+                        if (businessPhone.isNotEmpty)
+                          Text(
+                            businessPhone,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
 
-                  // Right Icons: Share, Bell (Badge 2), Search in soft grey circles
+                  // Right Icons: Share, Bell, Search
                   _circleIconButton(
                     icon: Icons.share_outlined,
                     onTap: () {
@@ -198,23 +204,35 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     children: [
                       _circleIconButton(
                         icon: Icons.notifications_none_rounded,
-                        onTap: () => _showDefaultersAlert(defaultersCount > 0 ? defaultersCount : 21),
+                        onTap: () {
+                          if (defaultersCount > 0) {
+                            _showDefaultersAlert(defaultersCount);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('No pending defaulters or due alerts'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
                       ),
-                      Positioned(
-                        top: -2,
-                        right: -2,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '2',
-                            style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+                      if (defaultersCount > 0)
+                        Positioned(
+                          top: -2,
+                          right: -2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '$defaultersCount',
+                              style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(width: 8),
@@ -324,9 +342,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     _buildNetBalanceCard(money, totalOutstanding, totalAccountsCount),
                     const SizedBox(height: 14),
 
-                    // Remind Defaulters (Pending) Banner matching Image 1
-                    _buildRemindDefaultersBanner(defaultersCount > 0 ? defaultersCount : 21),
-                    const SizedBox(height: 14),
+                    // Remind Defaulters (Pending) Banner
+                    if (defaultersCount > 0) ...[
+                      _buildRemindDefaultersBanner(defaultersCount),
+                      const SizedBox(height: 14),
+                    ],
 
                     // Customer Accounts List matching Image 1
                     if (allParties.isEmpty)
@@ -466,7 +486,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
               ),
               const SizedBox(width: 12),
 
-              // Filter Icon with Red Badge '1' matching Image 1
+              // Filter Icon
               Stack(
                 clipBehavior: Clip.none,
                 children: [
@@ -479,23 +499,24 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     ),
                     child: const Icon(Icons.tune_rounded, size: 18, color: Color(0xFF16A34A)),
                   ),
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
-                        shape: BoxShape.circle,
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        '1',
-                        style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                  if (_activeChip != 'Customer')
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEF4444),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          '1',
+                          style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ],

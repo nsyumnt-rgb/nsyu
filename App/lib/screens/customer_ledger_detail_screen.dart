@@ -742,17 +742,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
       return matchesName || matchesPhone;
     }).toList();
 
-    // In case no bills recorded locally yet, show realistic bills matching Image 6 Right
-    final count = customerBills.isNotEmpty ? customerBills.length : 5;
-    final totalAmt = customerBills.isNotEmpty
-        ? customerBills.fold(0.0, (s, b) => s + b.total)
-        : 12450.0;
-    final totalPaid = customerBills.isNotEmpty
-        ? customerBills.fold(0.0, (s, b) => s + b.paidAmount)
-        : 7940.0;
-    final dueAmt = customerBills.isNotEmpty
-        ? customerBills.fold(0.0, (s, b) => s + b.dueAmount)
-        : 4510.0;
+    final count = customerBills.length;
+    final totalAmt = customerBills.fold(0.0, (s, b) => s + b.total);
+    final totalPaid = customerBills.fold(0.0, (s, b) => s + b.paidAmount);
+    final dueAmt = customerBills.fold(0.0, (s, b) => s + b.dueAmount);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
@@ -1202,16 +1195,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
       return matchesName || matchesPhone;
     }).toList();
 
-    final count = customerOrders.isNotEmpty ? customerOrders.length : 3;
-    final totalAmt = customerOrders.isNotEmpty
-        ? customerOrders.fold(0.0, (s, o) => s + o.total)
-        : 6450.0;
-    final completedCount = customerOrders.isNotEmpty
-        ? customerOrders.where((o) => o.status == OrderStatus.delivered || o.status == OrderStatus.convertedToBill).length
-        : 2;
-    final pendingCount = customerOrders.isNotEmpty
-        ? customerOrders.where((o) => o.status == OrderStatus.pending || o.status == OrderStatus.confirmed).length
-        : 1;
+    final count = customerOrders.length;
+    final totalAmt = customerOrders.fold(0.0, (s, o) => s + o.total);
+    final completedCount = customerOrders.where((o) => o.status == OrderStatus.delivered || o.status == OrderStatus.convertedToBill).length;
+    final pendingCount = customerOrders.where((o) => o.status == OrderStatus.pending || o.status == OrderStatus.confirmed).length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),

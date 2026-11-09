@@ -80,7 +80,7 @@ function CustomersInner() {
               className="input"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Ramesh Kumar"
+              placeholder="Customer Full Name"
             />
           </div>
           <div>
@@ -90,7 +90,7 @@ function CustomersInner() {
               className="input"
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="e.g. 9876543210"
+              placeholder="10-digit mobile number"
             />
           </div>
           <div>
@@ -100,7 +100,7 @@ function CustomersInner() {
               className="input"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="e.g. ramesh@example.com"
+              placeholder="customer@example.com"
             />
           </div>
           <div>

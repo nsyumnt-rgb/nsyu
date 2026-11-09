@@ -1,0 +1,74 @@
+[
+  {
+    "file": "web/src/pages/Customers.tsx",
+    "line": 83,
+    "pattern": "fake_person_name",
+    "text": "placeholder=\"e.g. Ramesh Kumar\""
+  },
+  {
+    "file": "web/src/pages/Customers.tsx",
+    "line": 93,
+    "pattern": "hardcoded_phone",
+    "text": "placeholder=\"e.g. 9876543210\""
+  },
+  {
+    "file": "web/src/pages/portal/PortalLogin.tsx",
+    "line": 180,
+    "pattern": "hardcoded_phone",
+    "text": "placeholder=\"9876543210 or customer@email.com\""
+  },
+  {
+    "file": "web/src/pages/portal/PortalLogin.tsx",
+    "line": 355,
+    "pattern": "hardcoded_phone",
+    "text": "placeholder=\"9876543210\""
+  },
+  {
+    "file": "web/src/pages/Settings.tsx",
+    "line": 208,
+    "pattern": "hardcoded_phone",
+    "text": "businessPhone: activeShop?.phone || parsed.businessPhone || \"+91 9876543210\","
+  },
+  {
+    "file": "web/src/pages/Settings.tsx",
+    "line": 223,
+    "pattern": "hardcoded_phone",
+    "text": "phone: person && \"phone\" in person && person.phone ? String(person.phone) : \"+91 9876543210\","
+  },
+  {
+    "file": "web/src/pages/Settings.tsx",
+    "line": 224,
+    "pattern": "hardcoded_phone",
+    "text": "alternatePhone: \"+91 9876543210\","
+  },
+  {
+    "file": "web/src/pages/Settings.tsx",
+    "line": 238,
+    "pattern": "hardcoded_phone",
+    "text": "businessPhone: activeShop?.phone || \"+91 9876543210\","
+  },
+  {
+    "file": "App/lib/screens/bills_list_screen.dart",
+    "line": 57,
+    "pattern": "fake_person_name",
+    "text": "if (lower.startsWith('a')) return const Color(0xFFF87171); // Coral/Red (Aalam Near RG / Amit Sharma)"
+  },
+  {
+    "file": "App/lib/screens/bills_list_screen.dart",
+    "line": 435,
+    "pattern": "hardcoded_phone",
+    "text": "mobile: b.customerPhone.isNotEmpty ? b.customerPhone : '8800123456',"
+  },
+  {
+    "file": "App/lib/screens/orders_screen.dart",
+    "line": 438,
+    "pattern": "hardcoded_phone",
+    "text": "mobile: o.customerPhone.isNotEmpty ? o.customerPhone : '8800123456',"
+  },
+  {
+    "file": "App/lib/screens/order_cart_screen.dart",
+    "line": 1136,
+    "pattern": "hardcoded_phone",
+    "text": "final phone = provider.selectedCustomer?.mobile ?? '9876543210';"
+  }
+]

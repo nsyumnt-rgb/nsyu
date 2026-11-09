@@ -64,7 +64,7 @@ class AuthProvider extends ChangeNotifier {
         shopCode: _shopCode,
         ownerName: _userName.isNotEmpty ? _userName : 'Owner',
         role: _roleName.isNotEmpty ? _roleName : (isOwner ? 'Owner' : 'Staff'),
-        phone: _registeredMobile ?? (_shopPhone.isNotEmpty ? _shopPhone : '8800503662'),
+        phone: _registeredMobile ?? _shopPhone,
         email: _userEmail.isNotEmpty ? _userEmail : _shopEmail,
         address: _shopAddress,
         profileImage: _shopLogo,
