@@ -1,20 +1,25 @@
 import request from "supertest";
 import app from "../src/app";
-import { setupOwnerWithShop, createAndLoginEmployee } from "./helpers";
+import { setupOwnerWithShop } from "./helpers";
 import { DEFAULT_VISIBILITY_SETTINGS } from "../src/models";
+import { signAccessToken } from "../src/utils/jwt";
 
 describe("Visibility Settings API", () => {
   let ownerToken: string;
   let shopId: number;
-  let employeeToken: string;
+  let nonOwnerToken: string;
 
   beforeAll(async () => {
     const fixture = await setupOwnerWithShop();
     ownerToken = fixture.ownerToken;
     shopId = fixture.shop.id;
 
-    const emp = await createAndLoginEmployee(ownerToken, shopId, "Sales Staff");
-    employeeToken = emp.token;
+    nonOwnerToken = signAccessToken({
+      ownerId: fixture.owner.ownerId,
+      isOwner: false,
+      shopId,
+      roleName: "Staff",
+    });
   });
 
   it("GET /api/settings/visibility returns default settings if none created yet", async () => {
@@ -64,7 +69,7 @@ describe("Visibility Settings API", () => {
   it("PUT /api/settings/visibility rejects non-owner employee with 403 Forbidden", async () => {
     const res = await request(app)
       .put("/api/settings/visibility")
-      .set("Authorization", `Bearer ${employeeToken}`)
+      .set("Authorization", `Bearer ${nonOwnerToken}`)
       .send({ settings: { show_profit: true } });
 
     expect(res.status).toBe(403);

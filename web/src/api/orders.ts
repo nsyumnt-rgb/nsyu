@@ -114,7 +114,7 @@ export function createOrder(payload: CreateOrderPayload) {
 
 export function updateOrderStatus(
   id: number | string,
-  payload: { status: string; remarks?: string; payment_status?: string }
+  payload: { status: string; remarks?: string; payment_status?: string; force?: boolean }
 ) {
   return api.put<ApiEnvelope<OrderRecord>>(`/orders/${id}/status`, payload);
 }

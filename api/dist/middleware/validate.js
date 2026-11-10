@@ -50,9 +50,9 @@ exports.createProductRules = [
 ];
 exports.createSaleRules = [
     (0, express_validator_1.body)("items").isArray({ min: 1 }).withMessage("items must be a non-empty array"),
-    (0, express_validator_1.body)("items.*.productId").isInt({ min: 1 }).withMessage("each item needs a valid productId"),
-    (0, express_validator_1.body)("items.*.quantity").isFloat({ gt: 0 }).withMessage("each item needs a positive quantity"),
     (0, express_validator_1.body)("paymentMethod")
+        .optional()
+        .customSanitizer((v) => (typeof v === "string" ? v.trim().toLowerCase() : v))
         .isIn(["cash", "upi", "bank_transfer", "card", "cheque", "other"])
         .withMessage("invalid paymentMethod"),
     (0, express_validator_1.body)("paidAmount").optional().isFloat({ min: 0 }).withMessage("paidAmount must be >= 0"),

@@ -204,3 +204,4 @@ After applying the migration:
    SELECT 'shops', count(*) FROM public.shops;
    ```
 3. Test insertion into `bills` and verify synchronized reflection in view `sales`.
+

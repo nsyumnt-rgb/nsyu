@@ -212,3 +212,4 @@ erDiagram
   2. Appends immutable audit entry in `inventory_transactions`:
      $$\text{transaction\_type} = \text{'sale'}, \quad \text{quantity} = -\text{quantity}$$
 - Triggers operational low-stock notification if $\text{current\_stock} \le \text{min\_stock}$.
+

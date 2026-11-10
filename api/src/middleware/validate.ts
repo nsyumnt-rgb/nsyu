@@ -53,9 +53,9 @@ export const createProductRules = [
 
 export const createSaleRules = [
   body("items").isArray({ min: 1 }).withMessage("items must be a non-empty array"),
-  body("items.*.productId").isInt({ min: 1 }).withMessage("each item needs a valid productId"),
-  body("items.*.quantity").isFloat({ gt: 0 }).withMessage("each item needs a positive quantity"),
   body("paymentMethod")
+    .optional()
+    .customSanitizer((v) => (typeof v === "string" ? v.trim().toLowerCase() : v))
     .isIn(["cash", "upi", "bank_transfer", "card", "cheque", "other"])
     .withMessage("invalid paymentMethod"),
   body("paidAmount").optional().isFloat({ min: 0 }).withMessage("paidAmount must be >= 0"),

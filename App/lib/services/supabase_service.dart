@@ -712,7 +712,11 @@ class SupabaseService {
       OrderStatus.cancelled => 'cancelled',
       OrderStatus.convertedToBill => 'converted_to_bill',
     };
-    await _putWithRetry(url, {'status': statusName});
+    final res = await _putWithRetry(url, {'status': statusName, 'force': true});
+    if (res.statusCode >= 300) {
+      debugPrint('⚠️ Warning: updateOrderStatus returned ${res.statusCode}: ${res.body}');
+      throw Exception('Failed to update order status (HTTP ${res.statusCode})');
+    }
   }
 
   /// Marks an order converted to a bill to prevent duplicate billing

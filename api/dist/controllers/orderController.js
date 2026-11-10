@@ -145,7 +145,7 @@ async function getOrderById(req, res) {
 async function createOrder(req, res) {
     const ownerId = req.auth.ownerId;
     const shopId = req.auth.shopId || 1;
-    const { customerId, customer: newCustomerInput, items, orderDate, expectedDeliveryDate, orderType = "Walk-in", paymentMethod = "Cash", paymentStatus = "Paid", shippingAddress, discountAmount = 0, taxPercent = 18, remarks, orderNumber: customOrderNumber, status = "processing", } = req.body;
+    const { customerId, customer: newCustomerInput, items, orderDate, expectedDeliveryDate, orderType = "Walk-in", paymentMethod = "Cash", paymentStatus = "Paid", shippingAddress, discountAmount = 0, taxPercent = 18, remarks, orderNumber: customOrderNumber, status = "pending", } = req.body;
     if (!Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ success: false, message: "items must be a non-empty array" });
     }

@@ -112,7 +112,11 @@ class BillsProvider extends ChangeNotifier {
     if (target == null) return;
 
     target.status = status;
-    target.paidAmount = status == BillStatus.paid ? target.total : 0;
+    if (status == BillStatus.paid) {
+      target.paidAmount = target.total;
+    } else if (status == BillStatus.unpaid || status == BillStatus.cancelled) {
+      target.paidAmount = 0;
+    }
 
     debugPrint('🔄 Bill Status Updated: ${target.billNumber} -> ${status.label}');
     await _store.saveBills(bills);

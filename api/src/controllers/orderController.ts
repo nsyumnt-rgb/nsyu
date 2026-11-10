@@ -178,7 +178,7 @@ export async function createOrder(req: Request, res: Response) {
     taxPercent = 18,
     remarks,
     orderNumber: customOrderNumber,
-    status = "processing",
+    status = "pending",
   } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {

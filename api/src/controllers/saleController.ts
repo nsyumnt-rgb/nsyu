@@ -1074,10 +1074,14 @@ export async function updateSale(req: Request, res: Response) {
   const ownerId = req.auth!.ownerId;
 
   try {
+    const cleanSaleId = String(saleId || "").trim();
+    const isNum = !isNaN(Number(cleanSaleId)) && /^\d+$/.test(cleanSaleId);
     const sale = await Sale.findOne({
       where: {
-        [Op.or]: [{ id: isNaN(Number(saleId)) ? -1 : Number(saleId) }, { invoice_number: String(saleId) }],
         owner_id: ownerId,
+        ...(isNum
+          ? { [Op.or]: [{ id: Number(cleanSaleId) }, { invoice_number: cleanSaleId }] }
+          : { [Op.or]: [{ invoice_number: cleanSaleId }, { invoice_number: { [Op.iLike]: cleanSaleId } }] }),
       },
       include: saleIncludes,
     });

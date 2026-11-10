@@ -129,3 +129,4 @@ flowchart TD
    - Backward-compatible view `CREATE VIEW sales AS SELECT * FROM bills;` ensures existing code continues to work seamlessly.
    - Table `sale_items` will be renamed or aliased to `bill_items` with a view `CREATE VIEW sale_items AS SELECT * FROM bill_items;`.
    - Unused module tables will be backed up and safely archived.
+

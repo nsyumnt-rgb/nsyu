@@ -132,3 +132,4 @@ SELECT 'shops', count(*) FROM public.shops;
 - [ ] Customers, owners, and shops count unchanged.
 - [ ] Node.js backend server restarts cleanly without schema errors (`npm --prefix api run start`).
 - [ ] Flutter app and web app connect successfully.
+

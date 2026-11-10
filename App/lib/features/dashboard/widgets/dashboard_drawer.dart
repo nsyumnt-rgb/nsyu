@@ -6,7 +6,6 @@ import '../../../screens/activity_log_screen.dart';
 import '../../../screens/backup_restore_screen.dart';
 import '../../../screens/business_info_screen.dart';
 import '../../../screens/customer_picker_screen.dart';
-import '../../../screens/employees_screen.dart';
 import '../../../screens/help_support_screen.dart';
 import '../../../screens/inventory_screen.dart';
 import '../../../screens/login_screen.dart';
@@ -183,18 +182,6 @@ class DashboardDrawer extends StatelessWidget {
             },
           ),
 
-          _drawerSectionHeader('MANAGEMENT'),
-          _drawerItem(
-            icon: Icons.badge_outlined,
-            title: 'Employees & Staff',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EmployeesScreen()),
-              );
-            },
-          ),
 
           _drawerSectionHeader('ADMIN & SETTINGS'),
           _drawerItem(

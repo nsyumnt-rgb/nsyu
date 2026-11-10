@@ -9,7 +9,6 @@ import Register from "./pages/Register";
 import SelectShop from "./pages/SelectShop";
 import Dashboard from "./pages/Dashboard";
 import Shops from "./pages/Shops";
-import Employees from "./pages/Employees";
 import Roles from "./pages/Roles";
 import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
@@ -21,9 +20,6 @@ import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
 import Payments from "./pages/Payments";
 import Ledger from "./pages/Ledger";
-import EMI from "./pages/EMI";
-import Attendance from "./pages/Attendance";
-import Payroll from "./pages/Payroll";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -34,11 +30,8 @@ import PaymentDetail from "./pages/details/PaymentDetail";
 import CustomerDetail from "./pages/details/CustomerDetail";
 import SupplierDetail from "./pages/details/SupplierDetail";
 import ProductDetail from "./pages/details/ProductDetail";
-import EmployeeDetail from "./pages/details/EmployeeDetail";
 import TransferDetail from "./pages/details/TransferDetail";
 import MovementDetail from "./pages/details/MovementDetail";
-import EmiDetail from "./pages/details/EmiDetail";
-import PayrollDetail from "./pages/details/PayrollDetail";
 
 /* Customer Portal Pages */
 import PortalLogin from "./pages/portal/PortalLogin";
@@ -123,13 +116,6 @@ export default function App() {
             <Route path="payments" element={<Payments />} />
             <Route path="payments/:id" element={<PaymentDetail />} />
             <Route path="ledger" element={<Ledger />} />
-            <Route path="emi" element={<EMI />} />
-            <Route path="emi/:id" element={<EmiDetail />} />
-            <Route path="employees" element={<Employees />} />
-            <Route path="employees/:id" element={<EmployeeDetail />} />
-            <Route path="attendance" element={<Attendance />} />
-            <Route path="payroll" element={<Payroll />} />
-            <Route path="payroll/:id" element={<PayrollDetail />} />
             <Route path="shops" element={<Shops />} />
             <Route path="roles" element={<Roles />} />
             <Route path="reports" element={<Reports />} />

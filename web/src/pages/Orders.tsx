@@ -235,6 +235,7 @@ export default function Orders() {
         status: statusUpdateForm.status.toLowerCase(),
         payment_status: statusUpdateForm.payment_status,
         remarks: statusUpdateForm.remarks,
+        force: true,
       });
       if (res.data.data) setSelectedOrder(res.data.data);
       setStep("view");

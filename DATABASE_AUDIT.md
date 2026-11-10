@@ -121,3 +121,4 @@ The mandated foundation for NSYU Business operations consists of 8 primary busin
 - **Customer:** 1 active customer record (`Customer`, phone `9876543210`).
 - **Owner & Shop:** Owner 1 (`NSYU`, phone `8800503662`) and Shop 1 (`NSYU`) verified intact.
 - **Zero orphaned records** detected across `products`, `product_stocks`, and `categories`.
+

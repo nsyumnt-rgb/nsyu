@@ -4,199 +4,25 @@
       "table": "categories",
       "rowCount": 8,
       "inFks": [
-        "products.category_id",
-        "subcategories.category_id"
+        "products.category_id"
       ],
       "outFks": [
         "owner_id -> owners.id"
       ]
-    },
-    {
-      "table": "customer_carts",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "customer_id -> customers.id"
-      ]
-    },
-    {
-      "table": "customer_ledger",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "customer_id -> customers.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "customer_otps",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": []
-    },
-    {
-      "table": "customer_refresh_tokens",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": []
     },
     {
       "table": "customers",
       "rowCount": 1,
-      "inFks": [
-        "emi_plans.customer_id",
-        "payments.customer_id",
-        "customer_ledger.customer_id",
-        "orders.customer_id",
-        "customer_carts.customer_id"
-      ],
+      "inFks": [],
       "outFks": [
         "owner_id -> owners.id"
-      ]
-    },
-    {
-      "table": "emi_installments",
-      "rowCount": 0,
-      "inFks": [
-        "payments.emi_installment_id"
-      ],
-      "outFks": [
-        "emi_plan_id -> emi_plans.id"
-      ]
-    },
-    {
-      "table": "emi_plans",
-      "rowCount": 0,
-      "inFks": [
-        "emi_installments.emi_plan_id"
-      ],
-      "outFks": [
-        "customer_id -> customers.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "employee_advances",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "employee_incentives",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "employee_ledger",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "employee_shops",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id",
-        "role_id -> roles.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "employees",
-      "rowCount": 0,
-      "inFks": [
-        "leave_requests.employee_id",
-        "salary_configs.employee_id",
-        "employee_advances.employee_id",
-        "employee_incentives.employee_id",
-        "payrolls.employee_id",
-        "salary_payments.employee_id",
-        "employee_ledger.employee_id",
-        "employee_shops.employee_id",
-        "refresh_tokens.employee_id"
-      ],
-      "outFks": [
-        "owner_id -> owners.id"
-      ]
-    },
-    {
-      "table": "inventory_transactions",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "product_id -> products.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "invoice_counters",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": []
-    },
-    {
-      "table": "leave_requests",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id",
-        "shop_id -> shops.id"
       ]
     },
     {
       "table": "modules",
       "rowCount": 0,
-      "inFks": [
-        "role_permissions.module_id",
-        "permissions.module_id"
-      ],
-      "outFks": []
-    },
-    {
-      "table": "notifications",
-      "rowCount": 0,
       "inFks": [],
       "outFks": []
-    },
-    {
-      "table": "order_items",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "order_id -> orders.id"
-      ]
-    },
-    {
-      "table": "order_status_history",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "order_id -> orders.id"
-      ]
-    },
-    {
-      "table": "orders",
-      "rowCount": 0,
-      "inFks": [
-        "order_items.order_id",
-        "order_status_history.order_id"
-      ],
-      "outFks": [
-        "customer_id -> customers.id",
-        "owner_id -> owners.id",
-        "shop_id -> shops.id"
-      ]
     },
     {
       "table": "owners",
@@ -204,285 +30,33 @@
       "inFks": [
         "customers.owner_id",
         "shops.owner_id",
-        "purchases.owner_id",
         "roles.owner_id",
-        "orders.owner_id",
-        "employees.owner_id",
-        "refresh_tokens.owner_id",
         "categories.owner_id",
-        "suppliers.owner_id",
         "products.owner_id"
       ],
       "outFks": []
     },
     {
-      "table": "payments",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "customer_id -> customers.id",
-        "emi_installment_id -> emi_installments.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "payrolls",
-      "rowCount": 0,
-      "inFks": [
-        "salary_payments.payroll_id"
-      ],
-      "outFks": [
-        "employee_id -> employees.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "permissions",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "module_id -> modules.id"
-      ]
-    },
-    {
-      "table": "platform_audit_log",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": []
-    },
-    {
-      "table": "product_images",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "product_id -> products.id"
-      ]
-    },
-    {
-      "table": "product_locations",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "product_id -> products.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "product_stocks",
-      "rowCount": 90,
-      "inFks": [],
-      "outFks": [
-        "product_id -> products.id",
-        "shop_id -> shops.id"
-      ]
-    },
-    {
       "table": "products",
       "rowCount": 184,
-      "inFks": [
-        "product_images.product_id",
-        "product_stocks.product_id",
-        "product_locations.product_id",
-        "inventory_transactions.product_id",
-        "stock_transfers.product_id",
-        "sale_items.product_id",
-        "purchase_items.product_id"
-      ],
+      "inFks": [],
       "outFks": [
         "category_id -> categories.id",
-        "owner_id -> owners.id",
-        "subcategory_id -> subcategories.id",
-        "supplier_id -> suppliers.id"
-      ]
-    },
-    {
-      "table": "purchase_counters",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": []
-    },
-    {
-      "table": "purchase_items",
-      "rowCount": 0,
-      "inFks": [
-        "purchase_return_items.purchase_item_id"
-      ],
-      "outFks": [
-        "product_id -> products.id",
-        "purchase_id -> purchases.id"
-      ]
-    },
-    {
-      "table": "purchase_return_items",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "purchase_item_id -> purchase_items.id",
-        "purchase_return_id -> purchase_returns.id"
-      ]
-    },
-    {
-      "table": "purchase_returns",
-      "rowCount": 0,
-      "inFks": [
-        "purchase_return_items.purchase_return_id"
-      ],
-      "outFks": [
-        "purchase_id -> purchases.id",
-        "supplier_id -> suppliers.id"
-      ]
-    },
-    {
-      "table": "purchases",
-      "rowCount": 0,
-      "inFks": [
-        "purchase_items.purchase_id",
-        "purchase_returns.purchase_id"
-      ],
-      "outFks": [
-        "owner_id -> owners.id",
-        "shop_id -> shops.id",
-        "supplier_id -> suppliers.id"
-      ]
-    },
-    {
-      "table": "reference_counters",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": []
-    },
-    {
-      "table": "refresh_tokens",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id",
         "owner_id -> owners.id"
-      ]
-    },
-    {
-      "table": "role_field_permissions",
-      "rowCount": 112,
-      "inFks": [],
-      "outFks": [
-        "role_id -> roles.id"
-      ]
-    },
-    {
-      "table": "role_permissions",
-      "rowCount": 448,
-      "inFks": [],
-      "outFks": [
-        "module_id -> modules.id",
-        "role_id -> roles.id"
       ]
     },
     {
       "table": "roles",
       "rowCount": 18,
-      "inFks": [
-        "role_permissions.role_id",
-        "role_field_permissions.role_id",
-        "employee_shops.role_id"
-      ],
+      "inFks": [],
       "outFks": [
         "owner_id -> owners.id"
-      ]
-    },
-    {
-      "table": "salary_configs",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id"
-      ]
-    },
-    {
-      "table": "salary_payments",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "employee_id -> employees.id",
-        "payroll_id -> payrolls.id"
-      ]
-    },
-    {
-      "table": "sale_items",
-      "rowCount": 0,
-      "inFks": [
-        "sale_return_items.sale_item_id"
-      ],
-      "outFks": [
-        "product_id -> products.id"
-      ]
-    },
-    {
-      "table": "sale_return_items",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "sale_item_id -> sale_items.id"
       ]
     },
     {
       "table": "shops",
       "rowCount": 1,
-      "inFks": [
-        "product_stocks.shop_id",
-        "product_locations.shop_id",
-        "inventory_transactions.shop_id",
-        "stock_transfers.from_shop_id",
-        "stock_transfers.to_shop_id",
-        "emi_plans.shop_id",
-        "payments.shop_id",
-        "customer_ledger.shop_id",
-        "leave_requests.shop_id",
-        "employee_advances.shop_id",
-        "employee_incentives.shop_id",
-        "payrolls.shop_id",
-        "employee_ledger.shop_id",
-        "purchases.shop_id",
-        "orders.shop_id",
-        "employee_shops.shop_id"
-      ],
-      "outFks": [
-        "owner_id -> owners.id"
-      ]
-    },
-    {
-      "table": "status_history",
-      "rowCount": 0,
       "inFks": [],
-      "outFks": []
-    },
-    {
-      "table": "stock_transfers",
-      "rowCount": 0,
-      "inFks": [],
-      "outFks": [
-        "from_shop_id -> shops.id",
-        "product_id -> products.id",
-        "to_shop_id -> shops.id"
-      ]
-    },
-    {
-      "table": "subcategories",
-      "rowCount": 0,
-      "inFks": [
-        "products.subcategory_id"
-      ],
-      "outFks": [
-        "category_id -> categories.id"
-      ]
-    },
-    {
-      "table": "suppliers",
-      "rowCount": 1,
-      "inFks": [
-        "products.supplier_id",
-        "purchases.supplier_id",
-        "purchase_returns.supplier_id"
-      ],
       "outFks": [
         "owner_id -> owners.id"
       ]

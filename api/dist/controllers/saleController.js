@@ -919,10 +919,14 @@ async function updateSale(req, res) {
     const { status, paidAmount, notes } = req.body;
     const ownerId = req.auth.ownerId;
     try {
+        const cleanSaleId = String(saleId || "").trim();
+        const isNum = !isNaN(Number(cleanSaleId)) && /^\d+$/.test(cleanSaleId);
         const sale = await models_1.Sale.findOne({
             where: {
-                [sequelize_1.Op.or]: [{ id: isNaN(Number(saleId)) ? -1 : Number(saleId) }, { invoice_number: String(saleId) }],
                 owner_id: ownerId,
+                ...(isNum
+                    ? { [sequelize_1.Op.or]: [{ id: Number(cleanSaleId) }, { invoice_number: cleanSaleId }] }
+                    : { [sequelize_1.Op.or]: [{ invoice_number: cleanSaleId }, { invoice_number: { [sequelize_1.Op.iLike]: cleanSaleId } }] }),
             },
             include: saleIncludes,
         });

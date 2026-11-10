@@ -5,7 +5,7 @@ import { usePermission } from "../hooks/usePermission";
 import { useAuthStore } from "../store/authStore";
 import type { ModuleName } from "../types";
 
-export type NavGroup = "MAIN" | "BUSINESS MANAGEMENT" | "MANAGEMENT" | "ADMIN";
+export type NavGroup = "MAIN" | "BUSINESS MANAGEMENT" | "ADMIN";
 
 export interface NavItem {
   to: string;
@@ -194,97 +194,8 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
-  {
-    to: "/app/emi",
-    label: "EMI / Installments",
-    module: "emi",
-    group: "BUSINESS MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-        <line x1="16" y1="2" x2="16" y2="6" />
-        <line x1="8" y1="2" x2="8" y2="6" />
-        <line x1="3" y1="10" x2="21" y2="10" />
-        <line x1="8" y1="14" x2="16" y2="14" />
-        <line x1="8" y1="18" x2="13" y2="18" />
-      </svg>
-    ),
-  },
-
   // =========================================================================
-  // 3. MANAGEMENT
-  // =========================================================================
-  {
-    to: "/app/employees",
-    label: "Employees",
-    module: "employees",
-    group: "MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/attendance",
-    label: "Attendance",
-    module: "attendance",
-    group: "MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/payroll",
-    label: "Salary / Payroll",
-    module: "payroll",
-    group: "MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <line x1="12" y1="1" x2="12" y2="23" />
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    ),
-  },
-
-  // =========================================================================
-  // 4. ADMIN
+  // 3. ADMIN
   // =========================================================================
   {
     to: "/app/roles",
@@ -330,7 +241,6 @@ const NAV_ITEMS: NavItem[] = [
 const GROUPS: NavGroup[] = [
   "MAIN",
   "BUSINESS MANAGEMENT",
-  "MANAGEMENT",
   "ADMIN",
 ];
 
