@@ -15,7 +15,7 @@ export default function Login() {
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
   const setCustomerSession = usePortalStore((s) => s.setCustomerSession);
 
-  // Tab State: "staff" | "customer" (matches reference UI)
+  // Tab State: "staff" | "customer"
   const [activeTab, setActiveTab] = useState<"staff" | "customer">("staff");
 
   // Form Inputs
@@ -287,377 +287,384 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#38BDF8] via-[#2563EB] to-[#1D4ED8] flex flex-col justify-between font-sans relative overflow-x-hidden select-none">
+    <div className="min-h-screen bg-white text-[#142B4D] flex flex-col justify-between font-sans relative overflow-x-hidden select-none">
       
-      {/* ── Background Wave Decor (Top Layer) ── */}
+      {/* ── Soft Ambient Background Shapes (Pure White Theme with Subtle Light Blue Accents) ── */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <svg
-          className="absolute -top-12 left-0 w-full h-80 opacity-40 mix-blend-screen"
-          viewBox="0 0 1440 320"
-          preserveAspectRatio="none"
-        >
-          <path
-            fill="#BAE6FD"
-            d="M0,160L48,176C96,192,192,224,288,208C384,192,480,128,576,122.7C672,117,768,171,864,181.3C960,192,1056,160,1152,144C1248,128,1344,128,1392,128L1440,128L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"
-          />
-        </svg>
-
-        <svg
-          className="absolute top-16 -left-10 w-[120%] h-96 opacity-25"
-          viewBox="0 0 1440 320"
-          preserveAspectRatio="none"
-        >
-          <path
-            fill="#60A5FA"
-            d="M0,64L60,96C120,128,240,192,360,197.3C480,203,600,149,720,144C840,139,960,181,1080,181.3C1200,181,1320,139,1380,117.3L1440,96L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z"
-          />
-        </svg>
+        {/* Top-Left Soft Radial Wave */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-[#E2EFFF] to-[#F5F9FF] opacity-80 blur-2xl" />
+        {/* Top-Right Soft Radial Wave */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-gradient-to-bl from-[#EBF3FE] to-[#F8FAFC] opacity-70 blur-2xl" />
+        {/* Bottom-Left Wave Accent */}
+        <div className="absolute -bottom-36 -left-20 w-[420px] h-[360px] rounded-full bg-[#EDF5FF]/80 blur-3xl" />
+        {/* Bottom-Right Soft Wave Accent */}
+        <div className="absolute -bottom-40 -right-20 w-[480px] h-[400px] rounded-full bg-[#EBF3FF]/90 blur-3xl" />
       </div>
 
       {/* ── Main Scrollable Container ── */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12">
-        <div className="w-full max-w-[430px]">
-
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* HEADER BRANDING & LOGO (Exact matching Image 1 & Image 2)        */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          <div className="flex flex-col items-center text-center mb-6">
-            
-            {/* 3D Chrome NSYD Logo in Rounded White Box with Shadow */}
-            <div className="w-[84px] h-[84px] rounded-[24px] bg-white p-2.5 shadow-xl shadow-blue-950/20 flex items-center justify-center transition-transform hover:scale-105 duration-200">
-              <img
-                src="./nsyu_logo.png"
-                alt="NSYU Logo"
-                className="w-full h-full object-contain drop-shadow-sm"
-              />
-            </div>
-
-            {/* Title */}
-            <h1 className="text-[28px] font-extrabold text-white tracking-tight mt-3.5 leading-none drop-shadow-sm">
-              NSYU Business
-            </h1>
-
-            {/* Subtitle with dashes */}
-            <div className="flex items-center justify-center gap-2.5 mt-2 text-white/90">
-              <span className="w-6 h-[1.5px] bg-white/50 rounded-full" />
-              <span className="text-[12.5px] font-medium tracking-wide">Manage Your Business Easily</span>
-              <span className="w-6 h-[1.5px] bg-white/50 rounded-full" />
-            </div>
-
-            {/* 3 Circular Feature Indicators */}
-            <div className="flex items-center justify-center gap-5 sm:gap-7 mt-5 text-white">
-              
-              {/* Sales & Billing */}
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xs mb-1.5 border border-white/20">
-                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                </div>
-                <span className="text-[11px] font-medium text-white/95 tracking-tight">Sales & Billing</span>
-              </div>
-
-              {/* Divider */}
-              <div className="w-px h-8 bg-white/25" />
-
-              {/* Inventory */}
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xs mb-1.5 border border-white/20">
-                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                    <line x1="12" y1="22.08" x2="12" y2="12" />
-                  </svg>
-                </div>
-                <span className="text-[11px] font-medium text-white/95 tracking-tight">Inventory</span>
-              </div>
-
-              {/* Divider */}
-              <div className="w-px h-8 bg-white/25" />
-
-              {/* Customers */}
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xs mb-1.5 border border-white/20">
-                  <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </div>
-                <span className="text-[11px] font-medium text-white/95 tracking-tight">Customers</span>
-              </div>
-
-            </div>
-
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-10">
+        
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* HEADER BRANDING & LOGO (Exact matching Reference Design)          */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <div className="flex flex-col items-center text-center mb-6">
+          
+          {/* Logo in Clean Rounded White Card with Soft Subtle Shadow */}
+          <div className="w-[82px] h-[82px] rounded-[22px] bg-white p-2.5 shadow-[0_10px_25px_-5px_rgba(40,120,232,0.14),0_2px_6px_rgba(40,120,232,0.06)] border border-[#EBF2FA] flex items-center justify-center transition-transform hover:scale-105 duration-200">
+            <img
+              src="./nsyu_logo.png"
+              alt="NSYU Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
 
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* FLOATING WHITE AUTHENTICATION CARD (Matching Image 1 & Image 2)  */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          <div className="bg-white rounded-[28px] shadow-2xl shadow-blue-950/25 p-5 sm:p-6 border border-white/80 backdrop-blur-xs relative">
-            
-            {/* ── Segmented Pill Tabs ── */}
-            <div className="bg-[#F1F5F9] p-1 rounded-2xl flex items-center gap-1">
-              
-              {/* Staff / Owner Tab */}
-              <button
-                type="button"
-                id="staff-tab-btn"
-                onClick={() => handleTabChange("staff")}
-                className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  activeTab === "staff"
-                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-600/30"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-                <span>Staff / Owner</span>
-              </button>
+          {/* Heading: NSYU Business */}
+          <h1 className="text-[32px] sm:text-[34px] font-extrabold text-[#142B4D] tracking-tight mt-3.5 leading-none">
+            NSYU Business
+          </h1>
 
-              {/* Customer Portal Tab */}
-              <button
-                type="button"
-                id="customer-tab-btn"
-                onClick={() => handleTabChange("customer")}
-                className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  activeTab === "customer"
-                    ? "bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md shadow-blue-600/30"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="8.5" cy="7" r="4" />
-                  <polyline points="17 11 19 13 23 9" />
-                </svg>
-                <span>Customer Portal</span>
-              </button>
-
-            </div>
-
-            {/* ── Customer Portal Informational Banner (Shown ONLY in Customer mode, matching Image 2) ── */}
-            {activeTab === "customer" && (
-              <div className="mt-4 p-3 rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE]/80 flex items-start gap-3 animate-fadeIn">
-                <div className="w-9 h-9 rounded-xl bg-[#DBEAFE] text-[#2563EB] flex items-center justify-center shrink-0 mt-0.5">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="font-bold text-[13px] text-[#1E3A8A]">Customer Portal</div>
-                  <div className="text-[11.5px] text-[#64748B] leading-snug mt-0.5">
-                    Log in to view your bills, payments and ledger details.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* ── Form Error Notice ── */}
-            {error && (
-              <div className="mt-3.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
-                <svg className="w-4 h-4 mt-0.5 shrink-0 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <span className="leading-tight">{error}</span>
-              </div>
-            )}
-
-            {/* ── Main Login Form ── */}
-            <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
-              
-              {/* Field 1: Identifier (Email/Username or Email/Mobile Number) */}
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                  </svg>
-                </div>
-                <input
-                  id="identifier-input"
-                  type="text"
-                  required
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder={activeTab === "customer" ? "Email / Mobile Number" : "Email / Username"}
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 bg-white font-medium text-slate-800 text-[13px] placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                />
-              </div>
-
-              {/* Field 2: Password (with eye toggle) */}
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </div>
-                <input
-                  id="password-input"
-                  type={showPassword ? "text" : "password"}
-                  required={activeTab === "staff"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-white font-medium text-slate-800 text-[13px] placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  {showPassword ? (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              {/* Remember me & Forgot Password */}
-              <div className="flex items-center justify-between text-xs pt-0.5">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
-                  />
-                  <span className="text-slate-700 font-semibold text-[12.5px]">Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowForgotModal(true)}
-                  className="text-blue-600 hover:underline font-bold text-[12.5px] cursor-pointer"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-
-              {/* Solid Gradient Blue Login Button */}
-              <button
-                type="submit"
-                id="login-submit-btn"
-                disabled={loading}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 via-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-60 text-white font-bold text-[14.5px] shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer mt-1"
-              >
-                {loading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                    <polyline points="10 17 15 12 10 7" />
-                    <line x1="15" y1="12" x2="3" y2="12" />
-                  </svg>
-                )}
-                <span>{loading ? "Signing in…" : "Login"}</span>
-              </button>
-
-              {/* "or" Divider */}
-              <div className="flex items-center gap-3 pt-1">
-                <div className="flex-1 h-px bg-slate-200" />
-                <span className="text-[12px] text-slate-400 font-medium">or</span>
-                <div className="flex-1 h-px bg-slate-200" />
-              </div>
-
-              {/* Outlined Blue Create Account Button */}
-              <button
-                type="button"
-                id="create-account-btn"
-                onClick={() => setShowRegisterModal(true)}
-                className="w-full py-2.5 rounded-xl border-2 border-blue-600 hover:bg-blue-50/70 text-blue-600 font-bold text-[14px] flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="8.5" cy="7" r="4" />
-                  <line x1="20" y1="8" x2="20" y2="14" />
-                  <line x1="23" y1="11" x2="17" y2="11" />
-                </svg>
-                <span>Create Account</span>
-              </button>
-
-              {/* Connected Status Pill at bottom of card (Clickable to open server settings) */}
-              <button
-                type="button"
-                id="supabase-status-pill"
-                onClick={() => setShowApiModal(true)}
-                title="Click to view API Server & Supabase Database Configuration"
-                className="w-full mt-4 py-2 px-3.5 rounded-full bg-[#DCFCE7]/75 hover:bg-[#DCFCE7] border border-[#86EFAC]/80 flex items-center justify-between text-[11.5px] font-semibold text-[#166534] transition-all cursor-pointer shadow-2xs"
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${apiStatus === "offline" ? "bg-rose-500" : "bg-[#16A34A] animate-pulse"}`} />
-                  <span>
-                    {apiStatus === "offline" ? "Supabase Offline (Click to config)" : "Supabase PostgreSQL Connected"}
-                  </span>
-                </div>
-                <svg className="w-4 h-4 text-[#16A34A]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <ellipse cx="12" cy="5" rx="9" ry="3" />
-                  <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                </svg>
-              </button>
-
-            </form>
-
+          {/* Subtitle: —— Manage Your Business Easily —— */}
+          <div className="flex items-center justify-center gap-3 mt-2 text-[#64748B]">
+            <span className="w-8 h-[1.5px] bg-[#CBD5E1] rounded-full" />
+            <span className="text-[13px] font-medium tracking-wide">Manage Your Business Easily</span>
+            <span className="w-8 h-[1.5px] bg-[#CBD5E1] rounded-full" />
           </div>
 
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          {/* OPTIONAL APK DOWNLOAD / DIRECT SHORTCUT PILL                     */}
-          {/* ══════════════════════════════════════════════════════════════════ */}
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <button
-              type="button"
-              onClick={handleDownloadApk}
-              className="px-3.5 py-1.5 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-md text-white/95 text-[11.5px] font-semibold flex items-center gap-1.5 border border-white/20 transition-all cursor-pointer shadow-xs"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>Download Android APK (v1.0)</span>
-            </button>
+          {/* 3 Compact Business Features Highlights */}
+          <div className="flex items-center justify-center gap-6 sm:gap-10 mt-6">
+            
+            {/* 1: Sales & Billing */}
+            <div className="flex flex-col items-center group">
+              <div className="w-[52px] h-[52px] rounded-2xl bg-[#DCEBFF] flex items-center justify-center text-[#2878E8] shadow-xs transition-transform group-hover:scale-105">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+              </div>
+              <span className="text-[12.5px] font-bold text-[#142B4D] mt-2 tracking-tight">Sales & Billing</span>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-10 bg-[#E2E8F0]" />
+
+            {/* 2: Inventory */}
+            <div className="flex flex-col items-center group">
+              <div className="w-[52px] h-[52px] rounded-2xl bg-[#DCEBFF] flex items-center justify-center text-[#2878E8] shadow-xs transition-transform group-hover:scale-105">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                  <line x1="12" y1="22.08" x2="12" y2="12" />
+                </svg>
+              </div>
+              <span className="text-[12.5px] font-bold text-[#142B4D] mt-2 tracking-tight">Inventory</span>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-10 bg-[#E2E8F0]" />
+
+            {/* 3: Customers */}
+            <div className="flex flex-col items-center group">
+              <div className="w-[52px] h-[52px] rounded-2xl bg-[#DCEBFF] flex items-center justify-center text-[#2878E8] shadow-xs transition-transform group-hover:scale-105">
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <span className="text-[12.5px] font-bold text-[#142B4D] mt-2 tracking-tight">Customers</span>
+            </div>
+
           </div>
 
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        {/* 3-COLUMN WORKSPACE: LEFT SHOP | CENTER CARD | RIGHT DASHBOARD     */}
+        {/* ══════════════════════════════════════════════════════════════════ */}
+        <div className="w-full max-w-6xl flex items-center justify-center gap-6 lg:gap-10 xl:gap-14">
+
+          {/* ── Left Illustration: 3D Modern Retail Shop, Boxes & Plants (Desktop) ── */}
+          <div className="hidden lg:flex flex-col items-end justify-center flex-1 max-w-[280px] xl:max-w-[320px] pointer-events-none select-none">
+            <img
+              src="./illustrations/retail_shop.png"
+              alt="NSYU Retail Shop Illustration"
+              className="w-full max-h-[360px] object-contain drop-shadow-sm mix-blend-multiply"
+              style={{
+                maskImage: "radial-gradient(ellipse 94% 94% at 50% 50%, black 72%, transparent 100%)",
+                WebkitMaskImage: "radial-gradient(ellipse 94% 94% at 50% 50%, black 72%, transparent 100%)",
+              }}
+            />
+          </div>
+
+          {/* ── Center Column: Premium White Authentication Card ── */}
+          <div className="w-full max-w-[430px]">
+            <div className="bg-white rounded-[28px] shadow-[0_20px_50px_-15px_rgba(20,43,77,0.08),0_4px_15px_-4px_rgba(40,120,232,0.05)] p-6 sm:p-7 border border-[#E8EFF8] relative">
+              
+              {/* ── Segmented Pill Tabs ── */}
+              <div className="bg-[#F1F5F9] p-1 rounded-2xl flex items-center gap-1">
+                
+                {/* Staff / Owner Tab */}
+                <button
+                  type="button"
+                  id="staff-tab-btn"
+                  onClick={() => handleTabChange("staff")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    activeTab === "staff"
+                      ? "bg-[#2878E8] text-white shadow-md shadow-blue-500/25"
+                      : "text-[#64748B] hover:text-[#142B4D]"
+                  }`}
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                  <span>Staff / Owner</span>
+                </button>
+
+                {/* Customer Portal Tab */}
+                <button
+                  type="button"
+                  id="customer-tab-btn"
+                  onClick={() => handleTabChange("customer")}
+                  className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                    activeTab === "customer"
+                      ? "bg-[#2878E8] text-white shadow-md shadow-blue-500/25"
+                      : "text-[#64748B] hover:text-[#142B4D]"
+                  }`}
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <polyline points="17 11 19 13 23 9" />
+                  </svg>
+                  <span>Customer Portal</span>
+                </button>
+
+              </div>
+
+              {/* ── Customer Portal Informational Banner (Shown in Customer mode) ── */}
+              {activeTab === "customer" && (
+                <div className="mt-4 p-3 rounded-2xl bg-[#F0F6FE] border border-[#BFDBFE]/70 flex items-start gap-3 animate-fadeIn">
+                  <div className="w-8 h-8 rounded-xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center shrink-0 mt-0.5">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="font-bold text-[13px] text-[#142B4D]">Customer Portal</div>
+                    <div className="text-[11.5px] text-[#64748B] leading-snug mt-0.5">
+                      Log in with your registered phone or email to view your bills, payments and ledger.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Form Error Notice ── */}
+              {error && (
+                <div className="mt-3.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
+                  <svg className="w-4 h-4 mt-0.5 shrink-0 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span className="leading-tight">{error}</span>
+                </div>
+              )}
+
+              {/* ── Main Login Form ── */}
+              <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
+                
+                {/* Field 1: Identifier (Email / Username or Phone) */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#94A3B8]">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                  </div>
+                  <input
+                    id="identifier-input"
+                    type="text"
+                    required
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder={activeTab === "customer" ? "Email / Mobile Number" : "Email / Username"}
+                    className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-[#E2E8F0] bg-white font-medium text-[#142B4D] text-[13.5px] placeholder-[#94A3B8] focus:border-[#2878E8] focus:outline-none focus:ring-4 focus:ring-[#2878E8]/10 transition-all"
+                  />
+                </div>
+
+                {/* Field 2: Password (with Eye Toggle) */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#94A3B8]">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                  <input
+                    id="password-input"
+                    type={showPassword ? "text" : "password"}
+                    required={activeTab === "staff"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-[#E2E8F0] bg-white font-medium text-[#142B4D] text-[13.5px] placeholder-[#94A3B8] focus:border-[#2878E8] focus:outline-none focus:ring-4 focus:ring-[#2878E8]/10 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#94A3B8] hover:text-[#64748B] cursor-pointer"
+                  >
+                    {showPassword ? (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+
+                {/* Remember me & Forgot Password */}
+                <div className="flex items-center justify-between text-xs pt-0.5">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="rounded border-slate-300 text-[#2878E8] focus:ring-[#2878E8] h-3.5 w-3.5"
+                    />
+                    <span className="text-[#142B4D] font-semibold text-[12.5px]">Remember me</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-[#2878E8] hover:underline font-bold text-[12.5px] cursor-pointer"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+
+                {/* Solid Professional Blue Login Button */}
+                <button
+                  type="submit"
+                  id="login-submit-btn"
+                  disabled={loading}
+                  className="w-full py-3 rounded-xl bg-[#2878E8] hover:bg-[#1E6CE0] active:scale-[0.99] disabled:opacity-60 text-white font-bold text-[14.5px] shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-1"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                      <polyline points="10 17 15 12 10 7" />
+                      <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                  )}
+                  <span>{loading ? "Signing in…" : "Login"}</span>
+                </button>
+
+                {/* "or" Divider */}
+                <div className="flex items-center gap-3 pt-1">
+                  <div className="flex-1 h-px bg-[#E2E8F0]" />
+                  <span className="text-[12px] text-[#94A3B8] font-medium">or</span>
+                  <div className="flex-1 h-px bg-[#E2E8F0]" />
+                </div>
+
+                {/* Outlined Blue Create Account Button */}
+                <button
+                  type="button"
+                  id="create-account-btn"
+                  onClick={() => setShowRegisterModal(true)}
+                  className="w-full py-2.5 rounded-xl border-2 border-[#2878E8] hover:bg-[#F5F9FF] text-[#2878E8] font-bold text-[14px] flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="8.5" cy="7" r="4" />
+                    <line x1="20" y1="8" x2="20" y2="14" />
+                    <line x1="23" y1="11" x2="17" y2="11" />
+                  </svg>
+                  <span>Create Account</span>
+                </button>
+
+                {/* Supabase Connection Status Pill (Clickable for API / Database Settings) */}
+                <button
+                  type="button"
+                  id="supabase-status-pill"
+                  onClick={() => setShowApiModal(true)}
+                  title="Click to view API Server & Supabase Database Configuration"
+                  className="w-full mt-4 py-2 px-3.5 rounded-full bg-[#ECFDF5] hover:bg-[#D1FAE5] border border-[#86EFAC]/80 flex items-center justify-between text-[11.5px] font-semibold text-[#166534] transition-all cursor-pointer shadow-2xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${apiStatus === "offline" ? "bg-rose-500" : "bg-[#16A34A] animate-pulse"}`} />
+                    <span>
+                      {apiStatus === "offline" ? "Supabase Offline (Click to config)" : "Supabase PostgreSQL Connected"}
+                    </span>
+                  </div>
+                  <svg className="w-4 h-4 text-[#16A34A]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                  </svg>
+                </button>
+
+              </form>
+
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            {/* APK DOWNLOAD BUTTON (Matching Reference UI)                      */}
+            {/* ══════════════════════════════════════════════════════════════════ */}
+            <div className="mt-5 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={handleDownloadApk}
+                className="px-5 py-2 rounded-full bg-[#EBF3FF] hover:bg-[#DCEBFF] text-[#2878E8] text-[12px] font-bold flex items-center gap-2 border border-[#BFDBFE]/80 transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <svg className="w-3.5 h-3.5 text-[#2878E8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                <span>Download Android APK (v1.0)</span>
+              </button>
+            </div>
+
+          </div>
+
+          {/* ── Right Illustration: 3D Modern Analytics Dashboard & Monitor (Desktop) ── */}
+          <div className="hidden lg:flex flex-col items-start justify-center flex-1 max-w-[280px] xl:max-w-[320px] pointer-events-none select-none">
+            <img
+              src="./illustrations/business_analytics.png"
+              alt="NSYU Business Analytics Dashboard Illustration"
+              className="w-full max-h-[360px] object-contain drop-shadow-sm mix-blend-multiply"
+              style={{
+                maskImage: "radial-gradient(ellipse 94% 94% at 50% 50%, black 72%, transparent 100%)",
+                WebkitMaskImage: "radial-gradient(ellipse 94% 94% at 50% 50%, black 72%, transparent 100%)",
+              }}
+            />
+          </div>
+
+        </div>
+
       </div>
 
-      {/* ── Subtle Bottom Waves (Image Reference) ── */}
-      <div className="relative w-full h-12 pointer-events-none overflow-hidden z-0">
-        <svg
-          className="absolute bottom-0 left-0 w-full h-12 text-white/20"
-          viewBox="0 0 1440 120"
-          preserveAspectRatio="none"
-        >
-          <path
-            fill="currentColor"
-            d="M0,32L60,42.7C120,53,240,75,360,69.3C480,64,600,32,720,26.7C840,21,960,43,1080,48C1200,53,1320,43,1380,37.3L1440,32L1440,120L1380,120C1320,120,1200,120,1080,120C960,120,840,120,720,120C600,120,480,120,360,120C240,120,120,120,60,120L0,120Z"
-          />
-        </svg>
-      </div>
+      {/* ── Bottom Ambient Corner Curve ── */}
+      <div className="relative w-full h-8 pointer-events-none overflow-hidden z-0" />
 
       {/* ══════════════════════════════════════════════════════════════════ */}
       {/* MODAL 1: CUSTOMER OTP VERIFICATION MODAL                          */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {showOtpModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
             <button
               type="button"
@@ -671,15 +678,15 @@ export default function Login() {
             </button>
 
             <div className="text-center pt-1">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2.5 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center mx-auto mb-2.5 shadow-xs">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
                 </svg>
               </div>
-              <h3 className="text-lg font-extrabold text-slate-900">Enter Verification Code</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                A 4-digit code was sent to {maskedEmail ? <strong className="text-slate-800">{maskedEmail}</strong> : "your registered email"}.
+              <h3 className="text-lg font-extrabold text-[#142B4D]">Enter Verification Code</h3>
+              <p className="text-xs text-[#64748B] mt-1">
+                A 4-digit code was sent to {maskedEmail ? <strong className="text-[#142B4D]">{maskedEmail}</strong> : "your registered email"}.
               </p>
             </div>
 
@@ -699,14 +706,14 @@ export default function Login() {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="••••"
-                  className="w-full py-3 text-center text-2xl font-mono tracking-widest rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 focus:outline-none"
+                  className="w-full py-3 text-center text-2xl font-mono tracking-widest rounded-xl border border-slate-300 focus:border-[#2878E8] focus:ring-2 focus:ring-blue-100 focus:outline-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={otpLoading || otpCode.length !== 4}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer"
+                className="w-full py-2.5 bg-[#2878E8] hover:bg-[#1E6CE0] disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer"
               >
                 {otpLoading ? "Verifying…" : "Verify & Login"}
               </button>
@@ -716,7 +723,7 @@ export default function Login() {
                   type="button"
                   disabled={otpCooldown > 0}
                   onClick={() => handleSubmit(new Event("submit") as any)}
-                  className="text-xs text-blue-600 hover:underline font-semibold disabled:text-slate-400 cursor-pointer"
+                  className="text-xs text-[#2878E8] hover:underline font-semibold disabled:text-slate-400 cursor-pointer"
                 >
                   {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : "Didn't receive code? Resend"}
                 </button>
@@ -730,7 +737,7 @@ export default function Login() {
       {/* MODAL 2: CUSTOMER CREATE ACCOUNT REGISTRATION                     */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {showRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4 max-h-[90vh] overflow-y-auto">
             <button
               type="button"
@@ -745,7 +752,7 @@ export default function Login() {
             </button>
 
             <div className="text-center pt-1">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center mx-auto mb-2 shadow-xs">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="8.5" cy="7" r="4" />
@@ -753,8 +760,8 @@ export default function Login() {
                   <line x1="23" y1="11" x2="17" y2="11" />
                 </svg>
               </div>
-              <h3 className="text-lg font-extrabold text-slate-900">Create Customer Account</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Register to access your bills, receipts and catalog online</p>
+              <h3 className="text-lg font-extrabold text-[#142B4D]">Create Customer Account</h3>
+              <p className="text-xs text-[#64748B] mt-0.5">Register to access your bills, receipts and catalog online</p>
             </div>
 
             {regError && (
@@ -771,68 +778,68 @@ export default function Login() {
 
             <form onSubmit={handleRegister} className="space-y-3 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Shop Code *</label>
+                <label className="block font-semibold text-[#142B4D] mb-1">Shop Code *</label>
                 <input
                   type="text"
                   required
                   value={regShopCode}
                   onChange={(e) => setRegShopCode(e.target.value.toUpperCase())}
                   placeholder="NSYU-01"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs uppercase"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs uppercase focus:border-[#2878E8] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Full Name *</label>
+                <label className="block font-semibold text-[#142B4D] mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Mobile Number *</label>
+                <label className="block font-semibold text-[#142B4D] mb-1">Mobile Number *</label>
                 <input
                   type="tel"
                   required
                   value={regPhone}
                   onChange={(e) => setRegPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Email Address *</label>
+                <label className="block font-semibold text-[#142B4D] mb-1">Email Address *</label>
                 <input
                   type="email"
                   required
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="e.g. ramesh@example.com"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Address (Optional)</label>
+                <label className="block font-semibold text-[#142B4D] mb-1">Address (Optional)</label>
                 <input
                   type="text"
                   value={regAddress}
                   onChange={(e) => setRegAddress(e.target.value)}
                   placeholder="City, State"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={regLoading}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer mt-2"
+                className="w-full py-2.5 bg-[#2878E8] hover:bg-[#1E6CE0] disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer mt-2"
               >
                 {regLoading ? "Registering…" : "Register & Send OTP"}
               </button>
@@ -845,7 +852,7 @@ export default function Login() {
       {/* MODAL 3: BACKEND API & SUPABASE STATUS CONFIGURATION              */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {showApiModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
             <button
               type="button"
@@ -868,35 +875,35 @@ export default function Login() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">Supabase & API Configuration</h3>
-                <p className="text-xs text-slate-500">Live backend server and database status</p>
+                <h3 className="text-base font-extrabold text-[#142B4D]">Supabase & API Configuration</h3>
+                <p className="text-xs text-[#64748B]">Live backend server and database status</p>
               </div>
             </div>
 
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">PostgreSQL Host:</span>
-                <span className="font-mono font-semibold text-slate-800 text-[11px]">aws-0-ap-south-1.pooler.supabase.com</span>
+                <span className="text-[#64748B]">PostgreSQL Host:</span>
+                <span className="font-mono font-semibold text-[#142B4D] text-[11px]">aws-0-ap-south-1.pooler.supabase.com</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Database Name:</span>
+                <span className="text-[#64748B]">Database Name:</span>
                 <span className="font-mono font-semibold text-emerald-700">postgres.lggjtxzannywecuvwqbl</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">API Health:</span>
+                <span className="text-[#64748B]">API Health:</span>
                 <span className="font-semibold text-emerald-600">{statusMsg || "Checking..."}</span>
               </div>
             </div>
 
             <div className="space-y-2 text-xs">
-              <label className="font-bold text-slate-700">Backend API Endpoint</label>
+              <label className="font-bold text-[#142B4D]">Backend API Endpoint</label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => handleSaveApiUrl(DEFAULT_CLOUD_API_URL)}
                   className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all ${
                     apiUrl === DEFAULT_CLOUD_API_URL
-                      ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                      ? "bg-[#2878E8] text-white border-[#2878E8] shadow-xs"
                       : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
                   }`}
                 >
@@ -920,12 +927,12 @@ export default function Login() {
                   type="text"
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono"
+                  className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono focus:border-[#2878E8] focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleSaveApiUrl(apiUrl)}
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 text-xs shrink-0 cursor-pointer"
+                  className="px-3 py-1.5 bg-[#2878E8] text-white rounded-xl font-bold hover:bg-[#1E6CE0] text-xs shrink-0 cursor-pointer"
                 >
                   Save
                 </button>
@@ -943,7 +950,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowApiModal(false)}
-                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                className="flex-1 py-2 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Done
               </button>
@@ -956,7 +963,7 @@ export default function Login() {
       {/* MODAL 4: FORGOT PASSWORD HELPER MODAL                            */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {showForgotModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
             <button
               type="button"
@@ -973,14 +980,14 @@ export default function Login() {
             </button>
 
             <div className="text-center pt-1">
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center mx-auto mb-2 shadow-xs">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
               </div>
-              <h3 className="text-lg font-extrabold text-slate-900">Forgot Password?</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Contact system administrator or request password assistance</p>
+              <h3 className="text-lg font-extrabold text-[#142B4D]">Forgot Password?</h3>
+              <p className="text-xs text-[#64748B] mt-0.5">Contact system administrator or request password assistance</p>
             </div>
 
             {forgotMsg ? (
@@ -995,7 +1002,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setForgotMsg(`Password assistance instruction sent to ${identifier || "nsyu.mnt@gmail.com"}.`)}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer"
+                  className="w-full py-2.5 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer"
                 >
                   Send Reset Link
                 </button>
@@ -1020,7 +1027,7 @@ export default function Login() {
       {/* MODAL 5: APK DOWNLOAD SUCCESS & ERROR MODALS                      */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {apkSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
             <button
               type="button"
@@ -1041,19 +1048,19 @@ export default function Login() {
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
               </div>
-              <h3 className="text-lg font-extrabold text-slate-900">APK Download Started</h3>
-              <p className="text-xs text-slate-500 mt-0.5">NSYU-Business-Release.apk (v1.0 • 62.4 MB)</p>
+              <h3 className="text-lg font-extrabold text-[#142B4D]">APK Download Started</h3>
+              <p className="text-xs text-[#64748B] mt-0.5">NSYU-Business-Release.apk (v1.0 • 62.4 MB)</p>
             </div>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-              <div className="font-bold text-slate-800">📱 Installation Note:</div>
+              <div className="font-bold text-[#142B4D]">📱 Installation Note:</div>
               <div>When prompted by your browser, tap <strong>"Download anyway"</strong>, then tap the file to install.</div>
             </div>
 
             <button
               type="button"
               onClick={() => setApkSuccessModal(null)}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              className="w-full py-2 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Done
             </button>
@@ -1062,7 +1069,7 @@ export default function Login() {
       )}
 
       {apkErrorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
             <button
               type="button"
@@ -1083,8 +1090,8 @@ export default function Login() {
                   <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
               </div>
-              <h3 className="text-lg font-extrabold text-slate-900">Download Error</h3>
-              <p className="text-xs text-slate-500 mt-0.5">{apkErrorModal.reason}</p>
+              <h3 className="text-lg font-extrabold text-[#142B4D]">Download Error</h3>
+              <p className="text-xs text-[#64748B] mt-0.5">{apkErrorModal.reason}</p>
             </div>
 
             <div className="flex gap-2">
@@ -1112,7 +1119,7 @@ export default function Login() {
       )}
 
       {showIosModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative space-y-4">
             <button
               type="button"
@@ -1126,8 +1133,8 @@ export default function Login() {
             </button>
 
             <div className="text-center pt-1">
-              <h3 className="text-lg font-extrabold text-slate-900">iOS App in Development</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="text-lg font-extrabold text-[#142B4D]">iOS App in Development</h3>
+              <p className="text-xs text-[#64748B] mt-1">
                 You can use the full NSYU Web Portal right from Safari or Chrome on your iPhone or iPad!
               </p>
             </div>
@@ -1135,7 +1142,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowIosModal(false)}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              className="w-full py-2 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Continue
             </button>

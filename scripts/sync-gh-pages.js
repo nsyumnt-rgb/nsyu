@@ -46,8 +46,8 @@ function main() {
 
 
 
-  // 3. Copy web/dist/downloads
-  ['downloads'].forEach(folder => {
+  // 3. Copy web/dist/downloads and web/dist/illustrations
+  ['downloads', 'illustrations'].forEach(folder => {
     const src = path.join(distDir, folder);
     if (fs.existsSync(src)) {
       copyDirRecursive(src, path.join(rootDir, folder));
