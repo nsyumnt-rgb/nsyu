@@ -124,6 +124,9 @@ class BillsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> setBillStatus(String billNumber, BillStatus status) => setStatus(billNumber, status);
+  Future<void> updateBillStatus(String billNumber, BillStatus status) => setStatus(billNumber, status);
+
   Future<void> deleteBill(String billNumber) async {
     bills.removeWhere((b) => b.billNumber == billNumber);
     await _store.saveBills(bills);

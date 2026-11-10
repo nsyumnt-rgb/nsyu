@@ -493,23 +493,32 @@ class SupabaseService {
   /// Updates a bill status in Supabase PostgreSQL
   Future<void> updateBillStatus(String billNumber, BillStatus status, {double paidAmount = 0}) async {
     await ensureAuth();
-    final lookupUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales/${Uri.encodeComponent(billNumber)}');
-    final lookupRes = await http.get(lookupUrl, headers: _headers);
+    final statusStr = status == BillStatus.paid
+        ? 'paid'
+        : (status == BillStatus.cancelled
+            ? 'cancelled'
+            : (status == BillStatus.partial ? 'partially_paid' : 'unpaid'));
 
-    if (lookupRes.statusCode == 200) {
-      final saleId = jsonDecode(lookupRes.body)['data']?['id'];
-      if (saleId != null) {
-        final statusStr = status == BillStatus.paid
-            ? 'paid'
-            : (status == BillStatus.cancelled
-                ? 'cancelled'
-                : (status == BillStatus.partial ? 'partially_paid' : 'unpaid'));
-        await http.put(
-          Uri.parse('${SupabaseConfig.apiUrl}/sales/$saleId'),
-          headers: _headers,
-          body: jsonEncode({'status': statusStr, 'paidAmount': paidAmount}),
-        );
+    // 1. Try direct PUT using billNumber (backend updateSale supports invoice_number lookup)
+    final putUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales/${Uri.encodeComponent(billNumber)}');
+    final res = await _putWithRetry(putUrl, {'status': statusStr, 'paidAmount': paidAmount});
+    if (res.statusCode < 300) return;
+
+    // 2. Fallback: Lookup by billNumber to get numeric id and PUT
+    try {
+      final lookupUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales/${Uri.encodeComponent(billNumber)}');
+      final lookupRes = await _getWithRetry(lookupUrl);
+      if (lookupRes.statusCode == 200) {
+        final saleId = jsonDecode(lookupRes.body)['data']?['id'];
+        if (saleId != null) {
+          await _putWithRetry(
+            Uri.parse('${SupabaseConfig.apiUrl}/sales/$saleId'),
+            {'status': statusStr, 'paidAmount': paidAmount},
+          );
+        }
       }
+    } catch (e) {
+      debugPrint('Warning: Fallback updateBillStatus failed: $e');
     }
   }
 

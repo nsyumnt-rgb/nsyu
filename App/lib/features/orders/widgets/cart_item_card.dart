@@ -234,11 +234,11 @@ class _CartItemCardState extends State<CartItemCard> {
                                 final p =
                                     double.tryParse(val.replaceAll(',', '').trim());
                                 if (p != null) {
-                                  if (isOrder) {
-                                    provider.updateOrderItemPrice(it.code, p);
-                                  } else {
-                                    provider.updateItemPrice(it.code, p);
-                                  }
+                                  setState(() {
+                                    it.price = p;
+                                  });
+                                  provider.updateOrderItemPrice(it.code, p);
+                                  provider.updateItemPrice(it.code, p);
                                 }
                               },
                             ),
@@ -295,11 +295,11 @@ class _CartItemCardState extends State<CartItemCard> {
                           if (trimmed.isEmpty) return;
                           final q = int.tryParse(trimmed);
                           if (q != null && q >= 1) {
-                            if (isOrder) {
-                              provider.updateOrderItemQty(it.code, q);
-                            } else {
-                              provider.updateItemQty(it.code, q);
-                            }
+                            setState(() {
+                              it.qty = q;
+                            });
+                            provider.updateOrderItemQty(it.code, q);
+                            provider.updateItemQty(it.code, q);
                           }
                         },
                       ),

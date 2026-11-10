@@ -35,10 +35,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   int _getQty(String code) => _quantities[code] ?? 1;
 
-  void _changeQty(String code, int delta) {
-    final current = _getQty(code);
-    final next = (current + delta).clamp(1, 9999);
-    setState(() => _quantities[code] = next);
+  void _setQty(String code, int value) {
+    setState(() => _quantities[code] = value.clamp(1, 99999));
   }
 
   @override
@@ -291,7 +289,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             isFav: _favorites.contains(item.code),
                             isExpanded: _expandedDescriptions.contains(item.code),
                             provider: provider,
-                            onQtyChanged: (delta) => _changeQty(item.code, delta),
+                            onQtyChanged: (newQty) => _setQty(item.code, newQty),
                             onToggleFav: () {
                               setState(() {
                                 if (_favorites.contains(item.code)) {

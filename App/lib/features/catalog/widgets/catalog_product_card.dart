@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/product.dart';
@@ -358,48 +359,38 @@ class CatalogProductCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Interactive Quantity Pill [-] QTY [+]
+              // Direct Numeric Quantity Input Field (No +/- buttons)
               Container(
+                width: 70,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFFCBD5E1)),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    InkWell(
-                      onTap: () => onQtyChanged(-1),
-                      borderRadius:
-                          const BorderRadius.horizontal(left: Radius.circular(8)),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        child: Icon(Icons.remove, size: 16, color: Color(0xFF475569)),
-                      ),
-                    ),
-                    Container(
-                      constraints: const BoxConstraints(minWidth: 28),
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$qty',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => onQtyChanged(1),
-                      borderRadius:
-                          const BorderRadius.horizontal(right: Radius.circular(8)),
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                        child: Icon(Icons.add, size: 16, color: Color(0xFF475569)),
-                      ),
-                    ),
-                  ],
+                alignment: Alignment.center,
+                child: TextFormField(
+                  key: ValueKey('catalog_qty_${item.code}_$qty'),
+                  initialValue: '$qty',
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  ),
+                  onChanged: (val) {
+                    final parsed = int.tryParse(val) ?? 1;
+                    if (parsed >= 1) {
+                      onQtyChanged(parsed);
+                    }
+                  },
                 ),
               ),
 

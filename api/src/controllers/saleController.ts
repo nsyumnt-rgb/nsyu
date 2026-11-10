@@ -1055,10 +1055,44 @@ export async function updateSale(req: Request, res: Response) {
     if (status !== undefined) {
       const cleanStatus = String(status).toLowerCase().trim();
       if (cleanStatus === "paid") {
+        const previousDue = Number(sale.due_amount);
         sale.status = "paid";
         sale.paid_amount = sale.total_amount;
         sale.due_amount = 0;
-      } else if (cleanStatus === "unpaid") {
+        if (previousDue > 0 && sale.customer_id) {
+          try {
+            const actorType = req.auth!.isOwner ? "owner" : "employee";
+            const actorId = req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId);
+            const payment = await Payment.create({
+              owner_id: ownerId,
+              shop_id: sale.shop_id,
+              customer_id: sale.customer_id,
+              sale_id: sale.id,
+              type: "sale_payment",
+              amount: previousDue,
+              method: "cash",
+              payment_date: new Date(),
+              notes: notes || `Bill marked Paid: ${sale.invoice_number}`,
+              actor_type: actorType,
+              actor_id: actorId,
+            });
+            await recordLedgerEntry({
+              ownerId,
+              shopId: sale.shop_id,
+              customerId: sale.customer_id,
+              entryType: "credit",
+              amount: previousDue,
+              referenceType: "Payment",
+              referenceId: payment.id,
+              description: `Payment for ${sale.invoice_number} (Marked Paid)`,
+              actorType,
+              actorId,
+            });
+          } catch (payErr) {
+            console.error("Warning: Could not record payment for marked paid bill:", payErr);
+          }
+        }
+      } else if (cleanStatus === "unpaid" || cleanStatus === "pending") {
         sale.status = "unpaid";
         sale.paid_amount = 0;
         sale.due_amount = sale.total_amount;

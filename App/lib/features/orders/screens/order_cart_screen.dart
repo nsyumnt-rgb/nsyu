@@ -91,12 +91,12 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       return;
     }
 
-    final cust = provider.selectedCustomer;
-    final custName = cust != null && cust.name.isNotEmpty ? cust.name : 'Walk-in Customer';
-    final custPhone = cust?.mobile ?? '';
+    Customer? cust = provider.selectedCustomer;
 
     try {
       if (isOrder) {
+        final custName = cust != null && cust.name.isNotEmpty ? cust.name : 'Walk-in Customer';
+        final custPhone = cust?.mobile ?? '';
         setState(() => _saving = true);
         final orderItemsList = items
             .map((e) => SavedOrderItem(
@@ -133,6 +133,28 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
         return;
       }
 
+      // If creating a Bill, prompt for Customer selection if none is chosen so ledger can be updated!
+      if (cust == null) {
+        final picked = await Navigator.of(context).push<Customer>(
+          MaterialPageRoute(builder: (_) => const CustomerPickerScreen()),
+        );
+        if (picked != null) {
+          provider.selectCustomer(picked);
+          cust = picked;
+        } else {
+          if (!mounted) return;
+          showAppSnackBar(
+            context,
+            'Please select a customer to save the bill and record it in the Ledger.',
+            isError: true,
+          );
+          return;
+        }
+      }
+
+      final custName = cust.name.isNotEmpty ? cust.name : 'Customer';
+      final custPhone = cust.mobile;
+
       final billItemsList = items
           .map((e) => SavedBillItem(
                 sku: e.code,
@@ -142,26 +164,25 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
               ))
           .toList();
 
-      double paidAmount = grandTotal;
+      double paidAmount = 0.0;
       String paymentMethod = 'cash';
-      BillStatus billStatus = BillStatus.paid;
+      BillStatus billStatus = BillStatus.unpaid;
 
-      // If a real customer is selected, allow choosing Credit (Udhaar), Paid, or Partial
-      if (cust != null) {
-        final paymentResult = await _showPaymentModeSheet(context, cust, grandTotal);
-        if (paymentResult == null) {
-          // User dismissed or cancelled
-          return;
-        }
-        paidAmount = paymentResult['paidAmount'] as double;
-        paymentMethod = paymentResult['paymentMethod'] as String;
-        if (paidAmount <= 0.01) {
-          billStatus = BillStatus.unpaid;
-        } else if (paidAmount < grandTotal) {
-          billStatus = BillStatus.partial;
-        } else {
-          billStatus = BillStatus.paid;
-        }
+      // Show Payment Selection Sheet (Defaults to Credit / Udhaar -> Payment Pending & Added to Ledger)
+      if (!mounted) return;
+      final paymentResult = await _showPaymentModeSheet(context, cust, grandTotal);
+      if (paymentResult == null || !mounted) {
+        // User dismissed
+        return;
+      }
+      paidAmount = paymentResult['paidAmount'] as double;
+      paymentMethod = paymentResult['paymentMethod'] as String;
+      if (paidAmount <= 0.01) {
+        billStatus = BillStatus.unpaid;
+      } else if (paidAmount < grandTotal) {
+        billStatus = BillStatus.partial;
+      } else {
+        billStatus = BillStatus.paid;
       }
 
       setState(() => _saving = true);
@@ -183,7 +204,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       final billsProvider = context.read<BillsProvider>();
       final backendBill = await billsProvider.addBill(
         bill,
-        customerId: cust?.id,
+        customerId: cust.id,
         paymentMethod: paymentMethod,
         billDiscount: discount,
       );
@@ -199,7 +220,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       if (backendBill.due > 0) {
         showAppSnackBar(
           context,
-          'Bill #${backendBill.billNumber} saved! ₹${backendBill.due.toStringAsFixed(0)} added to ${cust?.name ?? "Customer"}\'s Ledger.',
+          'Bill #${backendBill.billNumber} saved (Payment Pending)! ₹${backendBill.due.toStringAsFixed(0)} added to ${cust.name}\'s Ledger.',
         );
       } else {
         showAppSnackBar(context, 'Bill #${backendBill.billNumber} saved and marked Paid!');

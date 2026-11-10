@@ -77,7 +77,11 @@ class CartStickyFooter extends StatelessWidget {
           children: [
             // Save as Draft
             _buildFooterIconBtn(context, Icons.save_outlined, 'Save as Draft', () {
-              showAppSnackBar(context, 'Cart saved as draft');
+              if (isEmptyCart) {
+                showAppSnackBar(context, 'Cart is empty. Add products first.', isError: true);
+                return;
+              }
+              onCreateBillOrOrder();
             }),
 
             // Print

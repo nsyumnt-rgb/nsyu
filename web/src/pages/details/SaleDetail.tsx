@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getSale, downloadInvoicePdf } from "../../api/sales";
+import { getSale, downloadInvoicePdf, updateSale } from "../../api/sales";
 import ReferenceLink from "../../components/ReferenceLink";
 import type { Sale } from "../../types";
 
@@ -12,6 +12,27 @@ export default function SaleDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  async function handleUpdateStatus(newStatus: string) {
+    if (!sale) return;
+    setStatusUpdating(true);
+    setStatusMsg(null);
+    try {
+      const res = await updateSale(sale.id, { status: newStatus });
+      if (res.data.success && res.data.data) {
+        setSale(res.data.data);
+        setStatusMsg(`Bill status updated to ${newStatus.replace("_", " ")}`);
+        setShowStatusModal(false);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to update bill status");
+    } finally {
+      setStatusUpdating(false);
+    }
+  }
 
   useEffect(() => {
     if (!id) return;
@@ -93,6 +114,13 @@ export default function SaleDetail() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {statusMsg && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-center justify-between">
+          <span>{statusMsg}</span>
+          <button onClick={() => setStatusMsg(null)} className="text-emerald-600 hover:text-emerald-900 font-bold ml-2">✕</button>
+        </div>
+      )}
+
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200/90 shadow-2xs">
         <div className="flex items-center gap-3">
@@ -108,9 +136,17 @@ export default function SaleDetail() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold font-mono text-slate-900">{sale.invoice_number}</h1>
-              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border ${statusBadge}`}>
-                {sale.status.replace("_", " ")}
-              </span>
+              <button
+                type="button"
+                onClick={() => setShowStatusModal(true)}
+                title="Click to change bill status"
+                className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border hover:opacity-80 transition-opacity flex items-center gap-1 cursor-pointer ${statusBadge}`}
+              >
+                <span>{sale.status.replace("_", " ")}</span>
+                <svg className="w-3 h-3 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
               {sale.is_emi && (
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
                   EMI Financed
@@ -384,6 +420,75 @@ export default function SaleDetail() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Update Bill Status Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm">Update Bill Status</h3>
+              <button
+                type="button"
+                onClick={() => setShowStatusModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Invoice <strong className="text-slate-800">{sale.invoice_number}</strong> — Total: ₹{Number(sale.total_amount).toLocaleString("en-IN")}
+            </p>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleUpdateStatus("paid")}
+                className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-semibold transition-all cursor-pointer ${
+                  sale.status === "paid" ? "bg-emerald-50 border-emerald-300 text-emerald-800" : "hover:bg-slate-50 border-slate-200 text-slate-700"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span>Paid (Full Amount Cleared)</span>
+                </div>
+                {sale.status === "paid" && <span className="text-emerald-600 font-bold">Current</span>}
+              </button>
+
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleUpdateStatus("unpaid")}
+                className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-semibold transition-all cursor-pointer ${
+                  sale.status === "unpaid" ? "bg-rose-50 border-rose-300 text-rose-800" : "hover:bg-slate-50 border-slate-200 text-slate-700"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                  <span>Unpaid / Pending (Due in Ledger)</span>
+                </div>
+                {sale.status === "unpaid" && <span className="text-rose-600 font-bold">Current</span>}
+              </button>
+
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={() => handleUpdateStatus("cancelled")}
+                className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs font-semibold transition-all cursor-pointer ${
+                  sale.status === "cancelled" ? "bg-slate-100 border-slate-300 text-slate-800" : "hover:bg-slate-50 border-slate-200 text-slate-700"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                  <span>Cancelled</span>
+                </div>
+                {sale.status === "cancelled" && <span className="text-slate-600 font-bold">Current</span>}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

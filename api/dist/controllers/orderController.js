@@ -288,78 +288,99 @@ async function updateOrderStatus(req, res) {
     const ownerId = req.auth.ownerId;
     const { id } = req.params;
     const { status, remarks, payment_status } = req.body;
-    if (!status) {
-        return res.status(400).json({ success: false, message: "status is required" });
+    if (!status && !payment_status && !remarks) {
+        return res.status(400).json({ success: false, message: "status, payment_status or remarks is required" });
     }
-    const targetStatus = String(status).toLowerCase().trim();
+    const idStr = String(id).trim();
+    const isNumeric = /^\d+$/.test(idStr);
+    const orderWhere = { owner_id: ownerId };
+    if (isNumeric) {
+        orderWhere[sequelize_1.Op.or] = [{ id: Number(idStr) }, { order_number: idStr }];
+    }
+    else {
+        orderWhere.order_number = idStr;
+    }
     try {
         const order = await models_1.Order.findOne({
-            where: { id, owner_id: ownerId },
+            where: orderWhere,
             include: [{ model: models_1.Customer, as: "customer" }],
         });
         if (!order) {
             return res.status(404).json({ success: false, message: "Order not found" });
         }
         const currentStatus = String(order.status).toLowerCase().trim();
-        // Reject duplicate status transition (CP-O06)
-        if (currentStatus === targetStatus) {
-            return res.status(400).json({
-                success: false,
-                message: `Duplicate status transition: order is already in "${order.status}" status`,
-            });
-        }
-        // Validate transition against matrix (section 8.1)
-        const allowedTargets = ALLOWED_STATUS_TRANSITIONS[currentStatus];
-        if (!allowedTargets || !allowedTargets.includes(targetStatus)) {
-            return res.status(400).json({
-                success: false,
-                message: `Invalid status transition: cannot change status from "${order.status}" to "${status}"`,
-            });
+        let statusChanged = false;
+        let targetStatus = currentStatus;
+        if (status) {
+            targetStatus = String(status).toLowerCase().trim();
+            const VALID_STATUSES = [
+                "pending",
+                "confirmed",
+                "processing",
+                "shipped",
+                "delivered",
+                "completed",
+                "cancelled",
+                "converted_to_bill",
+            ];
+            if (!VALID_STATUSES.includes(targetStatus)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid order status. Allowed: ${VALID_STATUSES.join(", ")}`,
+                });
+            }
+            if (currentStatus !== targetStatus) {
+                statusChanged = true;
+            }
         }
         const previousStatus = order.status;
-        order.status = targetStatus;
-        if (remarks)
+        if (statusChanged) {
+            order.status = targetStatus;
+        }
+        if (remarks !== undefined)
             order.remarks = remarks;
-        if (payment_status)
+        if (payment_status !== undefined)
             order.payment_status = payment_status;
         await order.save();
-        // Record OrderStatusHistory
-        await models_1.OrderStatusHistory.create({
-            order_id: order.id,
-            from_status: String(previousStatus),
-            to_status: targetStatus,
-            changed_by_type: req.auth.isOwner ? "owner" : "employee",
-            changed_by_id: req.auth.isOwner ? req.auth.ownerId : (req.auth.employeeId || req.auth.ownerId),
-            note: remarks || `Status changed to ${targetStatus}`,
-        });
-        // Notify customer and owner
-        try {
-            await models_1.Notification.create({
-                owner_id: ownerId,
-                shop_id: order.shop_id,
-                recipient_type: "customer",
-                recipient_id: order.customer_id,
-                type: "order_status_changed",
-                title: `Order Status: ${targetStatus}`,
-                message: `Your order #${order.order_number} status has been updated to ${targetStatus}.`,
-                reference_type: "order",
-                reference_id: order.id,
-                is_read: false,
+        // Record OrderStatusHistory if status actually changed
+        if (statusChanged) {
+            await models_1.OrderStatusHistory.create({
+                order_id: order.id,
+                from_status: String(previousStatus),
+                to_status: targetStatus,
+                changed_by_type: req.auth.isOwner ? "owner" : "employee",
+                changed_by_id: req.auth.isOwner ? req.auth.ownerId : (req.auth.employeeId || req.auth.ownerId),
+                note: remarks || `Status changed to ${targetStatus}`,
             });
-            await models_1.Notification.create({
-                owner_id: ownerId,
-                shop_id: order.shop_id,
-                recipient_type: "owner",
-                recipient_id: ownerId,
-                type: "order_status_changed",
-                title: `Order ${targetStatus}: ${order.order_number}`,
-                message: `Order #${order.order_number} status changed to ${targetStatus}.`,
-                reference_type: "order",
-                reference_id: order.id,
-                is_read: false,
-            });
+            // Notify customer and owner
+            try {
+                await models_1.Notification.create({
+                    owner_id: ownerId,
+                    shop_id: order.shop_id,
+                    recipient_type: "customer",
+                    recipient_id: order.customer_id,
+                    type: "order_status_changed",
+                    title: `Order Status: ${targetStatus}`,
+                    message: `Your order #${order.order_number} status has been updated to ${targetStatus}.`,
+                    reference_type: "order",
+                    reference_id: order.id,
+                    is_read: false,
+                });
+                await models_1.Notification.create({
+                    owner_id: ownerId,
+                    shop_id: order.shop_id,
+                    recipient_type: "owner",
+                    recipient_id: ownerId,
+                    type: "order_status_changed",
+                    title: `Order ${targetStatus}: ${order.order_number}`,
+                    message: `Order #${order.order_number} status changed to ${targetStatus}.`,
+                    reference_type: "order",
+                    reference_id: order.id,
+                    is_read: false,
+                });
+            }
+            catch { }
         }
-        catch { }
         const updated = await models_1.Order.findByPk(order.id, {
             include: [
                 { model: models_1.OrderItem, as: "items" },
@@ -370,7 +391,7 @@ async function updateOrderStatus(req, res) {
         });
         return res.json({
             success: true,
-            message: `Order status updated to ${status}`,
+            message: `Order status updated to ${order.status}`,
             data: updated,
         });
     }

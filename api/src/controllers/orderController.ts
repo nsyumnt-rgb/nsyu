@@ -356,15 +356,22 @@ export async function updateOrderStatus(req: Request, res: Response) {
   const { id } = req.params;
   const { status, remarks, payment_status } = req.body;
 
-  if (!status) {
-    return res.status(400).json({ success: false, message: "status is required" });
+  if (!status && !payment_status && !remarks) {
+    return res.status(400).json({ success: false, message: "status, payment_status or remarks is required" });
   }
 
-  const targetStatus = String(status).toLowerCase().trim();
+  const idStr = String(id).trim();
+  const isNumeric = /^\d+$/.test(idStr);
+  const orderWhere: any = { owner_id: ownerId };
+  if (isNumeric) {
+    orderWhere[Op.or] = [{ id: Number(idStr) }, { order_number: idStr }];
+  } else {
+    orderWhere.order_number = idStr;
+  }
 
   try {
     const order = await Order.findOne({
-      where: { id, owner_id: ownerId },
+      where: orderWhere,
       include: [{ model: Customer, as: "customer" }],
     });
     if (!order) {
@@ -372,68 +379,81 @@ export async function updateOrderStatus(req: Request, res: Response) {
     }
 
     const currentStatus = String(order.status).toLowerCase().trim();
+    let statusChanged = false;
+    let targetStatus = currentStatus;
 
-    // Reject duplicate status transition (CP-O06)
-    if (currentStatus === targetStatus) {
-      return res.status(400).json({
-        success: false,
-        message: `Duplicate status transition: order is already in "${order.status}" status`,
-      });
-    }
+    if (status) {
+      targetStatus = String(status).toLowerCase().trim();
+      const VALID_STATUSES = [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "delivered",
+        "completed",
+        "cancelled",
+        "converted_to_bill",
+      ];
+      if (!VALID_STATUSES.includes(targetStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid order status. Allowed: ${VALID_STATUSES.join(", ")}`,
+        });
+      }
 
-    // Validate transition against matrix (section 8.1)
-    const allowedTargets = ALLOWED_STATUS_TRANSITIONS[currentStatus];
-    if (!allowedTargets || !allowedTargets.includes(targetStatus)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid status transition: cannot change status from "${order.status}" to "${status}"`,
-      });
+      if (currentStatus !== targetStatus) {
+        statusChanged = true;
+      }
     }
 
     const previousStatus = order.status;
-    order.status = targetStatus;
-    if (remarks) order.remarks = remarks;
-    if (payment_status) order.payment_status = payment_status;
+    if (statusChanged) {
+      order.status = targetStatus;
+    }
+    if (remarks !== undefined) order.remarks = remarks;
+    if (payment_status !== undefined) order.payment_status = payment_status;
     await order.save();
 
-    // Record OrderStatusHistory
-    await OrderStatusHistory.create({
-      order_id: order.id,
-      from_status: String(previousStatus),
-      to_status: targetStatus,
-      changed_by_type: req.auth!.isOwner ? "owner" : "employee",
-      changed_by_id: req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId),
-      note: remarks || `Status changed to ${targetStatus}`,
-    });
-
-    // Notify customer and owner
-    try {
-      await Notification.create({
-        owner_id: ownerId,
-        shop_id: order.shop_id,
-        recipient_type: "customer",
-        recipient_id: order.customer_id,
-        type: "order_status_changed",
-        title: `Order Status: ${targetStatus}`,
-        message: `Your order #${order.order_number} status has been updated to ${targetStatus}.`,
-        reference_type: "order",
-        reference_id: order.id,
-        is_read: false,
+    // Record OrderStatusHistory if status actually changed
+    if (statusChanged) {
+      await OrderStatusHistory.create({
+        order_id: order.id,
+        from_status: String(previousStatus),
+        to_status: targetStatus,
+        changed_by_type: req.auth!.isOwner ? "owner" : "employee",
+        changed_by_id: req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId),
+        note: remarks || `Status changed to ${targetStatus}`,
       });
 
-      await Notification.create({
-        owner_id: ownerId,
-        shop_id: order.shop_id,
-        recipient_type: "owner",
-        recipient_id: ownerId,
-        type: "order_status_changed",
-        title: `Order ${targetStatus}: ${order.order_number}`,
-        message: `Order #${order.order_number} status changed to ${targetStatus}.`,
-        reference_type: "order",
-        reference_id: order.id,
-        is_read: false,
-      });
-    } catch {}
+      // Notify customer and owner
+      try {
+        await Notification.create({
+          owner_id: ownerId,
+          shop_id: order.shop_id,
+          recipient_type: "customer",
+          recipient_id: order.customer_id,
+          type: "order_status_changed",
+          title: `Order Status: ${targetStatus}`,
+          message: `Your order #${order.order_number} status has been updated to ${targetStatus}.`,
+          reference_type: "order",
+          reference_id: order.id,
+          is_read: false,
+        });
+
+        await Notification.create({
+          owner_id: ownerId,
+          shop_id: order.shop_id,
+          recipient_type: "owner",
+          recipient_id: ownerId,
+          type: "order_status_changed",
+          title: `Order ${targetStatus}: ${order.order_number}`,
+          message: `Order #${order.order_number} status changed to ${targetStatus}.`,
+          reference_type: "order",
+          reference_id: order.id,
+          is_read: false,
+        });
+      } catch {}
+    }
 
     const updated = await Order.findByPk(order.id, {
       include: [
@@ -446,7 +466,7 @@ export async function updateOrderStatus(req: Request, res: Response) {
 
     return res.json({
       success: true,
-      message: `Order status updated to ${status}`,
+      message: `Order status updated to ${order.status}`,
       data: updated,
     });
   } catch (err: any) {

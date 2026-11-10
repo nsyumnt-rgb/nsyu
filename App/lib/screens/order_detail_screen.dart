@@ -154,6 +154,143 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  void _showStatusPicker(BuildContext context, SavedOrder order) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Update Order Status',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildStatusOption(
+                  ctx,
+                  label: 'Pending',
+                  status: OrderStatus.pending,
+                  current: order.status,
+                  icon: Icons.hourglass_top,
+                  color: const Color(0xFFD97706),
+                  onSelect: () => _updateStatus(order, OrderStatus.pending),
+                ),
+                _buildStatusOption(
+                  ctx,
+                  label: 'Confirmed',
+                  status: OrderStatus.confirmed,
+                  current: order.status,
+                  icon: Icons.check_circle_outline,
+                  color: const Color(0xFF0284C7),
+                  onSelect: () => _updateStatus(order, OrderStatus.confirmed),
+                ),
+                _buildStatusOption(
+                  ctx,
+                  label: 'Delivered',
+                  status: OrderStatus.delivered,
+                  current: order.status,
+                  icon: Icons.local_shipping_outlined,
+                  color: const Color(0xFF16A34A),
+                  onSelect: () => _updateStatus(order, OrderStatus.delivered),
+                ),
+                _buildStatusOption(
+                  ctx,
+                  label: 'Cancelled',
+                  status: OrderStatus.cancelled,
+                  current: order.status,
+                  icon: Icons.cancel_outlined,
+                  color: const Color(0xFFDC2626),
+                  onSelect: () => _updateStatus(order, OrderStatus.cancelled),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusOption(
+    BuildContext ctx, {
+    required String label,
+    required OrderStatus status,
+    required OrderStatus current,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onSelect,
+  }) {
+    final isSelected = status == current;
+    return InkWell(
+      onTap: () {
+        Navigator.pop(ctx);
+        onSelect();
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isSelected ? color : const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? color : const Color(0xFF1E293B),
+              ),
+            ),
+            const Spacer(),
+            if (isSelected) Icon(Icons.check, color: color, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateStatus(SavedOrder order, OrderStatus newStatus) async {
+    try {
+      final ordersProvider = context.read<OrdersProvider>();
+      await ordersProvider.updateOrderStatus(order.orderNumber, newStatus);
+      setState(() {
+        order.status = newStatus;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Order #${order.orderNumber} status changed to ${newStatus.label}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update status: $e')),
+        );
+      }
+    }
+  }
+
   void _convertToBill(BuildContext context, SavedOrder order) {
     final catalog = context.read<CatalogProvider>();
     final custProvider = context.read<CustomerProvider>();
@@ -268,11 +405,23 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   BillPdfService.shareBill(o.toPdfData());
                 } else if (val == 'whatsapp') {
                   _sendWhatsApp(o);
+                } else if (val == 'status') {
+                  _showStatusPicker(context, o);
                 } else if (val == 'convert') {
                   _convertToBill(context, o);
                 }
               },
               itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'status',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_note_outlined, size: 18, color: Color(0xFF2563EB)),
+                      SizedBox(width: 8),
+                      Text('Update Status'),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'share',
                   child: Row(
@@ -442,18 +591,30 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        statusText,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                    InkWell(
+                      onTap: () => _showStatusPicker(context, o),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_drop_down, size: 14, color: statusColor),
+                          ],
                         ),
                       ),
                     ),

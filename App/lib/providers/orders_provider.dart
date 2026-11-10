@@ -86,6 +86,8 @@ class OrdersProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> updateOrderStatus(String orderNumber, OrderStatus status) => setStatus(orderNumber, status);
+
   Future<void> deleteOrder(String orderNumber) async {
     orders.removeWhere((o) => o.orderNumber == orderNumber);
     await _store.saveOrders(orders);

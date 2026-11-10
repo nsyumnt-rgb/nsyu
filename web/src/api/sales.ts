@@ -49,6 +49,10 @@ export function returnSale(saleId: number, items: Array<{ saleItemId: number; qu
   return api.post<ApiEnvelope<any>>(`/sales/${saleId}/returns`, { items, reason });
 }
 
+export function updateSale(saleId: number | string, data: { status?: string; paidAmount?: number; notes?: string }) {
+  return api.put<ApiEnvelope<Sale>>(`/sales/${saleId}`, data);
+}
+
 export function downloadInvoicePdf(saleId: number) {
   return api.get(`/sales/${saleId}/bill/pdf`, { responseType: "blob" });
 }

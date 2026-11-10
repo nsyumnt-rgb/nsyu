@@ -153,6 +153,180 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
     );
   }
 
+  void _showBillStatusPicker(BuildContext context, SavedBill bill) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Update Bill Status',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildBillStatusOption(
+                  ctx,
+                  label: 'Paid (Full Amount)',
+                  status: BillStatus.paid,
+                  current: bill.status,
+                  icon: Icons.check_circle_outline,
+                  color: const Color(0xFF16A34A),
+                  onSelect: () => _updateBillStatus(bill, BillStatus.paid),
+                ),
+                _buildBillStatusOption(
+                  ctx,
+                  label: 'Unpaid / Pending (Due to Ledger)',
+                  status: BillStatus.unpaid,
+                  current: bill.status,
+                  icon: Icons.hourglass_top,
+                  color: const Color(0xFFDC2626),
+                  onSelect: () => _updateBillStatus(bill, BillStatus.unpaid),
+                ),
+                _buildBillStatusOption(
+                  ctx,
+                  label: 'Partial Payment',
+                  status: BillStatus.partial,
+                  current: bill.status,
+                  icon: Icons.pie_chart_outline,
+                  color: const Color(0xFFD97706),
+                  onSelect: () => _promptPartialBillStatus(bill),
+                ),
+                _buildBillStatusOption(
+                  ctx,
+                  label: 'Cancelled',
+                  status: BillStatus.cancelled,
+                  current: bill.status,
+                  icon: Icons.cancel_outlined,
+                  color: const Color(0xFF64748B),
+                  onSelect: () => _updateBillStatus(bill, BillStatus.cancelled),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBillStatusOption(
+    BuildContext ctx, {
+    required String label,
+    required BillStatus status,
+    required BillStatus current,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onSelect,
+  }) {
+    final isSelected = status == current;
+    return InkWell(
+      onTap: () {
+        Navigator.pop(ctx);
+        onSelect();
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.only(bottom: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isSelected ? color : const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                color: isSelected ? color : const Color(0xFF1E293B),
+              ),
+            ),
+            const Spacer(),
+            if (isSelected) Icon(Icons.check, color: color, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateBillStatus(SavedBill bill, BillStatus newStatus, {double? customPaid}) async {
+    try {
+      final billsProvider = context.read<BillsProvider>();
+      final paid = customPaid ?? (newStatus == BillStatus.paid ? bill.total : (newStatus == BillStatus.unpaid ? 0.0 : bill.paidAmount));
+      bill.paidAmount = paid.clamp(0.0, bill.total);
+      bill.status = newStatus;
+      await billsProvider.setBillStatus(bill.billNumber, newStatus);
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Bill #${bill.billNumber} status updated to ${newStatus.label}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update bill status: $e')),
+        );
+      }
+    }
+  }
+
+  void _promptPartialBillStatus(SavedBill bill) {
+    final ctrl = TextEditingController(text: (bill.paidAmount > 0 ? bill.paidAmount : bill.total / 2).toStringAsFixed(0));
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Enter Paid Amount'),
+        content: TextField(
+          controller: ctrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          autofocus: true,
+          decoration: InputDecoration(
+            prefixText: '₹ ',
+            labelText: 'Paid Amount (Total: ₹${bill.total.toStringAsFixed(0)})',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF006837),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              final paid = double.tryParse(ctrl.text.trim()) ?? 0.0;
+              Navigator.pop(ctx);
+              _updateBillStatus(bill, BillStatus.partial, customPaid: paid);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final b = _bill;
@@ -238,9 +412,21 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                       builder: (_) => CollectPaymentScreen(customer: cust),
                     ),
                   );
+                } else if (val == 'status') {
+                  _showBillStatusPicker(context, b);
                 }
               },
               itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'status',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_note_outlined, size: 18, color: Color(0xFF2563EB)),
+                      SizedBox(width: 8),
+                      Text('Update Status'),
+                    ],
+                  ),
+                ),
                 const PopupMenuItem(
                   value: 'share',
                   child: Row(
@@ -401,18 +587,30 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        statusText,
-                        style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                    InkWell(
+                      onTap: () => _showBillStatusPicker(context, b),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: statusBg,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.arrow_drop_down, size: 14, color: statusColor),
+                          ],
                         ),
                       ),
                     ),
