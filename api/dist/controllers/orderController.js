@@ -16,7 +16,7 @@ function round2(n) {
 }
 const ALLOWED_STATUS_TRANSITIONS = {
     pending: ["confirmed", "cancelled"],
-    confirmed: ["processing", "cancelled"],
+    confirmed: ["processing", "delivered", "completed", "converted_to_bill", "cancelled"],
     processing: ["completed", "converted_to_bill", "delivered", "shipped", "cancelled"],
     shipped: ["delivered", "completed", "cancelled"],
     delivered: ["completed"],
@@ -328,6 +328,21 @@ async function updateOrderStatus(req, res) {
                     success: false,
                     message: `Invalid order status. Allowed: ${VALID_STATUSES.join(", ")}`,
                 });
+            }
+            if (currentStatus === targetStatus && !req.body.force) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Duplicate status transition: order is already in "${order.status}" status`,
+                });
+            }
+            if (!req.body.force) {
+                const allowedTargets = ALLOWED_STATUS_TRANSITIONS[currentStatus];
+                if (allowedTargets && !allowedTargets.includes(targetStatus)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Invalid status transition: cannot change status from "${order.status}" to "${status}"`,
+                    });
+                }
             }
             if (currentStatus !== targetStatus) {
                 statusChanged = true;

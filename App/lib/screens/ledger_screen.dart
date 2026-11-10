@@ -7,9 +7,11 @@ import '../models/saved_bill.dart';
 import '../providers/auth_provider.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
+import '../providers/notifications_provider.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'customer_ledger_detail_screen.dart';
 import 'customer_picker_screen.dart';
+import 'notifications_screen.dart';
 
 /// Main Ledger Screen matching Reference Image 1
 class LedgerScreen extends StatefulWidget {
@@ -37,6 +39,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       if (!bills.loaded) await bills.load();
       if (!bills.syncing) bills.syncFromSupabase();
       if (!customers.loaded) customers.load();
+      if (mounted) context.read<NotificationsProvider>().fetchUnreadCount();
     });
   }
 
@@ -205,20 +208,18 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       _circleIconButton(
                         icon: Icons.notifications_none_rounded,
                         onTap: () {
-                          if (defaultersCount > 0) {
-                            _showDefaultersAlert(defaultersCount);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('No pending defaulters or due alerts'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
+                          final notifs = context.read<NotificationsProvider>();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                          ).then((_) => notifs.fetchUnreadCount());
                         },
                       ),
-                      if (defaultersCount > 0)
-                        Positioned(
+                      Builder(builder: (ctx) {
+                        final unreadNotifs = ctx.watch<NotificationsProvider>().unreadCount;
+                        final totalBadge = unreadNotifs > 0 ? unreadNotifs : defaultersCount;
+                        if (totalBadge <= 0) return const SizedBox.shrink();
+                        return Positioned(
                           top: -2,
                           right: -2,
                           child: Container(
@@ -228,11 +229,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
                               shape: BoxShape.circle,
                             ),
                             child: Text(
-                              '$defaultersCount',
+                              '$totalBadge',
                               style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w800),
                             ),
                           ),
-                        ),
+                        );
+                      }),
                     ],
                   ),
                   const SizedBox(width: 8),

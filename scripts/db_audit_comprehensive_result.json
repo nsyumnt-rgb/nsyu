@@ -1,69 +1,15 @@
 {
-  "timestamp": "2026-11-09T13:50:21.746Z",
+  "timestamp": "2026-11-10T19:00:15.226Z",
   "summary": {
-    "totalTables": 61,
+    "totalTables": 49,
     "totalViews": 0,
     "totalEnums": 71,
     "totalFunctions": 2,
     "totalTriggers": 0,
-    "totalIndexes": 276,
-    "totalRlsPolicies": 17
+    "totalIndexes": 218,
+    "totalRlsPolicies": 15
   },
   "tables": [
-    {
-      "table": "attendance",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [
-        "shops.id",
-        "employees.id"
-      ],
-      "codeRefMatchCount": 141,
-      "sampleRefs": [
-        {
-          "file": "api/src/app.ts",
-          "line": 102,
-          "snippet": "app.use(\"/api/attendance\", attendanceRoutes);"
-        },
-        {
-          "file": "api/src/config/permissions.ts",
-          "line": 45,
-          "snippet": "\"attendance\","
-        },
-        {
-          "file": "api/src/config/permissions.ts",
-          "line": 61,
-          "snippet": "attendance: \"user_management\","
-        },
-        {
-          "file": "api/src/controllers/attendanceController.ts",
-          "line": 3,
-          "snippet": "import { Attendance, Employee, Shop } from \"../models\";"
-        },
-        {
-          "file": "api/src/controllers/attendanceController.ts",
-          "line": 4,
-          "snippet": "import { ATTENDANCE_STATUSES, AttendanceStatus } from \"../models/Attendance\";"
-        }
-      ]
-    },
-    {
-      "table": "audit_logs",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [
-        "owners.id",
-        "shops.id"
-      ],
-      "codeRefMatchCount": 1,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/AuditLog.ts",
-          "line": 65,
-          "snippet": "tableName: \"audit_logs\","
-        }
-      ]
-    },
     {
       "table": "categories",
       "rowCount": 8,
@@ -104,47 +50,9 @@
       ]
     },
     {
-      "table": "customer_accounts",
-      "rowCount": 0,
-      "incomingFks": [
-        "customer_refresh_tokens.account_id"
-      ],
-      "outgoingFks": [
-        "customers.id",
-        "shops.id"
-      ],
-      "codeRefMatchCount": 1,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/CustomerAccount.ts",
-          "line": 68,
-          "snippet": "tableName: \"customer_accounts\","
-        }
-      ]
-    },
-    {
-      "table": "customer_cart_items",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [
-        "customer_carts.id",
-        "products.id"
-      ],
-      "codeRefMatchCount": 1,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/CustomerCartItem.ts",
-          "line": 38,
-          "snippet": "tableName: \"customer_cart_items\","
-        }
-      ]
-    },
-    {
       "table": "customer_carts",
       "rowCount": 0,
-      "incomingFks": [
-        "customer_cart_items.cart_id"
-      ],
+      "incomingFks": [],
       "outgoingFks": [
         "customers.id"
       ],
@@ -212,9 +120,7 @@
       "table": "customer_refresh_tokens",
       "rowCount": 0,
       "incomingFks": [],
-      "outgoingFks": [
-        "customer_accounts.id"
-      ],
+      "outgoingFks": [],
       "codeRefMatchCount": 1,
       "sampleRefs": [
         {
@@ -228,19 +134,16 @@
       "table": "customers",
       "rowCount": 1,
       "incomingFks": [
-        "sales.customer_id",
         "emi_plans.customer_id",
         "payments.customer_id",
         "customer_ledger.customer_id",
-        "sale_returns.customer_id",
         "orders.customer_id",
-        "customer_accounts.customer_id",
         "customer_carts.customer_id"
       ],
       "outgoingFks": [
         "owners.id"
       ],
-      "codeRefMatchCount": 197,
+      "codeRefMatchCount": 199,
       "sampleRefs": [
         {
           "file": "api/src/app.ts",
@@ -295,7 +198,6 @@
       ],
       "outgoingFks": [
         "shops.id",
-        "sales.id",
         "customers.id"
       ],
       "codeRefMatchCount": 2,
@@ -390,7 +292,6 @@
       "table": "employees",
       "rowCount": 0,
       "incomingFks": [
-        "attendance.employee_id",
         "leave_requests.employee_id",
         "salary_configs.employee_id",
         "employee_advances.employee_id",
@@ -457,7 +358,7 @@
     },
     {
       "table": "invoice_counters",
-      "rowCount": 1,
+      "rowCount": 0,
       "incomingFks": [],
       "outgoingFks": [],
       "codeRefMatchCount": 1,
@@ -491,8 +392,7 @@
       "rowCount": 0,
       "incomingFks": [
         "role_permissions.module_id",
-        "permissions.module_id",
-        "shop_modules.module_id"
+        "permissions.module_id"
       ],
       "outgoingFks": [],
       "codeRefMatchCount": 66,
@@ -526,10 +426,10 @@
     },
     {
       "table": "notifications",
-      "rowCount": 3,
+      "rowCount": 0,
       "incomingFks": [],
       "outgoingFks": [],
-      "codeRefMatchCount": 75,
+      "codeRefMatchCount": 117,
       "sampleRefs": [
         {
           "file": "api/src/app.ts",
@@ -600,11 +500,9 @@
       "outgoingFks": [
         "owners.id",
         "shops.id",
-        "customers.id",
-        "sales.id",
-        "sales.id"
+        "customers.id"
       ],
-      "codeRefMatchCount": 234,
+      "codeRefMatchCount": 242,
       "sampleRefs": [
         {
           "file": "api/src/app.ts",
@@ -638,14 +536,12 @@
       "rowCount": 2,
       "incomingFks": [
         "customers.owner_id",
-        "sales.owner_id",
         "shops.owner_id",
         "purchases.owner_id",
         "roles.owner_id",
         "orders.owner_id",
         "employees.owner_id",
         "refresh_tokens.owner_id",
-        "audit_logs.owner_id",
         "categories.owner_id",
         "suppliers.owner_id",
         "products.owner_id"
@@ -687,10 +583,9 @@
       "outgoingFks": [
         "shops.id",
         "customers.id",
-        "sales.id",
         "emi_installments.id"
       ],
-      "codeRefMatchCount": 170,
+      "codeRefMatchCount": 173,
       "sampleRefs": [
         {
           "file": "api/src/app.ts",
@@ -863,7 +758,7 @@
     },
     {
       "table": "product_stocks",
-      "rowCount": 184,
+      "rowCount": 90,
       "incomingFks": [],
       "outgoingFks": [
         "products.id",
@@ -908,8 +803,7 @@
         "inventory_transactions.product_id",
         "stock_transfers.product_id",
         "sale_items.product_id",
-        "purchase_items.product_id",
-        "customer_cart_items.product_id"
+        "purchase_items.product_id"
       ],
       "outgoingFks": [
         "categories.id",
@@ -917,7 +811,7 @@
         "suppliers.id",
         "owners.id"
       ],
-      "codeRefMatchCount": 350,
+      "codeRefMatchCount": 349,
       "sampleRefs": [
         {
           "file": "api/src/app.ts",
@@ -1025,15 +919,14 @@
       "rowCount": 0,
       "incomingFks": [
         "purchase_items.purchase_id",
-        "purchase_returns.purchase_id",
-        "supplier_payments.purchase_id"
+        "purchase_returns.purchase_id"
       ],
       "outgoingFks": [
         "owners.id",
         "shops.id",
         "suppliers.id"
       ],
-      "codeRefMatchCount": 76,
+      "codeRefMatchCount": 75,
       "sampleRefs": [
         {
           "file": "api/src/app.ts",
@@ -1172,7 +1065,6 @@
       "incomingFks": [
         "role_permissions.role_id",
         "role_field_permissions.role_id",
-        "user_roles.role_id",
         "employee_shops.role_id"
       ],
       "outgoingFks": [
@@ -1247,7 +1139,6 @@
         "sale_return_items.sale_item_id"
       ],
       "outgoingFks": [
-        "sales.id",
         "products.id"
       ],
       "codeRefMatchCount": 2,
@@ -1259,7 +1150,7 @@
         },
         {
           "file": "App/lib/models/saved_bill.dart",
-          "line": 242,
+          "line": 258,
           "snippet": "final rawItems = j['items'] ?? j['sale_items'] ?? [];"
         }
       ]
@@ -1269,7 +1160,6 @@
       "rowCount": 0,
       "incomingFks": [],
       "outgoingFks": [
-        "sale_returns.id",
         "sale_items.id"
       ],
       "codeRefMatchCount": 1,
@@ -1282,128 +1172,6 @@
       ]
     },
     {
-      "table": "sale_returns",
-      "rowCount": 0,
-      "incomingFks": [
-        "sale_return_items.sale_return_id"
-      ],
-      "outgoingFks": [
-        "sales.id",
-        "customers.id"
-      ],
-      "codeRefMatchCount": 2,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/SaleReturn.ts",
-          "line": 70,
-          "snippet": "tableName: \"sale_returns\","
-        },
-        {
-          "file": "api/src/scripts/migrate_reference_codes.ts",
-          "line": 44,
-          "snippet": "{ name: \"sale_returns\", prefix: \"SRT\", isDateBased: true },"
-        }
-      ]
-    },
-    {
-      "table": "sales",
-      "rowCount": 19,
-      "incomingFks": [
-        "sale_items.sale_id",
-        "emi_plans.sale_id",
-        "payments.sale_id",
-        "sale_returns.sale_id",
-        "orders.converted_sale_id",
-        "orders.billed_bill_id"
-      ],
-      "outgoingFks": [
-        "owners.id",
-        "shops.id",
-        "customers.id"
-      ],
-      "codeRefMatchCount": 214,
-      "sampleRefs": [
-        {
-          "file": "api/src/app.ts",
-          "line": 98,
-          "snippet": "app.use(\"/api/sales\", saleRoutes);"
-        },
-        {
-          "file": "api/src/config/permissions.ts",
-          "line": 39,
-          "snippet": "\"sales\","
-        },
-        {
-          "file": "api/src/config/permissions.ts",
-          "line": 70,
-          "snippet": "sales: \"sales_purchases\","
-        },
-        {
-          "file": "api/src/config/permissions.ts",
-          "line": 112,
-          "snippet": "\"Sales Staff\","
-        },
-        {
-          "file": "api/src/controllers/adminController.ts",
-          "line": 53,
-          "snippet": "* Real database queries: total shops, active/suspended shops, total users, total"
-        }
-      ]
-    },
-    {
-      "table": "shop_modules",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [
-        "shops.id",
-        "modules.id"
-      ],
-      "codeRefMatchCount": 6,
-      "sampleRefs": [
-        {
-          "file": "api/src/config/permissions.ts",
-          "line": 8,
-          "snippet": "* - shop_modules"
-        },
-        {
-          "file": "api/src/controllers/authController.ts",
-          "line": 274,
-          "snippet": "// If shop has disabled any module via shop_modules, revoke access for staff"
-        },
-        {
-          "file": "api/src/middleware/permission.ts",
-          "line": 12,
-          "snippet": "* 3. Staff: Checked dynamically against role_permissions in DB + shop_modules en"
-        },
-        {
-          "file": "api/src/middleware/permission.ts",
-          "line": 62,
-          "snippet": "// Check shop_modules table if current shop disabled this module"
-        },
-        {
-          "file": "api/src/middleware/permission.ts",
-          "line": 78,
-          "snippet": "// Fallback gracefully if shop_modules lookup fails"
-        }
-      ]
-    },
-    {
-      "table": "shop_portal_settings",
-      "rowCount": 1,
-      "incomingFks": [],
-      "outgoingFks": [
-        "shops.id"
-      ],
-      "codeRefMatchCount": 1,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/ShopPortalSettings.ts",
-          "line": 57,
-          "snippet": "tableName: \"shop_portal_settings\","
-        }
-      ]
-    },
-    {
       "table": "shops",
       "rowCount": 1,
       "incomingFks": [
@@ -1412,31 +1180,22 @@
         "inventory_transactions.shop_id",
         "stock_transfers.from_shop_id",
         "stock_transfers.to_shop_id",
-        "sales.shop_id",
         "emi_plans.shop_id",
         "payments.shop_id",
         "customer_ledger.shop_id",
-        "attendance.shop_id",
         "leave_requests.shop_id",
         "employee_advances.shop_id",
         "employee_incentives.shop_id",
         "payrolls.shop_id",
         "employee_ledger.shop_id",
         "purchases.shop_id",
-        "supplier_ledger.shop_id",
         "orders.shop_id",
-        "supplier_payments.shop_id",
-        "shop_modules.shop_id",
-        "user_roles.shop_id",
-        "customer_accounts.shop_id",
-        "employee_shops.shop_id",
-        "audit_logs.shop_id",
-        "shop_portal_settings.shop_id"
+        "employee_shops.shop_id"
       ],
       "outgoingFks": [
         "owners.id"
       ],
-      "codeRefMatchCount": 217,
+      "codeRefMatchCount": 219,
       "sampleRefs": [
         {
           "file": "api/src/app.ts",
@@ -1479,7 +1238,7 @@
         },
         {
           "file": "api/src/controllers/saleController.ts",
-          "line": 707,
+          "line": 849,
           "snippet": "// 4. Record status change in status_history"
         },
         {
@@ -1576,54 +1335,12 @@
       ]
     },
     {
-      "table": "supplier_ledger",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [
-        "shops.id",
-        "suppliers.id"
-      ],
-      "codeRefMatchCount": 2,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/SupplierLedger.ts",
-          "line": 82,
-          "snippet": "tableName: \"supplier_ledger\","
-        },
-        {
-          "file": "api/src/scripts/migrate_reference_codes.ts",
-          "line": 39,
-          "snippet": "{ name: \"supplier_ledger\", prefix: \"SLG\", isDateBased: true },"
-        }
-      ]
-    },
-    {
-      "table": "supplier_payments",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [
-        "shops.id",
-        "suppliers.id",
-        "purchases.id"
-      ],
-      "codeRefMatchCount": 1,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/SupplierPayment.ts",
-          "line": 78,
-          "snippet": "tableName: \"supplier_payments\","
-        }
-      ]
-    },
-    {
       "table": "suppliers",
       "rowCount": 1,
       "incomingFks": [
         "products.supplier_id",
         "purchases.supplier_id",
-        "supplier_ledger.supplier_id",
-        "purchase_returns.supplier_id",
-        "supplier_payments.supplier_id"
+        "purchase_returns.supplier_id"
       ],
       "outgoingFks": [
         "owners.id"
@@ -1654,62 +1371,6 @@
           "file": "api/src/controllers/reportController.ts",
           "line": 339,
           "snippet": "const suppliers = await Supplier.findAll({ where: { owner_id: req.auth!.ownerId "
-        }
-      ]
-    },
-    {
-      "table": "user_roles",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [
-        "roles.id",
-        "shops.id"
-      ],
-      "codeRefMatchCount": 2,
-      "sampleRefs": [
-        {
-          "file": "api/src/config/permissions.ts",
-          "line": 9,
-          "snippet": "* - user_roles"
-        },
-        {
-          "file": "api/src/models/UserRole.ts",
-          "line": 44,
-          "snippet": "tableName: \"user_roles\","
-        }
-      ]
-    },
-    {
-      "table": "visibility_settings",
-      "rowCount": 0,
-      "incomingFks": [],
-      "outgoingFks": [],
-      "codeRefMatchCount": 9,
-      "sampleRefs": [
-        {
-          "file": "api/src/models/VisibilitySettings.ts",
-          "line": 120,
-          "snippet": "tableName: \"visibility_settings\","
-        },
-        {
-          "file": "api/src/scripts/migrate_visibility_settings.ts",
-          "line": 4,
-          "snippet": "console.log(\"Checking visibility_settings table...\");"
-        },
-        {
-          "file": "api/src/scripts/migrate_visibility_settings.ts",
-          "line": 6,
-          "snippet": "CREATE TABLE IF NOT EXISTS visibility_settings ("
-        },
-        {
-          "file": "api/src/scripts/migrate_visibility_settings.ts",
-          "line": 16,
-          "snippet": "console.log(\"Table visibility_settings created or verified.\");"
-        },
-        {
-          "file": "api/src/scripts/migrate_visibility_settings.ts",
-          "line": 61,
-          "snippet": "SELECT id FROM visibility_settings WHERE owner_id = 1 AND shop_id = 1"
         }
       ]
     }
@@ -2019,66 +1680,6 @@
   "indexes": [
     {
       "schemaname": "public",
-      "tablename": "attendance",
-      "indexname": "attendance_employee_id_date",
-      "indexdef": "CREATE UNIQUE INDEX attendance_employee_id_date ON public.attendance USING btree (employee_id, date)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "attendance",
-      "indexname": "attendance_owner_id_shop_id_date",
-      "indexdef": "CREATE INDEX attendance_owner_id_shop_id_date ON public.attendance USING btree (owner_id, shop_id, date)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "attendance",
-      "indexname": "attendance_pkey",
-      "indexdef": "CREATE UNIQUE INDEX attendance_pkey ON public.attendance USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "attendance",
-      "indexname": "attendance_reference_code",
-      "indexdef": "CREATE INDEX attendance_reference_code ON public.attendance USING btree (reference_code)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "attendance",
-      "indexname": "attendance_status",
-      "indexdef": "CREATE INDEX attendance_status ON public.attendance USING btree (status)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "attendance",
-      "indexname": "idx_attendance_shop_id",
-      "indexdef": "CREATE INDEX idx_attendance_shop_id ON public.attendance USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "audit_logs",
-      "indexname": "audit_logs_module",
-      "indexdef": "CREATE INDEX audit_logs_module ON public.audit_logs USING btree (module)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "audit_logs",
-      "indexname": "audit_logs_owner_id",
-      "indexdef": "CREATE INDEX audit_logs_owner_id ON public.audit_logs USING btree (owner_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "audit_logs",
-      "indexname": "audit_logs_pkey",
-      "indexdef": "CREATE UNIQUE INDEX audit_logs_pkey ON public.audit_logs USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "audit_logs",
-      "indexname": "audit_logs_shop_id",
-      "indexdef": "CREATE INDEX audit_logs_shop_id ON public.audit_logs USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
       "tablename": "categories",
       "indexname": "categories_owner_id",
       "indexdef": "CREATE INDEX categories_owner_id ON public.categories USING btree (owner_id)"
@@ -2100,66 +1701,6 @@
       "tablename": "categories",
       "indexname": "categories_reference_code",
       "indexdef": "CREATE INDEX categories_reference_code ON public.categories USING btree (reference_code)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_accounts",
-      "indexname": "customer_accounts_customer_id",
-      "indexdef": "CREATE UNIQUE INDEX customer_accounts_customer_id ON public.customer_accounts USING btree (customer_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_accounts",
-      "indexname": "customer_accounts_customer_id_key",
-      "indexdef": "CREATE UNIQUE INDEX customer_accounts_customer_id_key ON public.customer_accounts USING btree (customer_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_accounts",
-      "indexname": "customer_accounts_owner_id",
-      "indexdef": "CREATE INDEX customer_accounts_owner_id ON public.customer_accounts USING btree (owner_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_accounts",
-      "indexname": "customer_accounts_pkey",
-      "indexdef": "CREATE UNIQUE INDEX customer_accounts_pkey ON public.customer_accounts USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_accounts",
-      "indexname": "customer_accounts_shop_id_phone",
-      "indexdef": "CREATE INDEX customer_accounts_shop_id_phone ON public.customer_accounts USING btree (shop_id, phone)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_accounts",
-      "indexname": "customer_accounts_status",
-      "indexdef": "CREATE INDEX customer_accounts_status ON public.customer_accounts USING btree (status)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_cart_items",
-      "indexname": "customer_cart_items_cart_id",
-      "indexdef": "CREATE INDEX customer_cart_items_cart_id ON public.customer_cart_items USING btree (cart_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_cart_items",
-      "indexname": "customer_cart_items_cart_id_product_id",
-      "indexdef": "CREATE UNIQUE INDEX customer_cart_items_cart_id_product_id ON public.customer_cart_items USING btree (cart_id, product_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_cart_items",
-      "indexname": "customer_cart_items_pkey",
-      "indexdef": "CREATE UNIQUE INDEX customer_cart_items_pkey ON public.customer_cart_items USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "customer_cart_items",
-      "indexname": "customer_cart_items_product_id",
-      "indexdef": "CREATE INDEX customer_cart_items_product_id ON public.customer_cart_items USING btree (product_id)"
     },
     {
       "schemaname": "public",
@@ -3309,126 +2850,6 @@
     },
     {
       "schemaname": "public",
-      "tablename": "sale_returns",
-      "indexname": "sale_returns_customer_id",
-      "indexdef": "CREATE INDEX sale_returns_customer_id ON public.sale_returns USING btree (customer_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sale_returns",
-      "indexname": "sale_returns_owner_id_shop_id",
-      "indexdef": "CREATE INDEX sale_returns_owner_id_shop_id ON public.sale_returns USING btree (owner_id, shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sale_returns",
-      "indexname": "sale_returns_pkey",
-      "indexdef": "CREATE UNIQUE INDEX sale_returns_pkey ON public.sale_returns USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sale_returns",
-      "indexname": "sale_returns_reference_code",
-      "indexdef": "CREATE INDEX sale_returns_reference_code ON public.sale_returns USING btree (reference_code)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sale_returns",
-      "indexname": "sale_returns_sale_id",
-      "indexdef": "CREATE INDEX sale_returns_sale_id ON public.sale_returns USING btree (sale_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "idx_sales_customer_id",
-      "indexdef": "CREATE INDEX idx_sales_customer_id ON public.sales USING btree (customer_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "idx_sales_shop_id",
-      "indexdef": "CREATE INDEX idx_sales_shop_id ON public.sales USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "idx_sales_shop_status",
-      "indexdef": "CREATE INDEX idx_sales_shop_status ON public.sales USING btree (shop_id, status)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "sales_customer_id",
-      "indexdef": "CREATE INDEX sales_customer_id ON public.sales USING btree (customer_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "sales_owner_id_shop_id",
-      "indexdef": "CREATE INDEX sales_owner_id_shop_id ON public.sales USING btree (owner_id, shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "sales_owner_id_shop_id_invoice_number",
-      "indexdef": "CREATE UNIQUE INDEX sales_owner_id_shop_id_invoice_number ON public.sales USING btree (owner_id, shop_id, invoice_number)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "sales_pkey",
-      "indexdef": "CREATE UNIQUE INDEX sales_pkey ON public.sales USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "sales_reference_code",
-      "indexdef": "CREATE INDEX sales_reference_code ON public.sales USING btree (reference_code)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "indexname": "sales_status",
-      "indexdef": "CREATE INDEX sales_status ON public.sales USING btree (status)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "shop_modules",
-      "indexname": "idx_shop_modules_module_id",
-      "indexdef": "CREATE INDEX idx_shop_modules_module_id ON public.shop_modules USING btree (module_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "shop_modules",
-      "indexname": "shop_modules_pkey",
-      "indexdef": "CREATE UNIQUE INDEX shop_modules_pkey ON public.shop_modules USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "shop_modules",
-      "indexname": "shop_modules_shop_id_module_id",
-      "indexdef": "CREATE UNIQUE INDEX shop_modules_shop_id_module_id ON public.shop_modules USING btree (shop_id, module_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "shop_portal_settings",
-      "indexname": "shop_portal_settings_pkey",
-      "indexdef": "CREATE UNIQUE INDEX shop_portal_settings_pkey ON public.shop_portal_settings USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "shop_portal_settings",
-      "indexname": "shop_portal_settings_shop_id",
-      "indexdef": "CREATE UNIQUE INDEX shop_portal_settings_shop_id ON public.shop_portal_settings USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "shop_portal_settings",
-      "indexname": "shop_portal_settings_shop_id_key",
-      "indexdef": "CREATE UNIQUE INDEX shop_portal_settings_shop_id_key ON public.shop_portal_settings USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
       "tablename": "shops",
       "indexname": "shops_owner_id",
       "indexdef": "CREATE INDEX shops_owner_id ON public.shops USING btree (owner_id)"
@@ -3549,78 +2970,6 @@
     },
     {
       "schemaname": "public",
-      "tablename": "supplier_ledger",
-      "indexname": "idx_supplier_ledger_shop_id",
-      "indexdef": "CREATE INDEX idx_supplier_ledger_shop_id ON public.supplier_ledger USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_ledger",
-      "indexname": "idx_supplier_ledger_supplier_shop",
-      "indexdef": "CREATE INDEX idx_supplier_ledger_supplier_shop ON public.supplier_ledger USING btree (supplier_id, shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_ledger",
-      "indexname": "supplier_ledger_owner_id_shop_id",
-      "indexdef": "CREATE INDEX supplier_ledger_owner_id_shop_id ON public.supplier_ledger USING btree (owner_id, shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_ledger",
-      "indexname": "supplier_ledger_pkey",
-      "indexdef": "CREATE UNIQUE INDEX supplier_ledger_pkey ON public.supplier_ledger USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_ledger",
-      "indexname": "supplier_ledger_reference_code",
-      "indexdef": "CREATE INDEX supplier_ledger_reference_code ON public.supplier_ledger USING btree (reference_code)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_ledger",
-      "indexname": "supplier_ledger_reference_type_reference_id",
-      "indexdef": "CREATE INDEX supplier_ledger_reference_type_reference_id ON public.supplier_ledger USING btree (reference_type, reference_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_ledger",
-      "indexname": "supplier_ledger_supplier_id",
-      "indexdef": "CREATE INDEX supplier_ledger_supplier_id ON public.supplier_ledger USING btree (supplier_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_payments",
-      "indexname": "idx_supplier_payments_shop_id",
-      "indexdef": "CREATE INDEX idx_supplier_payments_shop_id ON public.supplier_payments USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_payments",
-      "indexname": "supplier_payments_owner_id_shop_id",
-      "indexdef": "CREATE INDEX supplier_payments_owner_id_shop_id ON public.supplier_payments USING btree (owner_id, shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_payments",
-      "indexname": "supplier_payments_pkey",
-      "indexdef": "CREATE UNIQUE INDEX supplier_payments_pkey ON public.supplier_payments USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_payments",
-      "indexname": "supplier_payments_purchase_id",
-      "indexdef": "CREATE INDEX supplier_payments_purchase_id ON public.supplier_payments USING btree (purchase_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "supplier_payments",
-      "indexname": "supplier_payments_supplier_id",
-      "indexdef": "CREATE INDEX supplier_payments_supplier_id ON public.supplier_payments USING btree (supplier_id)"
-    },
-    {
-      "schemaname": "public",
       "tablename": "suppliers",
       "indexname": "suppliers_owner_id",
       "indexdef": "CREATE INDEX suppliers_owner_id ON public.suppliers USING btree (owner_id)"
@@ -3636,42 +2985,6 @@
       "tablename": "suppliers",
       "indexname": "suppliers_reference_code",
       "indexdef": "CREATE INDEX suppliers_reference_code ON public.suppliers USING btree (reference_code)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "user_roles",
-      "indexname": "idx_user_roles_role_id",
-      "indexdef": "CREATE INDEX idx_user_roles_role_id ON public.user_roles USING btree (role_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "user_roles",
-      "indexname": "idx_user_roles_shop_id",
-      "indexdef": "CREATE INDEX idx_user_roles_shop_id ON public.user_roles USING btree (shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "user_roles",
-      "indexname": "user_roles_pkey",
-      "indexdef": "CREATE UNIQUE INDEX user_roles_pkey ON public.user_roles USING btree (id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "user_roles",
-      "indexname": "user_roles_user_type_user_id_role_id_shop_id",
-      "indexdef": "CREATE UNIQUE INDEX user_roles_user_type_user_id_role_id_shop_id ON public.user_roles USING btree (user_type, user_id, role_id, shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "visibility_settings",
-      "indexname": "visibility_settings_owner_id_shop_id",
-      "indexdef": "CREATE UNIQUE INDEX visibility_settings_owner_id_shop_id ON public.visibility_settings USING btree (owner_id, shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "visibility_settings",
-      "indexname": "visibility_settings_pkey",
-      "indexdef": "CREATE UNIQUE INDEX visibility_settings_pkey ON public.visibility_settings USING btree (id)"
     }
   ],
   "rlsPolicies": [
@@ -3779,26 +3092,6 @@
       "schemaname": "public",
       "tablename": "products",
       "policyname": "super_admin_select_products",
-      "permissive": "PERMISSIVE",
-      "roles": "{public}",
-      "cmd": "SELECT",
-      "qual": "is_super_admin()",
-      "with_check": null
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "policyname": "shop_users_access_sales",
-      "permissive": "PERMISSIVE",
-      "roles": "{public}",
-      "cmd": "ALL",
-      "qual": "is_shop_active(shop_id)",
-      "with_check": "is_shop_active(shop_id)"
-    },
-    {
-      "schemaname": "public",
-      "tablename": "sales",
-      "policyname": "super_admin_select_sales",
       "permissive": "PERMISSIVE",
       "roles": "{public}",
       "cmd": "SELECT",

@@ -34,10 +34,17 @@ async function getCustomerLedger(req, res) {
         ],
     });
     const totalDebit = entries
-        .filter((e) => e.entry_type === "debit" && e.status === "active")
+        .filter((e) => (e.entry_type === "debit" ||
+        (e.entry_type === "reversal" && e.reference_type === "PaymentReversal")) &&
+        e.status === "active")
         .reduce((sum, e) => sum + Number(e.amount), 0);
     const totalCredit = entries
-        .filter((e) => e.entry_type === "credit" && e.status === "active")
+        .filter((e) => (e.entry_type === "credit" ||
+        (e.entry_type === "reversal" &&
+            (e.reference_type === "SaleCancellation" ||
+                e.reference_type === "Return" ||
+                e.reference_type === "SaleReturn"))) &&
+        e.status === "active")
         .reduce((sum, e) => sum + Number(e.amount), 0);
     const hasOpeningEntry = entries.some((e) => e.reference_type === "Opening_Balance" || e.description?.toLowerCase().includes("opening"));
     const openingOffset = hasOpeningEntry ? 0 : Number(customer.opening_balance) || 0;

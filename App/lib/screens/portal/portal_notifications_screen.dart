@@ -70,12 +70,17 @@ class _PortalNotificationsScreenState extends State<PortalNotificationsScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, idx) {
                       final n = _notifications[idx];
-                      final id = (n['id'] as num).toInt();
+                      final id = int.tryParse(n['id']?.toString() ?? '0') ?? 0;
                       final title = n['title']?.toString() ?? 'Notification';
                       final msg = n['message']?.toString() ?? '';
                       final isRead = n['is_read'] == true;
-                      final dt = n['createdAt']?.toString();
-                      final dateStr = dt != null ? DateFormat('dd MMM, hh:mm a').format(DateTime.parse(dt)) : '';
+                      final dt = n['createdAt']?.toString() ?? n['created_at']?.toString();
+                      String dateStr = '';
+                      if (dt != null && dt.isNotEmpty) {
+                        try {
+                          dateStr = DateFormat('dd MMM, hh:mm a').format(DateTime.parse(dt).toLocal());
+                        } catch (_) {}
+                      }
 
                       return InkWell(
                         onTap: () async {

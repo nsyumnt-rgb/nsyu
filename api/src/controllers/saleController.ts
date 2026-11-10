@@ -513,6 +513,24 @@ export async function createSale(req: Request, res: Response) {
           { transaction: t }
         );
 
+        if (customer && customer.id) {
+          await Notification.create(
+            {
+              owner_id: ownerId,
+              shop_id: shopId,
+              recipient_type: "customer",
+              recipient_id: customer.id,
+              type: "bill_created",
+              title: `New Bill: ${invoiceNumber}`,
+              message: `Invoice #${invoiceNumber} for ₹${totalAmount} has been generated.`,
+              reference_type: "Sale",
+              reference_id: sale.id,
+              is_read: false,
+            },
+            { transaction: t }
+          );
+        }
+
         for (const pi of pricedItems) {
           const minStock = Number(pi.product.min_stock || 0);
           if (minStock > 0) {
@@ -783,8 +801,7 @@ export async function cancelSale(req: Request, res: Response) {
           ownerId,
           shopId: targetShopId,
           customerId: sale.customer_id,
-          entryType: "reversal",
-          reversalDirection: "debit",
+          entryType: "debit",
           amount: Number(p.amount),
           referenceType: "PaymentReversal",
           referenceId: p.id,
@@ -795,13 +812,12 @@ export async function cancelSale(req: Request, res: Response) {
         });
       }
 
-      // 3. Reverse the bill's debit in customer ledger
+      // 3. Reverse the bill's debit in customer ledger (offsetting credit)
       await recordLedgerEntry({
         ownerId,
         shopId: targetShopId,
         customerId: sale.customer_id,
-        entryType: "reversal",
-        reversalDirection: "credit",
+        entryType: "credit",
         amount: Number(sale.total_amount),
         referenceType: "SaleCancellation",
         referenceId: sale.id,
@@ -862,6 +878,24 @@ export async function cancelSale(req: Request, res: Response) {
           },
           { transaction: t }
         );
+
+        if (sale.customer_id) {
+          await Notification.create(
+            {
+              owner_id: ownerId,
+              shop_id: targetShopId,
+              recipient_type: "customer",
+              recipient_id: sale.customer_id,
+              type: "sale_cancelled",
+              title: `Bill Cancelled: ${sale.invoice_number}`,
+              message: `Invoice #${sale.invoice_number} has been cancelled (${reason || "No reason specified"}).`,
+              reference_type: "Sale",
+              reference_id: sale.id,
+              is_read: false,
+            },
+            { transaction: t }
+          );
+        }
       } catch (notifErr) {
         console.error("Failed to record bill cancellation notification:", notifErr);
       }

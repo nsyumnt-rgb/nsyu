@@ -7,6 +7,7 @@ import 'providers/bills_provider.dart';
 import 'providers/catalog_provider.dart';
 import 'providers/customer_portal_provider.dart';
 import 'providers/customer_provider.dart';
+import 'providers/notifications_provider.dart';
 import 'providers/orders_provider.dart';
 import 'providers/payments_provider.dart';
 import 'providers/settings_provider.dart';
@@ -36,6 +37,7 @@ class NsyuApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PaymentsProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CustomerPortalProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationsProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => VisibilityProvider()),
       ],

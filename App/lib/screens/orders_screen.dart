@@ -6,6 +6,7 @@ import '../models/customer.dart';
 import '../models/saved_order.dart';
 import '../providers/auth_provider.dart';
 import '../providers/customer_provider.dart';
+import '../providers/notifications_provider.dart';
 import '../providers/orders_provider.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'customer_ledger_detail_screen.dart';
@@ -170,12 +171,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     icon: const Icon(Icons.share_outlined, color: Color(0xFF475569), size: 21),
                     onPressed: () {},
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
-                    },
-                  ),
+                  Builder(builder: (ctx) {
+                    final unread = ctx.watch<NotificationsProvider>().unreadCount;
+                    return IconButton(
+                      icon: Badge(
+                        isLabelVisible: unread > 0,
+                        label: Text('$unread', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        backgroundColor: const Color(0xFFEF4444),
+                        child: const Icon(Icons.notifications_outlined, color: Color(0xFF475569), size: 23),
+                      ),
+                      onPressed: () {
+                        final notifs = ctx.read<NotificationsProvider>();
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())).then((_) {
+                          notifs.fetchUnreadCount();
+                        });
+                      },
+                    );
+                  }),
                   IconButton(
                     icon: Icon(_searchOpen ? Icons.close : Icons.search, color: const Color(0xFF475569), size: 22),
                     onPressed: () {

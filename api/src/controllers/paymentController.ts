@@ -227,6 +227,24 @@ export async function createPayment(req: Request, res: Response) {
           },
           { transaction: t }
         );
+
+        if (targetCustId) {
+          await Notification.create(
+            {
+              owner_id: ownerId,
+              shop_id: shopId,
+              recipient_type: "customer",
+              recipient_id: targetCustId,
+              type: "payment_received",
+              title: `Payment Received: ₹${numAmount}`,
+              message: `Your payment of ₹${numAmount} via ${cleanMethod.toUpperCase()} has been recorded.`,
+              reference_type: "Payment",
+              reference_id: payment.id,
+              is_read: false,
+            },
+            { transaction: t }
+          );
+        }
       } catch (notifErr) {
         console.error("Failed to create payment notification:", notifErr);
       }
@@ -335,6 +353,24 @@ export async function cancelPayment(req: Request, res: Response) {
           },
           { transaction: t }
         );
+
+        if (payment.customer_id) {
+          await Notification.create(
+            {
+              owner_id: ownerId,
+              shop_id: payment.shop_id,
+              recipient_type: "customer",
+              recipient_id: payment.customer_id,
+              type: "general",
+              title: `Payment Voided: ₹${payment.amount}`,
+              message: `Payment #${payment.id} for ₹${payment.amount} was voided (${reason || "No reason specified"}).`,
+              reference_type: "Payment",
+              reference_id: payment.id,
+              is_read: false,
+            },
+            { transaction: t }
+          );
+        }
       } catch (notifErr) {
         console.error("Failed to create payment cancellation notification:", notifErr);
       }

@@ -6,8 +6,8 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/bills_provider.dart';
 import '../../../providers/catalog_provider.dart';
 import '../../../providers/customer_provider.dart';
+import '../../../providers/notifications_provider.dart';
 import '../../../providers/visibility_provider.dart';
-import '../../../services/supabase_service.dart';
 import '../../../widgets/app_bottom_nav.dart';
 import '../../bills/screens/bill_screen.dart';
 import '../../orders/screens/order_cart_screen.dart';
@@ -31,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String _selectedPeriod = 'Today';
   final String _chartPeriod = 'This Week';
-  int _unreadNotifs = 0;
 
   @override
   void initState() {
@@ -53,8 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadUnreadNotifs() async {
     try {
-      final count = await SupabaseService().getUnreadNotificationCount();
-      if (mounted) setState(() => _unreadNotifs = count);
+      if (mounted) {
+        context.read<NotificationsProvider>().fetchUnreadCount();
+      }
     } catch (_) {}
   }
 
@@ -202,43 +202,48 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 8),
                       // Notification Bell with Red Badge
-                      InkWell(
-                        onTap: () async {
-                          await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const NotificationsScreen()));
-                          _loadUnreadNotifs();
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Stack(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: const Icon(Icons.notifications_none_rounded,
-                                  size: 20, color: Color(0xFF334155)),
-                            ),
-                            if (_unreadNotifs > 0)
-                              Positioned(
-                                top: 2,
-                                right: 2,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                      color: Color(0xFFEF4444),
-                                      shape: BoxShape.circle),
+                      Builder(builder: (ctx) {
+                        final notifs = ctx.watch<NotificationsProvider>();
+                        final unread = notifs.unreadCount;
+                        return InkWell(
+                          onTap: () {
+                            Navigator.push(
+                                ctx,
+                                MaterialPageRoute(
+                                    builder: (_) => const NotificationsScreen())).then((_) {
+                              notifs.fetchUnreadCount();
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Stack(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: const Color(0xFFE2E8F0)),
                                 ),
+                                child: const Icon(Icons.notifications_none_rounded,
+                                    size: 20, color: Color(0xFF334155)),
                               ),
-                          ],
-                        ),
-                      ),
+                              if (unread > 0)
+                                Positioned(
+                                  top: 2,
+                                  right: 2,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                        color: Color(0xFFEF4444),
+                                        shape: BoxShape.circle),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
                       const SizedBox(width: 8),
                       // Profile Avatar
                       InkWell(
