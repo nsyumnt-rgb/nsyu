@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Payment, Sale, Customer, Shop, EMIInstallment, Notification } from "../models";
+import { Payment, Sale, Customer, Shop, Notification } from "../models";
 import { streamReceiptPdf } from "../utils/pdf";
 import { logAudit } from "../utils/audit";
 import { recordLedgerEntry } from "../utils/ledger";
@@ -31,7 +31,6 @@ export async function listPayments(req: Request, res: Response) {
       { model: Customer, as: "customer", attributes: ["id", "name", "phone"] },
       { model: Sale, as: "sale", attributes: ["id", "invoice_number"] },
       { model: Shop, as: "shop", attributes: ["id", "name", "code"] },
-      { model: EMIInstallment, as: "installment", attributes: ["id", "installment_number"] },
     ],
     order: [["payment_date", "DESC"]],
     limit: Number(req.query.limit) || 100,
@@ -62,7 +61,6 @@ export async function getPayment(req: Request, res: Response) {
       { model: Customer, as: "customer" },
       { model: Sale, as: "sale" },
       { model: Shop, as: "shop", attributes: ["id", "name", "code"] },
-      { model: EMIInstallment, as: "installment" },
     ],
   });
   if (!payment) return res.status(404).json({ success: false, message: "Payment not found" });
@@ -320,20 +318,6 @@ export async function cancelPayment(req: Request, res: Response) {
         }
       }
 
-      if (payment.emi_installment_id) {
-        const installment = await EMIInstallment.findOne({
-          where: { id: payment.emi_installment_id },
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-        if (installment) {
-          installment.paid_amount = Math.max(0, Number(installment.paid_amount) - Number(payment.amount));
-          installment.remaining_amount = Number(installment.expected_amount) + Number(installment.late_fee) - installment.paid_amount;
-          installment.status = installment.paid_amount > 0 ? "Partially Paid" : "Due";
-          await installment.save({ transaction: t });
-        }
-      }
-
       await logAudit({ req, module: "payments", action: "cancel", entityType: "Payment", entityId: payment.id, details: { reason } });
 
       // In-app notification for payment voided
@@ -400,7 +384,6 @@ export async function downloadReceiptPdf(req: Request, res: Response) {
     include: [
       { model: Customer, as: "customer" },
       { model: Sale, as: "sale" },
-      { model: EMIInstallment, as: "installment" },
       { model: Shop, as: "shop" },
     ],
   });

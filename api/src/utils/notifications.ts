@@ -1,6 +1,5 @@
 import { Notification, NotificationType } from "../models/Notification";
-import { Product, ProductStock, EMIPlan, EMIInstallment, Customer, Sale, LeaveRequest, Employee } from "../models";
-import { refreshInstallmentStatuses } from "./emi";
+import { Product, ProductStock } from "../models";
 
 /** Fire-and-forget: creates one persisted notification for a single recipient. Never throws into the caller's flow. */
 export async function notify(params: {
@@ -74,39 +73,5 @@ export async function getComputedAlerts(ownerId: number, shopId?: number) {
       minStock: s.min_stock ?? s.product?.min_stock ?? 0,
     }));
 
-  const planWhere: any = { owner_id: ownerId, status: "active" };
-  if (shopId) planWhere.shop_id = shopId;
-  const plans = await EMIPlan.findAll({
-    where: planWhere,
-    include: [
-      { model: Customer, as: "customer", attributes: ["id", "name", "phone"] },
-      { model: Sale, as: "sale", attributes: ["id", "invoice_number"] },
-      { model: EMIInstallment, as: "installments" },
-    ],
-  });
-  const overdueEmi: any[] = [];
-  for (const plan of plans) {
-    const installments = await refreshInstallmentStatuses((plan as any).installments);
-    for (const inst of installments) {
-      if (inst.status === "Overdue") {
-        overdueEmi.push({
-          planId: plan.id,
-          customer: (plan as any).customer,
-          sale: (plan as any).sale,
-          installmentNumber: inst.installment_number,
-          dueDate: inst.due_date,
-          remainingAmount: Number(inst.remaining_amount),
-        });
-      }
-    }
-  }
-
-  const leaveWhere: any = { owner_id: ownerId, status: "Pending" };
-  if (shopId) leaveWhere.shop_id = shopId;
-  const pendingLeaves = await LeaveRequest.findAll({
-    where: leaveWhere,
-    include: [{ model: Employee, as: "employee", attributes: ["id", "name"] }],
-  });
-
-  return { lowStock, overdueEmi, pendingLeaves };
+  return { lowStock, overdueEmi: [], pendingLeaves: [] };
 }

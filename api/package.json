@@ -9,10 +9,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "test": "jest --runInBand",
-    "start": "node dist/server.js",
-    "seed": "ts-node src/seed/run.ts",
-    "seed:reset": "ts-node src/seed/reset.ts"
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

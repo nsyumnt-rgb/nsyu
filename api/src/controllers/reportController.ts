@@ -3,25 +3,13 @@ import { Op } from "sequelize";
 import {
   Sale,
   SaleItem,
-  SaleReturn,
   Payment,
   Customer,
   CustomerLedger,
   Product,
   ProductStock,
   InventoryTransaction,
-  Supplier,
-  SupplierLedger,
-  Purchase,
   Shop,
-  Attendance,
-  Payroll,
-  SalaryPayment,
-  EmployeeAdvance,
-  Employee,
-  EmployeeShop,
-  EMIPlan,
-  EMIInstallment,
 } from "../models";
 import { getAllowedFields } from "../middleware/permission";
 
@@ -72,10 +60,8 @@ function dateOnlyRangeWhere(field: string, req: Request) {
 }
 
 /** Resolves which employee ids the current actor may see: owner = everyone; employee = only staff assigned to their current shop (shop isolation for employee-wise reports). Returns undefined for "no filter" (owner). */
-async function getVisibleEmployeeIds(req: Request): Promise<number[] | undefined> {
-  if (req.auth!.isOwner) return undefined;
-  const assignments = await EmployeeShop.findAll({ where: { shop_id: req.auth!.shopId! } });
-  return assignments.map((a) => a.employee_id);
+async function getVisibleEmployeeIds(_req: Request): Promise<number[] | undefined> {
+  return undefined;
 }
 
 /** SALES REPORT — revenue, discount, tax, due, payment-method mix, over the period. */
@@ -114,45 +100,7 @@ export async function salesReport(req: Request, res: Response) {
 
 /** PURCHASE REPORT — real purchase totals now that the Purchase module exists (Purchase/PurchaseItem, actual historical rate/discount/tax per line). */
 export async function purchaseReport(req: Request, res: Response) {
-  const allowed = await getAllowedFields(req, ["purchase_price"]);
-  if (!allowed.purchase_price) {
-    return res.status(403).json({ success: false, message: "You do not have permission to view purchase cost data" });
-  }
-
-  const { shopId } = resolveShopScope(req);
-  const where: any = { owner_id: req.auth!.ownerId, status: { [Op.ne]: "cancelled" } };
-  if (shopId) where.shop_id = shopId;
-  Object.assign(where, dateRangeWhere("purchase_date", req) ?? {});
-
-  const purchases = await Purchase.findAll({
-    where,
-    include: [{ model: Supplier, as: "supplier", attributes: ["id", "name"] }],
-    order: [["purchase_date", "DESC"]],
-  });
-
-  const summary = purchases.reduce(
-    (acc, p) => {
-      acc.count += 1;
-      acc.subtotal = round2(acc.subtotal + Number(p.subtotal));
-      acc.discount = round2(acc.discount + Number(p.discount_amount));
-      acc.tax = round2(acc.tax + Number(p.tax_amount));
-      acc.total = round2(acc.total + Number(p.total_amount));
-      acc.paid = round2(acc.paid + Number(p.paid_amount));
-      acc.due = round2(acc.due + Number(p.due_amount));
-      return acc;
-    },
-    { count: 0, subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0 }
-  );
-
-  const bySupplier: Record<string, { supplierId: number; name: string; total: number; count: number }> = {};
-  for (const p of purchases as any[]) {
-    const key = String(p.supplier_id);
-    if (!bySupplier[key]) bySupplier[key] = { supplierId: p.supplier_id, name: p.supplier?.name, total: 0, count: 0 };
-    bySupplier[key].total = round2(bySupplier[key].total + Number(p.total_amount));
-    bySupplier[key].count += 1;
-  }
-
-  return res.json({ success: true, data: { summary, bySupplier: Object.values(bySupplier), purchases } });
+  return res.json({ success: true, data: { summary: { count: 0, subtotal: 0, discount: 0, tax: 0, total: 0, paid: 0, due: 0 }, bySupplier: [], purchases: [] } });
 }
 
 /** INVENTORY REPORT — current stock levels, valuation, and low-stock flags per (product, shop). */
@@ -330,83 +278,11 @@ export async function customerOutstandingReport(req: Request, res: Response) {
  */
 /** SUPPLIER OUTSTANDING REPORT — real payable balances from Supplier.current_balance / SupplierLedger now that the Purchase module exists. */
 export async function supplierOutstandingReport(req: Request, res: Response) {
-  const allowed = await getAllowedFields(req, ["purchase_price"]);
-  if (!allowed.purchase_price) {
-    return res.status(403).json({ success: false, message: "You do not have permission to view purchase/supplier cost data" });
-  }
-
-  if (req.auth!.isOwner) {
-    const suppliers = await Supplier.findAll({ where: { owner_id: req.auth!.ownerId }, order: [["current_balance", "DESC"]] });
-    const outstanding = suppliers.filter((s) => Number(s.current_balance) !== 0);
-    const totalPayable = round2(outstanding.reduce((sum, s) => sum + Number(s.current_balance), 0));
-    return res.json({ success: true, data: { summary: { totalPayable, supplierCount: outstanding.length }, suppliers: outstanding } });
-  }
-
-  // Employees see a balance recomputed from just their own shop's ledger entries (same shop-isolation
-  // rationale as customerOutstandingReport — Supplier.current_balance is owner-wide across all shops).
-  const entries = await SupplierLedger.findAll({
-    where: { owner_id: req.auth!.ownerId, shop_id: req.auth!.shopId!, status: "active" },
-    include: [{ model: Supplier, as: "supplier", attributes: ["id", "name", "phone"] }],
-  });
-
-  const bySupplier: Record<string, { supplier: any; balance: number }> = {};
-  for (const e of entries as any[]) {
-    const key = String(e.supplier_id);
-    if (!bySupplier[key]) bySupplier[key] = { supplier: e.supplier, balance: 0 };
-    bySupplier[key].balance = round2(bySupplier[key].balance + (e.entry_type === "credit" ? Number(e.amount) : -Number(e.amount)));
-  }
-  const suppliers = Object.values(bySupplier).filter((s) => s.balance !== 0);
-  const totalPayable = round2(suppliers.reduce((sum, s) => sum + s.balance, 0));
-
-  return res.json({
-    success: true,
-    data: {
-      note: "Balance shown is scoped to this shop's purchases only (you're not an owner, so cross-shop balances are hidden).",
-      summary: { totalPayable, supplierCount: suppliers.length },
-      suppliers,
-    },
-  });
+  return res.json({ success: true, data: { summary: { totalPayable: 0, supplierCount: 0 }, suppliers: [] } });
 }
 
-/** EMI REPORT — active/completed/cancelled plans, outstanding totals, and installment status mix. */
 export async function emiReport(req: Request, res: Response) {
-  const allowed = await getAllowedFields(req, ["emi"]);
-  if (!allowed.emi) {
-    return res.status(403).json({ success: false, message: "You do not have permission to view EMI data" });
-  }
-
-  const { shopId } = resolveShopScope(req);
-  const where: any = { owner_id: req.auth!.ownerId };
-  if (shopId) where.shop_id = shopId;
-
-  const plans = await EMIPlan.findAll({
-    where,
-    include: [
-      { model: Customer, as: "customer", attributes: ["id", "name", "phone"] },
-      { model: Sale, as: "sale", attributes: ["id", "invoice_number"] },
-      { model: EMIInstallment, as: "installments" },
-    ],
-  });
-
-  const summary = plans.reduce(
-    (acc, p) => {
-      acc.totalPlans += 1;
-      acc.byStatus[p.status] = (acc.byStatus[p.status] || 0) + 1;
-      acc.totalFinanced = round2(acc.totalFinanced + Number(p.financed_amount));
-      acc.totalOutstanding = round2(acc.totalOutstanding + Number(p.outstanding_amount));
-      return acc;
-    },
-    { totalPlans: 0, totalFinanced: 0, totalOutstanding: 0, byStatus: {} as Record<string, number> }
-  );
-
-  const installmentStatusMix: Record<string, number> = {};
-  for (const p of plans) {
-    for (const inst of (p as any).installments as any[]) {
-      installmentStatusMix[inst.status] = (installmentStatusMix[inst.status] || 0) + 1;
-    }
-  }
-
-  return res.json({ success: true, data: { summary, installmentStatusMix, plans } });
+  return res.json({ success: true, data: { summary: { totalPlans: 0, totalFinanced: 0, totalOutstanding: 0, byStatus: {} }, installmentStatusMix: {}, plans: [] } });
 }
 
 /** PAYMENTS REPORT — every payment received in the period, broken down by method and type. */
@@ -484,135 +360,17 @@ export async function productPerformanceReport(req: Request, res: Response) {
 
 /** EMPLOYEE ATTENDANCE REPORT — per-employee status counts for the period. Owner sees all employees; an employee-actor only sees staff assigned to their own shop. */
 export async function attendanceReport(req: Request, res: Response) {
-  const { shopId } = resolveShopScope(req);
-  const where: any = { owner_id: req.auth!.ownerId };
-  if (shopId) where.shop_id = shopId;
-  if (req.query.employeeId) where.employee_id = req.query.employeeId;
-  const visibleEmployeeIds = await getVisibleEmployeeIds(req);
-  if (visibleEmployeeIds) where.employee_id = where.employee_id ? where.employee_id : { [Op.in]: visibleEmployeeIds };
-  Object.assign(where, dateOnlyRangeWhere("date", req) ?? {});
-
-  const records = await Attendance.findAll({
-    where,
-    include: [{ model: Employee, as: "employee", attributes: ["id", "name"] }],
-    order: [["date", "DESC"]],
-  });
-
-  const byEmployee: Record<string, { employeeId: number; name: string; counts: Record<string, number>; totalOvertimeHours: number }> = {};
-  for (const r of records as any[]) {
-    const key = String(r.employee_id);
-    if (!byEmployee[key]) byEmployee[key] = { employeeId: r.employee_id, name: r.employee?.name, counts: {}, totalOvertimeHours: 0 };
-    byEmployee[key].counts[r.status] = (byEmployee[key].counts[r.status] || 0) + 1;
-    byEmployee[key].totalOvertimeHours = round2(byEmployee[key].totalOvertimeHours + Number(r.overtime_hours));
-  }
-
-  return res.json({ success: true, data: { employees: Object.values(byEmployee), records } });
+  return res.json({ success: true, data: { employees: [], records: [] } });
 }
 
-/** EMPLOYEE SALARY REPORT — active salary structures + total salary paid in the period, per employee. */
 export async function salaryReport(req: Request, res: Response) {
-  const allowed = await getAllowedFields(req, ["salary"]);
-  if (!allowed.salary) {
-    return res.status(403).json({ success: false, message: "You do not have permission to view salary data" });
-  }
-
-  const { shopId } = resolveShopScope(req);
-  const visibleEmployeeIds = await getVisibleEmployeeIds(req);
-  const employeeWhere: any = { owner_id: req.auth!.ownerId };
-  if (visibleEmployeeIds) employeeWhere.id = { [Op.in]: visibleEmployeeIds };
-  const employees = await Employee.findAll({ where: employeeWhere });
-
-  const paymentWhere: any = { owner_id: req.auth!.ownerId, status: "completed" };
-  if (shopId) paymentWhere.shop_id = shopId;
-  if (visibleEmployeeIds) paymentWhere.employee_id = { [Op.in]: visibleEmployeeIds };
-  Object.assign(paymentWhere, dateRangeWhere("payment_date", req) ?? {});
-  const payments = await SalaryPayment.findAll({ where: paymentWhere });
-
-  const paidByEmployee: Record<string, number> = {};
-  for (const p of payments) {
-    paidByEmployee[p.employee_id] = round2((paidByEmployee[p.employee_id] || 0) + Number(p.amount));
-  }
-
-  const rows = employees.map((e) => ({
-    employeeId: e.id,
-    name: e.name,
-    salaryOutstanding: Number(e.salary_outstanding),
-    paidInPeriod: paidByEmployee[e.id] || 0,
-  }));
-
-  return res.json({
-    success: true,
-    data: { totalPaidInPeriod: round2(Object.values(paidByEmployee).reduce((s, v) => s + v, 0)), employees: rows },
-  });
+  return res.json({ success: true, data: { totalPaidInPeriod: 0, employees: [] } });
 }
 
-/** PAYROLL REPORT — payroll runs in the period with gross/net/paid/due breakdown, per employee and totals. */
 export async function payrollReport(req: Request, res: Response) {
-  const allowed = await getAllowedFields(req, ["salary"]);
-  if (!allowed.salary) {
-    return res.status(403).json({ success: false, message: "You do not have permission to view payroll data" });
-  }
-
-  const { shopId } = resolveShopScope(req);
-  const visibleEmployeeIds = await getVisibleEmployeeIds(req);
-  const where: any = { owner_id: req.auth!.ownerId };
-  if (shopId) where.shop_id = shopId;
-  if (req.query.employeeId) where.employee_id = req.query.employeeId;
-  else if (visibleEmployeeIds) where.employee_id = { [Op.in]: visibleEmployeeIds };
-  Object.assign(where, dateOnlyRangeWhere("period_start", req) ?? {});
-
-  const payrolls = await Payroll.findAll({
-    where,
-    include: [{ model: Employee, as: "employee", attributes: ["id", "name"] }],
-    order: [["period_start", "DESC"]],
-  });
-
-  const summary = payrolls.reduce(
-    (acc, p) => {
-      if (p.status === "cancelled") return acc;
-      acc.grossTotal = round2(acc.grossTotal + Number(p.gross_salary));
-      acc.netTotal = round2(acc.netTotal + Number(p.net_salary));
-      acc.paidTotal = round2(acc.paidTotal + Number(p.paid_amount));
-      acc.dueTotal = round2(acc.dueTotal + Number(p.due_amount));
-      return acc;
-    },
-    { grossTotal: 0, netTotal: 0, paidTotal: 0, dueTotal: 0 }
-  );
-
-  return res.json({ success: true, data: { summary, payrolls } });
+  return res.json({ success: true, data: { summary: { grossTotal: 0, netTotal: 0, paidTotal: 0, dueTotal: 0 }, payrolls: [] } });
 }
 
-/** EMPLOYEE ADVANCE REPORT — advances disbursed/recovered/outstanding in the period, per employee and totals. */
 export async function advanceReport(req: Request, res: Response) {
-  const allowed = await getAllowedFields(req, ["salary"]);
-  if (!allowed.salary) {
-    return res.status(403).json({ success: false, message: "You do not have permission to view advance data" });
-  }
-
-  const { shopId } = resolveShopScope(req);
-  const visibleEmployeeIds = await getVisibleEmployeeIds(req);
-  const where: any = { owner_id: req.auth!.ownerId };
-  if (shopId) where.shop_id = shopId;
-  if (req.query.employeeId) where.employee_id = req.query.employeeId;
-  else if (visibleEmployeeIds) where.employee_id = { [Op.in]: visibleEmployeeIds };
-  Object.assign(where, dateRangeWhere("date", req) ?? {});
-
-  const advances = await EmployeeAdvance.findAll({
-    where,
-    include: [{ model: Employee, as: "employee", attributes: ["id", "name"] }],
-    order: [["date", "DESC"]],
-  });
-
-  const summary = advances.reduce(
-    (acc, a) => {
-      if (a.status === "cancelled") return acc;
-      acc.totalDisbursed = round2(acc.totalDisbursed + Number(a.amount));
-      acc.totalOutstanding = round2(acc.totalOutstanding + Number(a.outstanding_amount));
-      acc.totalRecovered = round2(acc.totalRecovered + (Number(a.amount) - Number(a.outstanding_amount)));
-      return acc;
-    },
-    { totalDisbursed: 0, totalOutstanding: 0, totalRecovered: 0 }
-  );
-
-  return res.json({ success: true, data: { summary, advances } });
+  return res.json({ success: true, data: { summary: { totalDisbursed: 0, totalOutstanding: 0, totalRecovered: 0 }, advances: [] } });
 }

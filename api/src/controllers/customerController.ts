@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import { Customer, Sale, CustomerLedger, EMIPlan, CustomerAccount, CustomerRefreshToken, Shop } from "../models";
+import { Customer, Sale, CustomerLedger, CustomerAccount, CustomerRefreshToken, Shop } from "../models";
 import { logAudit } from "../utils/audit";
 
 export async function createCustomer(req: Request, res: Response) {
@@ -88,10 +88,6 @@ export async function getCustomer(req: Request, res: Response) {
         as: "ledgerEntries",
         limit: 20,
         order: [["created_at", "DESC"]],
-      },
-      {
-        model: EMIPlan,
-        as: "emiPlans",
       },
     ],
   });

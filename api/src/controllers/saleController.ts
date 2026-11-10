@@ -7,8 +7,6 @@ import {
   Product,
   Customer,
   Payment,
-  EMIPlan,
-  EMIInstallment,
   SaleReturn,
   SaleReturnItem,
   Shop,
@@ -20,7 +18,6 @@ import { PAYMENT_METHODS, PaymentMethod } from "../models/Sale";
 import { recordStockMovement } from "../utils/inventory";
 import { recordLedgerEntry, reverseLedgerEntry } from "../utils/ledger";
 import { nextInvoiceNumber } from "../utils/invoice";
-import { buildEmiSchedule, refreshInstallmentStatuses } from "../utils/emi";
 import { logAudit } from "../utils/audit";
 import { streamBillPdf } from "../utils/pdf";
 
@@ -40,7 +37,6 @@ const saleIncludes = [
   { model: Customer, as: "customer" },
   { model: Shop, as: "shop" },
   { model: Payment, as: "payments" },
-  { model: EMIPlan, as: "emiPlan", include: [{ model: EMIInstallment, as: "installments" }] },
   { model: SaleReturn, as: "returns", include: [{ model: SaleReturnItem, as: "items" }] },
 ];
 
@@ -428,64 +424,6 @@ export async function createSale(req: Request, res: Response) {
         });
       }
 
-      // 8. EMI plan + installment schedule
-      let emiPlan: EMIPlan | null = null;
-      if (isEmi) {
-        const financedAmount = round2(totalAmount - downPayment);
-        const interestPercent = Number(emi.interestPercent) || 0;
-        const lateFeePercent = Number(emi.lateFeePercent) || 0;
-        const startDate = emi.startDate ? new Date(emi.startDate) : new Date();
-        const numberOfInstallments = Number(emi.numberOfInstallments);
-
-        const schedule = buildEmiSchedule({
-          financedAmount,
-          interestPercent,
-          numberOfInstallments,
-          startDate,
-        });
-
-        emiPlan = await EMIPlan.create(
-          {
-            owner_id: ownerId,
-            shop_id: shopId,
-            sale_id: sale.id,
-            customer_id: customer.id,
-            total_amount: totalAmount,
-            down_payment: downPayment,
-            financed_amount: financedAmount,
-            interest_percent: interestPercent,
-            interest_amount: schedule.interestAmount,
-            payable_amount: schedule.payableAmount,
-            number_of_installments: numberOfInstallments,
-            emi_amount: schedule.emiAmount,
-            start_date: startDate,
-            late_fee_percent: lateFeePercent,
-            outstanding_amount: schedule.payableAmount,
-            actor_type: actorType,
-            actor_id: actorId,
-          },
-          { transaction: t }
-        );
-
-        for (const inst of schedule.installments) {
-          await EMIInstallment.create(
-            {
-              emi_plan_id: emiPlan.id,
-              installment_number: inst.installmentNumber,
-              due_date: inst.dueDate,
-              expected_amount: inst.expectedAmount,
-              remaining_amount: inst.expectedAmount,
-            },
-            { transaction: t }
-          );
-        }
-
-        // Sale's outstanding due mirrors the EMI plan's outstanding (financed) amount
-        sale.due_amount = schedule.payableAmount;
-        sale.status = "partially_paid";
-        await sale.save({ transaction: t });
-      }
-
       await logAudit({
         req,
         module: "sales",
@@ -630,10 +568,6 @@ export async function getSale(req: Request, res: Response) {
   });
   if (!sale) return res.status(404).json({ success: false, message: "Sale invoice not found" });
 
-  if ((sale as any).emiPlan?.installments) {
-    await refreshInstallmentStatuses((sale as any).emiPlan.installments);
-  }
-
   return res.json({ success: true, data: sale });
 }
 
@@ -762,7 +696,6 @@ export async function cancelSale(req: Request, res: Response) {
       if (sale.status === "cancelled") throw Object.assign(new Error("Sale is already cancelled"), { status: 400 });
 
       const items = await SaleItem.findAll({ where: { sale_id: sale.id }, transaction: t });
-      const emiPlan = await EMIPlan.findOne({ where: { sale_id: sale.id }, transaction: t });
 
       const targetShopId = sale.shop_id; // Stock and ledger stay with the original shop
       const oldStatus = sale.status;
@@ -826,18 +759,6 @@ export async function cancelSale(req: Request, res: Response) {
         actorId,
         externalTransaction: t,
       });
-
-      if (emiPlan) {
-        const plan = emiPlan;
-        plan.status = "cancelled";
-        plan.cancel_reason = reason ?? "Sale cancelled";
-        plan.outstanding_amount = 0;
-        await plan.save({ transaction: t });
-        await EMIInstallment.update(
-          { status: "Cancelled" },
-          { where: { emi_plan_id: plan.id, status: ["Upcoming", "Due", "Overdue", "Partially Paid"] }, transaction: t }
-        );
-      }
 
       sale.due_amount = 0;
       sale.status = "cancelled";

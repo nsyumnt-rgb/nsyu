@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { Owner, Employee, Role, RolePermission, RoleFieldPermission, EmployeeShop, RefreshToken, Shop, ShopModule } from "../models";
+import { Owner, Role, RolePermission, RoleFieldPermission, RefreshToken, Shop, ShopModule } from "../models";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, refreshExpiryDate } from "../utils/jwt";
 import { seedOwnerDefaults } from "../utils/seed";
 import { MODULES, SENSITIVE_FIELDS, toCanonicalModule } from "../config/permissions";
@@ -121,61 +121,6 @@ export async function login(req: Request, res: Response) {
           isSuperAdmin: false,
           owner: { id: owner.id, name: owner.name, email: owner.email, is_super_admin: false, role: owner.role },
           shop: firstShop,
-          accessToken,
-          refreshToken,
-        },
-      });
-    }
-  }
-
-  // Fall back to Employee accounts
-  const employee = await Employee.findOne({ where: { email: lookupEmail } });
-  if (employee) {
-    const isEmpMatch = await bcrypt.compare(password, employee.password);
-
-    if (isEmpMatch) {
-      if (employee.status !== "active") {
-        return res.status(403).json({ success: false, message: "Account disabled. Contact your owner." });
-      }
-
-      const shopAssignments = await EmployeeShop.findAll({
-        where: { employee_id: employee.id },
-        include: [{ model: Shop, as: "shop" }, { model: Role, as: "role" }],
-      });
-      const firstAssignment = shopAssignments[0];
-      const assignedShop = (firstAssignment as any)?.shop;
-      if (assignedShop && assignedShop.status === "suspended") {
-        return res.status(403).json({
-          success: false,
-          message: "Shop is suspended. Access blocked. Contact system administrator.",
-        });
-      }
-      const defaultShopId = firstAssignment?.shop_id ?? null;
-      const defaultRoleId = firstAssignment?.role_id ?? null;
-      const defaultRoleName = (firstAssignment as any)?.role?.name ?? null;
-
-      const accessToken = signAccessToken({
-        ownerId: employee.owner_id,
-        isOwner: false,
-        employeeId: employee.id,
-        shopId: defaultShopId,
-        roleId: defaultRoleId,
-        roleName: defaultRoleName,
-      });
-      const refreshToken = signRefreshToken({ ownerId: employee.owner_id, employeeId: employee.id });
-      await RefreshToken.create({
-        token: refreshToken,
-        employee_id: employee.id,
-        expires_at: refreshExpiryDate(),
-      });
-
-      return res.json({
-        success: true,
-        data: {
-          accountType: "employee",
-          employee: { id: employee.id, name: employee.name, email: employee.email },
-          shop: (firstAssignment as any)?.shop ?? null,
-          assignedShopIds: shopAssignments.map((a) => a.shop_id),
           accessToken,
           refreshToken,
         },
@@ -316,20 +261,5 @@ export async function getMe(req: Request, res: Response) {
     });
   }
 
-  const employee = await Employee.findByPk(auth.employeeId, { attributes: { exclude: ["password"] } });
-  const shopAssignments = await EmployeeShop.findAll({ where: { employee_id: auth.employeeId } });
-
-  return res.json({
-    success: true,
-    data: {
-      accountType: "employee",
-      employee,
-      shopId: auth.shopId ?? null,
-      roleId: auth.roleId ?? null,
-      roleName: auth.roleName ?? null,
-      assignedShopIds: shopAssignments.map((a) => a.shop_id),
-      permissions,
-      fieldPermissions,
-    },
-  });
+  return res.status(401).json({ success: false, message: "Invalid session" });
 }

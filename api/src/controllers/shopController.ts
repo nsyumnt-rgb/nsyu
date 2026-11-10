@@ -3,15 +3,9 @@ import { Op } from "sequelize";
 import {
   Shop,
   Role,
-  EmployeeShop,
   Sale,
-  Purchase,
   InventoryTransaction,
   CustomerLedger,
-  SupplierLedger,
-  Attendance,
-  Payroll,
-  EMIPlan,
   ProductStock,
   ShopPortalSettings,
 } from "../models";
@@ -54,27 +48,10 @@ export async function createShop(req: Request, res: Response) {
  *  - Employee sees only shops they've been assigned to.
  */
 export async function listShops(req: Request, res: Response) {
-  if (req.auth!.isOwner) {
-    const shops = await Shop.findAll({
-      where: { owner_id: req.auth!.ownerId },
-      order: [["created_at", "ASC"]],
-    });
-    return res.json({ success: true, data: shops });
-  }
-
-  const assignments = await EmployeeShop.findAll({
-    where: { employee_id: req.auth!.employeeId },
-    include: [{ model: Shop, as: "shop" }, { model: Role, as: "role" }],
+  const shops = await Shop.findAll({
+    where: { owner_id: req.auth!.ownerId },
+    order: [["created_at", "ASC"]],
   });
-
-  const shops = assignments
-    .filter((a: any) => a.shop && a.shop.owner_id === req.auth!.ownerId)
-    .map((a: any) => ({
-      ...a.shop.toJSON(),
-      roleId: a.role_id,
-      roleName: a.role?.name,
-    }));
-
   return res.json({ success: true, data: shops });
 }
 
@@ -84,15 +61,6 @@ export async function getShop(req: Request, res: Response) {
   const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } });
   if (!shop) {
     return res.status(404).json({ success: false, message: "Shop not found" });
-  }
-
-  if (!req.auth!.isOwner) {
-    const assigned = await EmployeeShop.findOne({
-      where: { employee_id: req.auth!.employeeId, shop_id: shopId },
-    });
-    if (!assigned) {
-      return res.status(403).json({ success: false, message: "You are not assigned to this shop" });
-    }
   }
 
   return res.json({ success: true, data: shop });
@@ -175,44 +143,28 @@ export async function deleteShop(req: Request, res: Response) {
   // Count existing transactions in all related modules
   const [
     salesCount,
-    purchasesCount,
     inventoryCount,
     customerLedgerCount,
-    supplierLedgerCount,
-    attendanceCount,
-    payrollCount,
-    emiCount,
   ] = await Promise.all([
     Sale.count({ where: { shop_id: shopId } }),
-    Purchase.count({ where: { shop_id: shopId } }),
     InventoryTransaction.count({ where: { shop_id: shopId } }),
     CustomerLedger.count({ where: { shop_id: shopId } }),
-    SupplierLedger.count({ where: { shop_id: shopId } }),
-    Attendance.count({ where: { shop_id: shopId } }),
-    Payroll.count({ where: { shop_id: shopId } }),
-    EMIPlan.count({ where: { shop_id: shopId } }),
   ]);
 
   const totalHistoricalRecords =
     salesCount +
-    purchasesCount +
     inventoryCount +
-    customerLedgerCount +
-    supplierLedgerCount +
-    attendanceCount +
-    payrollCount +
-    emiCount;
+    customerLedgerCount;
 
   if (totalHistoricalRecords > 0) {
     return res.status(400).json({
       success: false,
-      message: `Cannot delete shop with existing financial or historical records (${totalHistoricalRecords} records found: ${salesCount} sales, ${purchasesCount} purchases, ${inventoryCount} inventory entries, ${attendanceCount} attendance records, ${payrollCount} payroll runs). Please deactivate the shop instead to preserve transaction history.`,
+      message: `Cannot delete shop with existing financial or historical records (${totalHistoricalRecords} records found: ${salesCount} sales, ${inventoryCount} inventory entries, ${customerLedgerCount} ledger entries). Please deactivate the shop instead to preserve transaction history.`,
     });
   }
 
-  // Clean up any zero-stock rows and employee assignments
+  // Clean up any zero-stock rows
   await ProductStock.destroy({ where: { shop_id: shopId, current_stock: 0 } });
-  await EmployeeShop.destroy({ where: { shop_id: shopId } });
   await shop.destroy();
 
   await logAudit({ req, module: "shops", action: "delete", entityType: "Shop", entityId: shopId });
@@ -241,33 +193,11 @@ export async function switchShop(req: Request, res: Response) {
     return res.status(403).json({ success: false, message: "Cannot switch to an inactive shop. Please contact the owner." });
   }
 
-  if (req.auth!.isOwner) {
-    const accessToken = signAccessToken({
-      ownerId: req.auth!.ownerId,
-      isOwner: true,
-      shopId: shop.id,
-      roleId: null, // owner has no role row — bypasses permission checks entirely
-    });
-    return res.json({ success: true, data: { accessToken, shop } });
-  }
-
-  // Employee must be explicitly assigned to this shop
-  const assignment = await EmployeeShop.findOne({
-    where: { employee_id: req.auth!.employeeId, shop_id: shop.id },
-    include: [{ model: Role, as: "role" }],
-  });
-
-  if (!assignment) {
-    return res.status(403).json({ success: false, message: "You are not assigned to this shop" });
-  }
-
   const accessToken = signAccessToken({
     ownerId: req.auth!.ownerId,
-    isOwner: false,
-    employeeId: req.auth!.employeeId,
+    isOwner: req.auth!.isOwner,
     shopId: shop.id,
-    roleId: assignment.role_id,
-    roleName: (assignment as any).role?.name ?? null,
+    roleId: req.auth!.roleId ?? null,
   });
 
   await logAudit({ req, module: "shops", action: "switch", entityType: "Shop", entityId: shop.id });

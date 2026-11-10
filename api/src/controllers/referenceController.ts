@@ -2,22 +2,16 @@ import { Request, Response } from "express";
 import { Op } from "sequelize";
 import {
   Sale,
-  Purchase,
   Payment,
-  StockTransfer,
   Product,
   Customer,
-  Supplier,
-  Employee,
-  EMIPlan,
-  Payroll,
   InventoryTransaction,
 } from "../models";
 
 /**
  * Universal Reference Resolver:
- * Resolves any record identifier (invoice_number, purchase_number, transfer_no,
- * SKU, transaction_id, customer, supplier, employee, payment) to its canonical
+ * Resolves any record identifier (invoice_number,
+ * SKU, transaction_id, customer, payment) to its canonical
  * route, record type, and database ID.
  */
 export async function resolveReference(req: Request, res: Response) {
@@ -50,48 +44,7 @@ export async function resolveReference(req: Request, res: Response) {
     }
   }
 
-  // 2. Purchase Bill: starts with "PUR" or matches purchase_number
-  if (upper.startsWith("PUR") || upper.includes("PUR-")) {
-    const purchase = await Purchase.findOne({
-      where: { owner_id: ownerId, purchase_number: { [Op.iLike]: ref } },
-      attributes: ["id", "purchase_number", "total_amount", "supplier_id", "status"],
-    });
-    if (purchase) {
-      return res.json({
-        success: true,
-        data: {
-          type: "purchase",
-          id: purchase.id,
-          reference: purchase.purchase_number,
-          route: `/app/purchase/${purchase.id}`,
-          title: `Purchase Bill #${purchase.purchase_number}`,
-          record: purchase,
-        },
-      });
-    }
-  }
-
-  // 3. Stock Transfer: starts with "TRF" or matches transfer_no
-  if (upper.startsWith("TRF") || upper.includes("TRF-")) {
-    const transfer = await StockTransfer.findOne({
-      where: { owner_id: ownerId, transfer_no: { [Op.iLike]: ref } },
-    });
-    if (transfer) {
-      return res.json({
-        success: true,
-        data: {
-          type: "transfer",
-          id: transfer.id,
-          reference: transfer.transfer_no,
-          route: `/app/inventory/transfers/${transfer.id}`,
-          title: `Transfer #${transfer.transfer_no}`,
-          record: transfer,
-        },
-      });
-    }
-  }
-
-  // 4. Payment: starts with "PAY" or numeric ID match
+  // 2. Payment: starts with "PAY" or numeric ID match
   if (upper.startsWith("PAY") || upper.includes("PAY-")) {
     const digits = ref.match(/\d+$/);
     const numId = digits ? Number(digits[0]) : null;
@@ -117,7 +70,7 @@ export async function resolveReference(req: Request, res: Response) {
     }
   }
 
-  // 5. Product SKU lookup
+  // 3. Product SKU lookup
   const product = await Product.findOne({
     where: { owner_id: ownerId, sku: { [Op.iLike]: ref } },
     attributes: ["id", "name", "sku", "selling_price"],
@@ -136,7 +89,7 @@ export async function resolveReference(req: Request, res: Response) {
     });
   }
 
-  // 6. Customer lookup (by phone, name, or CUST-ID)
+  // 4. Customer lookup (by phone, name, or CUST-ID)
   const custDigits = ref.match(/CUST[-_]?(\d+)/i);
   const custId = custDigits ? Number(custDigits[1]) : null;
   const customer = await Customer.findOne({
@@ -164,35 +117,7 @@ export async function resolveReference(req: Request, res: Response) {
     });
   }
 
-  // 7. Supplier lookup
-  const suppDigits = ref.match(/SUPP?[-_]?(\d+)/i);
-  const suppId = suppDigits ? Number(suppDigits[1]) : null;
-  const supplier = await Supplier.findOne({
-    where: {
-      owner_id: ownerId,
-      [Op.or]: [
-        ...(suppId ? [{ id: suppId }] : []),
-        { name: { [Op.iLike]: ref } },
-        { phone: ref },
-      ],
-    },
-    attributes: ["id", "name", "phone"],
-  });
-  if (supplier) {
-    return res.json({
-      success: true,
-      data: {
-        type: "supplier",
-        id: supplier.id,
-        reference: supplier.name,
-        route: `/app/suppliers/${supplier.id}`,
-        title: supplier.name,
-        record: supplier,
-      },
-    });
-  }
-
-  // 8. Fallback: check Sale or Purchase by partial match
+  // 5. Fallback: check Sale by partial match
   const fallbackSale = await Sale.findOne({
     where: { owner_id: ownerId, invoice_number: { [Op.iLike]: `%${ref}%` } },
   });

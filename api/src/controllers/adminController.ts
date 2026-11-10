@@ -5,7 +5,6 @@ import sequelize from "../config/database";
 import {
   Shop,
   Owner,
-  Employee,
   Customer,
   Sale,
   Order,
@@ -68,7 +67,7 @@ export async function getAdminDashboard(req: Request, res: Response) {
       Shop.count({ where: { status: "active" } }),
       Shop.count({ where: { status: "suspended" } }),
       Owner.count({ where: { is_super_admin: false } }),
-      Employee.count(),
+      0,
       Customer.count(),
       Sale.findOne({
         attributes: [

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import { AuditLog, Owner, Employee, Shop } from "../models";
+import { AuditLog, Owner, Shop } from "../models";
 
 export async function listActivityLogs(req: Request, res: Response) {
   try {
@@ -39,11 +39,11 @@ export async function listActivityLogs(req: Request, res: Response) {
       if (log.shop_id) shopIds.add(log.shop_id);
     }
 
-    const [owners, employees, shops] = await Promise.all([
+    const [owners, shops] = await Promise.all([
       ownerIds.size > 0 ? Owner.findAll({ where: { id: Array.from(ownerIds) }, attributes: ["id", "name", "email"] }) : [],
-      employeeIds.size > 0 ? Employee.findAll({ where: { id: Array.from(employeeIds) }, attributes: ["id", "name", "email"] }) : [],
       shopIds.size > 0 ? Shop.findAll({ where: { id: Array.from(shopIds) }, attributes: ["id", "name", "code"] }) : [],
     ]);
+    const employees: any[] = [];
 
     const ownerMap = new Map<any, any>(owners.map((o: any) => [o.id, o.name] as [any, any]));
     const employeeMap = new Map<any, any>(employees.map((e: any) => [e.id, e.name] as [any, any]));

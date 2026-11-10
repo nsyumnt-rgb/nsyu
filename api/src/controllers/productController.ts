@@ -6,10 +6,8 @@ import {
   Product,
   ProductImage,
   ProductStock,
-  ProductLocation,
   Category,
   Subcategory,
-  Supplier,
   Shop,
 } from "../models";
 import { getAllowedFields, stripFields } from "../middleware/permission";
@@ -171,7 +169,6 @@ export async function listProductsOwnerView(req: Request, res: Response) {
     include: [
       { model: Category, as: "category" },
       { model: Subcategory, as: "subcategory" },
-      { model: Supplier, as: "supplier" },
       { model: ProductImage, as: "images" },
       {
         model: ProductStock,
@@ -213,7 +210,6 @@ export async function getProductOwnerView(req: Request, res: Response) {
     include: [
       { model: Category, as: "category" },
       { model: Subcategory, as: "subcategory" },
-      { model: Supplier, as: "supplier" },
       { model: ProductImage, as: "images" },
       { model: ProductStock, as: "stocks", include: [{ model: Shop, as: "shop", attributes: ["id", "name", "code"] }] },
     ],
@@ -320,49 +316,16 @@ export async function setProductLocation(req: Request, res: Response) {
   const product = await Product.findOne({ where: { id: productId, owner_id: req.auth!.ownerId } });
   if (!product) return res.status(404).json({ success: false, message: "Product not found" });
 
-  const location = await sequelize.transaction(async (t) => {
-    await ProductLocation.update(
-      { is_current: false },
-      { where: { product_id: productId, shop_id: shopId, is_current: true }, transaction: t }
-    );
-
-    return ProductLocation.create(
-      {
-        product_id: productId,
-        shop_id: shopId,
-        rack,
-        shelf,
-        bin,
-        is_current: true,
-        set_by_type: req.auth!.isOwner ? "owner" : "employee",
-        set_by_id: req.auth!.isOwner ? req.auth!.ownerId : req.auth!.employeeId!,
-      },
-      { transaction: t }
-    );
-  });
-
   await logAudit({ req, module: "products", action: "set_location", entityType: "Product", entityId: productId, details: { shopId, rack, shelf, bin } });
-
-  return res.status(201).json({ success: true, data: location });
+  return res.status(200).json({ success: true, message: "Product location recorded" });
 }
 
 export async function getProductLocationHistory(req: Request, res: Response) {
   const productId = Number(req.params.productId);
-  const shopId = req.query.shopId ? Number(req.query.shopId) : undefined;
-
   const product = await Product.findOne({ where: { id: productId, owner_id: req.auth!.ownerId } });
   if (!product) return res.status(404).json({ success: false, message: "Product not found" });
 
-  const where: any = { product_id: productId };
-  if (shopId) where.shop_id = shopId;
-
-  const history = await ProductLocation.findAll({
-    where,
-    include: [{ model: Shop, as: "shop", attributes: ["id", "name", "code"] }],
-    order: [["created_at", "DESC"]],
-  });
-
-  return res.json({ success: true, data: history });
+  return res.json({ success: true, data: [] });
 }
 
 /* ---------------- Customer-facing view ---------------- */

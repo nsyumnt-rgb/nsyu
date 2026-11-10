@@ -1,6 +1,6 @@
 import xlsx from "xlsx";
 import sequelize from "../config/database";
-import { Category, Product, ProductStock, Supplier, AuditLog } from "../models";
+import { Category, Product, ProductStock, AuditLog } from "../models";
 import { nextDateReferenceCode } from "./referenceCode";
 
 export interface RawParsedItem {
@@ -702,30 +702,7 @@ export async function executeProductImport(params: {
   }
 
   return await sequelize.transaction(async (t) => {
-    // 1. Ensure default supplier exists
-    let supplier = await Supplier.findOne({
-      where: { owner_id: ownerId, name: "ERD Technologies" },
-      transaction: t,
-    });
-    if (!supplier) {
-      const supRef = await nextDateReferenceCode({ ownerId, prefix: "SUP" }).catch(() => "SUP-000001");
-      supplier = await Supplier.create(
-        {
-          owner_id: ownerId,
-          name: "ERD Technologies",
-          phone: "011-45678900",
-          email: "sales@erdglobal.com",
-          address: "B-21, Sector 65, Noida, UP - 201301",
-          gstin: "07AAACE1234F1Z5",
-          reference_code: supRef,
-          current_balance: 0,
-          status: "active",
-        },
-        { transaction: t }
-      );
-    }
-
-    // 2. Resolve / Create Categories for owner
+    // 1. Resolve / Create Categories for owner
     const categoryCache = new Map<string, number>();
     const existingCats = await Category.findAll({ where: { owner_id: ownerId }, transaction: t });
     existingCats.forEach((c) => categoryCache.set(c.name.toUpperCase(), c.id));
@@ -834,7 +811,6 @@ export async function executeProductImport(params: {
         if (categoryId && !product.category_id) product.category_id = categoryId;
         if (item.brand && !product.brand) product.brand = item.brand;
         if (item.spec && !product.description) product.description = item.spec;
-        if (!product.supplier_id) product.supplier_id = supplier.id;
 
         await product.save({ transaction: t });
         updatedCount++;
@@ -858,7 +834,7 @@ export async function executeProductImport(params: {
             discount: 0,
             tax_percent: item.tax_percent !== undefined ? item.tax_percent : 18,
             min_stock: item.min_stock || 5,
-            supplier_id: supplier.id,
+            supplier_id: null,
             status: item.product_status || "active",
             reference_code: refCode,
           },
