@@ -1,5 +1,3 @@
-import '../models/saved_bill.dart';
-import '../models/saved_payment.dart' as sp;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -179,22 +177,10 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
       await payments.addPayment(payment, customerId: cust?.id);
       if (!mounted) return;
 
-      // 2. Allocate payment to unpaid bills in BillsProvider so party balance updates
-      double remainingAmt = amount;
-      final unpaidBills = billsProv.billsForParty(custName).where((b) => b.status == BillStatus.unpaid).toList();
-      for (final bill in unpaidBills) {
-        if (remainingAmt <= 0) break;
-        final due = bill.due;
-        final payAmt = remainingAmt > due ? due : remainingAmt;
-        await billsProv.receivePayment(
-          bill: bill,
-          amount: payAmt,
-          method: sp.PaymentMethod.values.firstWhere((m) => m.name == _method.name, orElse: () => sp.PaymentMethod.cash),
-          customerId: cust?.id ?? '',
-          remarks: _notes.isNotEmpty ? _notes : 'Payment received',
-        );
-        remainingAmt -= payAmt;
-      }
+      // 2. Synchronize authoritative bills and customer balances from backend
+      await billsProv.syncFromSupabase();
+      if (!mounted) return;
+      await context.read<CustomerProvider>().syncFromSupabase();
 
       if (!mounted) return;
       showAppSnackBar(context, 'Payment of ₹${_money.format(amount)} recorded successfully!');

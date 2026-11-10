@@ -159,9 +159,9 @@ class CartStickyFooter extends StatelessWidget {
                             size: 15, color: Colors.white),
                         const SizedBox(width: 4),
                         Text(
-                          'Create $documentMode',
+                          documentMode == 'Bill' ? 'Save' : 'Create Order',
                           style: const TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                           ),

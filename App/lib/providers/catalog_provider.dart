@@ -583,7 +583,7 @@ class CatalogProvider extends ChangeNotifier {
             .toList(),
         status: remainingOutstanding <= 0.005 && totalAmountPayable > 0
             ? BillStatus.paid
-            : BillStatus.unpaid,
+            : (paymentReceived > 0.005 ? BillStatus.partial : BillStatus.unpaid),
         paidAmount: paymentReceived,
         discount: billDiscount,
         tax: billTax,

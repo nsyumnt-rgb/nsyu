@@ -7,6 +7,7 @@ exports.recordSalePayment = recordSalePayment;
 exports.cancelSale = cancelSale;
 exports.returnSale = returnSale;
 exports.downloadBillPdf = downloadBillPdf;
+exports.updateSale = updateSale;
 const sequelize_1 = require("sequelize");
 const models_1 = require("../models");
 const Sale_1 = require("../models/Sale");
@@ -459,7 +460,9 @@ async function createSale(req, res) {
         return res.status(201).json({ success: true, data: sale });
     }
     catch (err) {
-        return res.status(err.status || 500).json({ success: false, message: err.message });
+        const errMsg = err.errors ? err.errors.map((e) => `${e.path}: ${e.message}`).join(", ") : err.message;
+        console.error("createSale error:", errMsg, err);
+        return res.status(err.status || 500).json({ success: false, message: errMsg });
     }
 }
 async function listSales(req, res) {
@@ -605,7 +608,9 @@ async function recordSalePayment(req, res) {
         return res.status(201).json({ success: true, data: payment });
     }
     catch (err) {
-        return res.status(err.status || 500).json({ success: false, message: err.message });
+        const errMsg = err.errors ? err.errors.map((e) => `${e.path}: ${e.message}`).join(", ") : err.message;
+        console.error("createSale error:", errMsg, err);
+        return res.status(err.status || 500).json({ success: false, message: errMsg });
     }
 }
 /**
@@ -744,7 +749,9 @@ async function cancelSale(req, res) {
         return res.json({ success: true, data: sale });
     }
     catch (err) {
-        return res.status(err.status || 500).json({ success: false, message: err.message });
+        const errMsg = err.errors ? err.errors.map((e) => `${e.path}: ${e.message}`).join(", ") : err.message;
+        console.error("createSale error:", errMsg, err);
+        return res.status(err.status || 500).json({ success: false, message: errMsg });
     }
 }
 /**
@@ -861,7 +868,9 @@ async function returnSale(req, res) {
         return res.status(201).json({ success: true, data: saleReturn });
     }
     catch (err) {
-        return res.status(err.status || 500).json({ success: false, message: err.message });
+        const errMsg = err.errors ? err.errors.map((e) => `${e.path}: ${e.message}`).join(", ") : err.message;
+        console.error("createSale error:", errMsg, err);
+        return res.status(err.status || 500).json({ success: false, message: errMsg });
     }
 }
 /** Streams a printable/downloadable PDF invoice for the given sale. */
@@ -877,5 +886,60 @@ async function downloadBillPdf(req, res) {
     if (!sale)
         return res.status(404).json({ success: false, message: "Sale not found" });
     (0, pdf_1.streamBillPdf)(res, sale.toJSON());
+}
+/** Updates a sale (status, paidAmount, notes) */
+async function updateSale(req, res) {
+    const { saleId } = req.params;
+    const { status, paidAmount, notes } = req.body;
+    const ownerId = req.auth.ownerId;
+    try {
+        const sale = await models_1.Sale.findOne({
+            where: {
+                [sequelize_1.Op.or]: [{ id: isNaN(Number(saleId)) ? -1 : Number(saleId) }, { invoice_number: String(saleId) }],
+                owner_id: ownerId,
+            },
+            include: saleIncludes,
+        });
+        if (!sale) {
+            return res.status(404).json({ success: false, message: "Sale not found" });
+        }
+        if (status !== undefined) {
+            const cleanStatus = String(status).toLowerCase().trim();
+            if (cleanStatus === "paid") {
+                sale.status = "paid";
+                sale.paid_amount = sale.total_amount;
+                sale.due_amount = 0;
+            }
+            else if (cleanStatus === "unpaid") {
+                sale.status = "unpaid";
+                sale.paid_amount = 0;
+                sale.due_amount = sale.total_amount;
+            }
+            else if (cleanStatus === "partially_paid" || cleanStatus === "partial") {
+                sale.status = "partially_paid";
+                if (paidAmount !== undefined) {
+                    const numPaid = Math.min(Number(sale.total_amount), Math.max(0, Number(paidAmount)));
+                    sale.paid_amount = numPaid;
+                    sale.due_amount = Math.max(0, round2(Number(sale.total_amount) - numPaid));
+                    if (sale.due_amount <= 0.01) {
+                        sale.due_amount = 0;
+                        sale.status = "paid";
+                    }
+                }
+            }
+            else if (cleanStatus === "cancelled") {
+                sale.status = "cancelled";
+                sale.due_amount = 0;
+            }
+        }
+        if (notes !== undefined) {
+            sale.notes = notes;
+        }
+        await sale.save();
+        return res.json({ success: true, data: sale });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
 }
 //# sourceMappingURL=saleController.js.map

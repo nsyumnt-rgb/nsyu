@@ -66,7 +66,9 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
         _currentBalance = (res['currentBalance'] as num?)?.toDouble() ?? 0.0;
         _totalDebit = (res['totalDebit'] as num?)?.toDouble() ?? 0.0;
         _totalCredit = (res['totalCredit'] as num?)?.toDouble() ?? 0.0;
-        _backendEntries = (res['entries'] as List<CustomerLedgerEntry>?) ?? [];
+        final rawEntries = (res['entries'] as List<CustomerLedgerEntry>?) ?? [];
+        rawEntries.sort((a, b) => b.entryDate.compareTo(a.entryDate));
+        _backendEntries = rawEntries;
       });
     } catch (_) {}
   }
@@ -168,7 +170,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
 
     final totalSales = _totalDebit != 0.0 ? _totalDebit : timeline.where((e) => e.isDebit).fold(0.0, (s, e) => s + e.amount);
     final totalPayments = _totalCredit != 0.0 ? _totalCredit : timeline.where((e) => e.isCredit).fold(0.0, (s, e) => s + e.amount);
-    final currentOutstanding = _currentBalance != 0.0 ? _currentBalance : (cust?.currentBalance ?? (totalSales - totalPayments));
+    final currentOutstanding = _backendEntries.isNotEmpty ? _currentBalance : (totalSales - totalPayments);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -364,14 +366,24 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           ),
           child: Column(
             children: [
-              const Text(
-                'Total Due',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
+              Text(
+                currentOutstanding > 0
+                    ? 'Total Due'
+                    : (currentOutstanding < 0 ? 'Advance Balance' : 'All Settled'),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: currentOutstanding > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                ),
               ),
               const SizedBox(height: 6),
               Text(
-                '₹${_money.format(currentOutstanding)}',
-                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Color(0xFFEA580C)),
+                '₹ ${_money.format(currentOutstanding.abs())}',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  color: currentOutstanding > 0 ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
+                ),
               ),
               const SizedBox(height: 6),
               const Text(
@@ -379,14 +391,27 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                 style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8)),
               ),
               const SizedBox(height: 4),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('14 Oct 2026', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                  Text(' • ', style: TextStyle(color: Color(0xFFCBD5E1))),
-                  Text('₹156 Received', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF16A34A))),
-                ],
-              ),
+              if (timeline.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(_dateFormat.format(timeline.first.entryDate), style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    const Text(' • ', style: TextStyle(color: Color(0xFFCBD5E1))),
+                    Text(
+                      timeline.first.isCredit
+                          ? '₹ ${_money.format(timeline.first.amount)} Received'
+                          : '₹ ${_money.format(timeline.first.amount)} Billed',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: timeline.first.isCredit ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                const Text('No transactions yet', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+              ],
             ],
           ),
         ),
@@ -570,7 +595,11 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   Container(width: 1, height: 32, color: const Color(0xFFE2E8F0)),
                   _metricCol('Total Credit', '₹${_money.format(totalPayments)}', const Color(0xFF16A34A)),
                   Container(width: 1, height: 32, color: const Color(0xFFE2E8F0)),
-                  _metricCol('Outstanding', '₹${_money.format(currentOutstanding)}', const Color(0xFFDC2626)),
+                  _metricCol(
+                    currentOutstanding < 0 ? 'Advance' : 'Outstanding',
+                    '₹ ${_money.format(currentOutstanding.abs())}',
+                    currentOutstanding > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                  ),
                 ],
               ),
             ],

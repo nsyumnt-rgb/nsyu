@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/customer.dart';
@@ -7,6 +8,7 @@ import '../../../models/saved_order.dart';
 import '../../../navigation/app_navigation.dart';
 import '../../../providers/bills_provider.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../providers/customer_provider.dart';
 import '../../../providers/orders_provider.dart';
 import '../../../theme/app_theme.dart';
 import '../../../screens/customer_picker_screen.dart';
@@ -93,10 +95,9 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
     final custName = cust != null && cust.name.isNotEmpty ? cust.name : 'Walk-in Customer';
     final custPhone = cust?.mobile ?? '';
 
-    setState(() => _saving = true);
-
     try {
       if (isOrder) {
+        setState(() => _saving = true);
         final orderItemsList = items
             .map((e) => SavedOrderItem(
                   sku: e.code,
@@ -141,6 +142,30 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
               ))
           .toList();
 
+      double paidAmount = grandTotal;
+      String paymentMethod = 'cash';
+      BillStatus billStatus = BillStatus.paid;
+
+      // If a real customer is selected, allow choosing Credit (Udhaar), Paid, or Partial
+      if (cust != null) {
+        final paymentResult = await _showPaymentModeSheet(context, cust, grandTotal);
+        if (paymentResult == null) {
+          // User dismissed or cancelled
+          return;
+        }
+        paidAmount = paymentResult['paidAmount'] as double;
+        paymentMethod = paymentResult['paymentMethod'] as String;
+        if (paidAmount <= 0.01) {
+          billStatus = BillStatus.unpaid;
+        } else if (paidAmount < grandTotal) {
+          billStatus = BillStatus.partial;
+        } else {
+          billStatus = BillStatus.paid;
+        }
+      }
+
+      setState(() => _saving = true);
+
       final bill = SavedBill(
         id: DateTime.now().millisecondsSinceEpoch,
         billNumber: 'B-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
@@ -150,25 +175,363 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
         items: billItemsList,
         discount: discount,
         tax: 0.0,
-        paidAmount: grandTotal,
-        status: BillStatus.paid,
+        paidAmount: paidAmount,
+        status: billStatus,
       );
 
+      if (!mounted) return;
       final billsProvider = context.read<BillsProvider>();
-      await billsProvider.addBill(bill, paymentMethod: 'cash', billDiscount: discount);
+      final backendBill = await billsProvider.addBill(
+        bill,
+        customerId: cust?.id,
+        paymentMethod: paymentMethod,
+        billDiscount: discount,
+      );
 
       if (!mounted) return;
       provider.orderItems.clear();
       provider.billItems.clear();
       provider.clearBill();
+      context.read<CustomerProvider>().syncFromSupabase();
+      context.read<BillsProvider>().syncFromSupabase();
       setState(() => _saving = false);
-      showAppSnackBar(context, 'Bill #${bill.billNumber} created successfully!');
-      AppNavigation.openBillDetails(context, bill: bill);
+
+      if (backendBill.due > 0) {
+        showAppSnackBar(
+          context,
+          'Bill #${backendBill.billNumber} saved! ₹${backendBill.due.toStringAsFixed(0)} added to ${cust?.name ?? "Customer"}\'s Ledger.',
+        );
+      } else {
+        showAppSnackBar(context, 'Bill #${backendBill.billNumber} saved and marked Paid!');
+      }
+      AppNavigation.openBillDetails(context, bill: backendBill);
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      showAppSnackBar(context, 'Failed to create $_documentMode: $e', isError: true);
+      showAppSnackBar(context, 'Failed to save $_documentMode: $e', isError: true);
     }
+  }
+
+  Future<Map<String, dynamic>?> _showPaymentModeSheet(
+    BuildContext context,
+    Customer customer,
+    double grandTotal,
+  ) {
+    String selectedMode = 'credit'; // Default to Credit (Udhaar) for ledger recording
+    String paymentMethod = 'cash';
+    final paidCtrl = TextEditingController(text: '0.00');
+
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final enteredPaid = double.tryParse(paidCtrl.text.trim()) ?? 0.0;
+            final remainingDue = (grandTotal - enteredPaid).clamp(0.0, double.infinity);
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 18,
+                right: 18,
+                top: 18,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 18,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.receipt_long, color: Color(0xFF16A34A), size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Save Bill & Ledger',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                              ),
+                              Text(
+                                '${customer.name} (${customer.mobile})',
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Bill Grand Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                        Text('₹ ${NumberFormat('#,##0.00').format(grandTotal)}', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text('Select Payment Option', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF334155))),
+                  const SizedBox(height: 8),
+
+                  // Option 1: Credit / Unpaid (Udhaar)
+                  _buildPaymentOptionTile(
+                    title: 'Credit / Unpaid (Udhaar)',
+                    subtitle: 'Full amount will be added as Due to Customer Ledger',
+                    icon: Icons.account_balance_wallet_outlined,
+                    iconColor: const Color(0xFFEA580C),
+                    isSelected: selectedMode == 'credit',
+                    onTap: () {
+                      setModalState(() {
+                        selectedMode = 'credit';
+                        paymentMethod = 'cash';
+                        paidCtrl.text = '0.00';
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Option 2: Full Paid (Cash / UPI)
+                  _buildPaymentOptionTile(
+                    title: 'Full Paid (Cash / UPI)',
+                    subtitle: 'Bill is fully cleared now (No pending due)',
+                    icon: Icons.check_circle_outline,
+                    iconColor: const Color(0xFF16A34A),
+                    isSelected: selectedMode == 'paid',
+                    onTap: () {
+                      setModalState(() {
+                        selectedMode = 'paid';
+                        paymentMethod = 'cash';
+                        paidCtrl.text = grandTotal.toStringAsFixed(2);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Option 3: Partial Payment
+                  _buildPaymentOptionTile(
+                    title: 'Partial Payment',
+                    subtitle: 'Pay part now, remainder added to Customer Ledger',
+                    icon: Icons.pie_chart_outline,
+                    iconColor: const Color(0xFF2563EB),
+                    isSelected: selectedMode == 'partial',
+                    onTap: () {
+                      setModalState(() {
+                        selectedMode = 'partial';
+                        paidCtrl.text = (grandTotal / 2).toStringAsFixed(0);
+                      });
+                    },
+                  ),
+
+                  // If Partial or Paid: Payment Method selector
+                  if (selectedMode != 'credit') ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _buildMethodChip('cash', 'Cash', paymentMethod, (m) => setModalState(() => paymentMethod = m)),
+                        const SizedBox(width: 8),
+                        _buildMethodChip('upi', 'UPI / QR', paymentMethod, (m) => setModalState(() => paymentMethod = m)),
+                        const SizedBox(width: 8),
+                        _buildMethodChip('bank_transfer', 'Bank', paymentMethod, (m) => setModalState(() => paymentMethod = m)),
+                      ],
+                    ),
+                  ],
+
+                  // If Partial: Custom Amount Input
+                  if (selectedMode == 'partial') ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Text('Amount Paid Now:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF006837)),
+                            ),
+                            child: TextField(
+                              controller: paidCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              decoration: const InputDecoration(
+                                prefixText: '₹ ',
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(vertical: 8),
+                              ),
+                              onChanged: (_) => setModalState(() {}),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+                  // Remaining Due Summary Box
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: remainingDue > 0 ? const Color(0xFFFFF7ED) : const Color(0xFFF0FDF4),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: remainingDue > 0 ? const Color(0xFFFFEDD5) : const Color(0xFFDCFCE7),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          remainingDue > 0 ? 'Remaining Due in Ledger:' : 'Ledger Impact:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: remainingDue > 0 ? const Color(0xFFC2410C) : const Color(0xFF15803D),
+                          ),
+                        ),
+                        Text(
+                          remainingDue > 0
+                              ? '+ ₹ ${NumberFormat('#,##0.00').format(remainingDue)} Due'
+                              : '₹ 0.00 (Fully Settled)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: remainingDue > 0 ? const Color(0xFFC2410C) : const Color(0xFF15803D),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF006837),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        final paid = selectedMode == 'credit'
+                            ? 0.0
+                            : (selectedMode == 'paid'
+                                ? grandTotal
+                                : (double.tryParse(paidCtrl.text.trim()) ?? 0.0));
+                        Navigator.pop(ctx, {
+                          'paidAmount': paid.clamp(0.0, grandTotal),
+                          'paymentMethod': paymentMethod,
+                        });
+                      },
+                      child: const Text(
+                        'Confirm & Save Bill',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentOptionTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFF0FDF4) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                  Text(subtitle, style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMethodChip(String val, String label, String currentVal, ValueChanged<String> onSelected) {
+    final isSelected = val == currentVal;
+    return InkWell(
+      onTap: () => onSelected(val),
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF006837) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildPaymentNoteCard() {

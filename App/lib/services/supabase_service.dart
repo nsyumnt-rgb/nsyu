@@ -501,7 +501,9 @@ class SupabaseService {
       if (saleId != null) {
         final statusStr = status == BillStatus.paid
             ? 'paid'
-            : (status == BillStatus.cancelled ? 'cancelled' : 'unpaid');
+            : (status == BillStatus.cancelled
+                ? 'cancelled'
+                : (status == BillStatus.partial ? 'partially_paid' : 'unpaid'));
         await http.put(
           Uri.parse('${SupabaseConfig.apiUrl}/sales/$saleId'),
           headers: _headers,
@@ -595,15 +597,31 @@ class SupabaseService {
     const allowedMethods = ['cash', 'upi', 'bank_transfer', 'card', 'cheque', 'other'];
     if (!allowedMethods.contains(methodStr)) methodStr = 'cash';
 
-    final payload = {
+    int? custId = int.tryParse(payment.customerId.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (custId == null || custId == 0) {
+      final cleanName = payment.customerName.trim();
+      if (cleanName.isNotEmpty && !cleanName.toLowerCase().contains('walk-in')) {
+        final cRes = await _getWithRetry(
+          Uri.parse('${SupabaseConfig.apiUrl}/customers?search=${Uri.encodeComponent(cleanName)}'),
+        );
+        if (cRes.statusCode == 200) {
+          final data = jsonDecode(cRes.body);
+          final List list = data['data'] ?? [];
+          if (list.isNotEmpty) custId = list.first['id'];
+        }
+      }
+    }
+
+    final payload = <String, dynamic>{
       'shopId': SupabaseConfig.shopId,
-      'customerId': int.tryParse(payment.customerId),
+      'customerId': custId,
       'amount': payment.amount,
       'type': 'sale_payment',
       'method': methodStr,
       'transactionId': payment.transactionId,
       'paymentDate': payment.date.toIso8601String(),
       'notes': payment.remarks,
+      'invoiceNumber': payment.billNumber.isNotEmpty ? payment.billNumber : null,
     };
 
     final res = await http.post(url, headers: _headers, body: jsonEncode(payload));

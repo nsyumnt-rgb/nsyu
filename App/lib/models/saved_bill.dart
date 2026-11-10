@@ -1,6 +1,6 @@
 import 'bill_pdf_data.dart';
 
-enum BillStatus { paid, unpaid, cancelled }
+enum BillStatus { paid, unpaid, partial, cancelled }
 
 extension BillStatusLabel on BillStatus {
   String get label {
@@ -9,6 +9,8 @@ extension BillStatusLabel on BillStatus {
         return 'Paid';
       case BillStatus.unpaid:
         return 'Unpaid';
+      case BillStatus.partial:
+        return 'Partial';
       case BillStatus.cancelled:
         return 'Cancelled';
     }
@@ -18,6 +20,9 @@ extension BillStatusLabel on BillStatus {
     switch (s.toLowerCase()) {
       case 'paid':
         return BillStatus.paid;
+      case 'partial':
+      case 'partially_paid':
+        return BillStatus.partial;
       case 'cancelled':
         return BillStatus.cancelled;
       default:
@@ -124,7 +129,10 @@ class SavedBill {
   double get total => finalBillTotal;
 
   /// Whether this bill has been completely paid
-  bool get isPaid => status == BillStatus.paid;
+  bool get isPaid => status == BillStatus.paid || (total > 0 && due <= 0.01);
+
+  /// Whether this bill has been partially paid
+  bool get isPartial => status == BillStatus.partial || (!isPaid && paidAmount > 0);
 
   /// Due amount remaining
   double get dueAmount => due;
@@ -134,7 +142,7 @@ class SavedBill {
 
   /// What's still owed after payment received
   /// Remaining Outstanding = Total Amount Payable - Payment Received
-  double get due => (totalAmountPayable - paidAmount) < 0 ? 0 : (totalAmountPayable - paidAmount);
+  double get due => (totalAmountPayable - paidAmount) <= 0.01 ? 0.0 : (totalAmountPayable - paidAmount);
 
 
   /// Helper to sanitize a customer name into an underscore-separated identifier
@@ -273,17 +281,20 @@ class SavedBill {
       }
     }
 
-    final statusStr = (j['status'] ?? 'unpaid').toString();
+    final statusStr = (j['status'] ?? 'unpaid').toString().toLowerCase();
+    final paid = double.tryParse(j['paid_amount']?.toString() ?? j['paidAmount']?.toString() ?? '0') ?? 0.0;
+    final totalAmt = double.tryParse(j['total_amount']?.toString() ?? j['totalAmount']?.toString() ?? '0') ?? 0.0;
+
     BillStatus st;
-    if (statusStr.toLowerCase() == 'paid') {
+    if (statusStr == 'paid' || (totalAmt > 0 && paid >= totalAmt)) {
       st = BillStatus.paid;
-    } else if (statusStr.toLowerCase() == 'cancelled') {
+    } else if (statusStr.contains('partial') || (paid > 0 && paid < totalAmt)) {
+      st = BillStatus.partial;
+    } else if (statusStr == 'cancelled') {
       st = BillStatus.cancelled;
     } else {
       st = BillStatus.unpaid;
     }
-
-    final paid = double.tryParse(j['paid_amount']?.toString() ?? j['paidAmount']?.toString() ?? '0') ?? 0.0;
     final discount = double.tryParse(j['discount_amount']?.toString() ?? j['discountAmount']?.toString() ?? '0') ?? 0.0;
     final tax = double.tryParse(j['tax_amount']?.toString() ?? j['taxAmount']?.toString() ?? '0') ?? 0.0;
 

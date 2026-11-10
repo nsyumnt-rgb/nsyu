@@ -39,6 +39,11 @@ All 10 testing phases were executed with **100% PASS** rate. All layout issues, 
 | **BILL-01** | Billing | Create Bill with items, tax & discount | Web / Mobile | **PASS** | Invoice generated (`INV-NSYU-000021`, etc.) |
 | **LED-01** | Ledger | Customer Ledger balance debit on Invoice creation | Web / Mobile | **PASS** | Invoice adds debit entry to customer timeline |
 | **LED-02** | Ledger | Customer "↓ Received" payment flow | Mobile | **PASS** | Keypad entry ₹100 -> Confirmed -> Total Due updated by ₹-100 |
+| **LED-03** | Ledger | Cart Bill Save -> Customer Ledger Debit posting (Credit / Udhaar) | Mobile / Backend | **PASS** | Bill ₹660 saved on Credit; adds ₹660.00 Debit to Customer Ledger |
+| **LED-04** | Ledger | Partial Payment Allocation & Status change to `partially_paid` | Mobile / Backend | **PASS** | Partial payment ₹200 applied; bill status becomes `partially_paid`, due = ₹460.00 |
+| **LED-05** | Ledger | Full Settlement Payment & Status change to `paid` | Mobile / Backend | **PASS** | Final payment ₹460 applied; bill status becomes `paid`, due = ₹0.00 |
+| **LED-06** | Ledger | Reconciliation of Customer Balances & Removal of Duplicate Payments | Mobile / Backend | **PASS** | Removed double payment call in `collect_payment_screen`; ledger matches exact debit - credit |
+| **BILL-02** | Bills | Status filter chips (`All`, `Unpaid`, `Partial`, `Paid`) & dynamic count | Mobile | **PASS** | `All Bills (13)` dynamic counter; badges render with proper colors |
 | **INV-01** | Inventory | Stock movements and live stock inspection | Web | **PASS** | Real-time stock display across 184 active products |
 | **ORD-01** | Orders | Orders directory and status tracking | Web / Mobile | **PASS** | Lists bills/orders with status badges |
 | **CUST-01** | Customers | Customer directory with outstanding balances | Web / Mobile | **PASS** | Accurate balance tiles (`Total Amount`, `Total Paid`, `Due`) |

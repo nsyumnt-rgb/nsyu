@@ -549,7 +549,9 @@ export async function createSale(req: Request, res: Response) {
     const sale = await Sale.findByPk(result, { include: saleIncludes });
     return res.status(201).json({ success: true, data: sale });
   } catch (err: any) {
-    return res.status(err.status || 500).json({ success: false, message: err.message });
+    const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
+    console.error("createSale error:", errMsg, err);
+    return res.status(err.status || 500).json({ success: false, message: errMsg });
   }
 }
 
@@ -707,7 +709,9 @@ export async function recordSalePayment(req: Request, res: Response) {
     const payment = await Payment.findByPk(result, { include: [{ model: Sale, as: "sale" }] });
     return res.status(201).json({ success: true, data: payment });
   } catch (err: any) {
-    return res.status(err.status || 500).json({ success: false, message: err.message });
+    const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
+    console.error("createSale error:", errMsg, err);
+    return res.status(err.status || 500).json({ success: false, message: errMsg });
   }
 }
 
@@ -866,7 +870,9 @@ export async function cancelSale(req: Request, res: Response) {
     const sale = await Sale.findByPk(req.params.saleId, { include: saleIncludes });
     return res.json({ success: true, data: sale });
   } catch (err: any) {
-    return res.status(err.status || 500).json({ success: false, message: err.message });
+    const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
+    console.error("createSale error:", errMsg, err);
+    return res.status(err.status || 500).json({ success: false, message: errMsg });
   }
 }
 
@@ -1006,7 +1012,9 @@ export async function returnSale(req: Request, res: Response) {
     const saleReturn = await SaleReturn.findByPk(result, { include: [{ model: SaleReturnItem, as: "items" }] });
     return res.status(201).json({ success: true, data: saleReturn });
   } catch (err: any) {
-    return res.status(err.status || 500).json({ success: false, message: err.message });
+    const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
+    console.error("createSale error:", errMsg, err);
+    return res.status(err.status || 500).json({ success: false, message: errMsg });
   }
 }
 
@@ -1023,5 +1031,62 @@ export async function downloadBillPdf(req: Request, res: Response) {
   if (!sale) return res.status(404).json({ success: false, message: "Sale not found" });
 
   streamBillPdf(res, sale.toJSON());
+}
+
+/** Updates a sale (status, paidAmount, notes) */
+export async function updateSale(req: Request, res: Response) {
+  const { saleId } = req.params;
+  const { status, paidAmount, notes } = req.body;
+  const ownerId = req.auth!.ownerId;
+
+  try {
+    const sale = await Sale.findOne({
+      where: {
+        [Op.or]: [{ id: isNaN(Number(saleId)) ? -1 : Number(saleId) }, { invoice_number: String(saleId) }],
+        owner_id: ownerId,
+      },
+      include: saleIncludes,
+    });
+
+    if (!sale) {
+      return res.status(404).json({ success: false, message: "Sale not found" });
+    }
+
+    if (status !== undefined) {
+      const cleanStatus = String(status).toLowerCase().trim();
+      if (cleanStatus === "paid") {
+        sale.status = "paid";
+        sale.paid_amount = sale.total_amount;
+        sale.due_amount = 0;
+      } else if (cleanStatus === "unpaid") {
+        sale.status = "unpaid";
+        sale.paid_amount = 0;
+        sale.due_amount = sale.total_amount;
+      } else if (cleanStatus === "partially_paid" || cleanStatus === "partial") {
+        sale.status = "partially_paid";
+        if (paidAmount !== undefined) {
+          const numPaid = Math.min(Number(sale.total_amount), Math.max(0, Number(paidAmount)));
+          sale.paid_amount = numPaid;
+          sale.due_amount = Math.max(0, round2(Number(sale.total_amount) - numPaid));
+          if (sale.due_amount <= 0.01) {
+            sale.due_amount = 0;
+            sale.status = "paid";
+          }
+        }
+      } else if (cleanStatus === "cancelled") {
+        sale.status = "cancelled";
+        sale.due_amount = 0;
+      }
+    }
+
+    if (notes !== undefined) {
+      sale.notes = notes;
+    }
+
+    await sale.save();
+    return res.json({ success: true, data: sale });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 }
 

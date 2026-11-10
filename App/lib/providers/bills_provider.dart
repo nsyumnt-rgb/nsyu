@@ -144,9 +144,10 @@ class BillsProvider extends ChangeNotifier {
 
     bill.paidAmount = (bill.paidAmount + amount).clamp(0, bill.total);
     const epsilon = 0.01;
-    bill.status = (bill.total - bill.paidAmount) <= epsilon
+    final remainingBillDue = bill.total - bill.paidAmount;
+    bill.status = remainingBillDue <= epsilon
         ? BillStatus.paid
-        : BillStatus.unpaid;
+        : (bill.paidAmount > epsilon ? BillStatus.partial : BillStatus.unpaid);
 
     final remainingDue = billsForParty(bill.customerName)
         .where((b) => b.status != BillStatus.cancelled)
@@ -189,7 +190,7 @@ class BillsProvider extends ChangeNotifier {
       .fold(0, (s, b) => s + b.total);
 
   double get totalDue => bills
-      .where((b) => b.status == BillStatus.unpaid)
+      .where((b) => b.status != BillStatus.cancelled && b.status != BillStatus.paid)
       .fold(0, (s, b) => s + b.due);
 
   int get totalBillsCount => bills.length;
@@ -252,7 +253,7 @@ class BillsProvider extends ChangeNotifier {
         .map((e) => LedgerParty(
               name: e.key,
               totalDue: e.value
-                  .where((b) => b.status == BillStatus.unpaid)
+                  .where((b) => b.status != BillStatus.cancelled && b.status != BillStatus.paid)
                   .fold(0.0, (s, b) => s + b.due),
               billCount: e.value.length,
             ))

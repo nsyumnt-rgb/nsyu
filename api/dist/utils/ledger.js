@@ -32,7 +32,7 @@ async function recordLedgerEntry(params) {
         if (entryType === "reversal") {
             signedAmount = params.reversalDirection === "debit" ? amount : -amount;
         }
-        const newBalance = Number(customer.current_balance) + signedAmount;
+        const newBalance = Math.round(((Number(customer.current_balance) || 0) + signedAmount) * 100) / 100;
         customer.current_balance = newBalance;
         await customer.save({ transaction: t });
         const entry = await models_1.CustomerLedger.create({

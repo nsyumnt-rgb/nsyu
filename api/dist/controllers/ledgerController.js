@@ -39,12 +39,20 @@ async function getCustomerLedger(req, res) {
     const totalCredit = entries
         .filter((e) => e.entry_type === "credit" && e.status === "active")
         .reduce((sum, e) => sum + Number(e.amount), 0);
-    const shopBalance = Math.round((totalDebit - totalCredit) * 100) / 100;
+    const hasOpeningEntry = entries.some((e) => e.reference_type === "Opening_Balance" || e.description?.toLowerCase().includes("opening"));
+    const openingOffset = hasOpeningEntry ? 0 : Number(customer.opening_balance) || 0;
+    const calculatedBalance = Math.round((openingOffset + totalDebit - totalCredit) * 100) / 100;
+    const shopBalance = calculatedBalance;
+    // Auto-reconcile customer.current_balance if it drifts from actual active entries
+    if (Math.abs(Number(customer.current_balance) - calculatedBalance) > 0.01) {
+        customer.current_balance = calculatedBalance;
+        await customer.save().catch(() => { });
+    }
     return res.json({
         success: true,
         data: {
             customer,
-            currentBalance: Number(customer.current_balance),
+            currentBalance: calculatedBalance,
             shopBalance,
             isShopScoped: !!targetShopId,
             scopedShopId: targetShopId ?? null,

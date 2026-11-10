@@ -10,6 +10,7 @@ import {
   cancelSale,
   returnSale,
   downloadBillPdf,
+  updateSale,
 } from "../controllers/saleController";
 
 const router = Router();
@@ -19,6 +20,8 @@ router.use(authenticate, requireShop);
 router.get("/", requirePermission("sales", "view"), listSales);
 router.get("/:saleId", requirePermission("sales", "view"), getSale);
 router.post("/", requirePermission("sales", "create"), validate(createSaleRules), createSale);
+router.put("/:saleId", requirePermission("sales", "edit"), updateSale);
+router.patch("/:saleId", requirePermission("sales", "edit"), updateSale);
 router.post("/:saleId/payments", requirePermission("billing", "create"), recordSalePayment);
 router.post("/:saleId/payment", requirePermission("billing", "create"), recordSalePayment); // alias
 router.post("/:saleId/cancel", requirePermission("sales", "delete"), cancelSale);

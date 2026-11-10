@@ -10,6 +10,8 @@ router.use(auth_1.authenticate, auth_1.requireShop);
 router.get("/", (0, permission_1.requirePermission)("sales", "view"), saleController_1.listSales);
 router.get("/:saleId", (0, permission_1.requirePermission)("sales", "view"), saleController_1.getSale);
 router.post("/", (0, permission_1.requirePermission)("sales", "create"), (0, validate_1.validate)(validate_1.createSaleRules), saleController_1.createSale);
+router.put("/:saleId", (0, permission_1.requirePermission)("sales", "edit"), saleController_1.updateSale);
+router.patch("/:saleId", (0, permission_1.requirePermission)("sales", "edit"), saleController_1.updateSale);
 router.post("/:saleId/payments", (0, permission_1.requirePermission)("billing", "create"), saleController_1.recordSalePayment);
 router.post("/:saleId/payment", (0, permission_1.requirePermission)("billing", "create"), saleController_1.recordSalePayment); // alias
 router.post("/:saleId/cancel", (0, permission_1.requirePermission)("sales", "delete"), saleController_1.cancelSale);

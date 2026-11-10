@@ -92,7 +92,18 @@ export async function createPayment(req: Request, res: Response) {
 
   try {
     const result = await sequelize.transaction(async (t) => {
+      let resolvedSaleId = saleId ? Number(saleId) : null;
+      if (!resolvedSaleId && (req.body.invoiceNumber || req.body.billNumber || req.body.invoice_number)) {
+        const invNum = String(req.body.invoiceNumber || req.body.billNumber || req.body.invoice_number).trim();
+        const foundSale = await Sale.findOne({ where: { invoice_number: invNum, owner_id: ownerId }, transaction: t });
+        if (foundSale) resolvedSaleId = foundSale.id;
+      }
+
       let targetCustId = customerId ? Number(customerId) : null;
+      if ((!targetCustId || isNaN(targetCustId)) && resolvedSaleId) {
+        const saleForCust = await Sale.findOne({ where: { id: resolvedSaleId, owner_id: ownerId }, transaction: t });
+        if (saleForCust) targetCustId = saleForCust.customer_id;
+      }
       if (!targetCustId || isNaN(targetCustId)) {
         const firstCust = await Customer.findOne({ where: { owner_id: ownerId }, transaction: t });
         if (!firstCust) throw Object.assign(new Error("No customer found"), { status: 404 });
@@ -104,7 +115,7 @@ export async function createPayment(req: Request, res: Response) {
           owner_id: ownerId,
           shop_id: shopId,
           customer_id: targetCustId,
-          sale_id: saleId ? Number(saleId) : null,
+          sale_id: resolvedSaleId,
           type: cleanType as any,
           amount: numAmount,
           method: cleanMethod as any,
@@ -136,24 +147,26 @@ export async function createPayment(req: Request, res: Response) {
       });
 
       // If saleId provided, update that sale
-      if (saleId) {
-        const sale = await Sale.findOne({ where: { id: saleId, owner_id: ownerId }, transaction: t, lock: t.LOCK.UPDATE });
+      if (resolvedSaleId) {
+        const sale = await Sale.findOne({ where: { id: resolvedSaleId, owner_id: ownerId }, transaction: t, lock: t.LOCK.UPDATE });
         if (sale) {
           if (sale.status === "cancelled") {
             throw Object.assign(new Error("Cannot add payment to a cancelled bill"), { status: 400 });
           }
           const currentPaid = Number(sale.paid_amount || 0);
           const total = Number(sale.total_amount || 0);
-          const newPaid = currentPaid + numAmount;
-          if (newPaid > total) {
+          const newPaid = Math.round((currentPaid + numAmount) * 100) / 100;
+          if (newPaid > total + 0.01) {
             throw Object.assign(
               new Error(`Payment amount ₹${numAmount} exceeds remaining due amount of ₹${Math.max(0, total - currentPaid)}`),
               { status: 400 }
             );
           }
-          sale.paid_amount = newPaid;
-          sale.due_amount = Math.max(0, total - newPaid);
-          sale.status = sale.due_amount <= 0 ? "paid" : "partially_paid";
+          const roundedPaid = Math.min(total, newPaid);
+          const remainingDue = Math.max(0, Math.round((total - roundedPaid) * 100) / 100);
+          sale.paid_amount = roundedPaid;
+          sale.due_amount = remainingDue <= 0.01 ? 0 : remainingDue;
+          sale.status = sale.due_amount <= 0.01 ? "paid" : "partially_paid";
           await sale.save({ transaction: t });
         }
       } else {
@@ -173,11 +186,16 @@ export async function createPayment(req: Request, res: Response) {
           if (remaining <= 0) break;
           const due = Math.max(0, Number(s.due_amount));
           const apply = Math.min(remaining, due);
-          s.paid_amount = Number(s.paid_amount) + apply;
-          s.due_amount = Math.max(0, Number(s.total_amount) - s.paid_amount);
-          s.status = s.due_amount <= 0 ? "paid" : "partially_paid";
+          s.paid_amount = Math.round((Number(s.paid_amount) + apply) * 100) / 100;
+          s.due_amount = Math.max(0, Math.round((Number(s.total_amount) - Number(s.paid_amount)) * 100) / 100);
+          if (s.due_amount <= 0.01) {
+            s.due_amount = 0;
+            s.status = "paid";
+          } else {
+            s.status = "partially_paid";
+          }
           await s.save({ transaction: t });
-          remaining -= apply;
+          remaining = Math.round((remaining - apply) * 100) / 100;
         }
       }
 

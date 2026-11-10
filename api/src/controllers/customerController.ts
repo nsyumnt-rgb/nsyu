@@ -19,6 +19,25 @@ export async function createCustomer(req: Request, res: Response) {
     notes: notes ?? null,
   });
 
+  if (Number(openingBalance) !== 0) {
+    const numOpBal = Number(openingBalance);
+    const entryType = numOpBal > 0 ? "debit" : "credit";
+    const absOpBal = Math.abs(numOpBal);
+    await CustomerLedger.create({
+      owner_id: req.auth!.ownerId,
+      shop_id: req.auth!.shopId || 1,
+      customer_id: customer.id,
+      entry_type: entryType,
+      amount: absOpBal,
+      running_balance: numOpBal,
+      reference_type: "Opening_Balance",
+      description: numOpBal > 0 ? "Opening Due Balance" : "Opening Advance Balance",
+      entry_date: new Date(),
+      actor_type: req.auth!.isOwner ? "owner" : "employee",
+      actor_id: req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || 1),
+    }).catch(() => {});
+  }
+
   await logAudit({ req, module: "customers", action: "create", entityType: "Customer", entityId: customer.id });
   return res.status(201).json({ success: true, data: customer });
 }
