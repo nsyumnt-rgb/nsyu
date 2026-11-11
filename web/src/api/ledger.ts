@@ -20,6 +20,16 @@ export function listOutstandingBalances() {
   return api.get<ApiEnvelope<Customer[]>>("/ledger/outstanding");
 }
 
+export function recordLedgerPayment(data: {
+  customerId: number;
+  amount: number;
+  paymentMethod?: string;
+  notes?: string;
+  saleId?: number;
+}) {
+  return api.post<ApiEnvelope<CustomerLedgerEntry>>("/ledger/payment", data);
+}
+
 export function getSupplierLedger(supplierId: number, params?: { shopId?: number; allShops?: boolean }) {
   return api.get<ApiEnvelope<any>>(`/supplier-ledger/${supplierId}`, { params });
 }

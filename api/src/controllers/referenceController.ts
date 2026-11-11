@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { Op } from "sequelize";
 import {
   Sale,
-  Payment,
+  CustomerLedger,
   Product,
   Customer,
   InventoryTransaction,
@@ -44,27 +44,27 @@ export async function resolveReference(req: Request, res: Response) {
     }
   }
 
-  // 2. Payment: starts with "PAY" or numeric ID match
-  if (upper.startsWith("PAY") || upper.includes("PAY-")) {
+  // 2. Payment / Ledger Receipt: starts with "PAY" or "RCP"
+  if (upper.startsWith("PAY") || upper.includes("PAY-") || upper.startsWith("RCP") || upper.includes("RCP-")) {
     const digits = ref.match(/\d+$/);
     const numId = digits ? Number(digits[0]) : null;
-    const paymentWhere: any = { owner_id: ownerId };
+    const ledgerWhere: any = { owner_id: ownerId, entry_type: "credit" };
     if (numId) {
-      paymentWhere[Op.or] = [{ id: numId }, { transaction_id: { [Op.iLike]: ref } }];
+      ledgerWhere[Op.or] = [{ id: numId }, { reference_code: { [Op.iLike]: ref } }];
     } else {
-      paymentWhere.transaction_id = { [Op.iLike]: ref };
+      ledgerWhere.reference_code = { [Op.iLike]: ref };
     }
-    const payment = await Payment.findOne({ where: paymentWhere });
-    if (payment) {
+    const entry = await CustomerLedger.findOne({ where: ledgerWhere });
+    if (entry) {
       return res.json({
         success: true,
         data: {
-          type: "payment",
-          id: payment.id,
-          reference: `PAY-${payment.id}`,
-          route: `/app/payments/${payment.id}`,
-          title: `Payment Receipt #${payment.id}`,
-          record: payment,
+          type: "ledger",
+          id: entry.id,
+          reference: entry.reference_code || `PAY-${entry.id}`,
+          route: `/app/ledger?customerId=${entry.customer_id}`,
+          title: `Ledger Payment Receipt #${entry.id}`,
+          record: entry,
         },
       });
     }

@@ -93,14 +93,26 @@ BEGIN
   END IF;
 END $$;
 
--- 8. Ensure enums for Payment status support received and reversed
+-- 8. Single Ledger Architecture: Migrate any legacy payments into customer_ledger, drop payments table, and ensure customer_ledger supports full payment tracking
+ALTER TABLE public.customer_ledger ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash';
+ALTER TABLE public.customer_ledger ADD COLUMN IF NOT EXISTS notes TEXT;
+
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_payments_status') THEN
-    ALTER TYPE enum_payments_status ADD VALUE IF NOT EXISTS 'received';
-    ALTER TYPE enum_payments_status ADD VALUE IF NOT EXISTS 'reversed';
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payments') THEN
+    UPDATE public.customer_ledger cl
+    SET
+      reference_type = CASE WHEN p.sale_id IS NOT NULL THEN 'SalePayment' ELSE 'Payment' END,
+      reference_id = COALESCE(p.sale_id, cl.reference_id),
+      payment_method = COALESCE(p.method::text, cl.payment_method, 'cash'),
+      notes = COALESCE(p.notes, cl.notes),
+      reference_code = COALESCE(cl.reference_code, p.reference_code)
+    FROM public.payments p
+    WHERE cl.reference_type = 'Payment' AND cl.reference_id = p.id;
   END IF;
 END $$;
+
+DROP TABLE IF EXISTS public.payments CASCADE;
 
 -- 9. Ensure enums for Customer Ledger entry_type support reversal
 DO $$
@@ -163,7 +175,6 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 ALTER TABLE public.shops ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customer_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_stocks ENABLE ROW LEVEL SECURITY;
@@ -174,7 +185,6 @@ ALTER TABLE public.status_history ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS super_admin_select_shops ON public.shops;
 DROP POLICY IF EXISTS super_admin_select_sales ON public.sales;
 DROP POLICY IF EXISTS super_admin_select_orders ON public.orders;
-DROP POLICY IF EXISTS super_admin_select_payments ON public.payments;
 DROP POLICY IF EXISTS super_admin_select_customer_ledger ON public.customer_ledger;
 DROP POLICY IF EXISTS super_admin_select_products ON public.products;
 DROP POLICY IF EXISTS super_admin_select_product_stocks ON public.product_stocks;
@@ -184,7 +194,6 @@ DROP POLICY IF EXISTS super_admin_all_platform_audit ON public.platform_audit_lo
 DROP POLICY IF EXISTS shop_users_access_shops ON public.shops;
 DROP POLICY IF EXISTS shop_users_access_sales ON public.sales;
 DROP POLICY IF EXISTS shop_users_access_orders ON public.orders;
-DROP POLICY IF EXISTS shop_users_access_payments ON public.payments;
 DROP POLICY IF EXISTS shop_users_access_customer_ledger ON public.customer_ledger;
 DROP POLICY IF EXISTS shop_users_access_products ON public.products;
 DROP POLICY IF EXISTS shop_users_access_product_stocks ON public.product_stocks;
@@ -198,9 +207,6 @@ CREATE POLICY super_admin_select_sales ON public.sales
   FOR SELECT USING (public.is_super_admin());
 
 CREATE POLICY super_admin_select_orders ON public.orders
-  FOR SELECT USING (public.is_super_admin());
-
-CREATE POLICY super_admin_select_payments ON public.payments
   FOR SELECT USING (public.is_super_admin());
 
 CREATE POLICY super_admin_select_customer_ledger ON public.customer_ledger
@@ -234,13 +240,6 @@ CREATE POLICY shop_users_access_sales ON public.sales
   );
 
 CREATE POLICY shop_users_access_orders ON public.orders
-  FOR ALL USING (
-    public.is_shop_active(shop_id)
-  ) WITH CHECK (
-    public.is_shop_active(shop_id)
-  );
-
-CREATE POLICY shop_users_access_payments ON public.payments
   FOR ALL USING (
     public.is_shop_active(shop_id)
   ) WITH CHECK (

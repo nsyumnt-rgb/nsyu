@@ -15,6 +15,9 @@ interface RecordLedgerEntryParams {
   actorType: "owner" | "employee";
   actorId: number;
   entryDate?: Date;
+  referenceCode?: string;
+  paymentMethod?: string;
+  notes?: string;
   externalTransaction?: Transaction; // pass in to make this atomic with the sale/payment/EMI write
 }
 
@@ -83,6 +86,9 @@ export async function recordLedgerEntry(params: RecordLedgerEntryParams) {
         entry_date: entryDate ?? new Date(),
         actor_type: actorType,
         actor_id: actorId,
+        reference_code: params.referenceCode ?? null,
+        payment_method: params.paymentMethod ?? (entryType === "credit" ? "cash" : null),
+        notes: params.notes ?? null,
       },
       { transaction: t }
     );

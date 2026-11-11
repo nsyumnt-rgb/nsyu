@@ -1,7 +1,6 @@
 import PDFDocument from "pdfkit";
 import { Response } from "express";
 import { Sale } from "../models/Sale";
-import { Payment } from "../models/Payment";
 
 const INR = (n: number | string) => `Rs. ${Number(n).toFixed(2)}`;
 
@@ -93,10 +92,12 @@ export function streamBillPdf(res: Response, sale: any) {
     y += 16;
     doc.font("Helvetica");
     for (const p of sale.payments) {
-      if (p.status === "cancelled") continue;
+      if (p.status === "cancelled" || p.status === "reversed") continue;
+      const pDate = p.payment_date || p.entry_date;
+      const pMethod = (p.method || p.payment_method || "cash").replace("_", " ");
       doc.text(
-        `${new Date(p.payment_date).toLocaleDateString("en-IN")} — ${p.method.replace("_", " ")} — ${INR(p.amount)}${
-          p.transaction_id ? ` (Txn: ${p.transaction_id})` : ""
+        `${new Date(pDate).toLocaleDateString("en-IN")} — ${pMethod} — ${INR(p.amount)}${
+          p.transaction_id ? ` (Txn: ${p.transaction_id})` : p.reference_code ? ` (Ref: ${p.reference_code})` : ""
         }`,
         40,
         y

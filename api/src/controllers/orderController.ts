@@ -10,7 +10,7 @@ import {
   Notification,
   Sale,
   SaleItem,
-  Payment,
+  CustomerLedger,
   Product,
   ProductStock,
 } from "../models";
@@ -516,7 +516,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
     // CP-B02: If already converted, return existing bill; create no duplicate
     if (order.status === "converted_to_bill" || order.converted_sale_id) {
       const existingBill = await Sale.findByPk(order.converted_sale_id || 0, {
-        include: [{ model: SaleItem, as: "items" }, { model: Payment, as: "payments" }],
+        include: [{ model: SaleItem, as: "items" }, { model: CustomerLedger, as: "payments", required: false }],
       });
       return res.json({
         success: true,
@@ -653,32 +653,19 @@ export async function convertOrderToBill(req: Request, res: Response) {
         externalTransaction: t,
       });
 
-      // 6. Payment if money received
+      // 6. Single Ledger: credit entry if money received
       if (paid > 0) {
-        const payment = await Payment.create(
-          {
-            owner_id: ownerId,
-            shop_id: shopId,
-            customer_id: order.customer_id,
-            sale_id: sale.id,
-            type: "sale_payment",
-            amount: paid,
-            method: paymentMethod as any,
-            payment_date: new Date(),
-            actor_type: actorType,
-            actor_id: actorId,
-          },
-          { transaction: t }
-        );
-
+        const receiptCode = `RCP-${Date.now()}`;
         await recordLedgerEntry({
           ownerId,
           shopId,
           customerId: order.customer_id,
           entryType: "credit",
           amount: paid,
-          referenceType: "Payment",
-          referenceId: payment.id,
+          referenceType: "SalePayment",
+          referenceId: sale.id,
+          referenceCode: receiptCode,
+          paymentMethod: paymentMethod || "cash",
           description: `Payment for ${invoiceNumber}`,
           actorType,
           actorId,

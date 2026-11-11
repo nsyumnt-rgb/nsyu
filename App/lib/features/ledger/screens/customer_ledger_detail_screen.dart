@@ -82,9 +82,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
     );
     if (paid != null && paid > 0 && mounted) {
       setState(() {
-        if (_currentBalance > 0) {
-          _currentBalance = (_currentBalance - paid).clamp(0.0, double.infinity);
-        }
+        _currentBalance = _currentBalance - paid;
         _totalCredit += paid;
       });
       await _fetchLiveLedger();

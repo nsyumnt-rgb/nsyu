@@ -18,7 +18,6 @@ import Orders from "./pages/Orders";
 import Billing from "./pages/Billing";
 import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
-import Payments from "./pages/Payments";
 import Ledger from "./pages/Ledger";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
@@ -26,7 +25,6 @@ import NotFound from "./pages/NotFound";
 
 import SaleDetail from "./pages/details/SaleDetail";
 import PurchaseDetail from "./pages/details/PurchaseDetail";
-import PaymentDetail from "./pages/details/PaymentDetail";
 import CustomerDetail from "./pages/details/CustomerDetail";
 import SupplierDetail from "./pages/details/SupplierDetail";
 import ProductDetail from "./pages/details/ProductDetail";
@@ -113,8 +111,8 @@ export default function App() {
             <Route path="customers/:id" element={<CustomerDetail />} />
             <Route path="suppliers" element={<Suppliers />} />
             <Route path="suppliers/:id" element={<SupplierDetail />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="payments/:id" element={<PaymentDetail />} />
+            <Route path="payments" element={<Navigate to="/app/ledger" replace />} />
+            <Route path="payments/:id" element={<Navigate to="/app/ledger" replace />} />
             <Route path="ledger" element={<Ledger />} />
             <Route path="shops" element={<Shops />} />
             <Route path="roles" element={<Roles />} />

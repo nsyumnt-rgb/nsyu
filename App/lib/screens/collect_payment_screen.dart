@@ -39,7 +39,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
 
   DateTime _paymentDate = DateTime.now();
   String _notes = '';
-  final PaymentMethod _method = PaymentMethod.cash;
+  PaymentMethod _method = PaymentMethod.cash;
 
   @override
   void initState() {
@@ -149,6 +149,9 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
   }
 
   Future<void> _confirmAndSavePayment() async {
+    if (_storedValue != null && _pendingOp != null) {
+      _onKeypadTap('=');
+    }
     final amount = _currentAmount;
     if (amount <= 0) {
       showAppSnackBar(context, 'Please enter a valid amount', isError: true);
@@ -463,6 +466,31 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                     ),
                   ),
                   const SizedBox(height: 28),
+
+                  // ── Payment Method Selector ──
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.center,
+                    children: PaymentMethod.values.map((m) {
+                      final selected = _method == m;
+                      return ChoiceChip(
+                        label: Text(
+                          m.label,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? Colors.white : const Color(0xFF334155),
+                          ),
+                        ),
+                        selected: selected,
+                        selectedColor: const Color(0xFF16A34A),
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        onSelected: (_) => setState(() => _method = m),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
 
                   // ── Card 1: Add Notes with Mic matching Image 3 ──
                   _buildActionCard(

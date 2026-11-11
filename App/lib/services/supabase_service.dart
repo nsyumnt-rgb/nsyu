@@ -548,8 +548,8 @@ class SupabaseService {
     return payments;
   }
 
-  /// Records a payment in Supabase PostgreSQL against customer and invoice
-  /// Records a customer payment by allocating against unpaid sales and updating the ledger in Supabase
+  /// Records a payment in Supabase PostgreSQL directly into the single customer ledger
+  /// (and automatically allocates against unpaid sales on the backend)
   Future<bool> recordCustomerPayment({
     required dynamic customerId,
     required double amount,
@@ -558,40 +558,21 @@ class SupabaseService {
   }) async {
     await ensureAuth();
     final cleanId = int.tryParse(customerId.toString().replaceAll(RegExp(r'[^0-9]'), '')) ?? customerId;
+    var cleanMethod = method.toLowerCase().trim().replaceAll(' ', '_');
+    if (cleanMethod == 'online') cleanMethod = 'upi';
 
     try {
-      final salesUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales?customerId=$cleanId');
-      final salesRes = await _getWithRetry(salesUrl);
-      List unpaidSales = [];
-      if (salesRes.statusCode == 200) {
-        final decoded = jsonDecode(salesRes.body);
-        final list = (decoded['data'] as List? ?? []);
-        unpaidSales = list.where((s) => s['status'] == 'unpaid' || s['status'] == 'partially_paid').toList();
-        unpaidSales.sort((a, b) => (a['id'] as dynamic).toString().compareTo((b['id'] as dynamic).toString()));
-      }
-
-      double remaining = amount;
-      if (unpaidSales.isNotEmpty) {
-        for (final sale in unpaidSales) {
-          if (remaining <= 0) break;
-          final saleId = sale['id'];
-          final due = double.tryParse(sale['due_amount']?.toString() ?? '0') ?? 0.0;
-          if (due <= 0) continue;
-          final payAmount = remaining > due ? due : remaining;
-
-          final payUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales/$saleId/payments');
-          final payBody = jsonEncode({
-            'amount': payAmount,
-            'method': method.toLowerCase().replaceAll(' ', '_'),
-            'notes': notes ?? 'Payment received',
-          });
-          final postRes = await http.post(payUrl, headers: _headers, body: payBody);
-          if (postRes.statusCode < 300) {
-            remaining -= payAmount;
-          }
-        }
-      }
-      return true;
+      final url = Uri.parse('${SupabaseConfig.apiUrl}/ledger/payment');
+      final body = jsonEncode({
+        'shopId': SupabaseConfig.shopId,
+        'customerId': cleanId,
+        'amount': amount,
+        'paymentMethod': cleanMethod,
+        'method': cleanMethod,
+        'notes': notes ?? 'Payment received',
+      });
+      final res = await http.post(url, headers: _headers, body: body);
+      return res.statusCode >= 200 && res.statusCode < 300;
     } catch (e) {
       debugPrint('Error recording customer payment: $e');
       return false;
@@ -600,7 +581,6 @@ class SupabaseService {
 
   Future<SavedPayment> recordPayment(SavedPayment payment) async {
     await ensureAuth();
-    final url = Uri.parse('${SupabaseConfig.apiUrl}/payments');
     String methodStr = payment.method.label.toLowerCase().replaceAll(' ', '_');
     if (methodStr == 'online') methodStr = 'upi';
     const allowedMethods = ['cash', 'upi', 'bank_transfer', 'card', 'cheque', 'other'];
@@ -626,17 +606,30 @@ class SupabaseService {
       'customerId': custId,
       'amount': payment.amount,
       'type': 'sale_payment',
+      'paymentMethod': methodStr,
       'method': methodStr,
+      'referenceCode': payment.receiptNumber.isNotEmpty ? payment.receiptNumber : null,
       'transactionId': payment.transactionId,
       'paymentDate': payment.date.toIso8601String(),
       'notes': payment.remarks,
       'invoiceNumber': payment.billNumber.isNotEmpty ? payment.billNumber : null,
     };
 
-    final res = await http.post(url, headers: _headers, body: jsonEncode(payload));
+    var res = await http.post(
+      Uri.parse('${SupabaseConfig.apiUrl}/ledger/payment'),
+      headers: _headers,
+      body: jsonEncode(payload),
+    );
+    if (res.statusCode == 404) {
+      res = await http.post(
+        Uri.parse('${SupabaseConfig.apiUrl}/payments'),
+        headers: _headers,
+        body: jsonEncode(payload),
+      );
+    }
     if (res.statusCode >= 300) {
-      debugPrint('⚠️ Notice: Could not sync payment to Supabase (${res.statusCode}): ${res.body}');
-      throw Exception('Failed to record payment in database (${res.statusCode})');
+      debugPrint('⚠️ Notice: Could not sync payment to ledger (${res.statusCode}): ${res.body}');
+      throw Exception('Failed to record payment in ledger (${res.statusCode})');
     }
     return payment;
   }

@@ -238,8 +238,8 @@ export default function Topbar() {
       navigate("/app/sales");
     } else if (refType === "order") {
       navigate("/app/orders");
-    } else if (refType === "payment") {
-      navigate("/app/payments");
+    } else if (refType === "payment" || refType === "customerledger") {
+      navigate("/app/ledger");
     } else if (refType === "product") {
       navigate("/app/inventory");
     }

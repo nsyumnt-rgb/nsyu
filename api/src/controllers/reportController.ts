@@ -3,7 +3,6 @@ import { Op } from "sequelize";
 import {
   Sale,
   SaleItem,
-  Payment,
   Customer,
   CustomerLedger,
   Product,
@@ -285,27 +284,41 @@ export async function emiReport(req: Request, res: Response) {
   return res.json({ success: true, data: { summary: { totalPlans: 0, totalFinanced: 0, totalOutstanding: 0, byStatus: {} }, installmentStatusMix: {}, plans: [] } });
 }
 
-/** PAYMENTS REPORT — every payment received in the period, broken down by method and type. */
+/** PAYMENTS REPORT — every payment received in the period from single customer ledger, broken down by method and reference type. */
 export async function paymentsReport(req: Request, res: Response) {
   const { shopId } = resolveShopScope(req);
-  const where: any = { owner_id: req.auth!.ownerId, status: "completed" };
+  const where: any = { owner_id: req.auth!.ownerId, entry_type: "credit", status: "active" };
   if (shopId) where.shop_id = shopId;
-  Object.assign(where, dateRangeWhere("payment_date", req) ?? {});
+  Object.assign(where, dateRangeWhere("entry_date", req) ?? {});
 
-  const payments = await Payment.findAll({
+  const entries = await CustomerLedger.findAll({
     where,
     include: [{ model: Customer, as: "customer", attributes: ["id", "name"] }],
-    order: [["payment_date", "DESC"]],
+    order: [["entry_date", "DESC"]],
   });
 
   const byMethod: Record<string, number> = {};
   const byType: Record<string, number> = {};
   let total = 0;
-  for (const p of payments) {
-    byMethod[p.method] = round2((byMethod[p.method] || 0) + Number(p.amount));
-    byType[p.type] = round2((byType[p.type] || 0) + Number(p.amount));
-    total = round2(total + Number(p.amount));
-  }
+  const payments = entries.map((e: any) => {
+    const method = e.payment_method || "cash";
+    const type = e.reference_type || "Payment";
+    const amt = Number(e.amount);
+    byMethod[method] = round2((byMethod[method] || 0) + amt);
+    byType[type] = round2((byType[type] || 0) + amt);
+    total = round2(total + amt);
+    return {
+      id: e.id,
+      amount: amt,
+      method,
+      type,
+      payment_date: e.entry_date,
+      notes: e.notes || e.description,
+      reference_code: e.reference_code,
+      customer: e.customer,
+      status: "completed",
+    };
+  });
 
   return res.json({ success: true, data: { summary: { total, count: payments.length, byMethod, byType }, payments } });
 }

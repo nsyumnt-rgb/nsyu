@@ -1,12 +1,37 @@
 import { Request, Response } from "express";
-import { Payment, Sale, Customer, Shop, Notification } from "../models";
+import { CustomerLedger, Sale, Customer, Shop, Notification, sequelize } from "../models";
 import { streamReceiptPdf } from "../utils/pdf";
 import { logAudit } from "../utils/audit";
 import { recordLedgerEntry } from "../utils/ledger";
-import { sequelize } from "../models";
+import { Op } from "sequelize";
+
+function formatPaymentResponse(entry: any) {
+  if (!entry) return null;
+  return {
+    id: entry.id,
+    owner_id: entry.owner_id,
+    shop_id: entry.shop_id,
+    customer_id: entry.customer_id,
+    sale_id: entry.reference_id,
+    type: "sale_payment",
+    amount: entry.amount,
+    method: entry.payment_method || "cash",
+    transaction_id: null,
+    payment_date: entry.entry_date,
+    notes: entry.notes || entry.description,
+    status: entry.status === "reversed" ? "cancelled" : "completed",
+    actor_type: entry.actor_type,
+    actor_id: entry.actor_id,
+    reference_code: entry.reference_code,
+    customer: entry.customer,
+    sale: entry.sale,
+    shop: entry.shop,
+    created_at: entry.created_at,
+  };
+}
 
 export async function listPayments(req: Request, res: Response) {
-  const { customerId, saleId, type, allShops } = req.query;
+  const { customerId, saleId, allShops } = req.query;
   let targetShopId: number | undefined;
 
   if (req.auth!.isOwner) {
@@ -19,23 +44,22 @@ export async function listPayments(req: Request, res: Response) {
     targetShopId = req.auth!.shopId || undefined;
   }
 
-  const where: any = { owner_id: req.auth!.ownerId };
+  const where: any = { owner_id: req.auth!.ownerId, entry_type: "credit" };
   if (targetShopId) where.shop_id = targetShopId;
   if (customerId) where.customer_id = customerId;
-  if (saleId) where.sale_id = saleId;
-  if (type) where.type = type;
+  if (saleId) where.reference_id = saleId;
 
-  const payments = await Payment.findAll({
+  const entries = await CustomerLedger.findAll({
     where,
     include: [
       { model: Customer, as: "customer", attributes: ["id", "name", "phone"] },
-      { model: Sale, as: "sale", attributes: ["id", "invoice_number"] },
       { model: Shop, as: "shop", attributes: ["id", "name", "code"] },
     ],
-    order: [["payment_date", "DESC"]],
+    order: [["entry_date", "DESC"]],
     limit: Number(req.query.limit) || 100,
   });
 
+  const payments = entries.map(formatPaymentResponse);
   return res.json({ success: true, data: payments });
 }
 
@@ -44,27 +68,26 @@ export async function getPayment(req: Request, res: Response) {
   const digitsMatch = param.match(/\d+$/);
   const numericId = digitsMatch ? Number(digitsMatch[0]) : null;
 
-  const where: any = { owner_id: req.auth!.ownerId };
+  const where: any = { owner_id: req.auth!.ownerId, entry_type: "credit" };
   if (numericId !== null && !isNaN(numericId)) {
     where.id = numericId;
   } else {
-    where.transaction_id = param;
+    where.reference_code = param;
   }
 
   if (!req.auth!.isOwner) {
     where.shop_id = req.auth!.shopId;
   }
 
-  const payment = await Payment.findOne({
+  const entry = await CustomerLedger.findOne({
     where,
     include: [
       { model: Customer, as: "customer" },
-      { model: Sale, as: "sale" },
       { model: Shop, as: "shop", attributes: ["id", "name", "code"] },
     ],
   });
-  if (!payment) return res.status(404).json({ success: false, message: "Payment not found" });
-  return res.json({ success: true, data: payment });
+  if (!entry) return res.status(404).json({ success: false, message: "Payment not found in ledger" });
+  return res.json({ success: true, data: formatPaymentResponse(entry) });
 }
 
 export async function createPayment(req: Request, res: Response) {
@@ -108,39 +131,22 @@ export async function createPayment(req: Request, res: Response) {
         targetCustId = firstCust.id;
       }
 
-      const payment = await Payment.create(
-        {
-          owner_id: ownerId,
-          shop_id: shopId,
-          customer_id: targetCustId,
-          sale_id: resolvedSaleId,
-          type: cleanType as any,
-          amount: numAmount,
-          method: cleanMethod as any,
-          transaction_id: transactionId || null,
-          payment_date: paymentDate ? new Date(paymentDate) : new Date(),
-          notes: notes || "Payment received",
-          status: "completed",
-          actor_type: actorType,
-          actor_id: actorId,
-          reference_code: `RCP-${Date.now()}`,
-        },
-        { transaction: t }
-      );
-
-      // Record ledger credit entry to update customer balance
-      await recordLedgerEntry({
+      const receiptCode = `RCP-${Date.now()}`;
+      const { entry: ledgerEntry } = await recordLedgerEntry({
         ownerId,
         shopId,
         customerId: targetCustId,
         entryType: "credit",
         amount: numAmount,
         referenceType: "Payment",
-        referenceId: payment.id,
+        referenceId: resolvedSaleId ?? undefined,
+        referenceCode: receiptCode,
+        paymentMethod: cleanMethod,
+        notes: notes || "Payment received",
         description: notes || `Payment received (${cleanMethod.toUpperCase()})`,
         actorType,
         actorId,
-        entryDate: payment.payment_date,
+        entryDate: paymentDate ? new Date(paymentDate) : new Date(),
         externalTransaction: t,
       });
 
@@ -199,10 +205,10 @@ export async function createPayment(req: Request, res: Response) {
 
       await logAudit({
         req,
-        module: "payments",
-        action: "create",
-        entityType: "Payment",
-        entityId: payment.id,
+        module: "ledger",
+        action: "payment",
+        entityType: "CustomerLedger",
+        entityId: ledgerEntry.id,
         details: { amount: numAmount, method: cleanMethod, customerId: targetCustId },
       });
 
@@ -220,7 +226,7 @@ export async function createPayment(req: Request, res: Response) {
             title: `Payment Received: ₹${numAmount}`,
             message: `₹${numAmount} received via ${cleanMethod.toUpperCase()} from ${custName}.`,
             reference_type: "Payment",
-            reference_id: payment.id,
+            reference_id: ledgerEntry.id,
             is_read: false,
           },
           { transaction: t }
@@ -237,7 +243,7 @@ export async function createPayment(req: Request, res: Response) {
               title: `Payment Received: ₹${numAmount}`,
               message: `Your payment of ₹${numAmount} via ${cleanMethod.toUpperCase()} has been recorded.`,
               reference_type: "Payment",
-              reference_id: payment.id,
+              reference_id: ledgerEntry.id,
               is_read: false,
             },
             { transaction: t }
@@ -247,27 +253,26 @@ export async function createPayment(req: Request, res: Response) {
         console.error("Failed to create payment notification:", notifErr);
       }
 
-      return payment;
+      return ledgerEntry;
     });
 
-    const fullPayment = await Payment.findByPk(result.id, {
+    const fullPayment = await CustomerLedger.findByPk(result.id, {
       include: [
         { model: Customer, as: "customer" },
-        { model: Sale, as: "sale" },
         { model: Shop, as: "shop" },
       ],
     });
 
-    return res.status(201).json({ success: true, data: fullPayment });
+    return res.status(201).json({ success: true, data: formatPaymentResponse(fullPayment) });
   } catch (err: any) {
     return res.status(err.status || 500).json({ success: false, message: err.message });
   }
 }
 
 /**
- * Voids a payment: never deletes it. Flips status to "cancelled" and
+ * Voids a payment: flips status to "reversed" and
  * posts a reversing debit on the customer ledger, then re-syncs the
- * owning Sale's / EMI installment's paid/due amounts.
+ * owning Sale's paid/due amounts.
  */
 export async function cancelPayment(req: Request, res: Response) {
   const { reason } = req.body;
@@ -278,116 +283,76 @@ export async function cancelPayment(req: Request, res: Response) {
 
   try {
     await sequelize.transaction(async (t) => {
-      const where: any = { id: req.params.paymentId, owner_id: ownerId };
+      const where: any = { id: req.params.paymentId, owner_id: ownerId, entry_type: "credit" };
       if (!req.auth!.isOwner) {
         where.shop_id = shopId;
       }
-      const payment = await Payment.findOne({
+      const entry = await CustomerLedger.findOne({
         where,
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
-      if (!payment) throw Object.assign(new Error("Payment not found"), { status: 404 });
-      if (payment.status === "cancelled") throw Object.assign(new Error("Payment already cancelled"), { status: 400 });
+      if (!entry) throw Object.assign(new Error("Payment entry not found in ledger"), { status: 404 });
+      if (entry.status === "reversed") throw Object.assign(new Error("Payment already cancelled/reversed"), { status: 400 });
 
       await recordLedgerEntry({
         ownerId,
-        shopId: payment.shop_id,
-        customerId: payment.customer_id,
+        shopId: entry.shop_id,
+        customerId: entry.customer_id,
         entryType: "debit",
-        amount: Number(payment.amount),
+        amount: Number(entry.amount),
         referenceType: "PaymentCancellation",
-        referenceId: payment.id,
-        description: `Reversal of payment #${payment.id}${reason ? `: ${reason}` : ""}`,
+        referenceId: entry.id,
+        description: `Reversal of payment #${entry.id}${reason ? `: ${reason}` : ""}`,
         actorType: actorType as "owner" | "employee",
         actorId: actorId as number,
         externalTransaction: t,
       });
 
-      payment.status = "cancelled";
-      payment.notes = [payment.notes, reason ? `Cancelled: ${reason}` : "Cancelled"].filter(Boolean).join(" | ");
-      await payment.save({ transaction: t });
+      entry.status = "reversed";
+      entry.notes = [entry.notes, reason ? `Cancelled: ${reason}` : "Cancelled"].filter(Boolean).join(" | ");
+      await entry.save({ transaction: t });
 
-      if (payment.sale_id) {
-        const sale = await Sale.findOne({ where: { id: payment.sale_id }, transaction: t, lock: t.LOCK.UPDATE });
+      if (entry.reference_id && entry.reference_type !== "Customer") {
+        const sale = await Sale.findOne({ where: { id: entry.reference_id }, transaction: t, lock: t.LOCK.UPDATE });
         if (sale) {
-          sale.paid_amount = Math.max(0, Number(sale.paid_amount) - Number(payment.amount));
+          sale.paid_amount = Math.max(0, Number(sale.paid_amount) - Number(entry.amount));
           sale.due_amount = Number(sale.total_amount) - sale.paid_amount;
           sale.status = sale.due_amount <= 0 ? "paid" : sale.paid_amount > 0 ? "partially_paid" : "unpaid";
           await sale.save({ transaction: t });
         }
       }
 
-      await logAudit({ req, module: "payments", action: "cancel", entityType: "Payment", entityId: payment.id, details: { reason } });
-
-      // In-app notification for payment voided
-      try {
-        await Notification.create(
-          {
-            owner_id: ownerId,
-            shop_id: shopId,
-            recipient_type: "owner",
-            recipient_id: ownerId,
-            type: "general",
-            title: `Payment Voided: ₹${payment.amount}`,
-            message: `Payment #${payment.id} for ₹${payment.amount} was voided (${reason || "No reason specified"}).`,
-            reference_type: "Payment",
-            reference_id: payment.id,
-            is_read: false,
-          },
-          { transaction: t }
-        );
-
-        if (payment.customer_id) {
-          await Notification.create(
-            {
-              owner_id: ownerId,
-              shop_id: payment.shop_id,
-              recipient_type: "customer",
-              recipient_id: payment.customer_id,
-              type: "general",
-              title: `Payment Voided: ₹${payment.amount}`,
-              message: `Payment #${payment.id} for ₹${payment.amount} was voided (${reason || "No reason specified"}).`,
-              reference_type: "Payment",
-              reference_id: payment.id,
-              is_read: false,
-            },
-            { transaction: t }
-          );
-        }
-      } catch (notifErr) {
-        console.error("Failed to create payment cancellation notification:", notifErr);
-      }
+      await logAudit({ req, module: "ledger", action: "cancel_payment", entityType: "CustomerLedger", entityId: entry.id, details: { reason } });
     });
 
-    const payment = await Payment.findByPk(req.params.paymentId, {
+    const entry = await CustomerLedger.findByPk(req.params.paymentId, {
       include: [
         { model: Customer, as: "customer" },
-        { model: Sale, as: "sale" },
         { model: Shop, as: "shop" },
       ],
     });
-    return res.json({ success: true, data: payment });
+    return res.json({ success: true, data: formatPaymentResponse(entry) });
   } catch (err: any) {
     return res.status(err.status || 500).json({ success: false, message: err.message });
   }
 }
 
 export async function downloadReceiptPdf(req: Request, res: Response) {
-  const where: any = { id: req.params.paymentId, owner_id: req.auth!.ownerId };
+  const where: any = { id: req.params.paymentId, owner_id: req.auth!.ownerId, entry_type: "credit" };
   if (!req.auth!.isOwner) {
     where.shop_id = req.auth!.shopId;
   }
 
-  const payment = await Payment.findOne({
+  const entry = await CustomerLedger.findOne({
     where,
     include: [
       { model: Customer, as: "customer" },
-      { model: Sale, as: "sale" },
       { model: Shop, as: "shop" },
     ],
   });
-  if (!payment) return res.status(404).json({ success: false, message: "Payment not found" });
+  if (!entry) return res.status(404).json({ success: false, message: "Payment receipt not found" });
 
-  streamReceiptPdf(res, payment.toJSON());
+  const paymentData = formatPaymentResponse(entry);
+  streamReceiptPdf(res, paymentData);
 }

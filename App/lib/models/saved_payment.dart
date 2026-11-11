@@ -15,12 +15,14 @@ extension PaymentMethodLabel on PaymentMethod {
   }
 
   static PaymentMethod fromLabel(String s) {
-    switch (s.toLowerCase()) {
+    switch (s.toLowerCase().trim()) {
       case 'cash':
         return PaymentMethod.cash;
       case 'card':
         return PaymentMethod.card;
       case 'bank transfer':
+      case 'bank_transfer':
+      case 'bank':
         return PaymentMethod.bankTransfer;
       default:
         return PaymentMethod.upi;
@@ -105,18 +107,20 @@ class SavedPayment {
     }
 
     final id = j['id']?.toString() ?? '';
-    final rcptNum = j['receiptNumber'] ?? (id.isNotEmpty ? 'RCPT-$id' : '');
+    final rcptNum = j['receiptNumber']?.toString() ??
+        j['reference_code']?.toString() ??
+        (id.isNotEmpty ? 'RCPT-$id' : '');
 
     return SavedPayment(
       receiptNumber: rcptNum,
-      date: DateTime.tryParse(j['payment_date']?.toString() ?? j['date']?.toString() ?? j['created_at']?.toString() ?? '') ?? DateTime.now(),
+      date: DateTime.tryParse(j['payment_date']?.toString() ?? j['entry_date']?.toString() ?? j['date']?.toString() ?? j['created_at']?.toString() ?? '') ?? DateTime.now(),
       customerName: custName,
       customerId: custId,
       billNumber: invoiceNum,
       amount: double.tryParse(j['amount']?.toString() ?? '0') ?? 0.0,
-      method: PaymentMethodLabel.fromLabel(j['method']?.toString() ?? 'UPI'),
+      method: PaymentMethodLabel.fromLabel(j['method']?.toString() ?? j['payment_method']?.toString() ?? 'cash'),
       transactionId: j['transaction_id']?.toString() ?? j['transactionId']?.toString() ?? '',
-      remarks: j['notes']?.toString() ?? j['remarks']?.toString() ?? '',
+      remarks: j['notes']?.toString() ?? j['description']?.toString() ?? j['remarks']?.toString() ?? '',
       outstandingBalanceAfter: double.tryParse(j['outstanding_balance_after']?.toString() ?? j['outstandingBalanceAfter']?.toString() ?? '0') ?? 0.0,
     );
   }

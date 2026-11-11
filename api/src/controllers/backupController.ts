@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { sequelize, Product, Customer, Sale, SaleItem, Payment, Shop, Category } from "../models";
+import { sequelize, Product, Customer, Sale, SaleItem, CustomerLedger, Shop, Category } from "../models";
 import { logAudit } from "../utils/audit";
 
 export async function exportBackup(req: Request, res: Response) {
@@ -8,7 +8,7 @@ export async function exportBackup(req: Request, res: Response) {
     const ownerId = auth.ownerId;
     const shopId = auth.shopId;
 
-    const [shops, categories, products, customers, sales, payments] = await Promise.all([
+    const [shops, categories, products, customers, sales, ledgerEntries] = await Promise.all([
       Shop.findAll({ where: { owner_id: ownerId } }),
       Category.findAll({ where: { owner_id: ownerId } }),
       Product.findAll({ where: { owner_id: ownerId } }),
@@ -19,12 +19,14 @@ export async function exportBackup(req: Request, res: Response) {
         limit: 500,
         order: [["id", "DESC"]],
       }),
-      Payment.findAll({
+      CustomerLedger.findAll({
         where: shopId && !auth.isOwner ? { owner_id: ownerId, shop_id: shopId } : { owner_id: ownerId },
         limit: 500,
         order: [["id", "DESC"]],
       }),
     ]);
+
+    const payments = ledgerEntries.filter((e) => e.entry_type === "credit");
 
     const backupData = {
       app: "NSYU Business",
@@ -39,6 +41,7 @@ export async function exportBackup(req: Request, res: Response) {
         customersCount: customers.length,
         salesCount: sales.length,
         paymentsCount: payments.length,
+        ledgerEntriesCount: ledgerEntries.length,
       },
       data: {
         shops,
@@ -47,6 +50,7 @@ export async function exportBackup(req: Request, res: Response) {
         customers,
         sales,
         payments,
+        ledgerEntries,
       },
     };
 

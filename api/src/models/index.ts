@@ -15,7 +15,6 @@ import { InventoryTransaction } from "./InventoryTransaction";
 import { Customer } from "./Customer";
 import { Sale } from "./Sale";
 import { SaleItem } from "./SaleItem";
-import { Payment } from "./Payment";
 import { CustomerLedger } from "./CustomerLedger";
 import { SaleReturn, SaleReturnItem } from "./SaleReturn";
 import { InvoiceCounter } from "./InvoiceCounter";
@@ -119,19 +118,18 @@ SaleItem.belongsTo(Sale, { foreignKey: "sale_id", as: "sale" });
 SaleItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 Product.hasMany(SaleItem, { foreignKey: "product_id", as: "saleItems" });
 
-/* ---------------- Payments ---------------- */
-Sale.hasMany(Payment, { foreignKey: "sale_id", as: "payments" });
-Payment.belongsTo(Sale, { foreignKey: "sale_id", as: "sale" });
-Customer.hasMany(Payment, { foreignKey: "customer_id", as: "payments" });
-Payment.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
-Shop.hasMany(Payment, { foreignKey: "shop_id", as: "payments" });
-Payment.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
-
-/* ---------------- Customer Ledger ---------------- */
+/* ---------------- Customer Ledger (Single Ledger Architecture) ---------------- */
 Customer.hasMany(CustomerLedger, { foreignKey: "customer_id", as: "ledgerEntries" });
 CustomerLedger.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
 Shop.hasMany(CustomerLedger, { foreignKey: "shop_id", as: "ledgerEntries" });
 CustomerLedger.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+Sale.hasMany(CustomerLedger, {
+  foreignKey: "reference_id",
+  as: "payments",
+  scope: { entry_type: "credit", reference_type: "SalePayment", status: "active" },
+  constraints: false,
+});
+CustomerLedger.belongsTo(Sale, { foreignKey: "reference_id", as: "sale", constraints: false });
 
 /* ---------------- Returns ---------------- */
 Sale.hasMany(SaleReturn, { foreignKey: "sale_id", as: "returns" });
@@ -196,7 +194,6 @@ export {
   Customer,
   Sale,
   SaleItem,
-  Payment,
   CustomerLedger,
   SaleReturn,
   SaleReturnItem,

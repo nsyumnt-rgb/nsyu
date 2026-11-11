@@ -183,7 +183,7 @@ class BillsProvider extends ChangeNotifier {
 
     try {
       await _supabaseService.recordPayment(payment);
-      await _supabaseService.updateBillStatus(bill.billNumber, bill.status, paidAmount: bill.paidAmount);
+      await syncFromSupabase();
     } catch (e) {
       lastPaymentSyncError = e.toString();
     }

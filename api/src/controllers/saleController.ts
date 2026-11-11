@@ -6,7 +6,7 @@ import {
   SaleItem,
   Product,
   Customer,
-  Payment,
+  CustomerLedger,
   SaleReturn,
   SaleReturnItem,
   Shop,
@@ -36,7 +36,7 @@ const saleIncludes = [
   { model: SaleItem, as: "items" },
   { model: Customer, as: "customer" },
   { model: Shop, as: "shop" },
-  { model: Payment, as: "payments" },
+  { model: CustomerLedger, as: "payments", required: false },
   { model: SaleReturn, as: "returns", include: [{ model: SaleReturnItem, as: "items" }] },
 ];
 
@@ -353,35 +353,21 @@ export async function createSale(req: Request, res: Response) {
         externalTransaction: t,
       });
 
-      // 7. Payment received now (cash sale amount, or EMI down payment)
-      let initialPayment: Payment | null = null;
+      // 7. Single Ledger Architecture: Payment received now is recorded directly into customer ledger
       if (initialPaid > 0) {
-        initialPayment = await Payment.create(
-          {
-            owner_id: ownerId,
-            shop_id: shopId,
-            customer_id: customer.id,
-            sale_id: sale.id,
-            type: isEmi ? "down_payment" : "sale_payment",
-            amount: initialPaid,
-            method: normalizedPaymentMethod,
-            transaction_id: transactionId ?? null,
-            payment_date: new Date(),
-            actor_type: actorType,
-            actor_id: actorId,
-          },
-          { transaction: t }
-        );
-
+        const receiptCode = `RCP-${Date.now()}`;
         await recordLedgerEntry({
           ownerId,
           shopId,
           customerId: customer.id,
           entryType: "credit",
           amount: initialPaid,
-          referenceType: "Payment",
-          referenceId: initialPayment.id,
+          referenceType: "SalePayment",
+          referenceId: sale.id,
+          referenceCode: receiptCode,
+          paymentMethod: normalizedPaymentMethod,
           description: isEmi ? `Down payment for ${invoiceNumber}` : `Payment for ${invoiceNumber}`,
+          notes: transactionId ? `Txn: ${transactionId}` : null,
           actorType,
           actorId,
           externalTransaction: t,
@@ -391,33 +377,17 @@ export async function createSale(req: Request, res: Response) {
       // 7b. Excess payment applied towards previous outstanding balance
       const excessPaid = !isEmi && Number(paidAmount) > totalAmount ? round2(Number(paidAmount) - totalAmount) : 0;
       if (excessPaid > 0) {
-        const excessPayment = await Payment.create(
-          {
-            owner_id: ownerId,
-            shop_id: shopId,
-            customer_id: customer.id,
-            sale_id: sale.id,
-            type: "sale_payment",
-            amount: excessPaid,
-            method: normalizedPaymentMethod,
-            transaction_id: transactionId ?? null,
-            payment_date: new Date(),
-            actor_type: actorType,
-            actor_id: actorId,
-            notes: `Payment towards previous balance with ${invoiceNumber}`,
-          },
-          { transaction: t }
-        );
-
         await recordLedgerEntry({
           ownerId,
           shopId,
           customerId: customer.id,
           entryType: "credit",
           amount: excessPaid,
-          referenceType: "Payment",
-          referenceId: excessPayment.id,
+          referenceType: "BalancePayment",
+          referenceId: sale.id,
+          paymentMethod: normalizedPaymentMethod,
           description: `Payment towards previous balance with ${invoiceNumber}`,
+          notes: transactionId ? `Txn: ${transactionId}` : null,
           actorType,
           actorId,
           externalTransaction: t,
@@ -608,36 +578,23 @@ export async function recordSalePayment(req: Request, res: Response) {
 
       // Always attribute payment and ledger to the actual shop of the sale
       const targetShopId = sale.shop_id;
+      const receiptCode = `RCP-${Date.now()}`;
 
-      const payment = await Payment.create(
-        {
-          owner_id: ownerId,
-          shop_id: targetShopId,
-          customer_id: sale.customer_id,
-          sale_id: sale.id,
-          type: "sale_payment",
-          amount: payAmount,
-          method: method as PaymentMethod,
-          transaction_id: transactionId ?? null,
-          payment_date: paymentDate ? new Date(paymentDate) : new Date(),
-          notes: notes ?? null,
-          actor_type: actorType,
-          actor_id: actorId,
-        },
-        { transaction: t }
-      );
-
-      await recordLedgerEntry({
+      const { entry: ledgerEntry } = await recordLedgerEntry({
         ownerId,
         shopId: targetShopId,
         customerId: sale.customer_id,
         entryType: "credit",
         amount: payAmount,
-        referenceType: "Payment",
-        referenceId: payment.id,
+        referenceType: "SalePayment",
+        referenceId: sale.id,
+        referenceCode: receiptCode,
+        paymentMethod: method,
+        notes: notes ?? null,
         description: `Payment for ${sale.invoice_number}`,
         actorType,
         actorId,
+        entryDate: paymentDate ? new Date(paymentDate) : new Date(),
         externalTransaction: t,
       });
 
@@ -655,11 +612,17 @@ export async function recordSalePayment(req: Request, res: Response) {
         details: { amount: payAmount, method },
       });
 
-      return payment.id;
+      return {
+        id: ledgerEntry.id,
+        amount: payAmount,
+        method,
+        payment_date: ledgerEntry.entry_date,
+        reference_code: receiptCode,
+        sale,
+      };
     });
 
-    const payment = await Payment.findByPk(result, { include: [{ model: Sale, as: "sale" }] });
-    return res.status(201).json({ success: true, data: payment });
+    return res.status(201).json({ success: true, data: result });
   } catch (err: any) {
     const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
     console.error("createSale error:", errMsg, err);
@@ -721,8 +684,13 @@ export async function cancelSale(req: Request, res: Response) {
       }
 
       // 2. Reverse payments attached to this bill & post reversing ledger entries
-      const attachedPayments = await Payment.findAll({
-        where: { sale_id: sale.id, status: { [Op.ne]: "reversed" } },
+      const attachedPayments = await CustomerLedger.findAll({
+        where: {
+          customer_id: sale.customer_id,
+          reference_id: sale.id,
+          entry_type: "credit",
+          status: "active",
+        },
         transaction: t,
       });
 
@@ -1022,27 +990,18 @@ export async function updateSale(req: Request, res: Response) {
           try {
             const actorType = req.auth!.isOwner ? "owner" : "employee";
             const actorId = req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId);
-            const payment = await Payment.create({
-              owner_id: ownerId,
-              shop_id: sale.shop_id,
-              customer_id: sale.customer_id,
-              sale_id: sale.id,
-              type: "sale_payment",
-              amount: previousDue,
-              method: "cash",
-              payment_date: new Date(),
-              notes: notes || `Bill marked Paid: ${sale.invoice_number}`,
-              actor_type: actorType,
-              actor_id: actorId,
-            });
+            const receiptCode = `RCP-${Date.now()}`;
             await recordLedgerEntry({
               ownerId,
               shopId: sale.shop_id,
               customerId: sale.customer_id,
               entryType: "credit",
               amount: previousDue,
-              referenceType: "Payment",
-              referenceId: payment.id,
+              referenceType: "SalePayment",
+              referenceId: sale.id,
+              referenceCode: receiptCode,
+              paymentMethod: "cash",
+              notes: notes || `Bill marked Paid: ${sale.invoice_number}`,
               description: `Payment for ${sale.invoice_number} (Marked Paid)`,
               actorType,
               actorId,
@@ -1052,9 +1011,43 @@ export async function updateSale(req: Request, res: Response) {
           }
         }
       } else if (cleanStatus === "unpaid" || cleanStatus === "pending") {
+        const previousPaid = Number(sale.paid_amount || 0);
         sale.status = "unpaid";
         sale.paid_amount = 0;
         sale.due_amount = sale.total_amount;
+        if (previousPaid > 0.01 && sale.customer_id) {
+          try {
+            const actorType = req.auth!.isOwner ? "owner" : "employee";
+            const actorId = req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId);
+            const activeCredits = await CustomerLedger.findAll({
+              where: {
+                customer_id: sale.customer_id,
+                reference_id: sale.id,
+                reference_type: { [Op.in]: ["SalePayment", "Payment"] },
+                entry_type: "credit",
+                status: "active",
+              },
+            });
+            for (const c of activeCredits) {
+              c.status = "reversed";
+              await c.save();
+            }
+            await recordLedgerEntry({
+              ownerId,
+              shopId: sale.shop_id,
+              customerId: sale.customer_id,
+              entryType: "debit",
+              amount: previousPaid,
+              referenceType: "PaymentReversal",
+              referenceId: sale.id,
+              description: `Payment reversal for ${sale.invoice_number} (Marked Unpaid)`,
+              actorType,
+              actorId,
+            });
+          } catch (revErr) {
+            console.error("Warning: Could not reverse payment for unpaid bill:", revErr);
+          }
+        }
       } else if (cleanStatus === "partially_paid" || cleanStatus === "partial") {
         sale.status = "partially_paid";
         if (paidAmount !== undefined) {

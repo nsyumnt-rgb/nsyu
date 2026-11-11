@@ -84,37 +84,45 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final customers = context.watch<CustomerProvider>();
     final money = NumberFormat('#,##0');
 
+    // Build merged authoritative customer ledger parties from CustomerProvider + BillsProvider
+    final Map<String, LedgerParty> mergedMap = {};
+    for (final c in customers.customers) {
+      if (c.isSupplier) continue;
+      final key = c.name.trim().toLowerCase();
+      final matchingBills = bills.bills.where((b) => b.customerName.trim().toLowerCase() == key).toList();
+      mergedMap[key] = LedgerParty(
+        name: c.name,
+        totalDue: c.currentBalance,
+        billCount: matchingBills.length,
+      );
+    }
+    for (final p in bills.parties) {
+      final key = p.name.trim().toLowerCase();
+      if (!mergedMap.containsKey(key)) {
+        mergedMap[key] = p;
+      }
+    }
+
+    final mergedParties = mergedMap.values.toList()
+      ..sort((a, b) => b.totalDue.compareTo(a.totalDue));
+
     // Filter parties based on search & chips
-    final allParties = bills.parties.where((p) {
+    final allParties = mergedParties.where((p) {
       if (_query.isNotEmpty && !p.name.toLowerCase().contains(_query.toLowerCase())) {
         return false;
       }
       if (_activeChip == 'Due Today') {
         return p.totalDue > 0;
       }
-      if (_activeChip == 'Supplier') {
-        final custMatch = customers.customers.cast<Customer?>().firstWhere(
-          (c) => c != null && c.name.toLowerCase() == p.name.toLowerCase(),
-          orElse: () => null,
-        );
-        return custMatch?.isSupplier == true;
-      }
-      if (_activeChip == 'Customer') {
-        final custMatch = customers.customers.cast<Customer?>().firstWhere(
-          (c) => c != null && c.name.toLowerCase() == p.name.toLowerCase(),
-          orElse: () => null,
-        );
-        return custMatch == null || !custMatch.isSupplier;
-      }
       return true;
     }).toList();
 
-    final totalOutstanding = bills.totalPartyDue;
+    final totalOutstanding = mergedParties.where((p) => p.totalDue > 0).fold(0.0, (s, p) => s + p.totalDue);
     final auth = context.watch<AuthProvider>();
     final businessName = auth.shopName.isNotEmpty ? auth.shopName : 'NSYU';
     final businessPhone = auth.shopPhone.isNotEmpty ? auth.shopPhone : (auth.registeredMobile ?? '');
     final initialLetter = businessName.isNotEmpty ? businessName[0].toUpperCase() : 'N';
-    final totalAccountsCount = bills.totalPartyCount > 0 ? bills.totalPartyCount : customers.customers.length;
+    final totalAccountsCount = mergedParties.length;
     final defaultersCount = allParties.where((p) => p.totalDue > 5000).length;
 
     return Scaffold(
@@ -279,7 +287,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
-                        children: ['Customer', 'Supplier', 'Due Today', 'All'].map((chip) {
+                        children: ['Customer', 'Due Today', 'All'].map((chip) {
                           final isSelected = _activeChip == chip;
                           return Padding(
                             padding: const EdgeInsets.only(right: 8),
@@ -336,7 +344,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
             // Main Scrollable Area
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () => bills.syncFromSupabase(),
+                onRefresh: () => Future.wait([
+                  bills.syncFromSupabase(),
+                  customers.syncFromSupabase(),
+                ]),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
                   children: [
@@ -646,7 +657,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
       }
     }
 
-    final isDefaulter = index == 1 || index == 4 || party.totalDue > 15000;
+    final dueAmount = party.totalDue;
+    final isDefaulter = dueAmount > 15000;
     final lastPayment = _lastPaymentDate(bills, party.name);
     final lastPaymentAmt = _lastPaymentAmount(bills, party.name);
 
@@ -654,18 +666,19 @@ class _LedgerScreenState extends State<LedgerScreen> {
     bool hasGreenCheck = false;
     bool hasRedCalendar = false;
 
-    if (isDefaulter && (index == 1 || index == 3)) {
-      hasRedCalendar = true;
-      subtitleText = index == 1 ? 'Pending Collection Since 8 months' : 'Pending Collection Since 51 days';
-    } else if (lastPayment != null && lastPaymentAmt > 0) {
+    if (lastPayment != null && lastPaymentAmt > 0) {
       hasGreenCheck = true;
       subtitleText = '₹${money.format(lastPaymentAmt)} Payment Added on ${DateFormat('dd MMM yyyy').format(lastPayment)}';
+    } else if (dueAmount > 0) {
+      hasRedCalendar = true;
+      subtitleText = '${party.billCount} ${party.billCount == 1 ? 'Bill' : 'Bills'} • Pending Collection';
+    } else if (dueAmount < 0) {
+      hasGreenCheck = true;
+      subtitleText = 'Advance Balance • ${party.billCount} ${party.billCount == 1 ? 'Bill' : 'Bills'}';
     } else {
       hasGreenCheck = true;
-      subtitleText = '₹156 Payment Added on 14 Oct 2026';
+      subtitleText = party.billCount > 0 ? '${party.billCount} ${party.billCount == 1 ? 'Bill' : 'Bills'} • Settled' : 'Account Settled';
     }
-
-    final dueAmount = party.totalDue > 0 ? party.totalDue : (19000.0 - index * 1200);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -691,13 +704,16 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 customer: match,
               ),
             ),
-          );
+          ).then((_) {
+            bills.syncFromSupabase();
+            customers.syncFromSupabase();
+          });
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              // Avatar with DEFAULTER badge or green rupee badge matching Image 1
+              // Avatar with DEFAULTER badge or green rupee badge
               Stack(
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
@@ -786,7 +802,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 ),
               ),
 
-              // Trailing Due Amount matching Image 1
+              // Trailing Due / Advance / Settled Amount
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -794,20 +810,24 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '₹${money.format(dueAmount)}',
-                        style: const TextStyle(
+                        '₹${money.format(dueAmount.abs())}',
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFFDC2626), // red matching Image 1
+                          color: dueAmount > 0
+                              ? const Color(0xFFDC2626)
+                              : dueAmount < 0
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFF0F172A),
                         ),
                       ),
                       const SizedBox(width: 2),
                       const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
                     ],
                   ),
-                  const Text(
-                    'Due',
-                    style: TextStyle(
+                  Text(
+                    dueAmount > 0 ? 'Due' : dueAmount < 0 ? 'Advance' : 'Settled',
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFF64748B),

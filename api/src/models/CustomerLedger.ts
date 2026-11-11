@@ -41,10 +41,12 @@ interface CustomerLedgerAttributes {
   actor_type: "owner" | "employee";
   actor_id: number;
   reference_code?: string | null;
+  payment_method?: string | null;
+  notes?: string | null;
 }
 
 interface CustomerLedgerCreationAttributes
-  extends Optional<CustomerLedgerAttributes, "id" | "reference_id" | "status" | "reference_code"> {}
+  extends Optional<CustomerLedgerAttributes, "id" | "reference_id" | "status" | "reference_code" | "payment_method" | "notes"> {}
 
 export class CustomerLedger
   extends Model<CustomerLedgerAttributes, CustomerLedgerCreationAttributes>
@@ -65,6 +67,8 @@ export class CustomerLedger
   public actor_type!: "owner" | "employee";
   public actor_id!: number;
   public reference_code?: string | null;
+  public payment_method?: string | null;
+  public notes?: string | null;
   public readonly created_at!: Date;
 }
 
@@ -85,6 +89,8 @@ CustomerLedger.init(
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
     actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
+    payment_method: { type: DataTypes.STRING(50), allowNull: true, defaultValue: "cash" },
+    notes: { type: DataTypes.TEXT, allowNull: true },
   },
   {
     sequelize,

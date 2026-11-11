@@ -3,7 +3,6 @@ import { Op } from "sequelize";
 import {
   Sale,
   SaleItem,
-  Payment,
   Customer,
   CustomerLedger,
   Notification,
@@ -80,7 +79,7 @@ export async function getPortalBill(req: Request, res: Response) {
       where: { id: billId, customer_id: customerId, shop_id: shopId },
       include: [
         { model: SaleItem, as: "items" },
-        { model: Payment, as: "payments" },
+        { model: CustomerLedger, as: "payments", required: false },
         { model: Shop, as: "shop", attributes: ["id", "name", "phone", "address", "email"] },
       ],
     });
@@ -110,7 +109,7 @@ export async function downloadPortalBillPdf(req: Request, res: Response) {
         { model: SaleItem, as: "items" },
         { model: Customer, as: "customer" },
         { model: Shop, as: "shop" },
-        { model: Payment, as: "payments" },
+        { model: CustomerLedger, as: "payments", required: false },
       ],
     });
 
@@ -182,9 +181,9 @@ export async function getPortalLedgerSummary(req: Request, res: Response) {
     }
 
     const [lastPayment, lastBill] = await Promise.all([
-      Payment.findOne({
-        where: { customer_id: customerId },
-        order: [["payment_date", "DESC"], ["id", "DESC"]],
+      CustomerLedger.findOne({
+        where: { customer_id: customerId, entry_type: "credit", status: "active" },
+        order: [["entry_date", "DESC"], ["id", "DESC"]],
       }),
       Sale.findOne({
         where: { customer_id: customerId, shop_id: shopId },
@@ -196,7 +195,7 @@ export async function getPortalLedgerSummary(req: Request, res: Response) {
       success: true,
       data: {
         currentOutstanding: round2(Number(customer.current_balance || 0)),
-        lastPaymentDate: lastPayment?.payment_date || null,
+        lastPaymentDate: lastPayment?.entry_date || null,
         lastPaymentAmount: lastPayment ? round2(Number(lastPayment.amount)) : 0,
         lastBillDate: lastBill?.invoice_date || null,
         lastBillNumber: lastBill?.invoice_number || null,
@@ -216,11 +215,22 @@ export async function listPortalPayments(req: Request, res: Response) {
     const customerId = req.customer!.customerId;
     const shopId = req.customer!.shopId;
 
-    const payments = await Payment.findAll({
-      where: { customer_id: customerId, shop_id: shopId },
-      order: [["payment_date", "DESC"], ["id", "DESC"]],
-      include: [{ model: Sale, as: "sale", attributes: ["id", "invoice_number"] }],
+    const entries = await CustomerLedger.findAll({
+      where: { customer_id: customerId, shop_id: shopId, entry_type: "credit" },
+      order: [["entry_date", "DESC"], ["id", "DESC"]],
+      include: [{ model: Sale, as: "sale", attributes: ["id", "invoice_number"], required: false }],
     });
+
+    const payments = entries.map((e: any) => ({
+      id: e.id,
+      amount: e.amount,
+      method: e.payment_method || "cash",
+      payment_date: e.entry_date,
+      notes: e.notes || e.description,
+      reference_code: e.reference_code,
+      status: e.status === "reversed" ? "cancelled" : "completed",
+      sale: e.sale,
+    }));
 
     return res.json({ success: true, data: payments });
   } catch (err: any) {
