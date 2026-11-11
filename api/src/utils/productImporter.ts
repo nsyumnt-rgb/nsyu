@@ -281,7 +281,7 @@ export function parseSpreadsheetRows(
           purchase_price: purchasePrice,
           selling_price: sellingPrice,
           mrp,
-          tax_percent: 18,
+          tax_percent: 0,
           category: currentCategory,
           brand,
           barcode: sku,
@@ -401,7 +401,7 @@ export function parseSpreadsheetRows(
     const purchasePrice = headerMap["purchase_price"] !== undefined ? parseNumber(row[headerMap["purchase_price"]], 0) : 0;
     const explicitSelling = headerMap["selling_price"] !== undefined ? parseNumber(row[headerMap["selling_price"]], 0) : undefined;
     const rawMrp = headerMap["mrp"] !== undefined ? parseNumber(row[headerMap["mrp"]], 0) : undefined;
-    const rawTax = headerMap["tax_percent"] !== undefined ? parseNumber(row[headerMap["tax_percent"]], 18) : 18;
+    const rawTax = headerMap["tax_percent"] !== undefined ? parseNumber(row[headerMap["tax_percent"]], 0) : 0;
     const rawPkg = headerMap["pkg"] !== undefined ? parseNumber(row[headerMap["pkg"]], 20) : 20;
     const rawMinStock = headerMap["min_stock"] !== undefined ? parseNumber(row[headerMap["min_stock"]], 5) : 5;
 
@@ -832,7 +832,7 @@ export async function executeProductImport(params: {
             selling_price: item.selling_price || calculateSellingPrice(item.purchase_price || 0).sellingPrice,
             mrp: item.mrp || calculateSellingPrice(item.purchase_price || 0).mrp,
             discount: 0,
-            tax_percent: item.tax_percent !== undefined ? item.tax_percent : 18,
+            tax_percent: item.tax_percent !== undefined ? item.tax_percent : 0,
             min_stock: item.min_stock || 5,
             supplier_id: null,
             status: item.product_status || "active",

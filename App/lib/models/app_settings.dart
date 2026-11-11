@@ -31,7 +31,7 @@ class AppSettings {
     this.timezone = 'Asia/Kolkata',
     this.defaultMargin = 20.0,
     this.pricesIncludeTax = false,
-    this.defaultGstRate = 18.0,
+    this.defaultGstRate = 0.0,
     this.invoicePrefix = 'INV-',
     this.nextInvoiceNumber = 1,
     this.allowNegativeStock = true,
@@ -67,7 +67,7 @@ class AppSettings {
           double.tryParse(s['defaultMargin']?.toString() ?? '') ?? 20.0,
       pricesIncludeTax: s['pricesIncludeTax'] == true,
       defaultGstRate:
-          double.tryParse(s['defaultGstRate']?.toString() ?? '') ?? 18.0,
+          double.tryParse(s['defaultGstRate']?.toString() ?? '') ?? 0.0,
       invoicePrefix: s['invoicePrefix']?.toString() ?? 'INV-',
       nextInvoiceNumber:
           int.tryParse(s['nextInvoiceNumber']?.toString() ?? '') ?? 1,

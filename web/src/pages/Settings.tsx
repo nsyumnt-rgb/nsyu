@@ -210,6 +210,7 @@ function SettingsInner() {
           businessLogo: activeShop?.logo || parsed.businessLogo || "",
           shopName: activeShop?.name || parsed.shopName || "NSYU",
           shopCode: activeShop?.code || parsed.shopCode || "NSYU-01",
+          defaultGstRate: activeShop?.settings?.defaultGstRate ?? parsed.defaultGstRate ?? 0,
         };
       }
     } catch {
@@ -265,7 +266,7 @@ function SettingsInner() {
       signatoryText: "Authorized Signatory",
 
       gstRegistrationType: "Regular",
-      defaultGstRate: 18,
+      defaultGstRate: 0,
       pricesIncludeTax: false,
       requireHsnCode: true,
       enableRcm: false,
@@ -1454,7 +1455,7 @@ function SettingsInner() {
                 onChange={(e) => handleTextChange("defaultGstRate", Number(e.target.value))}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-bold"
               >
-                <option value={0}>0% (Nil / Exempt)</option>
+                <option value={0}>0% (No GST / Default)</option>
                 <option value={5}>5%</option>
                 <option value={12}>12%</option>
                 <option value={18}>18% (Standard Electronics)</option>

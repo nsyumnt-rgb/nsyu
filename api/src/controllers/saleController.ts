@@ -185,7 +185,12 @@ export async function createSale(req: Request, res: Response) {
         const qty = Math.max(1, Math.floor(Number(rawQuantity)));
         const rate = raw.rate !== undefined ? Number(raw.rate) : (raw.unitPrice !== undefined ? Number(raw.unitPrice) : Number(product.selling_price));
         const discountPercent = raw.discountPercent !== undefined ? Number(raw.discountPercent) : (raw.discount_percent !== undefined ? Number(raw.discount_percent) : (Number(product.discount) || 0));
-        const taxPercent = raw.taxPercent !== undefined ? Number(raw.taxPercent) : (raw.tax_percent !== undefined ? Number(raw.tax_percent) : (Number(product.tax_percent) || Number(shopSettings.defaultGstRate) || 0));
+        const shopDefaultGst = shopSettings.defaultGstRate !== undefined && shopSettings.defaultGstRate !== null ? Number(shopSettings.defaultGstRate) : 0;
+        const taxPercent = raw.taxPercent !== undefined
+          ? Number(raw.taxPercent)
+          : (raw.tax_percent !== undefined
+            ? Number(raw.tax_percent)
+            : (shopDefaultGst > 0 ? (Number(product.tax_percent) || shopDefaultGst) : 0));
 
         let lineSubtotal = 0;
         let lineDiscountAmount = 0;

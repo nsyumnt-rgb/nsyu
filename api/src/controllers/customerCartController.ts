@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { CustomerCart, CustomerCartItem, Product, ProductStock, ProductImage, Category } from "../models";
+import { CustomerCart, CustomerCartItem, Product, ProductStock, ProductImage, Category, Shop } from "../models";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -38,6 +38,9 @@ export async function getCart(req: Request, res: Response) {
       order: [["id", "ASC"]],
     });
 
+    const shopRow = await Shop.findByPk(shopId);
+    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
+
     let subtotal = 0;
     let taxAmount = 0;
     let totalDiscount = 0;
@@ -61,7 +64,7 @@ export async function getCart(req: Request, res: Response) {
 
       const rate = round2(Number(product.selling_price || 0));
       const discPercent = round2(Number(product.discount || 0));
-      const gstPercent = round2(Number(product.tax_percent || 0));
+      const gstPercent = shopDefaultGst > 0 ? round2(Number(product.tax_percent) || shopDefaultGst) : 0;
 
       const lineGross = round2(rate * qty);
       const lineDisc = round2((lineGross * discPercent) / 100);

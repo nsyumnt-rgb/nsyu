@@ -60,7 +60,10 @@ export async function placeOrder(req: Request, res: Response) {
       });
     }
 
-    // 3. Load customer cart
+    // 3. Load customer cart & shop GST setting
+    const shopRow = await Shop.findByPk(shopId);
+    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
+
     const cart = await CustomerCart.findOne({
       where: { customer_id: customerId, shop_id: shopId },
       include: [{ model: CustomerCartItem, as: "items" }],
@@ -112,7 +115,7 @@ export async function placeOrder(req: Request, res: Response) {
 
         const rate = round2(Number(product.selling_price || 0));
         const discPercent = round2(Number(product.discount || 0));
-        const gstPercent = round2(Number(product.tax_percent || 0));
+        const gstPercent = shopDefaultGst > 0 ? round2(Number(product.tax_percent) || shopDefaultGst) : 0;
 
         const lineGross = round2(rate * requested);
         const lineDisc = round2((lineGross * discPercent) / 100);

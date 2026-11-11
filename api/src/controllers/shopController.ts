@@ -272,7 +272,7 @@ export async function getShopSettings(req: Request, res: Response) {
       timezone: "Asia/Kolkata",
       defaultMargin: 20,
       pricesIncludeTax: false,
-      defaultGstRate: 18,
+      defaultGstRate: 0,
       gstin: "",
       invoicePrefix: "INV-",
       nextInvoiceNumber: 1,

@@ -12,6 +12,7 @@ import {
 import { listProducts } from "../api/products";
 import { listCustomers } from "../api/customers";
 import { apiErrorMessage } from "../api/client";
+import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import type { Customer, Product } from "../types";
 
@@ -27,6 +28,8 @@ type WorkflowStep =
   | "notifications";
 
 export default function Orders() {
+  const activeShop = useAuthStore((s) => s.activeShop);
+  const defaultGstRate = Number(activeShop?.settings?.defaultGstRate ?? 0);
   const [step, setStep] = useState<WorkflowStep>("list");
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<OrderRecord | null>(null);
@@ -162,7 +165,7 @@ export default function Orders() {
   // Calculations for Step 2
   const calcSubtotal = cartItems.reduce((acc, it) => acc + it.price * it.qty, 0);
   const calcDiscount = cartItems.reduce((acc, it) => acc + (it.discountPercent || 0), 0);
-  const calcGst = Math.round((calcSubtotal - calcDiscount) * 0.18);
+  const calcGst = Math.round(((calcSubtotal - calcDiscount) * defaultGstRate) / 100);
   const calcGrandTotal = calcSubtotal - calcDiscount + calcGst;
 
   async function handleCreateOrder(e: React.FormEvent) {
@@ -200,7 +203,7 @@ export default function Orders() {
         paymentStatus,
         shippingAddress: custType === "new" ? newCustAddress : selectedCustomerObj?.address,
         discountAmount: calcDiscount,
-        taxPercent: 18,
+        taxPercent: defaultGstRate,
         items: cartItems.map((ci) => ({
           productId: ci.productId,
           productName: ci.productName,
@@ -261,7 +264,7 @@ export default function Orders() {
             sku: p.sku || "SKU-" + p.id,
             qty: 1,
             price: Number(p.selling_price || 0),
-            gstPercent: 18,
+            gstPercent: defaultGstRate,
             discountPercent: 0,
             productId: p.id,
           },
@@ -1123,7 +1126,7 @@ export default function Orders() {
                     <span className="font-mono text-red-600">- ₹ {calcDiscount}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
-                    <span>GST (18%)</span>
+                    <span>GST ({defaultGstRate}%)</span>
                     <span className="font-mono">₹ {calcGst}</span>
                   </div>
                   <div className="flex justify-between text-slate-900 font-bold text-sm pt-2 border-t border-border">
@@ -1398,7 +1401,7 @@ export default function Orders() {
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-600">
-                  <span>GST (18%)</span>
+                  <span>GST</span>
                   <span className="font-mono">
                     ₹ {Number(selectedOrder.tax_amount || 0).toLocaleString("en-IN")}
                   </span>
@@ -1762,7 +1765,7 @@ export default function Orders() {
                     <span className="font-mono text-red-600">- ₹ {selectedOrder.discount_amount || 0}</span>
                   </div>
                   <div className="flex justify-between text-slate-600">
-                    <span>GST (18%)</span>
+                    <span>GST</span>
                     <span className="font-mono">₹ {selectedOrder.tax_amount || 0}</span>
                   </div>
                   <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-border">

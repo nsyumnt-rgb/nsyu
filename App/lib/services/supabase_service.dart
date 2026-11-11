@@ -368,6 +368,13 @@ class SupabaseService {
       prods = await fetchProducts();
     } catch (_) {}
 
+    final taxableBase = (bill.subtotal - bill.discount) > 0
+        ? (bill.subtotal - bill.discount)
+        : bill.subtotal;
+    final billLevelTaxPercent = (bill.tax > 0 && taxableBase > 0)
+        ? double.parse(((bill.tax / taxableBase) * 100).toStringAsFixed(2))
+        : 0.0;
+
     final itemsPayload = bill.items.map((i) {
       int? pId = i.productId;
       if (pId == null || pId <= 0) {
@@ -392,7 +399,7 @@ class SupabaseService {
         'quantity': i.qty,
         'rate': i.price,
         'discountPercent': i.discountPercent,
-        'taxPercent': i.taxPercent,
+        'taxPercent': i.taxPercent > 0 ? i.taxPercent : billLevelTaxPercent,
       };
     }).toList();
 
@@ -671,7 +678,7 @@ class SupabaseService {
       'orderDate': order.date.toIso8601String(),
       'expectedDeliveryDate': order.expectedDeliveryDate?.toIso8601String(),
       'discountAmount': order.discountAmount,
-      'taxPercent': 18,
+      'taxPercent': 0,
       'remarks': order.remarks,
       'status': order.status.name,
       'items': order.items.map((i) => {

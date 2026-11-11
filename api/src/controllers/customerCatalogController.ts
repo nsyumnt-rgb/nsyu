@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import { Product, ProductStock, Category, ProductImage, ShopPortalSettings } from "../models";
+import { Product, ProductStock, Category, ProductImage, ShopPortalSettings, Shop } from "../models";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -45,9 +45,13 @@ export async function getPortalProducts(req: Request, res: Response) {
     const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
     const offset = (pageNum - 1) * limitNum;
 
-    // Check shop portal settings for stock quantity visibility
-    const settings = await ShopPortalSettings.findOne({ where: { shop_id: shopId } });
+    // Check shop portal settings for stock quantity visibility and shop GST rate
+    const [settings, shopRow] = await Promise.all([
+      ShopPortalSettings.findOne({ where: { shop_id: shopId } }),
+      Shop.findByPk(shopId),
+    ]);
     const showExactStock = Boolean(settings?.show_stock_qty);
+    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
 
     const where: any = {
       owner_id: ownerId,
@@ -108,7 +112,7 @@ export async function getPortalProducts(req: Request, res: Response) {
         sellingPrice: round2(Number(p.selling_price || 0)),
         mrp: round2(Number(p.mrp || 0)),
         discountPercent: round2(Number(p.discount || 0)),
-        gstPercent: round2(Number(p.tax_percent || 0)),
+        gstPercent: shopDefaultGst > 0 ? round2(Number(p.tax_percent) || shopDefaultGst) : 0,
         category: (p as any).category ? { id: (p as any).category.id, name: (p as any).category.name } : null,
         imageUrl: primaryImg ? primaryImg.url : null,
         availability,
@@ -140,8 +144,12 @@ export async function getPortalProduct(req: Request, res: Response) {
     const shopId = req.customer!.shopId;
     const productId = Number(req.params.id);
 
-    const settings = await ShopPortalSettings.findOne({ where: { shop_id: shopId } });
+    const [settings, shopRow] = await Promise.all([
+      ShopPortalSettings.findOne({ where: { shop_id: shopId } }),
+      Shop.findByPk(shopId),
+    ]);
     const showExactStock = Boolean(settings?.show_stock_qty);
+    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
 
     const product = await Product.findOne({
       where: { id: productId, owner_id: ownerId, status: "active" },
@@ -186,7 +194,7 @@ export async function getPortalProduct(req: Request, res: Response) {
         sellingPrice: round2(Number(product.selling_price || 0)),
         mrp: round2(Number(product.mrp || 0)),
         discountPercent: round2(Number(product.discount || 0)),
-        gstPercent: round2(Number(product.tax_percent || 0)),
+        gstPercent: shopDefaultGst > 0 ? round2(Number(product.tax_percent) || shopDefaultGst) : 0,
         category: (product as any).category ? { id: (product as any).category.id, name: (product as any).category.name } : null,
         imageUrl: primaryImg ? primaryImg.url : null,
         images: (product as any).images?.map((img: any) => img.url) || [],

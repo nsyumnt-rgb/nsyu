@@ -119,7 +119,10 @@ function BillingInner() {
   }
 
   const pricesIncludeTax = Boolean(activeShop?.settings?.pricesIncludeTax);
-  const defaultGstRate = Number(activeShop?.settings?.defaultGstRate) || 18;
+  const defaultGstRate =
+    activeShop?.settings?.defaultGstRate !== undefined && activeShop?.settings?.defaultGstRate !== null
+      ? Number(activeShop.settings.defaultGstRate)
+      : 0;
 
   const rawSubtotal = cart.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const discount = Math.min(rawSubtotal, Number(discountAmount) || 0);
@@ -132,7 +135,7 @@ function BillingInner() {
     grandTotal = Math.max(0, rawSubtotal - discount);
     totalTax = cart.reduce((sum, item) => {
       const lineTotal = item.quantity * item.unitPrice;
-      const rate = Number(item.product.tax_percent) || defaultGstRate || 0;
+      const rate = defaultGstRate > 0 ? (Number(item.product.tax_percent) || defaultGstRate) : 0;
       if (rate <= 0) return sum;
       const base = lineTotal / (1 + rate / 100);
       return sum + (lineTotal - base);
@@ -144,7 +147,7 @@ function BillingInner() {
       const lineSubtotal = item.quantity * item.unitPrice;
       const proportion = rawSubtotal > 0 ? lineSubtotal / rawSubtotal : 0;
       const lineTaxable = lineSubtotal - (discount * proportion);
-      const rate = Number(item.product.tax_percent) || defaultGstRate || 0;
+      const rate = defaultGstRate > 0 ? (Number(item.product.tax_percent) || defaultGstRate) : 0;
       return sum + (lineTaxable * rate / 100);
     }, 0);
     grandTotal = taxableSubtotal + totalTax;

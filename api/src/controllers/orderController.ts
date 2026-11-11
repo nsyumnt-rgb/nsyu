@@ -175,7 +175,7 @@ export async function createOrder(req: Request, res: Response) {
     paymentStatus = "Paid",
     shippingAddress,
     discountAmount = 0,
-    taxPercent = 18,
+    taxPercent,
     remarks,
     orderNumber: customOrderNumber,
     status = "pending",
@@ -218,7 +218,10 @@ export async function createOrder(req: Request, res: Response) {
         }
       }
 
-      // 2. Calculate totals and price items
+      // 2. Calculate totals and price items (respect shop defaultGstRate, default 0)
+      const shopRow = await Shop.findByPk(shopId, { transaction: t });
+      const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
+
       let subtotal = 0;
       let totalItemDiscount = 0;
       let totalCalculatedTax = 0;
@@ -228,7 +231,9 @@ export async function createOrder(req: Request, res: Response) {
         const qty = Number(item.quantity || item.qty || 1);
         const rate = Number(item.rate || item.price || 0);
         const disc = Number(item.discountPercent || item.discount || 0);
-        const itemGst = Number(item.gstPercent ?? taxPercent ?? 18);
+        const itemGst = item.gstPercent !== undefined
+          ? Number(item.gstPercent)
+          : (taxPercent !== undefined ? Number(taxPercent) : shopDefaultGst);
 
         const lineSubtotal = round2(rate * qty);
         const lineDiscAmount = round2((lineSubtotal * disc) / 100);
