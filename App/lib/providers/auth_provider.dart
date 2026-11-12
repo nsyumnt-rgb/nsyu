@@ -39,6 +39,7 @@ class AuthProvider extends ChangeNotifier {
   String _shopLogo = '';
   Map<String, bool> _fieldPermissions = {};
   bool _loadingProfile = false;
+  String? _lastError;
 
   String? get registeredMobile => _registeredMobile;
   bool get isLoggedIn => _isLoggedIn;
@@ -55,6 +56,7 @@ class AuthProvider extends ChangeNotifier {
   String get shopPhone => _shopPhone;
   String get shopEmail => _shopEmail;
   String get shopLogo => _shopLogo;
+  String? get lastError => _lastError;
   bool get isOwner => _accountType == 'owner' || _roleName.toLowerCase() == 'owner';
   bool get canViewPurchasePrice => isOwner || (_fieldPermissions['purchase_price'] ?? false);
   bool get loadingProfile => _loadingProfile;
@@ -224,27 +226,34 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> login(String input, String password) async {
     final trimmed = input.trim();
     final trimmedPass = password.trim();
+    _lastError = null;
 
-    // Authenticate with the Supabase / backend API
-    final token = await SupabaseService().ensureAuth(
-      force: true,
-      mobile: trimmed,
-      password: trimmedPass,
-    );
+    try {
+      // Authenticate with the Supabase / backend API
+      final token = await SupabaseService().ensureAuth(
+        force: true,
+        mobile: trimmed,
+        password: trimmedPass,
+      );
 
-    if (token != null) {
-      final prefs = await SharedPreferences.getInstance();
-      _isLoggedIn = true;
-      _isCustomer = false;
-      _userEmail = trimmed;
-      await prefs.setString(_userEmailKey, _userEmail);
-      await prefs.setBool(_loggedInKey, true);
-      await prefs.setBool(_isCustomerKey, false);
-      await refreshProfile();
-      notifyListeners();
-      return true;
+      if (token != null) {
+        final prefs = await SharedPreferences.getInstance();
+        _isLoggedIn = true;
+        _isCustomer = false;
+        _userEmail = trimmed;
+        await prefs.setString(_userEmailKey, _userEmail);
+        await prefs.setBool(_loggedInKey, true);
+        await prefs.setBool(_isCustomerKey, false);
+        await refreshProfile();
+        notifyListeners();
+        return true;
+      }
+      _lastError = 'Invalid email/username or password.';
+      return false;
+    } catch (e) {
+      _lastError = e.toString().replaceAll('Exception: ', '');
+      return false;
     }
-    return false;
   }
 
   /// Customer Portal Email / Mobile + Password Login
@@ -253,6 +262,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     String? shopCode,
   }) async {
+    _lastError = null;
     try {
       final effectiveId = identifier.trim();
       final res = await CustomerPortalService().loginWithPassword(
@@ -279,7 +289,8 @@ class AuthProvider extends ChangeNotifier {
 
       notifyListeners();
       return true;
-    } catch (_) {
+    } catch (e) {
+      _lastError = e.toString().replaceAll('Exception: ', '');
       return false;
     }
   }
@@ -291,6 +302,7 @@ class AuthProvider extends ChangeNotifier {
     required String otp,
     String? shopCode,
   }) async {
+    _lastError = null;
     try {
       final effectiveId = (identifier ?? phone ?? '').trim();
       final res = await CustomerPortalService().verifyOtp(
@@ -313,7 +325,8 @@ class AuthProvider extends ChangeNotifier {
 
       notifyListeners();
       return true;
-    } catch (_) {
+    } catch (e) {
+      _lastError = e.toString().replaceAll('Exception: ', '');
       return false;
     }
   }

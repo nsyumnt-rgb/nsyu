@@ -59,33 +59,17 @@ class CustomerProvider extends ChangeNotifier {
     double openingBalance = 0.0,
     bool isSupplier = false,
   }) async {
-    Customer created;
-    try {
-      created = await _supabaseService.addCustomer(
-        name: name,
-        mobile: mobile,
-        shopName: shopName,
-        email: email,
-        password: password,
-        address: address,
-        openingBalance: openingBalance,
-      ).timeout(const Duration(seconds: 4));
-      created.isSupplier = isSupplier;
-    } catch (_) {
-      final nextNum = _customers.length + 1;
-      final id = isSupplier ? 'S${nextNum.toString().padLeft(3, '0')}' : 'C${nextNum.toString().padLeft(3, '0')}';
-      created = Customer(
-        id: id,
-        name: name.trim(),
-        shopName: shopName?.trim(),
-        mobile: mobile.trim(),
-        email: email?.trim(),
-        address: address.trim(),
-        openingBalance: openingBalance,
-        currentBalance: openingBalance,
-        isSupplier: isSupplier,
-      );
-    }
+    final created = await _supabaseService.addCustomer(
+      name: name,
+      mobile: mobile,
+      shopName: shopName,
+      email: email,
+      password: password,
+      address: address,
+      openingBalance: openingBalance,
+    ).timeout(const Duration(seconds: 15));
+    created.isSupplier = isSupplier;
+
     _customers.add(created);
     await _store.saveCustomers(_customers);
     notifyListeners();

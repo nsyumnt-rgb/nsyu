@@ -60,7 +60,8 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
       _dialogErr = null;
     });
 
-    final success = await context.read<AuthProvider>().loginAsCustomer(
+    final auth = context.read<AuthProvider>();
+    final success = await auth.loginAsCustomer(
           identifier: widget.identifier,
           otp: otp,
         );
@@ -72,7 +73,7 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
     } else {
       setState(() {
         _verifying = false;
-        _dialogErr = 'Invalid code. Please try again.';
+        _dialogErr = auth.lastError ?? 'Invalid code. Please try again.';
       });
     }
   }

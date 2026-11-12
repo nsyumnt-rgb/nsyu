@@ -103,45 +103,55 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      final auth = context.read<AuthProvider>();
+
       if (_isCustomerMode) {
-        // Customer Portal Login
-        final auth = context.read<AuthProvider>();
-        // If password is 4 digits, attempt direct OTP verification
-        if (password.length == 4 && RegExp(r'^\d{4}$').hasMatch(password)) {
-          final success = await auth.loginAsCustomer(
+        // Customer Portal Login: Try password login first
+        bool success = await auth.loginAsCustomerWithPassword(
+          identifier: identifier,
+          password: password,
+        );
+
+        // Fallback: If password login failed and entered password is 4 digits, attempt OTP verification
+        if (!success && password.length == 4 && RegExp(r'^\d{4}$').hasMatch(password)) {
+          success = await auth.loginAsCustomer(
             identifier: identifier,
             otp: password,
           );
-          if (!mounted) return;
-          setState(() {
-            _loading = false;
-            if (!success) {
-              _error = 'Invalid 4-digit code. Please verify and try again.';
-            }
-          });
-        } else {
-          // Customer Email/Mobile + Password Login
-          final success = await auth.loginAsCustomerWithPassword(
-            identifier: identifier,
-            password: password,
-          );
-          if (!mounted) return;
-          setState(() {
-            _loading = false;
-            if (!success) {
-              _error = 'Invalid customer credentials. Please verify your email and password, or use 4-digit OTP login.';
-            }
-          });
         }
-      } else {
-        // Staff / Owner Login
-        final auth = context.read<AuthProvider>();
-        final success = await auth.login(identifier, password);
+
         if (!mounted) return;
         setState(() {
           _loading = false;
           if (!success) {
-            _error = 'Invalid credentials. Please verify your email/password.';
+            _error = auth.lastError ?? 'Invalid customer credentials. Please check your email/mobile and password.';
+          }
+        });
+      } else {
+        // Staff / Owner Login
+        bool success = await auth.login(identifier, password);
+
+        // Smart fallback: If Staff/Owner login failed, check if this is a Customer account
+        if (!success) {
+          final custSuccess = await auth.loginAsCustomerWithPassword(
+            identifier: identifier,
+            password: password,
+          );
+          if (custSuccess) {
+            if (!mounted) return;
+            setState(() {
+              _isCustomerMode = true;
+              _loading = false;
+            });
+            return;
+          }
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _loading = false;
+          if (!success) {
+            _error = auth.lastError ?? 'Invalid credentials. Please verify your email/password.';
           }
         });
       }

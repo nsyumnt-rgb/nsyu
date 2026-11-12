@@ -289,7 +289,15 @@ class SupabaseService {
     );
 
     if (res.statusCode >= 300) {
-      throw Exception('Failed to create customer in Supabase: ${res.body}');
+      try {
+        final errJson = jsonDecode(res.body);
+        if (errJson is Map && errJson['message'] != null) {
+          throw Exception(errJson['message']);
+        }
+      } catch (e) {
+        if (e is! FormatException) rethrow;
+      }
+      throw Exception('Failed to create customer: ${res.body}');
     }
 
     final decoded = jsonDecode(res.body);

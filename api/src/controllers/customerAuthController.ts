@@ -27,75 +27,120 @@ function normalizePhone(raw: string): string {
 }
 
 /**
- * Resolves a customer account using either email or phone number in a specific shop.
+ * Resolves a customer account using either email or phone number.
+ * If explicitShop is provided, searches within that shop first.
+ * If not found or if explicitShop is null, searches across all active CustomerAccounts globally,
+ * and derives the customer's shop from their account.
  */
 async function resolveCustomerAccount(
   rawInput: string,
-  shop: Shop
-): Promise<{ account: CustomerAccount | null; phone: string; email: string | null; isEmailInput: boolean }> {
+  explicitShop?: Shop | null
+): Promise<{ account: CustomerAccount | null; shop: Shop | null; phone: string; email: string | null; isEmailInput: boolean }> {
   const input = rawInput.trim();
   const isEmailInput = input.includes("@");
 
   if (isEmailInput) {
     const email = input.toLowerCase();
-    const customer = await Customer.findOne({
-      where: {
-        email,
-        owner_id: shop.owner_id,
-      },
-    });
+    let account: CustomerAccount | null = null;
+    let customer: Customer | null = null;
 
-    if (!customer) {
-      return { account: null, phone: "", email, isEmailInput: true };
-    }
-
-    const account = await CustomerAccount.findOne({
-      where: {
-        customer_id: customer.id,
-        shop_id: shop.id,
-      },
-      include: [{ model: Customer, as: "customer" }],
-    });
-
-    return {
-      account,
-      phone: account?.phone || customer.phone || "",
-      email: customer.email || email,
-      isEmailInput: true,
-    };
-  } else {
-    const phone = normalizePhone(input);
-    let account = await CustomerAccount.findOne({
-      where: {
-        phone,
-        shop_id: shop.id,
-      },
-      include: [{ model: Customer, as: "customer" }],
-    });
-
-    if (!account) {
-      const customer = await Customer.findOne({
-        where: {
-          phone,
-          owner_id: shop.owner_id,
-        },
+    if (explicitShop) {
+      customer = await Customer.findOne({
+        where: { email, owner_id: explicitShop.owner_id },
       });
       if (customer) {
         account = await CustomerAccount.findOne({
-          where: {
-            customer_id: customer.id,
-            shop_id: shop.id,
-          },
-          include: [{ model: Customer, as: "customer" }],
+          where: { customer_id: customer.id, shop_id: explicitShop.id },
+          include: [{ model: Customer, as: "customer" }, { model: Shop, as: "shop" }],
         });
       }
     }
 
-    const email = account?.customer?.email || null;
+    if (!account) {
+      account = await CustomerAccount.findOne({
+        where: { email },
+        include: [{ model: Customer, as: "customer" }, { model: Shop, as: "shop" }],
+        order: [["id", "DESC"]],
+      });
+
+      if (!account) {
+        customer = await Customer.findOne({
+          where: { email },
+          order: [["id", "DESC"]],
+        });
+        if (customer) {
+          account = await CustomerAccount.findOne({
+            where: { customer_id: customer.id },
+            include: [{ model: Customer, as: "customer" }, { model: Shop, as: "shop" }],
+            order: [["id", "DESC"]],
+          });
+        }
+      }
+    }
+
+    const resolvedShop = account?.shop || (account?.shop_id ? await Shop.findByPk(account.shop_id) : explicitShop) || null;
+    const resolvedPhone = account?.phone || account?.customer?.phone || customer?.phone || "";
+    const resolvedEmail = account?.email || account?.customer?.email || customer?.email || email;
+
     return {
       account,
+      shop: resolvedShop,
+      phone: resolvedPhone,
+      email: resolvedEmail,
+      isEmailInput: true,
+    };
+  } else {
+    const phone = normalizePhone(input);
+    let account: CustomerAccount | null = null;
+
+    if (explicitShop) {
+      account = await CustomerAccount.findOne({
+        where: { phone, shop_id: explicitShop.id },
+        include: [{ model: Customer, as: "customer" }, { model: Shop, as: "shop" }],
+      });
+      if (!account) {
+        const cust = await Customer.findOne({
+          where: { phone, owner_id: explicitShop.owner_id },
+        });
+        if (cust) {
+          account = await CustomerAccount.findOne({
+            where: { customer_id: cust.id, shop_id: explicitShop.id },
+            include: [{ model: Customer, as: "customer" }, { model: Shop, as: "shop" }],
+          });
+        }
+      }
+    }
+
+    if (!account) {
+      account = await CustomerAccount.findOne({
+        where: { phone },
+        include: [{ model: Customer, as: "customer" }, { model: Shop, as: "shop" }],
+        order: [["id", "DESC"]],
+      });
+
+      if (!account) {
+        const cust = await Customer.findOne({
+          where: { phone },
+          order: [["id", "DESC"]],
+        });
+        if (cust) {
+          account = await CustomerAccount.findOne({
+            where: { customer_id: cust.id },
+            include: [{ model: Customer, as: "customer" }, { model: Shop, as: "shop" }],
+            order: [["id", "DESC"]],
+          });
+        }
+      }
+    }
+
+    const resolvedShop = account?.shop || (account?.shop_id ? await Shop.findByPk(account.shop_id) : explicitShop) || null;
+    const resolvedEmail = account?.email || account?.customer?.email || null;
+
+    return {
+      account,
+      shop: resolvedShop,
       phone,
-      email,
+      email: resolvedEmail,
       isEmailInput: false,
     };
   }
@@ -116,22 +161,24 @@ export async function requestOtp(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: "Email address or mobile number is required" });
     }
 
-    // Resolve shop
-    let shop: Shop | null = null;
+    // Resolve shop if explicitly provided
+    let explicitShop: Shop | null = null;
     if (shopCode) {
-      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+      explicitShop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
     } else if (inputShopId) {
-      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
-    } else {
+      explicitShop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
+    }
+
+    const resolved = await resolveCustomerAccount(rawInput, explicitShop);
+    const { account, phone, email } = resolved;
+    let shop = resolved.shop || explicitShop;
+    if (!shop) {
       shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
     }
 
     if (!shop) {
       return res.status(404).json({ success: false, message: "Shop not found" });
     }
-
-    const resolved = await resolveCustomerAccount(rawInput, shop);
-    const { account, phone, email } = resolved;
 
     // Rate limiting: Max 3 OTP requests per phone/account per 15 minutes (in production)
     if (process.env.NODE_ENV !== "test" && phone) {
@@ -241,25 +288,24 @@ export async function verifyOtp(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: "OTP must be exactly 4 digits" });
     }
 
-    // Resolve shop
-    let shop: Shop | null = null;
+    // Resolve shop if explicitly provided
+    let explicitShop: Shop | null = null;
     if (shopCode) {
-      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+      explicitShop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
     } else if (inputShopId) {
-      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
-    } else {
-      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
+      explicitShop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
     }
 
-    if (!shop) {
-      return res.status(404).json({ success: false, message: "Shop not found" });
-    }
-
-    const resolved = await resolveCustomerAccount(rawInput, shop);
+    const resolved = await resolveCustomerAccount(rawInput, explicitShop);
     const { account } = resolved;
 
     if (!account) {
       return res.status(401).json({ success: false, message: "Invalid credentials or account not found" });
+    }
+
+    const shop = resolved.shop || explicitShop || (await Shop.findByPk(account.shop_id));
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
     }
 
     if (account.status !== "active") {
@@ -275,7 +321,6 @@ export async function verifyOtp(req: Request, res: Response) {
     const latestOtp = await CustomerOtp.findOne({
       where: {
         account_id: account.id,
-        shop_id: shop.id,
         used_at: null,
       },
       order: [["created_at", "DESC"]],
@@ -607,22 +652,25 @@ export async function loginWithPassword(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: "Email/Mobile and password are required" });
     }
 
-    // Resolve shop
-    let shop: Shop | null = null;
+    // Resolve shop if explicitly provided
+    let explicitShop: Shop | null = null;
     if (shopCode) {
-      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+      explicitShop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
     } else if (inputShopId) {
-      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
-    } else {
-      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
+      explicitShop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
     }
 
+    const resolved = await resolveCustomerAccount(rawInput, explicitShop);
+    const { account } = resolved;
+
+    if (!account) {
+      return res.status(401).json({ success: false, message: "Invalid email/mobile or password" });
+    }
+
+    const shop = resolved.shop || explicitShop || (await Shop.findByPk(account.shop_id));
     if (!shop) {
       return res.status(404).json({ success: false, message: "Shop not found" });
     }
-
-    const resolved = await resolveCustomerAccount(rawInput, shop);
-    const { account } = resolved;
 
     if (!account) {
       return res.status(401).json({ success: false, message: "Invalid email/mobile or password" });
@@ -732,24 +780,23 @@ export async function forgotPassword(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: "Email or mobile number is required" });
     }
 
-    let shop: Shop | null = null;
+    let explicitShop: Shop | null = null;
     if (shopCode) {
-      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+      explicitShop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
     } else if (inputShopId) {
-      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
-    } else {
-      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
+      explicitShop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
     }
 
-    if (!shop) {
-      return res.status(404).json({ success: false, message: "Shop not found" });
-    }
-
-    const resolved = await resolveCustomerAccount(rawInput, shop);
+    const resolved = await resolveCustomerAccount(rawInput, explicitShop);
     const { account, email } = resolved;
 
     if (!account) {
       return res.status(404).json({ success: false, message: "Customer account not found" });
+    }
+
+    const shop = resolved.shop || explicitShop || (await Shop.findByPk(account.shop_id));
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
     }
 
     const targetEmail = email || account.customer?.email;
@@ -830,30 +877,28 @@ export async function resetPasswordWithOtp(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
     }
 
-    let shop: Shop | null = null;
+    let explicitShop: Shop | null = null;
     if (shopCode) {
-      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+      explicitShop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
     } else if (inputShopId) {
-      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
-    } else {
-      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
+      explicitShop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
     }
 
-    if (!shop) {
-      return res.status(404).json({ success: false, message: "Shop not found" });
-    }
-
-    const resolved = await resolveCustomerAccount(rawInput, shop);
+    const resolved = await resolveCustomerAccount(rawInput, explicitShop);
     const { account } = resolved;
 
     if (!account) {
       return res.status(404).json({ success: false, message: "Customer account not found" });
     }
 
+    const shop = resolved.shop || explicitShop || (await Shop.findByPk(account.shop_id));
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+
     const latestOtp = await CustomerOtp.findOne({
       where: {
         account_id: account.id,
-        shop_id: shop.id,
         used_at: null,
       },
       order: [["created_at", "DESC"]],
