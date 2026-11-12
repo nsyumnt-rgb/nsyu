@@ -39,11 +39,11 @@ export async function getPortalProducts(req: Request, res: Response) {
   try {
     const ownerId = req.customer!.ownerId;
     const shopId = req.customer!.shopId;
-    const { search, categoryId, page = 1, limit = 20 } = req.query;
+    const { search, categoryId, page, limit } = req.query;
 
-    const pageNum = Math.max(1, Number(page) || 1);
-    const limitNum = Math.min(100, Math.max(1, Number(limit) || 20));
-    const offset = (pageNum - 1) * limitNum;
+    const pageNum = page ? Math.max(1, Number(page) || 1) : 1;
+    const limitNum = limit ? Math.min(500, Math.max(1, Number(limit) || 20)) : 500;
+    const offset = page ? (pageNum - 1) * limitNum : 0;
 
     // Check shop portal settings for stock quantity visibility and shop GST rate
     const [settings, shopRow] = await Promise.all([
@@ -68,6 +68,7 @@ export async function getPortalProducts(req: Request, res: Response) {
         { name: { [Op.like]: q } },
         { sku: { [Op.like]: q } },
         { brand: { [Op.like]: q } },
+        { description: { [Op.like]: q } },
       ];
     }
 
@@ -102,21 +103,47 @@ export async function getPortalProducts(req: Request, res: Response) {
       }
 
       const primaryImg = (p as any).images?.find((img: any) => img.is_primary) || (p as any).images?.[0];
+      const priceVal = round2(Number(p.selling_price || 0));
+      const mrpVal = round2(Number(p.mrp || 0));
+      const gstVal = shopDefaultGst > 0 ? round2(Number(p.tax_percent) || shopDefaultGst) : 0;
+      const catObj = (p as any).category ? { id: (p as any).category.id, name: (p as any).category.name } : null;
 
       return {
         id: p.id,
         name: p.name,
+        desc: p.name,
         sku: p.sku,
+        code: p.sku,
         brand: p.brand,
         description: p.description,
-        sellingPrice: round2(Number(p.selling_price || 0)),
-        mrp: round2(Number(p.mrp || 0)),
+        spec: p.description,
+        sellingPrice: priceVal,
+        selling_price: priceVal,
+        price: priceVal,
+        mrp: mrpVal,
         discountPercent: round2(Number(p.discount || 0)),
-        gstPercent: shopDefaultGst > 0 ? round2(Number(p.tax_percent) || shopDefaultGst) : 0,
-        category: (p as any).category ? { id: (p as any).category.id, name: (p as any).category.name } : null,
+        gstPercent: gstVal,
+        category: catObj,
+        categoryName: catObj?.name || p.brand || "General",
         imageUrl: primaryImg ? primaryImg.url : null,
+        images: (p as any).images?.map((img: any) => ({ id: img.id, url: img.url, is_primary: img.is_primary })) || [],
         availability,
-        stockQuantity: showExactStock ? currentStock : undefined,
+        stock: currentStock,
+        stockQuantity: currentStock,
+        availableStock: currentStock,
+        pricing: {
+          sellingPrice: priceVal,
+          sellingPriceInclTax: priceVal,
+          unitPrice: priceVal,
+          mrp: mrpVal,
+          discountPercent: round2(Number(p.discount || 0)),
+          gstPercent: gstVal,
+        },
+        inventory: {
+          availableStock: currentStock,
+          inStock: currentStock > 0,
+          availability,
+        },
       };
     });
 
@@ -128,6 +155,12 @@ export async function getPortalProducts(req: Request, res: Response) {
         page: pageNum,
         limit: limitNum,
         totalPages: Math.ceil(count / limitNum),
+      },
+      pagination: {
+        total: count,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(count / limitNum),
       },
     });
   } catch (err: any) {
@@ -182,24 +215,49 @@ export async function getPortalProduct(req: Request, res: Response) {
     }
 
     const primaryImg = (product as any).images?.find((img: any) => img.is_primary) || (product as any).images?.[0];
+    const priceVal = round2(Number(product.selling_price || 0));
+    const mrpVal = round2(Number(product.mrp || 0));
+    const gstVal = shopDefaultGst > 0 ? round2(Number(product.tax_percent) || shopDefaultGst) : 0;
+    const catObj = (product as any).category ? { id: (product as any).category.id, name: (product as any).category.name } : null;
 
     return res.json({
       success: true,
       data: {
         id: product.id,
         name: product.name,
+        desc: product.name,
         sku: product.sku,
+        code: product.sku,
         brand: product.brand,
         description: product.description,
-        sellingPrice: round2(Number(product.selling_price || 0)),
-        mrp: round2(Number(product.mrp || 0)),
+        spec: product.description,
+        sellingPrice: priceVal,
+        selling_price: priceVal,
+        price: priceVal,
+        mrp: mrpVal,
         discountPercent: round2(Number(product.discount || 0)),
-        gstPercent: shopDefaultGst > 0 ? round2(Number(product.tax_percent) || shopDefaultGst) : 0,
-        category: (product as any).category ? { id: (product as any).category.id, name: (product as any).category.name } : null,
+        gstPercent: gstVal,
+        category: catObj,
+        categoryName: catObj?.name || product.brand || "General",
         imageUrl: primaryImg ? primaryImg.url : null,
-        images: (product as any).images?.map((img: any) => img.url) || [],
+        images: (product as any).images?.map((img: any) => ({ id: img.id, url: img.url, is_primary: img.is_primary })) || [],
         availability,
-        stockQuantity: showExactStock ? currentStock : undefined,
+        stock: currentStock,
+        stockQuantity: currentStock,
+        availableStock: currentStock,
+        pricing: {
+          sellingPrice: priceVal,
+          sellingPriceInclTax: priceVal,
+          unitPrice: priceVal,
+          mrp: mrpVal,
+          discountPercent: round2(Number(product.discount || 0)),
+          gstPercent: gstVal,
+        },
+        inventory: {
+          availableStock: currentStock,
+          inStock: currentStock > 0,
+          availability,
+        },
       },
     });
   } catch (err: any) {

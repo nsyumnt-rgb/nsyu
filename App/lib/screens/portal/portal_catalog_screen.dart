@@ -48,14 +48,14 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
         search: _searchCtrl.text.trim().isNotEmpty ? _searchCtrl.text.trim() : null,
         categoryId: _selectedCategoryId,
         page: _page,
-        limit: 20,
+        limit: 100,
       );
       if (mounted) {
         final list = (res['data'] as List<dynamic>?)?.map((e) => e as Map<String, dynamic>).toList() ?? [];
-        final pagination = res['pagination'] as Map<String, dynamic>?;
+        final pagination = (res['pagination'] ?? res['meta']) as Map<String, dynamic>?;
         setState(() {
           _products = list;
-          _totalPages = (pagination?['pages'] as num?)?.toInt() ?? 1;
+          _totalPages = (pagination?['pages'] ?? pagination?['totalPages'] as num?)?.toInt() ?? 1;
         });
       }
     } catch (_) {
@@ -68,21 +68,37 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
   void _showProductDetails(Map<String, dynamic> prod) {
     final portal = context.read<CustomerPortalProvider>();
     final prodId = (prod['id'] as num).toInt();
-    final name = prod['name']?.toString() ?? 'Product';
-    final sku = prod['sku']?.toString() ?? 'N/A';
+    final name = prod['name']?.toString() ?? prod['desc']?.toString() ?? 'Product';
+    final sku = prod['sku']?.toString() ?? prod['code']?.toString() ?? 'N/A';
     final brand = prod['brand']?.toString();
-    final desc = prod['description']?.toString() ?? 'No description available.';
-    final catName = (prod['category'] as Map<String, dynamic>?)?['name']?.toString() ?? brand ?? 'General';
+    final desc = prod['description']?.toString() ?? prod['spec']?.toString() ?? 'No description available.';
+    final catName = (prod['category'] is Map ? prod['category']['name'] : null)?.toString() ??
+        prod['categoryName']?.toString() ??
+        brand ??
+        'General';
     final pricing = prod['pricing'] as Map<String, dynamic>?;
-    final price = ((pricing?['sellingPriceInclTax'] ?? pricing?['unitPrice'] ?? 0) as num).toDouble();
-    final gst = ((pricing?['gstPercent'] ?? 0) as num).toDouble();
+    final price = ((prod['sellingPrice'] ??
+            prod['selling_price'] ??
+            prod['price'] ??
+            pricing?['sellingPriceInclTax'] ??
+            pricing?['unitPrice'] ??
+            0) as num)
+        .toDouble();
+    final gst = ((prod['gstPercent'] ?? pricing?['gstPercent'] ?? 0) as num).toDouble();
     final inv = prod['inventory'] as Map<String, dynamic>?;
-    final stock = ((inv?['availableStock'] ?? 0) as num).toInt();
+    final stock = ((prod['stock'] ??
+            prod['stockQuantity'] ??
+            prod['availableStock'] ??
+            inv?['availableStock'] ??
+            1) as num)
+        .toInt();
 
-    final images = prod['images'] as List<dynamic>?;
-    String? imageUrl;
-    if (images != null && images.isNotEmpty) {
-      imageUrl = images[0]?['url']?.toString();
+    String? imageUrl = prod['imageUrl']?.toString();
+    if (imageUrl == null || imageUrl.isEmpty) {
+      final images = prod['images'] as List<dynamic>?;
+      if (images != null && images.isNotEmpty) {
+        imageUrl = images[0] is Map ? images[0]['url']?.toString() : images[0]?.toString();
+      }
     }
 
     int selectedQty = portal.getItemQuantityInCart(prodId);
@@ -174,11 +190,13 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
                       '₹${price.toStringAsFixed(2)}',
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8)),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Incl. ${gst.toStringAsFixed(0)}% GST',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                    ),
+                    if (gst > 0) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        'Incl. ${gst.toStringAsFixed(0)}% GST',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -421,19 +439,32 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
                           itemBuilder: (context, idx) {
                             final prod = _products[idx];
                             final prodId = (prod['id'] as num).toInt();
-                            final name = prod['name']?.toString() ?? '';
-                            final sku = prod['sku']?.toString() ?? '';
-                            final brand = prod['brand']?.toString();
+                            final name = prod['name']?.toString() ?? prod['desc']?.toString() ?? 'Product';
+                            final sku = prod['sku']?.toString() ?? prod['code']?.toString() ?? '';
+                            final brand = prod['brand']?.toString() ?? (prod['category'] is Map ? prod['category']['name']?.toString() : null) ?? prod['categoryName']?.toString();
                             final pricing = prod['pricing'] as Map<String, dynamic>?;
-                            final price = ((pricing?['sellingPriceInclTax'] ?? pricing?['unitPrice'] ?? 0) as num).toDouble();
-                            final gst = ((pricing?['gstPercent'] ?? 0) as num).toDouble();
+                            final price = ((prod['sellingPrice'] ??
+                                    prod['selling_price'] ??
+                                    prod['price'] ??
+                                    pricing?['sellingPriceInclTax'] ??
+                                    pricing?['unitPrice'] ??
+                                    0) as num)
+                                .toDouble();
+                            final gst = ((prod['gstPercent'] ?? pricing?['gstPercent'] ?? 0) as num).toDouble();
                             final inv = prod['inventory'] as Map<String, dynamic>?;
-                            final stock = ((inv?['availableStock'] ?? 0) as num).toInt();
+                            final stock = ((prod['stock'] ??
+                                    prod['stockQuantity'] ??
+                                    prod['availableStock'] ??
+                                    inv?['availableStock'] ??
+                                    1) as num)
+                                .toInt();
 
-                            final images = prod['images'] as List<dynamic>?;
-                            String? imageUrl;
-                            if (images != null && images.isNotEmpty) {
-                              imageUrl = images[0]?['url']?.toString();
+                            String? imageUrl = prod['imageUrl']?.toString();
+                            if (imageUrl == null || imageUrl.isEmpty) {
+                              final images = prod['images'] as List<dynamic>?;
+                              if (images != null && images.isNotEmpty) {
+                                imageUrl = images[0] is Map ? images[0]['url']?.toString() : images[0]?.toString();
+                              }
                             }
 
                             final qtyInCart = portal.getItemQuantityInCart(prodId);
@@ -511,10 +542,11 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
                                                     '₹${price.toStringAsFixed(2)}',
                                                     style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14.5, color: Color(0xFF0F172A)),
                                                   ),
-                                                  Text(
-                                                    'Incl. ${gst.toStringAsFixed(0)}% GST',
-                                                    style: const TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
-                                                  ),
+                                                  if (gst > 0)
+                                                    Text(
+                                                      'Incl. ${gst.toStringAsFixed(0)}% GST',
+                                                      style: const TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
+                                                    ),
                                                 ],
                                               ),
 
