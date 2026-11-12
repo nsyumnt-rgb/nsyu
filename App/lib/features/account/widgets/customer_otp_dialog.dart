@@ -93,9 +93,9 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
   }
 
   Future<void> _verifyOtp() async {
-    final otp = _otpCtrl.text.trim();
-    if (otp.length != 4) {
-      setState(() => _dialogErr = 'Please enter the 4-digit code.');
+    final input = _otpCtrl.text.trim();
+    if (input.isEmpty) {
+      setState(() => _dialogErr = 'Please enter the verification code or password.');
       return;
     }
 
@@ -105,10 +105,23 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
     });
 
     final auth = context.read<AuthProvider>();
-    final success = await auth.loginAsCustomer(
-      identifier: widget.identifier,
-      otp: otp,
-    );
+    bool success = false;
+
+    // 1. If input is 4 to 8 digits, try OTP verification first
+    if (RegExp(r'^\d{4,8}$').hasMatch(input)) {
+      success = await auth.loginAsCustomer(
+        identifier: widget.identifier,
+        otp: input,
+      );
+    }
+
+    // 2. Smart fallback: If OTP verification didn't succeed, or input is a full password / phone
+    if (!success) {
+      success = await auth.loginAsCustomerWithPassword(
+        identifier: widget.identifier,
+        password: input,
+      );
+    }
 
     if (!mounted) return;
 
@@ -117,7 +130,7 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
     } else {
       setState(() {
         _verifying = false;
-        _dialogErr = auth.lastError ?? 'Invalid code. Please try again.';
+        _dialogErr = auth.lastError ?? 'Invalid verification code or password. Please try again.';
       });
     }
   }
@@ -141,9 +154,11 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
             ),
           ),
           const SizedBox(width: 10),
-          const Text(
-            'Enter 4-Digit Code',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+          const Expanded(
+            child: Text(
+              'Enter Verification Code',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -153,7 +168,7 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'A 4-digit verification code was sent to ${_maskedEmail ?? widget.identifier}.',
+              'Enter the verification code or password for ${_maskedEmail ?? widget.identifier}.',
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
             ),
             if (_infoMessage != null && _infoMessage!.isNotEmpty) ...[
@@ -192,16 +207,16 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
               ),
               child: TextField(
                 controller: _otpCtrl,
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.text,
                 textAlign: TextAlign.center,
-                maxLength: 4,
+                maxLength: 20,
                 style: const TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  letterSpacing: 14,
+                  letterSpacing: 4,
                 ),
                 decoration: const InputDecoration(
-                  hintText: '••••',
+                  hintText: 'Code / Password',
                   counterText: '',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),

@@ -191,7 +191,7 @@ export async function requestOtp(req: Request, res: Response) {
         },
       });
 
-      if (recentCount >= 3) {
+      if (recentCount >= 10) {
         return res.status(429).json({
           success: false,
           message: "Too many OTP requests. Please wait 15 minutes before trying again.",
@@ -216,8 +216,8 @@ export async function requestOtp(req: Request, res: Response) {
         }
       }
 
-      // Generate 4-digit OTP
-      generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+      // Generate 6-digit standard OTP
+      generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
       const otpHash = hashString(generatedOtp);
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
@@ -230,7 +230,7 @@ export async function requestOtp(req: Request, res: Response) {
         attempts: 0,
       });
 
-      // Send 4-digit OTP to customer's registered email
+      // Send OTP to customer's registered email
       const emailSent = await sendOtpEmail({
         to: targetEmail,
         customerName: account.customer?.name,
@@ -257,7 +257,7 @@ export async function requestOtp(req: Request, res: Response) {
         success: true,
         emailDelivered: isDelivered,
         message: isDelivered
-          ? `A 4-digit verification code has been sent to your registered email (${masked}).`
+          ? `A verification code has been sent to your registered email (${masked}).`
           : `Verification code generated: ${generatedOtp}. Enter it below to log in.`,
         ...(masked ? { maskedEmail: masked } : {}),
         ...((!isDelivered && generatedOtp) ? { verificationCode: generatedOtp, otp: generatedOtp } : {}),
@@ -291,12 +291,12 @@ export async function verifyOtp(req: Request, res: Response) {
     const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
 
     if (!rawInput || !otp) {
-      return res.status(400).json({ success: false, message: "Email/Mobile and 4-digit OTP are required" });
+      return res.status(400).json({ success: false, message: "Email/Mobile and verification code are required" });
     }
 
     const cleanOtp = String(otp).trim();
-    if (cleanOtp.length !== 4) {
-      return res.status(400).json({ success: false, message: "OTP must be exactly 4 digits" });
+    if (cleanOtp.length < 4 || cleanOtp.length > 8) {
+      return res.status(400).json({ success: false, message: "Verification code must be 4 to 6 digits" });
     }
 
     // Resolve shop if explicitly provided
@@ -721,8 +721,8 @@ export async function loginWithPassword(req: Request, res: Response) {
       }
     }
 
-    // Fallback 2: If entered password is a valid 4-digit OTP
-    if (!isMatch && cleanPassword.length === 4 && /^\d{4}$/.test(cleanPassword)) {
+    // Fallback 2: If entered password is a valid 4-to-6 digit OTP
+    if (!isMatch && cleanPassword.length >= 4 && cleanPassword.length <= 8 && /^\d+$/.test(cleanPassword)) {
       const otpRecord = await CustomerOtp.findOne({
         where: { account_id: account.id, used_at: null },
         order: [["created_at", "DESC"]],
@@ -864,7 +864,7 @@ export async function forgotPassword(req: Request, res: Response) {
       });
     }
 
-    const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = hashString(generatedOtp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
@@ -891,7 +891,7 @@ export async function forgotPassword(req: Request, res: Response) {
       success: true,
       emailDelivered: isDelivered,
       message: isDelivered
-        ? `A 4-digit verification code has been sent to your registered email (${maskEmail(targetEmail)}).`
+        ? `A verification code has been sent to your registered email (${maskEmail(targetEmail)}).`
         : `Verification code generated: ${generatedOtp}. Please enter it below to reset password.`,
       maskedEmail: maskEmail(targetEmail),
       ...((!isDelivered && generatedOtp) ? { verificationCode: generatedOtp, otp: generatedOtp } : {}),
@@ -904,7 +904,7 @@ export async function forgotPassword(req: Request, res: Response) {
 
 /**
  * POST /api/customer-portal/auth/reset-password
- * Verifies 4-digit OTP and updates customer password.
+ * Verifies OTP and updates customer password.
  */
 export async function resetPasswordWithOtp(req: Request, res: Response) {
   try {
@@ -912,12 +912,12 @@ export async function resetPasswordWithOtp(req: Request, res: Response) {
     const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
 
     if (!rawInput || !otp || !newPassword) {
-      return res.status(400).json({ success: false, message: "Email/Mobile, 4-digit OTP, and new password are required" });
+      return res.status(400).json({ success: false, message: "Email/Mobile, verification code, and new password are required" });
     }
 
     const cleanOtp = String(otp).trim();
-    if (cleanOtp.length !== 4) {
-      return res.status(400).json({ success: false, message: "OTP must be exactly 4 digits" });
+    if (cleanOtp.length < 4 || cleanOtp.length > 8) {
+      return res.status(400).json({ success: false, message: "Verification code must be 4 to 6 digits" });
     }
 
     const cleanPassword = String(newPassword).trim();

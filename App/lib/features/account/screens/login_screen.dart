@@ -112,8 +112,8 @@ class _LoginScreenState extends State<LoginScreen> {
           password: password,
         );
 
-        // Fallback: If password login failed and entered password is 4 digits, attempt OTP verification
-        if (!success && password.length == 4 && RegExp(r'^\d{4}$').hasMatch(password)) {
+        // Fallback: If password login failed and entered password is 4 to 8 digits, attempt OTP verification
+        if (!success && RegExp(r'^\d{4,8}$').hasMatch(password)) {
           success = await auth.loginAsCustomer(
             identifier: identifier,
             otp: password,
@@ -279,11 +279,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: otpCtrl,
                     keyboardType: TextInputType.number,
-                    maxLength: 4,
+                    maxLength: 6,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 8),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 6),
                     decoration: const InputDecoration(
-                      labelText: '4-Digit Verification Code',
+                      labelText: 'Verification Code (OTP)',
                       border: OutlineInputBorder(),
                       counterText: '',
                       isDense: true,
@@ -352,8 +352,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     : () async {
                         final otp = otpCtrl.text.trim();
                         final pass = newPassCtrl.text.trim();
-                        if (otp.length != 4) {
-                          setDialogState(() => dialogError = 'Enter 4-digit code');
+                        if (otp.length < 4 || otp.length > 8) {
+                          setDialogState(() => dialogError = 'Enter valid verification code');
                           return;
                         }
                         if (pass.length < 6) {
@@ -782,7 +782,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: _loading ? null : _handleCustomerOtpLogin,
                                 icon: const Icon(Icons.mark_email_read_outlined, size: 16, color: Color(0xFF1D4ED8)),
                                 label: const Text(
-                                  'Log in with 4-Digit OTP Code instead',
+                                  'Log in with OTP Code instead',
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w600,

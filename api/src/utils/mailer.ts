@@ -50,7 +50,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
   const storeName = shopName || "NSYU Business";
   const name = customerName || "Valued Customer";
 
-  console.log(`[EMAIL DISPATCH] ✉️  4-Digit OTP [${otp}] dispatched to ${to} (${name}) for ${storeName}`);
+  console.log(`[EMAIL DISPATCH] ✉️  OTP [${otp}] dispatched to ${to} (${name}) for ${storeName}`);
 
   const activeTransporter = getTransporter();
   if (!activeTransporter) {
@@ -89,7 +89,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
     <div class="content">
       <div class="greeting">Hello, ${name}</div>
       <div class="instructions">
-        Use the following 4-digit verification code to log in to your customer portal. This code was requested for your account.
+        Use the following verification code to log in to your customer portal. This code was requested for your account.
       </div>
       <div class="otp-box">
         <div class="otp-code">${otp}</div>
@@ -112,7 +112,7 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
       from: process.env.SMTP_FROM || `"${storeName}" <no-reply@nsyu.local>`,
       to,
       subject: `${otp} is your verification code for ${storeName}`,
-      text: `Hello ${name},\n\nYour 4-digit verification code for ${storeName} Customer Portal is: ${otp}\n\nThis code is valid for 5 minutes. Never share this code with anyone.\n\nThank you,\n${storeName}`,
+      text: `Hello ${name},\n\nYour verification code for ${storeName} Customer Portal is: ${otp}\n\nThis code is valid for 5 minutes. Never share this code with anyone.\n\nThank you,\n${storeName}`,
       html,
     });
     return true;

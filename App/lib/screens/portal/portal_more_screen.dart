@@ -117,18 +117,18 @@ class _PortalMoreScreenState extends State<PortalMoreScreen> {
                   ),
                 if (!otpSent) ...[
                   Text(
-                    'We will send a 4-digit verification code to your registered identifier ($identifier) to securely verify your identity.',
+                    'We will send a verification code to your registered identifier ($identifier) to securely verify your identity.',
                     style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
                   ),
                 ] else ...[
                   TextField(
                     controller: otpCtrl,
                     keyboardType: TextInputType.number,
-                    maxLength: 4,
+                    maxLength: 6,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 8),
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 6),
                     decoration: const InputDecoration(
-                      labelText: '4-Digit Verification Code',
+                      labelText: 'Verification Code (OTP)',
                       border: OutlineInputBorder(),
                       counterText: '',
                       isDense: true,
@@ -209,8 +209,8 @@ class _PortalMoreScreenState extends State<PortalMoreScreen> {
                         final pass = newPassCtrl.text.trim();
                         final confirm = confirmPassCtrl.text.trim();
 
-                        if (otp.length != 4) {
-                          setDialogState(() => dialogError = 'Enter 4-digit code');
+                        if (otp.length < 4 || otp.length > 8) {
+                          setDialogState(() => dialogError = 'Enter valid verification code');
                           return;
                         }
                         if (pass.length < 6) {
