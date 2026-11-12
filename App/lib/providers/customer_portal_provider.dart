@@ -6,15 +6,26 @@ class CustomerPortalProvider extends ChangeNotifier {
 
   Map<String, dynamic>? _customer;
   Map<String, dynamic>? _cart;
+  Map<String, dynamic>? _dashboardData;
   int _unreadNotifications = 0;
   bool _loading = false;
   String? _error;
 
   Map<String, dynamic>? get customer => _customer;
   Map<String, dynamic>? get cart => _cart;
+  Map<String, dynamic>? get dashboardData => _dashboardData;
   int get unreadNotifications => _unreadNotifications;
   bool get loading => _loading;
   String? get error => _error;
+  int _selectedTabIndex = 0;
+  int get selectedTabIndex => _selectedTabIndex;
+
+  void switchTab(int index) {
+    if (_selectedTabIndex != index) {
+      _selectedTabIndex = index;
+      notifyListeners();
+    }
+  }
 
   int get cartItemCount {
     if (_cart == null) return 0;
@@ -50,10 +61,12 @@ class CustomerPortalProvider extends ChangeNotifier {
         _service.getProfile().catchError((_) => _customer ?? {}),
         _service.getCart().catchError((_) => <String, dynamic>{}),
         _service.getUnreadNotificationCount().catchError((_) => 0),
+        _service.getDashboard().catchError((_) => <String, dynamic>{}),
       ]);
       _customer = results[0] as Map<String, dynamic>;
       _cart = results[1] as Map<String, dynamic>;
       _unreadNotifications = results[2] as int;
+      _dashboardData = results[3] as Map<String, dynamic>;
       _error = null;
     } catch (e) {
       _error = e.toString();

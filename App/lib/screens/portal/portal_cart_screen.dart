@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../providers/customer_portal_provider.dart';
-import '../../widgets/product_item_icon.dart';
 import 'portal_order_detail_screen.dart';
 
 class PortalCartScreen extends StatefulWidget {
@@ -14,32 +13,52 @@ class PortalCartScreen extends StatefulWidget {
 
 class _PortalCartScreenState extends State<PortalCartScreen> {
   final TextEditingController _noteCtrl = TextEditingController();
+  final TextEditingController _addressCtrl = TextEditingController();
   bool _submitting = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CustomerPortalProvider>().refreshCart();
+      final portal = context.read<CustomerPortalProvider>();
+      portal.refreshCart();
+      final cust = portal.customer;
+      if (cust?['address'] != null) {
+        _addressCtrl.text = cust!['address'].toString();
+      }
     });
   }
 
   @override
   void dispose() {
     _noteCtrl.dispose();
+    _addressCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _handlePlaceOrder() async {
     final portal = context.read<CustomerPortalProvider>();
     final cart = portal.cart;
-    final items = cart?['items'] as List<dynamic>?;
+    final items = (cart?['items'] as List<dynamic>?) ?? [];
 
-    if (items == null || items.isEmpty) {
+    if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your cart is empty.')),
+        const SnackBar(content: Text('Your cart is empty. Please add products first.')),
       );
       return;
+    }
+
+    // Check for stock errors
+    for (final it in items) {
+      if (it['exceedsStock'] == true || it['isUnavailable'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${it['name']} exceeds available stock. Please adjust quantity.'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _submitting = true);
@@ -49,33 +68,98 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
       final res = await portal.placeOrder(
         clientRequestId: clientRequestId,
         note: _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : null,
-        deliveryType: 'pickup',
+        shippingAddress: _addressCtrl.text.trim().isNotEmpty ? _addressCtrl.text.trim() : null,
+        deliveryType: 'standard',
       );
 
       if (!mounted) return;
       setState(() => _submitting = false);
 
       final orderId = (res['id'] as num?)?.toInt();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order placed successfully! Shop staff has been notified.'),
-          backgroundColor: Color(0xFF047857),
+      final orderNumber = res['order_number']?.toString() ?? 'ORD-$orderId';
+      final total = ((res['total_amount'] ?? 0) as num).toDouble();
+
+      // Show professional order confirmation dialog
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFDCFCE7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 40),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Order Placed Successfully!',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Order #$orderNumber',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF1D4ED8)),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'STATUS: PENDING',
+                  style: TextStyle(color: Color(0xFFB45309), fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Total Amount: ₹${total.toStringAsFixed(2)}\nYour order has been sent to the store. Placing an order does not create a bill until fulfilled.',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D4ED8),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    if (orderId != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => PortalOrderDetailScreen(orderId: orderId)),
+                      );
+                    }
+                  },
+                  child: const Text('Track Order', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
         ),
       );
-
-      if (orderId != null) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => PortalOrderDetailScreen(orderId: orderId)),
-        );
-      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: const Color(0xFFBE123C),
+          backgroundColor: const Color(0xFFDC2626),
         ),
       );
     }
@@ -94,16 +178,15 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
     final grandTotal = portal.cartEstimatedTotal;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
-      // Top Green App Bar matching screenshot
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF047857),
+        backgroundColor: const Color(0xFF1D4ED8),
         elevation: 0,
         title: Row(
           children: [
             Badge(
               label: Text('$cartCount'),
-              backgroundColor: const Color(0xFFE11D48),
+              backgroundColor: const Color(0xFFDC2626),
               child: const Icon(Icons.shopping_cart, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 12),
@@ -111,12 +194,12 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Cart',
+                  'Shopping Cart',
                   style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '$cartCount Items',
-                  style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 11),
+                  '$cartCount ${cartCount == 1 ? "Item" : "Items"}',
+                  style: const TextStyle(color: Color(0xFFDBEAFE), fontSize: 11),
                 ),
               ],
             ),
@@ -134,7 +217,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                       FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE11D48)),
+                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
                         onPressed: () => Navigator.pop(ctx, true),
                         child: const Text('Clear'),
                       ),
@@ -147,7 +230,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
               },
               icon: const Icon(Icons.delete_outline, color: Colors.white, size: 18),
               label: const Text(
-                'Clear Cart',
+                'Clear',
                 style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
@@ -163,10 +246,10 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     width: 80,
                     height: 80,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFD1FAE5),
+                      color: Color(0xFFDBEAFE),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.shopping_cart_outlined, size: 40, color: Color(0xFF047857)),
+                    child: const Icon(Icons.shopping_cart_outlined, size: 40, color: Color(0xFF1D4ED8)),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -175,66 +258,96 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Browse the catalog to add items to your order.',
+                    'Browse the catalog to add items to your cart.',
                     style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1D4ED8),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => portal.switchTab(1),
+                    child: const Text('Explore Catalog'),
                   ),
                 ],
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Customer Info Card matching reference screenshot
+                  // Customer Delivery Card
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
+                      ],
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.person_outline, color: Color(0xFF475569)),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDBEAFE),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.person_pin, color: Color(0xFF1D4ED8), size: 18),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    (cust?['name'] ?? 'Customer').toString(),
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                  ),
+                                  Text(
+                                    'Mobile: +91 ${cust?['phone'] ?? ''}',
+                                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Customer',
-                                style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                (cust?['name'] ?? 'Customer').toString().toUpperCase(),
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Mobile: ${cust?['phone'] ?? ''} ${cust?['address'] != null ? '| ${cust!['address']}' : ''}',
-                                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _addressCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Delivery / Shop Address',
+                            labelStyle: const TextStyle(fontSize: 12),
+                            prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            isDense: true,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
-                  // Cart Items List - Clean, Modern Representation (Icon & Name Only)
+                  // Cart Items List
+                  const Text(
+                    'Selected Products',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 8),
+
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -245,95 +358,130 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                       final prodId = (item['productId'] ?? item['product_id'] as num).toInt();
                       final name = item['name']?.toString() ?? 'Product';
                       final qty = (item['quantity'] as num?)?.toInt() ?? 1;
+                      final unitPrice = ((item['unitPrice'] ?? item['price'] ?? 0) as num).toDouble();
+                      final lineTotal = ((item['lineTotal'] ?? qty * unitPrice) as num).toDouble();
                       final img = item['imageUrl']?.toString();
+                      final exceedsStock = item['exceedsStock'] == true;
+                      final availableStock = (item['availableStock'] as num?)?.toInt() ?? 0;
 
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: exceedsStock ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0)),
                           boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x06000000),
-                              blurRadius: 4,
-                              offset: Offset(0, 1),
-                            ),
+                            BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
                           ],
                         ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 1. Product Icon (attractive, properly aligned, 48x48)
-                            ProductItemIcon(
-                              name: name,
-                              category: item['category']?.toString() ?? item['brand']?.toString(),
-                              sku: item['sku']?.toString(),
-                              imageUrl: img,
-                              size: 48,
-                            ),
-                            const SizedBox(width: 14),
-
-                            // 2. Product Name (clear, readable, fully visible)
-                            Expanded(
-                              child: Text(
-                                name.trim(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A),
-                                  height: 1.3,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Product Image
+                                Container(
+                                  width: 58,
+                                  height: 58,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                  ),
+                                  child: img != null && img.isNotEmpty
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: Image.network(img, fit: BoxFit.contain),
+                                        )
+                                      : const Icon(Icons.image_outlined, color: Color(0xFF94A3B8)),
                                 ),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
+                                const SizedBox(width: 12),
 
-                            // 3. Direct Editable Quantity Input [ Qty ] (No +/- buttons)
-                            Container(
-                              width: 52,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: const Color(0xFFCBD5E1)),
-                              ),
-                              alignment: Alignment.center,
-                              child: TextFormField(
-                                key: ValueKey('portal_cart_qty_${prodId}_$qty'),
-                                initialValue: '$qty',
-                                keyboardType: TextInputType.number,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF0F172A),
+                                // Name & Unit Price
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        'Unit Price: ₹${unitPrice.toStringAsFixed(2)}',
+                                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                                      ),
+                                      if (exceedsStock)
+                                        Text(
+                                          'Only $availableStock left in stock!',
+                                          style: const TextStyle(fontSize: 10.5, color: Color(0xFFDC2626), fontWeight: FontWeight.bold),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                                decoration: const InputDecoration(
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                ),
-                                onChanged: (val) {
-                                  final trimmed = val.trim();
-                                  if (trimmed.isEmpty) return;
-                                  final q = int.tryParse(trimmed);
-                                  if (q != null && q >= 1) {
-                                    portal.setCartItem(prodId, q);
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
 
-                            // 4. Remove / Delete Button
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
-                              onPressed: () => portal.setCartItem(prodId, 0),
-                              tooltip: 'Remove',
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                              padding: EdgeInsets.zero,
+                                // Remove button
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFDC2626)),
+                                  onPressed: () => portal.setCartItem(prodId, 0),
+                                  tooltip: 'Remove',
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  padding: EdgeInsets.zero,
+                                ),
+                              ],
+                            ),
+
+                            const Divider(height: 16),
+
+                            // Quantity Stepper and Item Total Row
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Stepper
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove, size: 16, color: Color(0xFF1D4ED8)),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                        onPressed: () => portal.setCartItem(prodId, qty - 1),
+                                      ),
+                                      Text(
+                                        '$qty',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.add, size: 16, color: Color(0xFF1D4ED8)),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                        onPressed: () => portal.setCartItem(prodId, qty + 1),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Line Total
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text('ITEM TOTAL', style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                                    Text(
+                                      '₹${lineTotal.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -341,90 +489,40 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Terms & Conditions card matching screenshot
+                  // Order Summary Card
                   Container(
-                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.article_outlined, size: 16, color: Color(0xFF047857)),
-                            SizedBox(width: 6),
-                            Text('Terms & Conditions', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Text('1. Warranty as per product company rule.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        SizedBox(height: 3),
-                        Text('2. Payment must be cleared within maximum 21 days.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        SizedBox(height: 3),
-                        Text('3. 5% charges add per week after due date.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Financial calculations card matching screenshot
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: Text(
+                            'Order Summary',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                        const Divider(height: 1),
                         Padding(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           child: Column(
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Sub Total', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                                  Text('₹${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Discount', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                                  Text('₹${discount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('Tax (GST)', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                                  Text('₹${tax.toStringAsFixed(2)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Grand Total Green Bar matching screenshot
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF047857),
-                            borderRadius: BorderRadius.vertical(bottom: Radius.circular(11)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Grand Total', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                              Text('₹${grandTotal.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+                              _buildSummaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
+                              if (discount > 0)
+                                _buildSummaryRow('Discount', '-₹${discount.toStringAsFixed(2)}', color: const Color(0xFF16A34A)),
+                              if (tax > 0)
+                                _buildSummaryRow('GST Tax', '₹${tax.toStringAsFixed(2)}'),
+                              const Divider(height: 18),
+                              _buildSummaryRow('Grand Total', '₹${grandTotal.toStringAsFixed(2)}', isBold: true, fontSize: 16, color: const Color(0xFF1D4ED8)),
                             ],
                           ),
                         ),
@@ -432,68 +530,94 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
-                  // Payment Note (Optional) TextField matching screenshot
+                  // Order Notes (Optional)
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.edit_note, size: 18, color: Color(0xFF047857)),
-                            SizedBox(width: 6),
-                            Text('Payment / Order Note (Optional)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                          ],
+                        const Text(
+                          'Order Notes (Optional)',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
                         ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _noteCtrl,
                           decoration: InputDecoration(
-                            hintText: 'Add payment note...',
+                            hintText: 'Any special instructions for the store...',
                             hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                             filled: true,
                             fillColor: const Color(0xFFF8FAFC),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            isDense: true,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                  // Place Order CTA Button matching screenshot
+                  // Place Order CTA
                   SizedBox(
                     width: double.infinity,
-                    height: 50,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF047857),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1D4ED8),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 2,
                       ),
                       icon: _submitting
                           ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.receipt, color: Colors.white),
+                          : const Icon(Icons.check_circle_outline, color: Colors.white),
                       label: Text(
-                        _submitting ? 'Placing Order...' : 'Create Order >',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        _submitting ? 'Placing Order...' : 'Place Order (₹${grandTotal.toStringAsFixed(2)})',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       onPressed: _submitting ? null : _handlePlaceOrder,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
                 ],
               ),
             ),
     );
   }
-}
 
+  Widget _buildSummaryRow(String label, String value, {bool isBold = false, Color? color, double fontSize = 12.5}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
+              color: color ?? const Color(0xFF0F172A),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

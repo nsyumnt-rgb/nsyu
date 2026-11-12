@@ -200,7 +200,7 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
             TextField(
               controller: _shopNameCtrl,
               decoration: const InputDecoration(
-                labelText: 'Shop / Business Name (Optional)',
+                labelText: 'Shop Name (Optional)',
                 prefixIcon: Icon(Icons.store_outlined),
                 border: OutlineInputBorder(),
                 isDense: true,
@@ -221,20 +221,9 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: _emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email Address * (For Portal Login)',
-                prefixIcon: Icon(Icons.email_outlined),
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
               controller: _addressCtrl,
               decoration: const InputDecoration(
-                labelText: 'Address / Location *',
+                labelText: 'Address *',
                 prefixIcon: Icon(Icons.location_on_outlined),
                 border: OutlineInputBorder(),
                 isDense: true,
@@ -246,8 +235,19 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true, signed: true),
               decoration: const InputDecoration(
-                labelText: 'Opening Balance (₹) (+ Due, - Adv)',
+                labelText: 'Opening Balance (₹) (Default ₹0, + Due, - Adv)',
                 prefixIcon: Icon(Icons.currency_rupee),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email Address * (For Portal Login)',
+                prefixIcon: Icon(Icons.email_outlined),
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
@@ -257,7 +257,7 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
               controller: _passwordCtrl,
               obscureText: _obscurePassword,
               decoration: InputDecoration(
-                labelText: 'Portal Password * (Min 6 chars)',
+                labelText: 'Password * (Min 6 chars)',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
