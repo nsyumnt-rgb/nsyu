@@ -14,6 +14,9 @@ export interface CreateSaleInput {
   overallDiscount?: number;
   paidAmount?: number;
   paymentMethod?: string;
+  transactionId?: string;
+  clientRequestId?: string;
+  idempotencyKey?: string;
   notes?: string;
   isEmi?: boolean;
   emi?: {
@@ -34,11 +37,26 @@ export function getSale(saleId: number | string) {
 }
 
 export function createSale(data: CreateSaleInput) {
-  return api.post<ApiEnvelope<Sale>>("/sales", data);
+  const headers = data.idempotencyKey || data.clientRequestId
+    ? { "x-idempotency-key": data.idempotencyKey || data.clientRequestId! }
+    : undefined;
+  return api.post<ApiEnvelope<Sale>>("/sales", data, headers ? { headers } : undefined);
 }
 
-export function recordSalePayment(saleId: number, data: { amount: number; method: string; transactionId?: string; paymentDate?: string; notes?: string }) {
-  return api.post<ApiEnvelope<any>>(`/sales/${saleId}/payments`, data);
+export function recordSalePayment(
+  saleId: number,
+  data: {
+    amount: number;
+    method: string;
+    transactionId?: string;
+    referenceCode?: string;
+    idempotencyKey?: string;
+    paymentDate?: string;
+    notes?: string;
+  }
+) {
+  const headers = data.idempotencyKey ? { "x-idempotency-key": data.idempotencyKey } : undefined;
+  return api.post<ApiEnvelope<any>>(`/sales/${saleId}/payments`, data, headers ? { headers } : undefined);
 }
 
 export function cancelSale(saleId: number, reason?: string) {

@@ -106,6 +106,7 @@ function SalesInner() {
 
     setCreating(true);
     setCreateError(null);
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `sale-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     try {
       await createSale({
         customerId: Number(selectedCustomerId),
@@ -117,6 +118,7 @@ function SalesInner() {
         paidAmount: Number(paidAmount) || 0,
         paymentMethod: isEmi ? "cash" : paymentMethod,
         isEmi,
+        idempotencyKey,
         emi: isEmi
           ? {
               downPayment: Number(paidAmount) || 0,
@@ -142,11 +144,22 @@ function SalesInner() {
   async function handleRecordPayment(e: React.FormEvent) {
     e.preventDefault();
     if (!payingSale) return;
+    const amt = Number(payAmount);
+    if (!amt || amt <= 0) {
+      alert("Please enter a valid positive payment amount.");
+      return;
+    }
+    if (amt > Number(payingSale.due_amount) + 0.01) {
+      alert(`Payment amount ₹${amt} cannot exceed remaining due amount ₹${payingSale.due_amount}`);
+      return;
+    }
     setPaySaving(true);
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pay-${payingSale.id}-${Date.now()}`;
     try {
       await recordSalePayment(payingSale.id, {
-        amount: Number(payAmount),
+        amount: amt,
         method: payMethod,
+        idempotencyKey,
       });
       setPayingSale(null);
       setPayAmount("");
@@ -313,7 +326,7 @@ function SalesInner() {
                           : "bg-ink-100 text-ink-600"
                       }`}
                     >
-                      {s.status.replace("_", " ")}
+                      {s.payment_status || (s.status === "partially_paid" ? "PARTIAL" : s.status.toUpperCase())}
                     </span>
                   </td>
                   <td className="text-right space-x-2">
@@ -575,7 +588,7 @@ function SalesInner() {
                   <option value="cash">Cash</option>
                   <option value="upi">UPI</option>
                   <option value="card">Card</option>
-                  <option value="bank">Bank Transfer</option>
+                  <option value="bank_transfer">Bank Transfer</option>
                 </select>
               </div>
               <div className="flex justify-end gap-2">

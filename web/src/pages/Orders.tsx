@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import clsx from "clsx";
 import {
   getOrders,
@@ -95,9 +96,10 @@ export default function Orders() {
   const [convertingToBill, setConvertingToBill] = useState(false);
 
   async function handleConvertToBill(orderId: number) {
+    if (convertingToBill) return;
     if (
       !window.confirm(
-        "Are you sure you want to convert this order into an official tax bill? This will deduct live inventory and post to the customer ledger."
+        "Are you sure you want to convert this order into an official tax bill? This is a strictly one-time action that deducts inventory and posts to the customer ledger."
       )
     ) {
       return;
@@ -105,14 +107,22 @@ export default function Orders() {
     setConvertingToBill(true);
     try {
       const res = await convertOrderToBill(orderId);
-      alert("Order converted to official tax invoice successfully!");
-      loadOrdersData();
-      if (res?.data?.data) {
-        setSelectedOrder(res.data.data);
+      const payload = res?.data?.data as any;
+      const convertedOrder = payload?.order || payload;
+      const generatedBill = payload?.bill;
+      if (convertedOrder && convertedOrder.id) {
+        setSelectedOrder(convertedOrder);
       }
-      setStep("invoice");
+      await loadOrdersData();
+      alert(
+        generatedBill?.invoice_number
+          ? `Order converted to official bill #${generatedBill.invoice_number} successfully!`
+          : "Order converted to official tax invoice successfully!"
+      );
+      setStep("view");
     } catch (err) {
       alert(apiErrorMessage(err, "Could not convert order to bill"));
+      loadOrdersData();
     } finally {
       setConvertingToBill(false);
     }
@@ -482,6 +492,7 @@ export default function Orders() {
                   <option value="processing">Processing</option>
                   <option value="shipped">Shipped</option>
                   <option value="delivered">Delivered</option>
+                  <option value="BILLED">Billed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
 
@@ -586,8 +597,15 @@ export default function Orders() {
                           return true;
                         })
                         .map((ord, idx) => {
+                        const isBilled =
+                          String(ord.status || "").toUpperCase() === "BILLED" ||
+                          String(ord.status || "").toLowerCase() === "converted_to_bill" ||
+                          Boolean(ord.converted_sale_id || ord.billed_bill_id);
+
                         const statusColor =
-                          ord.status === "delivered" || ord.status === "Delivered"
+                          isBilled
+                            ? "bg-indigo-100 text-indigo-800 border-indigo-200"
+                            : ord.status === "delivered" || ord.status === "Delivered"
                             ? "bg-emerald-100 text-emerald-800 border-emerald-200"
                             : ord.status === "processing" || ord.status === "Processing"
                             ? "bg-blue-100 text-blue-800 border-blue-200"
@@ -703,30 +721,33 @@ export default function Orders() {
                                 >
                                   👁️
                                 </button>
-                                <button
-                                  title="Update Status"
-                                  onClick={() => {
-                                    setSelectedOrder(ord);
-                                    setStatusUpdateForm({
-                                      status:
-                                        ord.status.charAt(0).toUpperCase() + ord.status.slice(1),
-                                      payment_status: ord.payment_status || "Paid",
-                                      remarks: ord.remarks || "Status updated.",
-                                    });
-                                    setStep("update_status");
-                                  }}
-                                  className="text-slate-500 hover:text-indigo-600 text-sm"
-                                >
-                                  ✏️
-                                </button>
-                                {!(ord as any).converted_sale_id && (
-                                  <button
-                                    title="Convert to Official Bill"
-                                    onClick={() => handleConvertToBill(ord.id)}
-                                    className="text-slate-500 hover:text-emerald-700 text-sm"
-                                  >
-                                    🧾
-                                  </button>
+                                {!isBilled && ord.status !== "cancelled" && (
+                                  <>
+                                    <button
+                                      title="Update Status"
+                                      onClick={() => {
+                                        setSelectedOrder(ord);
+                                        setStatusUpdateForm({
+                                          status:
+                                            ord.status.charAt(0).toUpperCase() + ord.status.slice(1),
+                                          payment_status: ord.payment_status || "Paid",
+                                          remarks: ord.remarks || "Status updated.",
+                                        });
+                                        setStep("update_status");
+                                      }}
+                                      className="text-slate-500 hover:text-indigo-600 text-sm"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      title="Convert to Official Bill"
+                                      disabled={convertingToBill}
+                                      onClick={() => handleConvertToBill(ord.id)}
+                                      className="text-slate-500 hover:text-emerald-700 text-sm disabled:opacity-40"
+                                    >
+                                      🧾
+                                    </button>
+                                  </>
                                 )}
                                 <button
                                   title="Print Invoice"
@@ -1276,31 +1297,59 @@ export default function Orders() {
                 >
                   <span>🖨️</span> Print Invoice
                 </button>
-                {!(selectedOrder as any).converted_sale_id && (
-                  <button
-                    onClick={() => handleConvertToBill(selectedOrder.id)}
-                    disabled={convertingToBill}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    <span>🧾</span>
-                    <span>{convertingToBill ? "Converting..." : "Convert to Official Bill"}</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => {
-                    setStatusUpdateForm({
-                      status:
-                        selectedOrder.status.charAt(0).toUpperCase() +
-                        selectedOrder.status.slice(1),
-                      payment_status: selectedOrder.payment_status || "Paid",
-                      remarks: selectedOrder.remarks || "Processing order delivery.",
-                    });
-                    setStep("update_status");
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5"
-                >
-                  <span>✏️</span> Edit Order Status
-                </button>
+                {(() => {
+                  const selBilled =
+                    String(selectedOrder.status || "").toUpperCase() === "BILLED" ||
+                    String(selectedOrder.status || "").toLowerCase() === "converted_to_bill" ||
+                    Boolean(selectedOrder.converted_sale_id || selectedOrder.billed_bill_id);
+                  const linkedSaleId = selectedOrder.billed_bill_id || selectedOrder.converted_sale_id;
+                  if (selBilled) {
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                          BILLED {selectedOrder.billed_at ? `(${new Date(selectedOrder.billed_at).toLocaleDateString("en-IN")})` : ""}
+                        </span>
+                        {linkedSaleId && (
+                          <Link
+                            to={`/app/sales/${linkedSaleId}`}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs"
+                          >
+                            View Bill →
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <>
+                      {selectedOrder.status !== "cancelled" && (
+                        <button
+                          onClick={() => handleConvertToBill(selectedOrder.id)}
+                          disabled={convertingToBill}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          <span>🧾</span>
+                          <span>{convertingToBill ? "Converting..." : "Convert to Official Bill"}</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setStatusUpdateForm({
+                            status:
+                              selectedOrder.status.charAt(0).toUpperCase() +
+                              selectedOrder.status.slice(1),
+                            payment_status: selectedOrder.payment_status || "Paid",
+                            remarks: selectedOrder.remarks || "Processing order delivery.",
+                          });
+                          setStep("update_status");
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5"
+                      >
+                        <span>✏️</span> Edit Order Status
+                      </button>
+                    </>
+                  );
+                })()}
                 <button
                   onClick={() => setStep("tracking")}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5"

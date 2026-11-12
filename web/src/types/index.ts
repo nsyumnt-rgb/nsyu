@@ -354,6 +354,9 @@ export interface Sale {
   payment_method?: string;
   is_emi?: boolean;
   status: "paid" | "partially_paid" | "unpaid" | "cancelled" | "returned" | "partially_returned";
+  payment_status?: "PAID" | "PARTIAL" | "UNPAID" | "CANCELLED";
+  order_id?: number | null;
+  client_request_id?: string | null;
   notes?: string;
   customer?: Customer;
   shop?: Shop;
@@ -409,10 +412,15 @@ export interface CustomerLedgerEntry {
   owner_id: number;
   shop_id: number;
   customer_id: number;
-  entry_type: "debit" | "credit";
+  sale_id?: number | null;
+  entry_type: "debit" | "credit" | "reversal";
   amount: number;
+  running_balance?: number;
   reference_type: string;
   reference_id: number;
+  reference_code?: string | null;
+  payment_method?: string | null;
+  notes?: string | null;
   description?: string;
   entry_date: string;
   status: "active" | "reversed";

@@ -9,6 +9,7 @@ export const ORDER_STATUSES = [
   "cancelled",
   "confirmed",
   "converted_to_bill",
+  "BILLED",
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
@@ -32,6 +33,7 @@ export interface OrderAttributes {
   remarks?: string | null;
   converted_sale_id?: number | null;
   billed_bill_id?: number | null;
+  billed_at?: Date | null;
   advance_amount?: number;
   placed_by?: "customer" | "staff" | null;
   customer_account_id?: number | null;
@@ -57,6 +59,8 @@ export interface OrderCreationAttributes
     | "remarks"
     | "expected_delivery_date"
     | "converted_sale_id"
+    | "billed_bill_id"
+    | "billed_at"
     | "placed_by"
     | "customer_account_id"
     | "client_request_id"
@@ -85,6 +89,7 @@ export class Order extends Model<OrderAttributes, OrderCreationAttributes> imple
   public remarks?: string | null;
   public converted_sale_id?: number | null;
   public billed_bill_id?: number | null;
+  public billed_at?: Date | null;
   public advance_amount?: number;
   public placed_by?: "customer" | "staff" | null;
   public customer_account_id?: number | null;
@@ -115,6 +120,7 @@ Order.init(
     remarks: { type: DataTypes.TEXT, allowNull: true },
     converted_sale_id: { type: DataTypes.BIGINT, allowNull: true },
     billed_bill_id: { type: DataTypes.BIGINT, allowNull: true },
+    billed_at: { type: DataTypes.DATE, allowNull: true },
     advance_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     placed_by: { type: DataTypes.ENUM("customer", "staff"), allowNull: true, defaultValue: "staff" },
     customer_account_id: { type: DataTypes.BIGINT, allowNull: true },

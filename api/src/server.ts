@@ -12,6 +12,16 @@ async function ensureSingleLedgerSchema() {
     await sequelize.query(`
       ALTER TABLE public.customer_ledger ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'cash';
       ALTER TABLE public.customer_ledger ADD COLUMN IF NOT EXISTS notes TEXT;
+      ALTER TABLE public.customer_ledger ADD COLUMN IF NOT EXISTS sale_id BIGINT REFERENCES public.sales(id) ON DELETE SET NULL;
+      ALTER TABLE public.customer_ledger ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(120);
+      ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS order_id BIGINT REFERENCES public.orders(id) ON DELETE SET NULL;
+      ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID';
+      ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS client_request_id VARCHAR(120);
+      ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS billed_at TIMESTAMPTZ;
+      CREATE UNIQUE INDEX IF NOT EXISTS sales_unique_order_id_uidx ON public.sales (order_id) WHERE order_id IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS sales_owner_client_request_uidx ON public.sales (owner_id, client_request_id) WHERE client_request_id IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS customer_ledger_idempotency_key_uidx ON public.customer_ledger (owner_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS customer_ledger_credit_ref_code_uidx ON public.customer_ledger (owner_id, reference_code) WHERE reference_code IS NOT NULL AND entry_type = 'credit' AND status = 'active';
       DO $$
       BEGIN
         IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payments') THEN

@@ -281,17 +281,25 @@ class SavedBill {
       }
     }
 
-    final statusStr = (j['status'] ?? 'unpaid').toString().toLowerCase();
+    final mainStatusStr = (j['status'] ?? 'unpaid').toString().toLowerCase();
+    final payStatusStr =
+        (j['payment_status'] ?? j['paymentStatus'] ?? mainStatusStr)
+            .toString()
+            .toLowerCase();
     final paid = double.tryParse(j['paid_amount']?.toString() ?? j['paidAmount']?.toString() ?? '0') ?? 0.0;
     final totalAmt = double.tryParse(j['total_amount']?.toString() ?? j['totalAmount']?.toString() ?? '0') ?? 0.0;
 
     BillStatus st;
-    if (statusStr == 'paid' || (totalAmt > 0 && paid >= totalAmt)) {
-      st = BillStatus.paid;
-    } else if (statusStr.contains('partial') || (paid > 0 && paid < totalAmt)) {
-      st = BillStatus.partial;
-    } else if (statusStr == 'cancelled') {
+    if (mainStatusStr == 'cancelled') {
       st = BillStatus.cancelled;
+    } else if (payStatusStr == 'paid' ||
+        mainStatusStr == 'paid' ||
+        (totalAmt > 0 && paid >= totalAmt - 0.01)) {
+      st = BillStatus.paid;
+    } else if (payStatusStr.contains('partial') ||
+        mainStatusStr.contains('partial') ||
+        (paid > 0.01 && paid < totalAmt - 0.01)) {
+      st = BillStatus.partial;
     } else {
       st = BillStatus.unpaid;
     }

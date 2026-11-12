@@ -14,9 +14,9 @@ import {
   Notification,
   ProductStock,
 } from "../models";
-import { PAYMENT_METHODS, PaymentMethod } from "../models/Sale";
+import { PAYMENT_METHODS, PaymentMethod, computeBillPaymentStatus } from "../models/Sale";
 import { recordStockMovement } from "../utils/inventory";
-import { recordLedgerEntry, reverseLedgerEntry } from "../utils/ledger";
+import { generateUniqueReceiptCode, recordCustomerPaymentTransaction, recordLedgerEntry, reverseLedgerEntry } from "../utils/ledger";
 import { nextInvoiceNumber } from "../utils/invoice";
 import { logAudit } from "../utils/audit";
 import { streamBillPdf } from "../utils/pdf";
@@ -120,13 +120,15 @@ export async function createSale(req: Request, res: Response) {
     const existingSale = await Sale.findOne({
       where: {
         owner_id: ownerId,
-        shop_id: shopId,
-        notes: { [Op.like]: `%[req:${clientRequestId}]%` },
+        [Op.or]: [
+          { client_request_id: clientRequestId },
+          { notes: { [Op.like]: `%[req:${clientRequestId}]%` } },
+        ],
       },
       include: saleIncludes,
     });
     if (existingSale) {
-      return res.status(200).json({ success: true, data: existingSale, message: "Sale already processed (idempotent)" });
+      return res.status(200).json({ success: true, idempotent: true, data: existingSale, message: "Sale already processed (idempotent)" });
     }
   }
 
@@ -279,6 +281,7 @@ export async function createSale(req: Request, res: Response) {
       let status: Sale["status"] = "unpaid";
       if (initialPaid >= totalAmount && totalAmount > 0) status = "paid";
       else if (initialPaid > 0) status = "partially_paid";
+      const paymentStatus = computeBillPaymentStatus(totalAmount, initialPaid, status);
 
       // 4. Invoice number + Sale header
       const invoiceNumber = await nextInvoiceNumber({ ownerId, shopId, transaction: t });
@@ -289,6 +292,7 @@ export async function createSale(req: Request, res: Response) {
           owner_id: ownerId,
           shop_id: shopId,
           customer_id: customer.id,
+          order_id: req.body.orderId ? Number(req.body.orderId) : null,
           invoice_number: invoiceNumber,
           invoice_date: new Date(),
           subtotal,
@@ -300,7 +304,9 @@ export async function createSale(req: Request, res: Response) {
           payment_method: normalizedPaymentMethod,
           is_emi: Boolean(isEmi),
           status,
+          payment_status: paymentStatus,
           notes: finalNotes || null,
+          client_request_id: clientRequestId || null,
           actor_type: actorType,
           actor_id: actorId,
         },
@@ -347,10 +353,12 @@ export async function createSale(req: Request, res: Response) {
         ownerId,
         shopId,
         customerId: customer.id,
+        saleId: sale.id,
         entryType: "debit",
         amount: totalAmount,
         referenceType: "Sale",
         referenceId: sale.id,
+        idempotencyKey: clientRequestId ? `sale-debit:${clientRequestId}` : undefined,
         description: `Sale ${invoiceNumber}`,
         actorType,
         actorId,
@@ -360,38 +368,20 @@ export async function createSale(req: Request, res: Response) {
 
       // 7. Single Ledger Architecture: Payment received now is recorded directly into customer ledger
       if (initialPaid > 0) {
-        const receiptCode = `RCP-${Date.now()}`;
+        const receiptCode = transactionId ? String(transactionId).trim() : generateUniqueReceiptCode();
         await recordLedgerEntry({
           ownerId,
           shopId,
           customerId: customer.id,
+          saleId: sale.id,
           entryType: "credit",
           amount: initialPaid,
           referenceType: "SalePayment",
           referenceId: sale.id,
           referenceCode: receiptCode,
+          idempotencyKey: clientRequestId ? `sale-credit:${clientRequestId}` : undefined,
           paymentMethod: normalizedPaymentMethod,
           description: isEmi ? `Down payment for ${invoiceNumber}` : `Payment for ${invoiceNumber}`,
-          notes: transactionId ? `Txn: ${transactionId}` : null,
-          actorType,
-          actorId,
-          externalTransaction: t,
-        });
-      }
-
-      // 7b. Excess payment applied towards previous outstanding balance
-      const excessPaid = !isEmi && Number(paidAmount) > totalAmount ? round2(Number(paidAmount) - totalAmount) : 0;
-      if (excessPaid > 0) {
-        await recordLedgerEntry({
-          ownerId,
-          shopId,
-          customerId: customer.id,
-          entryType: "credit",
-          amount: excessPaid,
-          referenceType: "BalancePayment",
-          referenceId: sale.id,
-          paymentMethod: normalizedPaymentMethod,
-          description: `Payment towards previous balance with ${invoiceNumber}`,
           notes: transactionId ? `Txn: ${transactionId}` : null,
           actorType,
           actorId,
@@ -480,6 +470,16 @@ export async function createSale(req: Request, res: Response) {
     const sale = await Sale.findByPk(result, { include: saleIncludes });
     return res.status(201).json({ success: true, data: sale });
   } catch (err: any) {
+    const pgCode = err?.original?.code || err?.parent?.code || err?.code;
+    if ((pgCode === "23505" || err?.name === "SequelizeUniqueConstraintError") && clientRequestId) {
+      const existingSale = await Sale.findOne({
+        where: { owner_id: ownerId, client_request_id: clientRequestId },
+        include: saleIncludes,
+      });
+      if (existingSale) {
+        return res.status(200).json({ success: true, idempotent: true, data: existingSale, message: "Sale already processed (idempotent)" });
+      }
+    }
     const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
     console.error("createSale error:", errMsg, err);
     return res.status(err.status || 500).json({ success: false, message: errMsg });
@@ -548,89 +548,69 @@ export async function getSale(req: Request, res: Response) {
 
 /** Record a later (partial or final) payment against an existing sale's due balance. */
 export async function recordSalePayment(req: Request, res: Response) {
-  const { amount, method, transactionId, notes, paymentDate } = req.body;
+  const { amount, method, transactionId, referenceCode, notes, paymentDate, allowAdvance } = req.body;
   if (!amount || Number(amount) <= 0) return res.status(400).json({ success: false, message: "amount must be positive" });
-  if (!method || !PAYMENT_METHODS.includes(method)) {
+  const cleanMethod = String(method || req.body.paymentMethod || "cash").trim().toLowerCase();
+  if (!PAYMENT_METHODS.includes(cleanMethod as PaymentMethod)) {
     return res.status(400).json({ success: false, message: `method must be one of: ${PAYMENT_METHODS.join(", ")}` });
   }
 
   const ownerId = req.auth!.ownerId;
   const shopId = req.auth!.shopId!;
   const { actorType, actorId } = actorFromReq(req);
+  const idempotencyKey =
+    String(req.headers["x-idempotency-key"] || req.body.idempotencyKey || req.body.clientRequestId || "").trim() || null;
 
   try {
-    const result = await sequelize.transaction(async (t) => {
-      const where: any = { id: req.params.saleId, owner_id: ownerId };
-      if (!req.auth!.isOwner) {
-        where.shop_id = shopId;
-      }
-      const sale = await Sale.findOne({
-        where,
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-      });
-      if (!sale) throw Object.assign(new Error("Sale not found"), { status: 404 });
-      if (sale.status === "cancelled") throw Object.assign(new Error("Cannot pay a cancelled sale"), { status: 400 });
-      if (sale.is_emi) {
-        throw Object.assign(
-          new Error("This sale is on EMI — pay individual installments via /api/emi/installments/:id/pay"),
-          { status: 400 }
-        );
-      }
+    const result = await recordCustomerPaymentTransaction({
+      ownerId,
+      shopId,
+      saleId: Number(req.params.saleId),
+      amount: Number(amount),
+      paymentMethod: cleanMethod,
+      referenceCode: referenceCode || transactionId || null,
+      idempotencyKey,
+      notes: notes ?? null,
+      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+      actorType,
+      actorId,
+      isOwner: req.auth!.isOwner,
+      allowAdvance: Boolean(allowAdvance),
+      referenceType: "SalePayment",
+    });
 
-      const payAmount = round2(Math.min(Number(amount), Number(sale.due_amount)));
-      if (payAmount <= 0) throw Object.assign(new Error("Sale has no outstanding due amount"), { status: 400 });
-
-      // Always attribute payment and ledger to the actual shop of the sale
-      const targetShopId = sale.shop_id;
-      const receiptCode = `RCP-${Date.now()}`;
-
-      const { entry: ledgerEntry } = await recordLedgerEntry({
-        ownerId,
-        shopId: targetShopId,
-        customerId: sale.customer_id,
-        entryType: "credit",
-        amount: payAmount,
-        referenceType: "SalePayment",
-        referenceId: sale.id,
-        referenceCode: receiptCode,
-        paymentMethod: method,
-        notes: notes ?? null,
-        description: `Payment for ${sale.invoice_number}`,
-        actorType,
-        actorId,
-        entryDate: paymentDate ? new Date(paymentDate) : new Date(),
-        externalTransaction: t,
-      });
-
-      sale.paid_amount = round2(Number(sale.paid_amount) + payAmount);
-      sale.due_amount = round2(Number(sale.due_amount) - payAmount);
-      sale.status = sale.due_amount <= 0 ? "paid" : "partially_paid";
-      await sale.save({ transaction: t });
-
+    if (!result.idempotent) {
       await logAudit({
         req,
         module: "billing",
         action: "payment",
         entityType: "Sale",
-        entityId: sale.id,
-        details: { amount: payAmount, method },
+        entityId: Number(req.params.saleId),
+        details: { amount: Number(result.entry.amount), method: cleanMethod, referenceCode: result.receiptCode },
       });
+    }
 
-      return {
-        id: ledgerEntry.id,
-        amount: payAmount,
-        method,
-        payment_date: ledgerEntry.entry_date,
-        reference_code: receiptCode,
-        sale,
-      };
+    const reloadedSale = result.sale
+      ? await Sale.findByPk(result.sale.id, { include: saleIncludes })
+      : null;
+
+    return res.status(result.idempotent ? 200 : 201).json({
+      success: true,
+      idempotent: result.idempotent,
+      message: result.idempotent ? "Payment already recorded (idempotent)" : "Payment recorded successfully",
+      data: {
+        id: result.entry.id,
+        amount: Number(result.entry.amount),
+        method: result.entry.payment_method || cleanMethod,
+        payment_date: result.entry.entry_date,
+        reference_code: result.receiptCode,
+        running_balance: Number(result.entry.running_balance),
+        sale: reloadedSale || result.sale,
+      },
     });
-
-    return res.status(201).json({ success: true, data: result });
   } catch (err: any) {
     const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
-    console.error("createSale error:", errMsg, err);
+    console.error("recordSalePayment error:", errMsg, err);
     return res.status(err.status || 500).json({ success: false, message: errMsg });
   }
 }
@@ -735,6 +715,7 @@ export async function cancelSale(req: Request, res: Response) {
 
       sale.due_amount = 0;
       sale.status = "cancelled";
+      sale.payment_status = "CANCELLED";
       sale.cancel_reason = reason ?? null;
       await sale.save({ transaction: t });
 
@@ -799,7 +780,7 @@ export async function cancelSale(req: Request, res: Response) {
     return res.json({ success: true, data: sale });
   } catch (err: any) {
     const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
-    console.error("createSale error:", errMsg, err);
+    console.error("cancelSale error:", errMsg, err);
     return res.status(err.status || 500).json({ success: false, message: errMsg });
   }
 }
@@ -923,6 +904,7 @@ export async function returnSale(req: Request, res: Response) {
       sale.due_amount = Math.max(0, round2(Number(sale.due_amount) - totalRefund));
       const allReturned = saleItems.every((si) => si.returned_quantity >= si.quantity);
       sale.status = allReturned ? "returned" : "partially_returned";
+      sale.payment_status = computeBillPaymentStatus(sale.total_amount, sale.paid_amount, sale.status);
       await sale.save({ transaction: t });
 
       await logAudit({
@@ -941,7 +923,7 @@ export async function returnSale(req: Request, res: Response) {
     return res.status(201).json({ success: true, data: saleReturn });
   } catch (err: any) {
     const errMsg = err.errors ? err.errors.map((e: any) => `${e.path}: ${e.message}`).join(", ") : err.message;
-    console.error("createSale error:", errMsg, err);
+    console.error("returnSale error:", errMsg, err);
     return res.status(err.status || 500).json({ success: false, message: errMsg });
   }
 }
@@ -1068,6 +1050,7 @@ export async function updateSale(req: Request, res: Response) {
         sale.status = "cancelled";
         sale.due_amount = 0;
       }
+      sale.payment_status = computeBillPaymentStatus(sale.total_amount, sale.paid_amount, sale.status);
     }
 
     if (notes !== undefined) {

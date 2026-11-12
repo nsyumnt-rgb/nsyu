@@ -30,6 +30,7 @@ interface CustomerLedgerAttributes {
   owner_id: number;
   shop_id: number;
   customer_id: number;
+  sale_id?: number | null;
   entry_type: LedgerEntryType;
   amount: number;
   running_balance: number;
@@ -41,12 +42,16 @@ interface CustomerLedgerAttributes {
   actor_type: "owner" | "employee";
   actor_id: number;
   reference_code?: string | null;
+  idempotency_key?: string | null;
   payment_method?: string | null;
   notes?: string | null;
 }
 
 interface CustomerLedgerCreationAttributes
-  extends Optional<CustomerLedgerAttributes, "id" | "reference_id" | "status" | "reference_code" | "payment_method" | "notes"> {}
+  extends Optional<
+    CustomerLedgerAttributes,
+    "id" | "sale_id" | "reference_id" | "status" | "reference_code" | "idempotency_key" | "payment_method" | "notes"
+  > {}
 
 export class CustomerLedger
   extends Model<CustomerLedgerAttributes, CustomerLedgerCreationAttributes>
@@ -56,6 +61,7 @@ export class CustomerLedger
   public owner_id!: number;
   public shop_id!: number;
   public customer_id!: number;
+  public sale_id?: number | null;
   public entry_type!: LedgerEntryType;
   public amount!: number;
   public running_balance!: number;
@@ -67,6 +73,7 @@ export class CustomerLedger
   public actor_type!: "owner" | "employee";
   public actor_id!: number;
   public reference_code?: string | null;
+  public idempotency_key?: string | null;
   public payment_method?: string | null;
   public notes?: string | null;
   public readonly created_at!: Date;
@@ -78,6 +85,7 @@ CustomerLedger.init(
     owner_id: { type: DataTypes.INTEGER, allowNull: false },
     shop_id: { type: DataTypes.INTEGER, allowNull: false },
     customer_id: { type: DataTypes.INTEGER, allowNull: false },
+    sale_id: { type: DataTypes.BIGINT, allowNull: true },
     entry_type: { type: DataTypes.ENUM(...LEDGER_ENTRY_TYPES), allowNull: false },
     amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
     running_balance: { type: DataTypes.DECIMAL(12, 2), allowNull: false },
@@ -89,6 +97,7 @@ CustomerLedger.init(
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
     actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
+    idempotency_key: { type: DataTypes.STRING(120), allowNull: true },
     payment_method: { type: DataTypes.STRING(50), allowNull: true, defaultValue: "cash" },
     notes: { type: DataTypes.TEXT, allowNull: true },
   },

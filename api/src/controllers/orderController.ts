@@ -15,8 +15,9 @@ import {
   ProductStock,
 } from "../models";
 import { ORDER_STATUSES, OrderStatus } from "../models/Order";
+import { PAYMENT_METHODS, PaymentMethod, computeBillPaymentStatus, computeSaleStatus } from "../models/Sale";
 import { recordStockMovement } from "../utils/inventory";
-import { recordLedgerEntry } from "../utils/ledger";
+import { generateUniqueReceiptCode, recordLedgerEntry } from "../utils/ledger";
 import { nextInvoiceNumber } from "../utils/invoice";
 
 function round2(n: number): number {
@@ -24,13 +25,15 @@ function round2(n: number): number {
 }
 
 const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["processing", "delivered", "completed", "converted_to_bill", "cancelled"],
-  processing: ["completed", "converted_to_bill", "delivered", "shipped", "cancelled"],
+  pending: ["confirmed", "processing", "cancelled"],
+  confirmed: ["processing", "delivered", "completed", "cancelled"],
+  processing: ["completed", "delivered", "shipped", "cancelled"],
   shipped: ["delivered", "completed", "cancelled"],
   delivered: ["completed"],
   completed: [],
   converted_to_bill: [],
+  BILLED: [],
+  billed: [],
   cancelled: [],
 };
 
@@ -87,7 +90,12 @@ export async function getOrders(req: Request, res: Response) {
   }
 
   if (status && status !== "all") {
-    where.status = status;
+    const cleanFilter = String(status).trim().toLowerCase();
+    if (cleanFilter === "billed" || cleanFilter === "converted_to_bill") {
+      where.status = { [Op.in]: ["BILLED", "billed", "converted_to_bill"] };
+    } else {
+      where.status = { [Op.iLike]: cleanFilter };
+    }
   }
 
   if (paymentStatus && paymentStatus !== "all") {
@@ -120,6 +128,7 @@ export async function getOrders(req: Request, res: Response) {
         { model: OrderItem, as: "items" },
         { model: Customer, as: "customer", where: customerWhere, required: false },
         { model: Shop, as: "shop", attributes: ["id", "name"] },
+        { model: Sale, as: "convertedSale", attributes: ["id", "invoice_number", "status", "payment_status", "total_amount", "paid_amount", "due_amount"], required: false },
       ],
       order: [["order_date", "DESC"], ["created_at", "DESC"]],
     });
@@ -384,6 +393,21 @@ export async function updateOrderStatus(req: Request, res: Response) {
     }
 
     const currentStatus = String(order.status).toLowerCase().trim();
+    if (
+      currentStatus === "billed" ||
+      currentStatus === "converted_to_bill" ||
+      order.converted_sale_id ||
+      order.billed_bill_id
+    ) {
+      if (status) {
+        return res.status(409).json({
+          success: false,
+          code: "ORDER_ALREADY_BILLED",
+          message: "Order has already been converted to a bill and cannot change status",
+        });
+      }
+    }
+
     let statusChanged = false;
     let targetStatus = currentStatus;
 
@@ -397,7 +421,6 @@ export async function updateOrderStatus(req: Request, res: Response) {
         "delivered",
         "completed",
         "cancelled",
-        "converted_to_bill",
       ];
       if (!VALID_STATUSES.includes(targetStatus)) {
         return res.status(400).json({
@@ -497,107 +520,171 @@ export async function updateOrderStatus(req: Request, res: Response) {
 }
 
 /**
- * 6. Convert Order to Bill – Atomic transaction: stock deduction, ledger debit, order status.
- * CP-B01, CP-B02, CP-B03.
+ * 6. Convert Order to Bill – Strictly ONE-TIME atomic DB transaction:
+ *    row lock -> validate not billed -> create Sale + SaleItems -> deduct stock ->
+ *    update single CustomerLedger -> mark order BILLED + billed_at.
  */
 export async function convertOrderToBill(req: Request, res: Response) {
   const ownerId = req.auth!.ownerId;
   const { id } = req.params;
   const { saleId, paidAmount = 0, paymentMethod = "cash", notes } = req.body;
 
+  const idStr = String(id || "").trim();
+  const isNumeric = /^\d+$/.test(idStr);
+  const orderWhere: any = { owner_id: ownerId };
+  if (isNumeric) {
+    orderWhere[Op.or] = [{ id: Number(idStr) }, { order_number: idStr }];
+  } else {
+    orderWhere.order_number = idStr;
+  }
+
+  const actorType = (req.auth!.isOwner ? "owner" : "employee") as "owner" | "employee";
+  const actorId = req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId);
+  const rawMethod = String(paymentMethod || "cash").trim().toLowerCase();
+  const normalizedMethod: PaymentMethod = (
+    PAYMENT_METHODS.includes(rawMethod as PaymentMethod)
+      ? rawMethod
+      : rawMethod.includes("upi")
+      ? "upi"
+      : rawMethod.includes("card")
+      ? "card"
+      : rawMethod.includes("bank")
+      ? "bank_transfer"
+      : rawMethod.includes("cheque")
+      ? "cheque"
+      : "cash"
+  ) as PaymentMethod;
+
   try {
-    const order = await Order.findOne({
-      where: { id, owner_id: ownerId },
-      include: [
-        { model: OrderItem, as: "items" },
-        { model: Customer, as: "customer" },
-      ],
-    });
-
-    if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
-    }
-
-    // CP-B02: If already converted, return existing bill; create no duplicate
-    if (order.status === "converted_to_bill" || order.converted_sale_id) {
-      const existingBill = await Sale.findByPk(order.converted_sale_id || 0, {
-        include: [{ model: SaleItem, as: "items" }, { model: CustomerLedger, as: "payments", required: false }],
-      });
-      return res.json({
-        success: true,
-        message: "Order already converted to bill",
-        data: {
-          order,
-          bill: existingBill,
-        },
-      });
-    }
-
-    // If saleId was provided directly (linked from billing screen)
-    if (saleId) {
-      const existingSale = await Sale.findOne({ where: { id: saleId, owner_id: ownerId } });
-      if (!existingSale) {
-        return res.status(404).json({ success: false, message: "Linked sale not found" });
-      }
-      order.status = "converted_to_bill";
-      order.converted_sale_id = existingSale.id;
-      await order.save();
-
-      await OrderStatusHistory.create({
-        order_id: order.id,
-        from_status: order.status,
-        to_status: "converted_to_bill",
-        changed_by_type: req.auth!.isOwner ? "owner" : "employee",
-        changed_by_id: req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId),
-        note: `Linked to bill #${existingSale.invoice_number}`,
-      });
-
-      return res.json({
-        success: true,
-        message: "Order converted to bill",
-        data: { order, bill: existingSale },
-      });
-    }
-
-    // Otherwise, convert order items directly in ONE atomic transaction
-    const actorType = req.auth!.isOwner ? "owner" : "employee";
-    const actorId = req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId);
-    const shopId = order.shop_id;
-    const items = (order as any).items || [];
-
-    if (items.length === 0) {
-      return res.status(400).json({ success: false, message: "Cannot convert an order with no items" });
-    }
-
     const conversionResult = await sequelize.transaction(async (t) => {
-      // 1. Generate invoice number
+      // Lock the Order row first without outer-join includes (PostgreSQL FOR UPDATE safe)
+      const order = await Order.findOne({
+        where: orderWhere,
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!order) {
+        throw Object.assign(new Error("Order not found"), { status: 404 });
+      }
+
+      const normStatus = String(order.status || "").trim().toUpperCase();
+      if (
+        normStatus === "BILLED" ||
+        normStatus === "CONVERTED_TO_BILL" ||
+        order.converted_sale_id ||
+        order.billed_bill_id
+      ) {
+        throw Object.assign(new Error("Order has already been converted to a bill"), {
+          status: 409,
+          code: "ORDER_ALREADY_BILLED",
+          billedBillId: order.billed_bill_id || order.converted_sale_id,
+        });
+      }
+
+      if (normStatus === "CANCELLED") {
+        throw Object.assign(new Error("Cannot convert a cancelled order into a bill"), { status: 400 });
+      }
+
+      const existingLinkedSale = await Sale.findOne({
+        where: { order_id: order.id },
+        transaction: t,
+      });
+      if (existingLinkedSale) {
+        throw Object.assign(new Error("Order has already been converted to a bill"), {
+          status: 409,
+          code: "ORDER_ALREADY_BILLED",
+          billedBillId: existingLinkedSale.id,
+        });
+      }
+
+      const now = new Date();
+      const prevStatus = String(order.status);
+
+      // Legacy path: linking an already-created Sale inside same atomic transaction
+      if (saleId) {
+        const existingSale = await Sale.findOne({
+          where: { id: Number(saleId), owner_id: ownerId },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+        if (!existingSale) {
+          throw Object.assign(new Error("Linked sale not found"), { status: 404 });
+        }
+        if (existingSale.order_id && existingSale.order_id !== order.id) {
+          throw Object.assign(new Error("This bill is already linked to another order"), { status: 409 });
+        }
+        existingSale.order_id = order.id;
+        await existingSale.save({ transaction: t });
+
+        order.status = "BILLED";
+        order.converted_sale_id = existingSale.id;
+        order.billed_bill_id = existingSale.id;
+        order.billed_at = now;
+        await order.save({ transaction: t });
+
+        await OrderStatusHistory.create(
+          {
+            order_id: order.id,
+            from_status: prevStatus,
+            to_status: "BILLED",
+            changed_by_type: actorType,
+            changed_by_id: actorId,
+            note: `Linked to bill #${existingSale.invoice_number}`,
+          },
+          { transaction: t }
+        );
+
+        return { order, sale: existingSale };
+      }
+
+      const items = await OrderItem.findAll({
+        where: { order_id: order.id },
+        order: [["id", "ASC"]],
+        transaction: t,
+      });
+      if (items.length === 0) {
+        throw Object.assign(new Error("Cannot convert an order with no items"), { status: 400 });
+      }
+
+      const shopId = order.shop_id;
       const invoiceNumber = await nextInvoiceNumber({ ownerId, shopId, transaction: t });
 
-      const advance = Number(order.advance_amount || 0);
-      const paid = Math.min(Math.max(Number(paidAmount) || 0, advance), Number(order.total_amount));
-      const due = round2(Number(order.total_amount) - paid);
+      const orderTotal = round2(Number(order.total_amount || 0));
+      const advance = round2(Number(order.advance_amount || 0));
+      const requestedPaid = round2(Number(paidAmount || 0));
+      if (requestedPaid > orderTotal + 0.01) {
+        throw Object.assign(
+          new Error(`Paid amount (₹${requestedPaid}) cannot exceed order total (₹${orderTotal})`),
+          { status: 400 }
+        );
+      }
 
-      let saleStatus: Sale["status"] = "unpaid";
-      if (paid >= Number(order.total_amount) && Number(order.total_amount) > 0) saleStatus = "paid";
-      else if (paid > 0) saleStatus = "partially_paid";
+      const paid = Math.min(Math.max(requestedPaid, advance), orderTotal);
+      const due = Math.max(0, round2(orderTotal - paid));
+      const finalDue = due <= 0.01 ? 0 : due;
+      const saleStatus = computeSaleStatus(orderTotal, paid);
+      const salePaymentStatus = computeBillPaymentStatus(orderTotal, paid, saleStatus);
 
-      // 3. Create Sale header
+      // Create Sale header linked to Order via order_id FK
       const sale = await Sale.create(
         {
           owner_id: ownerId,
           shop_id: shopId,
           customer_id: order.customer_id,
+          order_id: order.id,
           invoice_number: invoiceNumber,
-          invoice_date: new Date(),
+          invoice_date: now,
           subtotal: order.subtotal,
           discount_amount: order.discount_amount,
           tax_amount: order.tax_amount,
-          total_amount: order.total_amount,
+          total_amount: orderTotal,
           paid_amount: paid,
-          due_amount: due,
-          payment_method: paymentMethod as any,
+          due_amount: finalDue,
+          payment_method: normalizedMethod,
           is_emi: false,
           status: saleStatus,
+          payment_status: salePaymentStatus,
           notes: notes || `Converted from Order #${order.order_number}`,
           actor_type: actorType,
           actor_id: actorId,
@@ -605,7 +692,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
         { transaction: t }
       );
 
-      // 4. Create SaleItems and deduct stock via recordStockMovement
+      // Create SaleItems + deduct stock
       for (const item of items) {
         await SaleItem.create(
           {
@@ -616,7 +703,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
             quantity: item.quantity,
             rate: item.rate,
             discount_percent: item.discount_percent,
-            discount_amount: round2((item.rate * item.quantity * item.discount_percent) / 100),
+            discount_amount: round2((Number(item.rate) * Number(item.quantity) * Number(item.discount_percent || 0)) / 100),
             tax_percent: item.gst_percent || 0,
             tax_amount: item.tax_amount || 0,
             total_amount: item.amount,
@@ -642,55 +729,60 @@ export async function convertOrderToBill(req: Request, res: Response) {
         }
       }
 
-      // 5. CustomerLedger debit for full bill amount
-      await recordLedgerEntry({
-        ownerId,
-        shopId,
-        customerId: order.customer_id,
-        entryType: "debit",
-        amount: Number(order.total_amount),
-        referenceType: "Sale",
-        referenceId: sale.id,
-        description: `Sale ${invoiceNumber} (from Order ${order.order_number})`,
-        actorType,
-        actorId,
-        entryDate: sale.invoice_date,
-        externalTransaction: t,
-      });
-
-      // 6. Single Ledger: credit entry if money received
-      if (paid > 0) {
-        const receiptCode = `RCP-${Date.now()}`;
+      // Ledger debit for full bill amount
+      if (orderTotal > 0) {
         await recordLedgerEntry({
           ownerId,
           shopId,
           customerId: order.customer_id,
+          saleId: sale.id,
+          entryType: "debit",
+          amount: orderTotal,
+          referenceType: "Sale",
+          referenceId: sale.id,
+          description: `Sale ${invoiceNumber} (from Order ${order.order_number})`,
+          actorType,
+          actorId,
+          entryDate: sale.invoice_date,
+          externalTransaction: t,
+        });
+      }
+
+      // Single Ledger credit if paid > 0 (net impact = 0 when paid === orderTotal)
+      if (paid > 0) {
+        const receiptCode = generateUniqueReceiptCode();
+        await recordLedgerEntry({
+          ownerId,
+          shopId,
+          customerId: order.customer_id,
+          saleId: sale.id,
           entryType: "credit",
           amount: paid,
           referenceType: "SalePayment",
           referenceId: sale.id,
           referenceCode: receiptCode,
-          paymentMethod: paymentMethod || "cash",
+          paymentMethod: normalizedMethod,
           description: `Payment for ${invoiceNumber}`,
           actorType,
           actorId,
+          entryDate: now,
           externalTransaction: t,
         });
       }
 
-      // 7. Update order to converted_to_bill
-      const prevStatus = order.status;
-      order.status = "converted_to_bill";
+      // Update order status strictly to BILLED with conversion timestamp
+      order.status = "BILLED";
+      order.payment_status = finalDue <= 0 ? "Paid" : paid > 0 ? "Partial" : order.payment_status;
       order.converted_sale_id = sale.id;
       order.billed_bill_id = sale.id;
+      order.billed_at = now;
       await order.save({ transaction: t });
 
-      // 8. OrderStatusHistory
       await OrderStatusHistory.create(
         {
           order_id: order.id,
-          from_status: String(prevStatus),
-          to_status: "converted_to_bill",
+          from_status: prevStatus,
+          to_status: "BILLED",
           changed_by_type: actorType,
           changed_by_id: actorId,
           note: `Converted to Bill #${invoiceNumber}`,
@@ -698,7 +790,6 @@ export async function convertOrderToBill(req: Request, res: Response) {
         { transaction: t }
       );
 
-      // 9. Notifications to customer and owner
       try {
         await Notification.create(
           {
@@ -708,7 +799,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
             recipient_id: order.customer_id,
             type: "bill_created",
             title: `Bill Generated: ${invoiceNumber}`,
-            message: `Your order #${order.order_number} has been billed (Invoice #${invoiceNumber}, Total: ₹${order.total_amount}).`,
+            message: `Your order #${order.order_number} has been billed (Invoice #${invoiceNumber}, Total: ₹${orderTotal}).`,
             reference_type: "sale",
             reference_id: sale.id,
             is_read: false,
@@ -724,7 +815,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
             recipient_id: ownerId,
             type: "bill_created",
             title: `Order Converted: ${invoiceNumber}`,
-            message: `Order #${order.order_number} converted to Invoice #${invoiceNumber} (Total: ₹${order.total_amount}).`,
+            message: `Order #${order.order_number} converted to Invoice #${invoiceNumber} (Total: ₹${orderTotal}).`,
             reference_type: "sale",
             reference_id: sale.id,
             is_read: false,
@@ -736,26 +827,48 @@ export async function convertOrderToBill(req: Request, res: Response) {
       return { order, sale };
     });
 
-    const refreshedOrder = await Order.findByPk(order.id, {
-      include: [
-        { model: OrderItem, as: "items" },
-        { model: OrderStatusHistory, as: "statusHistory" },
-      ],
-    });
+    const [refreshedOrder, refreshedBill] = await Promise.all([
+      Order.findByPk(conversionResult.order.id, {
+        include: [
+          { model: OrderItem, as: "items" },
+          { model: Customer, as: "customer" },
+          { model: Shop, as: "shop", attributes: ["id", "name", "address", "phone"] },
+          { model: OrderStatusHistory, as: "statusHistory" },
+        ],
+      }),
+      Sale.findByPk(conversionResult.sale.id, {
+        include: [
+          { model: SaleItem, as: "items" },
+          { model: Customer, as: "customer" },
+          { model: Shop, as: "shop" },
+          { model: CustomerLedger, as: "payments", required: false },
+        ],
+      }),
+    ]);
 
-    return res.json({
+    return res.status(201).json({
       success: true,
       message: "Order successfully converted to bill",
       data: {
-        order: refreshedOrder,
-        bill: conversionResult.sale,
+        order: refreshedOrder || conversionResult.order,
+        bill: refreshedBill || conversionResult.sale,
       },
     });
   } catch (err: any) {
+    const pgCode = err?.original?.code || err?.parent?.code || err?.code;
+    if (pgCode === "23505" || err?.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({
+        success: false,
+        code: "ORDER_ALREADY_BILLED",
+        message: "Order has already been converted to a bill",
+      });
+    }
     const statusCode = err.status || 500;
     return res.status(statusCode).json({
       success: false,
+      code: err.code,
       message: err.message || "Failed to convert order",
+      data: err.billedBillId ? { billedBillId: err.billedBillId } : undefined,
       shortLines: err.shortLines,
     });
   }

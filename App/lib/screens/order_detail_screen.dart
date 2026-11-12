@@ -3,14 +3,14 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../models/bill_item.dart';
 import '../models/customer.dart';
+import '../models/saved_bill.dart';
 import '../models/saved_order.dart';
-import '../providers/catalog_provider.dart';
+import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/orders_provider.dart';
 import '../services/bill_pdf_service.dart';
-import 'bill_screen.dart';
+import 'bill_detail_screen.dart';
 import 'customer_ledger_detail_screen.dart';
 
 /// Full-page Order Details screen redesigned with Green Theme matching Bill Details:
@@ -40,6 +40,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   final _dateFormat = DateFormat('dd MMM yyyy   hh:mm a');
   SavedOrder? _order;
   bool _loading = false;
+  bool _converting = false;
   String? _error;
 
   @override
@@ -291,45 +292,123 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
-  void _convertToBill(BuildContext context, SavedOrder order) {
-    final catalog = context.read<CatalogProvider>();
-    final custProvider = context.read<CustomerProvider>();
-
-    Customer? matchedCustomer;
-    for (final c in custProvider.customers) {
-      if (c.name.trim().toLowerCase() == order.customerName.trim().toLowerCase() ||
-          (order.customerPhone.isNotEmpty && c.mobile == order.customerPhone)) {
-        matchedCustomer = c;
-        break;
-      }
-    }
-
-    catalog.billItems.clear();
-    for (final oi in order.items) {
-      catalog.billItems.add(
-        BillItem(
-          code: oi.sku.isNotEmpty ? oi.sku : oi.desc,
-          desc: oi.desc,
-          spec: '',
-          price: oi.price,
-          qty: oi.qty,
-          availableStock: oi.availableStock,
-        ),
+  Future<void> _convertToBill(BuildContext context, SavedOrder order) async {
+    if (order.isBilled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Order #${order.orderNumber} is already billed.')),
       );
+      return;
     }
+    if (_converting) return;
 
-    if (matchedCustomer != null) {
-      catalog.selectCustomer(matchedCustomer);
-    } else {
-      catalog.customerName = order.customerName.isNotEmpty ? order.customerName : 'Walk-in Customer';
-      catalog.customerPhone = order.customerPhone;
-    }
+    final ordersProvider = context.read<OrdersProvider>();
+    final billsProvider = context.read<BillsProvider>();
+    final custProvider = context.read<CustomerProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const BillScreen(),
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Convert Order to Bill?'),
+        content: Text(
+          'Convert Order #${order.orderNumber} (₹${_money.format(order.total)}) into a bill?\n\n'
+          'This action is strictly one-time. Once billed, this order cannot be modified or converted again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF006837),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Convert to Bill'),
+          ),
+        ],
       ),
     );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _converting = true);
+    try {
+      final createdBill = await ordersProvider.convertOrderToBill(order);
+
+      await Future.wait([
+        billsProvider.syncFromSupabase(),
+        custProvider.syncFromSupabase(),
+      ]);
+
+      final updatedOrder = ordersProvider.orders.cast<SavedOrder?>().firstWhere(
+            (o) => o != null && (o.id == order.id || o.orderNumber == order.orderNumber),
+            orElse: () => null,
+          );
+
+      if (!mounted) return;
+      setState(() {
+        if (updatedOrder != null) {
+          _order = updatedOrder;
+        } else {
+          order.status = OrderStatus.convertedToBill;
+        }
+      });
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            createdBill != null
+                ? 'Order #${order.orderNumber} converted to Bill #${createdBill.billNumber}'
+                : 'Order #${order.orderNumber} converted to bill.',
+          ),
+        ),
+      );
+
+      if (createdBill != null && mounted) {
+        navigator.push(
+          MaterialPageRoute(
+            builder: (_) => BillDetailScreen(initialBill: createdBill),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Conversion failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _converting = false);
+    }
+  }
+
+  Future<void> _viewConvertedBill(BuildContext context, SavedOrder order) async {
+    final saleId = order.convertedSaleId ?? order.billedBillId;
+    final billsProvider = context.read<BillsProvider>();
+    if (billsProvider.bills.isEmpty) {
+      await billsProvider.syncFromSupabase();
+    }
+    SavedBill? match;
+    if (saleId != null) {
+      for (final b in billsProvider.bills) {
+        if (b.id == saleId) {
+          match = b;
+          break;
+        }
+      }
+    }
+    if (!context.mounted) return;
+    if (match != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => BillDetailScreen(initialBill: match)),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Opening Bills list — synced invoice is available in Bills.')),
+      );
+    }
   }
 
   @override
@@ -409,19 +488,22 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   _showStatusPicker(context, o);
                 } else if (val == 'convert') {
                   _convertToBill(context, o);
+                } else if (val == 'view_bill') {
+                  _viewConvertedBill(context, o);
                 }
               },
               itemBuilder: (ctx) => [
-                const PopupMenuItem(
-                  value: 'status',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit_note_outlined, size: 18, color: Color(0xFF2563EB)),
-                      SizedBox(width: 8),
-                      Text('Update Status'),
-                    ],
+                if (!o.isBilled && o.status != OrderStatus.cancelled)
+                  const PopupMenuItem(
+                    value: 'status',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note_outlined, size: 18, color: Color(0xFF2563EB)),
+                        SizedBox(width: 8),
+                        Text('Update Status'),
+                      ],
+                    ),
                   ),
-                ),
                 const PopupMenuItem(
                   value: 'share',
                   child: Row(
@@ -442,7 +524,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ],
                   ),
                 ),
-                if (o.status != OrderStatus.convertedToBill)
+                if (!o.isBilled && o.status != OrderStatus.cancelled)
                   const PopupMenuItem(
                     value: 'convert',
                     child: Row(
@@ -450,6 +532,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                         Icon(Icons.receipt_long_outlined, size: 18, color: Color(0xFF006837)),
                         SizedBox(width: 8),
                         Text('Convert to Bill'),
+                      ],
+                    ),
+                  ),
+                if (o.isBilled)
+                  const PopupMenuItem(
+                    value: 'view_bill',
+                    child: Row(
+                      children: [
+                        Icon(Icons.receipt_long, size: 18, color: Color(0xFF0D9488)),
+                        SizedBox(width: 8),
+                        Text('View Bill'),
                       ],
                     ),
                   ),
@@ -507,7 +600,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     } else if (o.status == OrderStatus.confirmed) {
       statusColor = const Color(0xFF0284C7);
       statusBg = const Color(0xFFE0F2FE);
-    } else if (o.status == OrderStatus.convertedToBill) {
+    } else if (o.isBilled) {
       statusColor = const Color(0xFF0D9488);
       statusBg = const Color(0xFFCCFBF1);
       statusText = 'Billed';
@@ -592,7 +685,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     InkWell(
-                      onTap: () => _showStatusPicker(context, o),
+                      onTap: (o.isBilled || o.status == OrderStatus.cancelled)
+                          ? null
+                          : () => _showStatusPicker(context, o),
                       borderRadius: BorderRadius.circular(6),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
@@ -612,8 +707,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            Icon(Icons.arrow_drop_down, size: 14, color: statusColor),
+                            if (!o.isBilled && o.status != OrderStatus.cancelled) ...[
+                              const SizedBox(width: 4),
+                              Icon(Icons.arrow_drop_down, size: 14, color: statusColor),
+                            ],
                           ],
                         ),
                       ),
@@ -637,6 +734,46 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 10),
+          if (!o.isBilled && o.status != OrderStatus.cancelled)
+            ElevatedButton.icon(
+              onPressed: _converting ? null : () => _convertToBill(context, o),
+              icon: _converting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.receipt_long_outlined, size: 18),
+              label: Text(
+                _converting ? 'Converting Order to Bill...' : 'Convert to Bill (One-Time)',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF006837),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+            )
+          else if (o.isBilled)
+            OutlinedButton.icon(
+              onPressed: () => _viewConvertedBill(context, o),
+              icon: const Icon(Icons.receipt_long, size: 18, color: Color(0xFF0D9488)),
+              label: Text(
+                o.convertedSaleId != null
+                    ? 'Billed (#${o.convertedSaleId}) • View Bill'
+                    : 'Billed • View Bill',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0D9488)),
+              ),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: const Color(0xFFF0FDFA),
+                side: const BorderSide(color: Color(0xFF99F6E4)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
           const SizedBox(height: 12),
 
           // =========================================================================

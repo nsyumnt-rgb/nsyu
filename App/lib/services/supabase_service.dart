@@ -562,11 +562,16 @@ class SupabaseService {
     required double amount,
     required String method,
     String? notes,
+    String? invoiceNumber,
+    String? idempotencyKey,
   }) async {
     await ensureAuth();
     final cleanId = int.tryParse(customerId.toString().replaceAll(RegExp(r'[^0-9]'), '')) ?? customerId;
     var cleanMethod = method.toLowerCase().trim().replaceAll(' ', '_');
     if (cleanMethod == 'online') cleanMethod = 'upi';
+    final idemKey = (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        ? idempotencyKey.trim()
+        : 'cust-pay-$cleanId-${DateTime.now().microsecondsSinceEpoch}';
 
     try {
       final url = Uri.parse('${SupabaseConfig.apiUrl}/ledger/payment');
@@ -577,8 +582,14 @@ class SupabaseService {
         'paymentMethod': cleanMethod,
         'method': cleanMethod,
         'notes': notes ?? 'Payment received',
+        if (invoiceNumber != null && invoiceNumber.isNotEmpty) 'invoiceNumber': invoiceNumber,
+        'idempotencyKey': idemKey,
       });
-      final res = await http.post(url, headers: _headers, body: body);
+      final res = await http.post(
+        url,
+        headers: {..._headers, 'x-idempotency-key': idemKey},
+        body: body,
+      );
       return res.statusCode >= 200 && res.statusCode < 300;
     } catch (e) {
       debugPrint('Error recording customer payment: $e');
@@ -586,7 +597,10 @@ class SupabaseService {
     }
   }
 
-  Future<SavedPayment> recordPayment(SavedPayment payment) async {
+  Future<SavedPayment> recordPayment(
+    SavedPayment payment, {
+    String? idempotencyKey,
+  }) async {
     await ensureAuth();
     String methodStr = payment.method.label.toLowerCase().replaceAll(' ', '_');
     if (methodStr == 'online') methodStr = 'upi';
@@ -608,6 +622,12 @@ class SupabaseService {
       }
     }
 
+    final idemKey = (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        ? idempotencyKey.trim()
+        : (payment.receiptNumber.isNotEmpty
+            ? 'pay-${payment.receiptNumber}'
+            : 'pay-${DateTime.now().microsecondsSinceEpoch}');
+
     final payload = <String, dynamic>{
       'shopId': SupabaseConfig.shopId,
       'customerId': custId,
@@ -620,23 +640,30 @@ class SupabaseService {
       'paymentDate': payment.date.toIso8601String(),
       'notes': payment.remarks,
       'invoiceNumber': payment.billNumber.isNotEmpty ? payment.billNumber : null,
+      'idempotencyKey': idemKey,
     };
 
+    final reqHeaders = {..._headers, 'x-idempotency-key': idemKey};
     var res = await http.post(
       Uri.parse('${SupabaseConfig.apiUrl}/ledger/payment'),
-      headers: _headers,
+      headers: reqHeaders,
       body: jsonEncode(payload),
     );
     if (res.statusCode == 404) {
       res = await http.post(
         Uri.parse('${SupabaseConfig.apiUrl}/payments'),
-        headers: _headers,
+        headers: reqHeaders,
         body: jsonEncode(payload),
       );
     }
     if (res.statusCode >= 300) {
+      String errMsg = 'Failed to record payment in ledger (${res.statusCode})';
+      try {
+        final errJson = jsonDecode(res.body);
+        if (errJson['message'] != null) errMsg = errJson['message'].toString();
+      } catch (_) {}
       debugPrint('⚠️ Notice: Could not sync payment to ledger (${res.statusCode}): ${res.body}');
-      throw Exception('Failed to record payment in ledger (${res.statusCode})');
+      throw Exception(errMsg);
     }
     return payment;
   }
@@ -714,16 +741,73 @@ class SupabaseService {
     };
     final res = await _putWithRetry(url, {'status': statusName, 'force': true});
     if (res.statusCode >= 300) {
+      String errMsg = 'Failed to update order status (HTTP ${res.statusCode})';
+      try {
+        final errJson = jsonDecode(res.body);
+        if (errJson['message'] != null) errMsg = errJson['message'].toString();
+      } catch (_) {}
       debugPrint('⚠️ Warning: updateOrderStatus returned ${res.statusCode}: ${res.body}');
-      throw Exception('Failed to update order status (HTTP ${res.statusCode})');
+      throw Exception(errMsg);
     }
+  }
+
+  /// Atomically converts an order into a bill on Supabase PostgreSQL (strictly one-time).
+  Future<Map<String, dynamic>> convertOrderToBill(
+    int orderId, {
+    double? paidAmount,
+    String paymentMethod = 'cash',
+    String? notes,
+  }) async {
+    await ensureAuth();
+    final url = Uri.parse('${SupabaseConfig.apiUrl}/orders/$orderId/convert');
+    final payload = <String, dynamic>{
+      if (paidAmount != null) 'paidAmount': paidAmount,
+      'paymentMethod': paymentMethod,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+    };
+    final res = await http.post(url, headers: _headers, body: jsonEncode(payload));
+    Map<String, dynamic> decoded = {};
+    try {
+      decoded = jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {}
+
+    if (res.statusCode >= 300) {
+      final msg = decoded['message']?.toString() ??
+          'Failed to convert order to bill (HTTP ${res.statusCode})';
+      throw Exception(msg);
+    }
+
+    final data = decoded['data'] is Map<String, dynamic>
+        ? decoded['data'] as Map<String, dynamic>
+        : decoded;
+    final orderJson = data['order'] is Map<String, dynamic>
+        ? data['order'] as Map<String, dynamic>
+        : null;
+    final billJson = data['bill'] is Map<String, dynamic>
+        ? data['bill'] as Map<String, dynamic>
+        : (data['sale'] is Map<String, dynamic>
+            ? data['sale'] as Map<String, dynamic>
+            : null);
+
+    return {
+      'order': orderJson != null ? SavedOrder.fromJson(orderJson) : null,
+      'bill': billJson != null ? SavedBill.fromSupabase(billJson) : null,
+    };
   }
 
   /// Marks an order converted to a bill to prevent duplicate billing
   Future<void> markOrderConverted(int orderId, int saleId) async {
     await ensureAuth();
     final url = Uri.parse('${SupabaseConfig.apiUrl}/orders/$orderId/convert');
-    await http.post(url, headers: _headers, body: jsonEncode({'saleId': saleId}));
+    final res = await http.post(url, headers: _headers, body: jsonEncode({'saleId': saleId}));
+    if (res.statusCode >= 300) {
+      String errMsg = 'Failed to mark order converted (HTTP ${res.statusCode})';
+      try {
+        final errJson = jsonDecode(res.body);
+        if (errJson['message'] != null) errMsg = errJson['message'].toString();
+      } catch (_) {}
+      throw Exception(errMsg);
+    }
   }
 
   // =========================================================================

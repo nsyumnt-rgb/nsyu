@@ -31,11 +31,32 @@ export type SaleStatus = (typeof SALE_STATUSES)[number];
  * is ever hard-deleted — cancellation flips `status` and reverses
  * stock/ledger with new offsetting entries, per spec.
  */
+export const BILL_PAYMENT_STATUSES = ["UNPAID", "PARTIAL", "PAID", "CANCELLED"] as const;
+export type BillPaymentStatus = (typeof BILL_PAYMENT_STATUSES)[number];
+
+export function computeBillPaymentStatus(totalAmount: number, paidAmount: number, status?: SaleStatus): BillPaymentStatus {
+  if (status === "cancelled") return "CANCELLED";
+  const total = Math.round(Number(totalAmount || 0) * 100) / 100;
+  const paid = Math.round(Number(paidAmount || 0) * 100) / 100;
+  if (total > 0 && paid >= total - 0.01) return "PAID";
+  if (paid > 0.01) return "PARTIAL";
+  return "UNPAID";
+}
+
+export function computeSaleStatus(totalAmount: number, paidAmount: number): SaleStatus {
+  const total = Math.round(Number(totalAmount || 0) * 100) / 100;
+  const paid = Math.round(Number(paidAmount || 0) * 100) / 100;
+  if (total > 0 && paid >= total - 0.01) return "paid";
+  if (paid > 0.01) return "partially_paid";
+  return "unpaid";
+}
+
 interface SaleAttributes {
   id: number;
   owner_id: number;
   shop_id: number;
   customer_id: number;
+  order_id?: number | null;
   invoice_number: string;
   invoice_date: Date;
   subtotal: number;
@@ -47,17 +68,20 @@ interface SaleAttributes {
   payment_method: PaymentMethod;
   is_emi: boolean;
   status: SaleStatus;
+  payment_status: BillPaymentStatus;
   notes?: string | null;
   cancel_reason?: string | null;
   actor_type: "owner" | "employee";
   actor_id: number;
   reference_code?: string | null;
+  client_request_id?: string | null;
 }
 
 interface SaleCreationAttributes
   extends Optional<
     SaleAttributes,
     | "id"
+    | "order_id"
     | "subtotal"
     | "discount_amount"
     | "tax_amount"
@@ -65,9 +89,11 @@ interface SaleCreationAttributes
     | "due_amount"
     | "is_emi"
     | "status"
+    | "payment_status"
     | "notes"
     | "cancel_reason"
     | "reference_code"
+    | "client_request_id"
   > {}
 
 export class Sale extends Model<SaleAttributes, SaleCreationAttributes> implements SaleAttributes {
@@ -75,6 +101,7 @@ export class Sale extends Model<SaleAttributes, SaleCreationAttributes> implemen
   public owner_id!: number;
   public shop_id!: number;
   public customer_id!: number;
+  public order_id?: number | null;
   public invoice_number!: string;
   public invoice_date!: Date;
   public subtotal!: number;
@@ -86,11 +113,13 @@ export class Sale extends Model<SaleAttributes, SaleCreationAttributes> implemen
   public payment_method!: PaymentMethod;
   public is_emi!: boolean;
   public status!: SaleStatus;
+  public payment_status!: BillPaymentStatus;
   public notes?: string | null;
   public cancel_reason?: string | null;
   public actor_type!: "owner" | "employee";
   public actor_id!: number;
   public reference_code?: string | null;
+  public client_request_id?: string | null;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 }
@@ -101,6 +130,7 @@ Sale.init(
     owner_id: { type: DataTypes.INTEGER, allowNull: false },
     shop_id: { type: DataTypes.INTEGER, allowNull: false },
     customer_id: { type: DataTypes.INTEGER, allowNull: false },
+    order_id: { type: DataTypes.BIGINT, allowNull: true },
     invoice_number: { type: DataTypes.STRING(40), allowNull: false },
     invoice_date: { type: DataTypes.DATE, allowNull: false },
     subtotal: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
@@ -112,11 +142,13 @@ Sale.init(
     payment_method: { type: DataTypes.ENUM(...PAYMENT_METHODS), allowNull: false },
     is_emi: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     status: { type: DataTypes.ENUM(...SALE_STATUSES), allowNull: false, defaultValue: "unpaid" },
+    payment_status: { type: DataTypes.STRING(20), allowNull: false, defaultValue: "UNPAID" },
     notes: { type: DataTypes.STRING(255), allowNull: true },
     cancel_reason: { type: DataTypes.STRING(255), allowNull: true },
     actor_type: { type: DataTypes.ENUM("owner", "employee"), allowNull: false },
     actor_id: { type: DataTypes.INTEGER, allowNull: false },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
+    client_request_id: { type: DataTypes.STRING(120), allowNull: true },
   },
   {
     sequelize,

@@ -26,8 +26,13 @@ export function recordLedgerPayment(data: {
   paymentMethod?: string;
   notes?: string;
   saleId?: number;
+  invoiceNumber?: string;
+  referenceCode?: string;
+  idempotencyKey?: string;
+  allowAdvance?: boolean;
 }) {
-  return api.post<ApiEnvelope<CustomerLedgerEntry>>("/ledger/payment", data);
+  const headers = data.idempotencyKey ? { "x-idempotency-key": data.idempotencyKey } : undefined;
+  return api.post<ApiEnvelope<CustomerLedgerEntry>>("/ledger/payment", data, headers ? { headers } : undefined);
 }
 
 export function getSupplierLedger(supplierId: number, params?: { shopId?: number; allShops?: boolean }) {

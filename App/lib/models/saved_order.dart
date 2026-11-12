@@ -14,7 +14,7 @@ extension OrderStatusLabel on OrderStatus {
       case OrderStatus.cancelled:
         return 'Cancelled';
       case OrderStatus.convertedToBill:
-        return 'Converted to Bill';
+        return 'Billed';
     }
   }
 
@@ -29,6 +29,7 @@ extension OrderStatusLabel on OrderStatus {
         return OrderStatus.delivered;
       case 'cancelled':
         return OrderStatus.cancelled;
+      case 'billed':
       case 'converted_to_bill':
       case 'converted to bill':
         return OrderStatus.convertedToBill;
@@ -99,7 +100,14 @@ class SavedOrder {
   final double totalAmount;
   final String remarks;
   final int? convertedSaleId;
+  final int? billedBillId;
+  final DateTime? billedAt;
   OrderStatus status;
+
+  bool get isBilled =>
+      status == OrderStatus.convertedToBill ||
+      convertedSaleId != null ||
+      billedBillId != null;
 
   SavedOrder({
     this.id,
@@ -117,6 +125,8 @@ class SavedOrder {
     double? totalAmount,
     this.remarks = '',
     this.convertedSaleId,
+    this.billedBillId,
+    this.billedAt,
     this.status = OrderStatus.pending,
   })  : subtotal = subtotal ?? items.fold(0.0, (s, i) => s + (i.price * i.qty)),
         totalAmount = totalAmount ??
@@ -156,6 +166,8 @@ class SavedOrder {
         'totalAmount': totalAmount,
         'remarks': remarks,
         'convertedSaleId': convertedSaleId,
+        'billedBillId': billedBillId,
+        'billedAt': billedAt?.toIso8601String(),
         'status': status.label,
       };
 
@@ -176,7 +188,9 @@ class SavedOrder {
         taxAmount: (j['taxAmount'] ?? j['tax_amount'] ?? 0.0).toDouble(),
         totalAmount: (j['totalAmount'] ?? j['total_amount'] ?? 0.0).toDouble(),
         remarks: j['remarks'] ?? '',
-        convertedSaleId: j['convertedSaleId'] ?? j['converted_sale_id'],
+        convertedSaleId: int.tryParse((j['convertedSaleId'] ?? j['converted_sale_id'])?.toString() ?? ''),
+        billedBillId: int.tryParse((j['billedBillId'] ?? j['billed_bill_id'])?.toString() ?? ''),
+        billedAt: DateTime.tryParse((j['billedAt'] ?? j['billed_at'])?.toString() ?? ''),
         status: OrderStatusLabel.fromLabel(j['status'] ?? 'pending'),
       );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getSale, downloadInvoicePdf, updateSale } from "../../api/sales";
+import { getSale, downloadInvoicePdf, updateSale, recordSalePayment } from "../../api/sales";
+import { apiErrorMessage } from "../../api/client";
 import ReferenceLink from "../../components/ReferenceLink";
 import type { Sale } from "../../types";
 
@@ -15,6 +16,47 @@ export default function SaleDetail() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payMethod, setPayMethod] = useState("cash");
+  const [payNotes, setPayNotes] = useState("");
+  const [paySaving, setPaySaving] = useState(false);
+
+  async function handleRecordPayment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sale) return;
+    const amt = Number(payAmount);
+    if (!amt || amt <= 0) {
+      alert("Please enter a valid positive payment amount.");
+      return;
+    }
+    if (amt > Number(sale.due_amount) + 0.01) {
+      alert(`Payment amount ₹${amt} exceeds remaining due ₹${sale.due_amount}`);
+      return;
+    }
+    setPaySaving(true);
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `saledet-${sale.id}-${Date.now()}`;
+    try {
+      await recordSalePayment(sale.id, {
+        amount: amt,
+        method: payMethod,
+        notes: payNotes.trim() || undefined,
+        idempotencyKey,
+      });
+      const refreshed = await getSale(sale.id);
+      if (refreshed.data.success && refreshed.data.data) {
+        setSale(refreshed.data.data);
+      }
+      setShowPayModal(false);
+      setPayAmount("");
+      setPayNotes("");
+      setStatusMsg(`Payment of ₹${amt.toLocaleString("en-IN")} recorded successfully.`);
+    } catch (err) {
+      alert(apiErrorMessage(err, "Failed to record payment"));
+    } finally {
+      setPaySaving(false);
+    }
+  }
 
   async function handleUpdateStatus(newStatus: string) {
     if (!sale) return;
@@ -142,7 +184,7 @@ export default function SaleDetail() {
                 title="Click to change bill status"
                 className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border hover:opacity-80 transition-opacity flex items-center gap-1 cursor-pointer ${statusBadge}`}
               >
-                <span>{sale.status.replace("_", " ")}</span>
+                <span>{sale.payment_status || (sale.status === "partially_paid" ? "PARTIAL" : sale.status.toUpperCase())}</span>
                 <svg className="w-3 h-3 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M6 9l6 6 6-6" />
                 </svg>
@@ -160,6 +202,18 @@ export default function SaleDetail() {
         </div>
 
         <div className="flex items-center gap-2">
+          {Number(sale.due_amount) > 0 && sale.status !== "cancelled" && !sale.is_emi && (
+            <button
+              onClick={() => {
+                setPayAmount(String(Number(sale.due_amount).toFixed(2)));
+                setShowPayModal(true);
+              }}
+              className="px-3.5 py-2 text-xs font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>₹</span>
+              <span>Receive Payment</span>
+            </button>
+          )}
           <button
             onClick={() => window.print()}
             className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-colors flex items-center gap-1.5"
@@ -406,13 +460,13 @@ export default function SaleDetail() {
               {sale.payments.map((p: any) => (
                 <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
                   <td className="py-2.5 px-4 font-mono font-medium">
-                    <ReferenceLink type="payment" id={p.id} refNumber={`PAY-${p.id}`} />
+                    <ReferenceLink type="payment" id={p.id} refNumber={p.reference_code || `PAY-${p.id}`} />
                   </td>
                   <td className="py-2.5 px-4 text-slate-600">
-                    {new Date(p.payment_date || p.created_at).toLocaleDateString("en-IN")}
+                    {new Date(p.entry_date || p.payment_date || p.created_at).toLocaleDateString("en-IN")}
                   </td>
-                  <td className="py-2.5 px-4 uppercase text-slate-700 font-medium">{p.method}</td>
-                  <td className="py-2.5 px-4 font-mono text-slate-500">{p.transaction_id || "—"}</td>
+                  <td className="py-2.5 px-4 uppercase text-slate-700 font-medium">{(p.payment_method || p.method || "cash").replace("_", " ")}</td>
+                  <td className="py-2.5 px-4 font-mono text-slate-500">{p.reference_code || p.transaction_id || "—"}</td>
                   <td className="py-2.5 px-4 text-right font-semibold text-emerald-700">
                     ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
@@ -488,6 +542,69 @@ export default function SaleDetail() {
                 {sale.status === "cancelled" && <span className="text-slate-600 font-bold">Current</span>}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receive Payment Modal */}
+      {showPayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm">Record Payment — {sale.invoice_number}</h3>
+              <button
+                type="button"
+                onClick={() => setShowPayModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleRecordPayment} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Amount (Remaining Due: ₹{Number(sale.due_amount).toFixed(2)})
+                </label>
+                <input
+                  type="number"
+                  min="0.01"
+                  max={Number(sale.due_amount)}
+                  step="0.01"
+                  required
+                  className="input font-mono w-full"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Payment Method</label>
+                <select className="input w-full" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+                  <option value="cash">Cash</option>
+                  <option value="upi">UPI</option>
+                  <option value="card">Card</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Notes (Optional)</label>
+                <input
+                  type="text"
+                  className="input w-full"
+                  placeholder="Reference / remarks"
+                  value={payNotes}
+                  onChange={(e) => setPayNotes(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowPayModal(false)} className="btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" disabled={paySaving} className="btn-primary bg-emerald-600 hover:bg-emerald-700">
+                  {paySaving ? "Saving…" : "Confirm Payment"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

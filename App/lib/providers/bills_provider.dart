@@ -137,8 +137,8 @@ class BillsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Records a payment against [bill] — marks it Paid, generates a
-  /// Payment Collect Receipt, saves locally, and syncs to Supabase PostgreSQL.
+  /// Records a payment against [bill] — validates due, persists on Supabase
+  /// PostgreSQL atomically with idempotency, recalculates bill status, and refreshes bills.
   Future<SavedPayment> receivePayment({
     required SavedBill bill,
     required double amount,
@@ -146,11 +146,34 @@ class BillsProvider extends ChangeNotifier {
     String customerId = '',
     String transactionId = '',
     String remarks = '',
+    String? idempotencyKey,
   }) async {
+    const epsilon = 0.01;
+    if (bill.status == BillStatus.cancelled) {
+      throw Exception('Cannot collect payment for a cancelled bill.');
+    }
+    if (amount <= 0) {
+      throw Exception('Payment amount must be greater than zero.');
+    }
+    final currentDue = bill.due;
+    if (currentDue <= epsilon) {
+      throw Exception('Bill #${bill.billNumber} is already fully paid.');
+    }
+    if (amount > currentDue + epsilon) {
+      throw Exception(
+        'Payment ₹${amount.toStringAsFixed(2)} exceeds remaining due ₹${currentDue.toStringAsFixed(2)}.',
+      );
+    }
+
     final receiptNumber = await _paymentsStore.nextReceiptNumber();
+    final idemKey = (idempotencyKey != null && idempotencyKey.trim().isNotEmpty)
+        ? idempotencyKey.trim()
+        : 'pay-${bill.billNumber}-$receiptNumber';
+
+    final prevPaid = bill.paidAmount;
+    final prevStatus = bill.status;
 
     bill.paidAmount = (bill.paidAmount + amount).clamp(0, bill.total);
-    const epsilon = 0.01;
     final remainingBillDue = bill.total - bill.paidAmount;
     bill.status = remainingBillDue <= epsilon
         ? BillStatus.paid
@@ -173,19 +196,20 @@ class BillsProvider extends ChangeNotifier {
       outstandingBalanceAfter: remainingDue,
     );
 
-    paymentReceipts.insert(0, payment);
-    await _paymentsStore.savePayments(paymentReceipts);
-    await _store.saveBills(bills);
-    notifyListeners();
-
-    debugPrint('💸 Payment Recorded for Bill: ${bill.billNumber} '
-        '(₹$amount collected, ₹${bill.due} still due)');
-
     try {
-      await _supabaseService.recordPayment(payment);
+      await _supabaseService.recordPayment(payment, idempotencyKey: idemKey);
+      paymentReceipts.insert(0, payment);
+      await _paymentsStore.savePayments(paymentReceipts);
+      await _store.saveBills(bills);
+      lastPaymentSyncError = null;
+      notifyListeners();
       await syncFromSupabase();
     } catch (e) {
+      bill.paidAmount = prevPaid;
+      bill.status = prevStatus;
       lastPaymentSyncError = e.toString();
+      notifyListeners();
+      rethrow;
     }
     return payment;
   }

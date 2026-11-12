@@ -78,12 +78,14 @@ function LedgerInner() {
     }
     setSubmittingPay(true);
     setPayError(null);
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ledg-${selectedCustomerId}-${Date.now()}`;
     try {
       await recordLedgerPayment({
         customerId: Number(selectedCustomerId),
         amount: amt,
         paymentMethod: payMethod,
         notes: payNotes.trim() || `Payment received (${payMethod.toUpperCase()})`,
+        idempotencyKey,
       });
       setShowPaymentModal(false);
       setPayAmount("");

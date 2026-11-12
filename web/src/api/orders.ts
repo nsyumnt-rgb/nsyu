@@ -56,6 +56,18 @@ export interface OrderRecord {
   payment_status?: string;
   shipping_address?: string;
   remarks?: string | null;
+  converted_sale_id?: number | null;
+  billed_bill_id?: number | null;
+  billed_at?: string | null;
+  convertedSale?: {
+    id: number;
+    invoice_number: string;
+    status: string;
+    payment_status?: string;
+    total_amount: number;
+    paid_amount: number;
+    due_amount: number;
+  } | null;
   customer_id: number;
   customer?: {
     id: number;
@@ -119,7 +131,11 @@ export function updateOrderStatus(
   return api.put<ApiEnvelope<OrderRecord>>(`/orders/${id}/status`, payload);
 }
 
-export function convertOrderToBill(id: number | string, saleId?: number) {
-  return api.post<ApiEnvelope<OrderRecord>>(`/orders/${id}/convert`, { saleId });
+export function convertOrderToBill(
+  id: number | string,
+  options?: { saleId?: number; paidAmount?: number; paymentMethod?: string; notes?: string } | number
+) {
+  const body = typeof options === "number" ? { saleId: options } : (options || {});
+  return api.post<ApiEnvelope<{ order: OrderRecord; bill: any }>>(`/orders/${id}/convert`, body);
 }
 

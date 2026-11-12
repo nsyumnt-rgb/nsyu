@@ -95,8 +95,14 @@ class _PaymentCollectScreenState extends State<PaymentCollectScreen> {
           const SizedBox(height: 6),
           TextField(
             controller: _amountCtrl,
+            onChanged: (_) => setState(() {}),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(prefixText: '₹ '),
+            decoration: InputDecoration(
+              prefixText: '₹ ',
+              errorText: _amount > widget.bill.due + 0.01
+                  ? 'Amount cannot exceed remaining due ₹${money.format(widget.bill.due)}'
+                  : null,
+            ),
           ),
           const SizedBox(height: 16),
           const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -132,14 +138,16 @@ class _PaymentCollectScreenState extends State<PaymentCollectScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: (_amount <= 0 || _saving) ? null : _confirmAndCollect,
+              onPressed: (_amount <= 0 || _amount > widget.bill.due + 0.01 || _saving)
+                  ? null
+                  : _confirmAndCollect,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.billGreen,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
               ),
-              child: const Text('Confirm Payment'),
+              child: Text(_saving ? 'Recording Payment...' : 'Confirm Payment'),
             ),
           ),
         ],
@@ -229,8 +237,8 @@ class _PaymentCollectScreenState extends State<PaymentCollectScreen> {
         showAppSnackBar(
           context,
           errors.isEmpty
-              ? 'Payment synced to Google Sheets.'
-              : 'Payment saved locally, but sync failed — ${errors.join(' · ')}',
+              ? 'Payment recorded & synced to ledger.'
+              : 'Sync warning — ${errors.join(' · ')}',
           isError: errors.isNotEmpty,
           duration: errors.isEmpty ? const Duration(seconds: 3) : const Duration(seconds: 8),
         );

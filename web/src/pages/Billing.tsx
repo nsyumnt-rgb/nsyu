@@ -190,6 +190,14 @@ function BillingInner() {
       errors.push("Quantity must be greater than 0 for all items.");
     }
 
+    const effectivePaid = paidAmount === "" ? grandTotal : Number(paidAmount);
+    if (effectivePaid < 0) {
+      errors.push("Paid amount cannot be negative.");
+    }
+    if (effectivePaid > grandTotal + 0.01) {
+      errors.push(`Paid amount (₹${effectivePaid.toFixed(2)}) cannot exceed Grand Total (₹${grandTotal.toFixed(2)}).`);
+    }
+
     if (errors.length > 0) {
       setValidationErrors(errors);
       setToast({
@@ -203,6 +211,7 @@ function BillingInner() {
     // 2. Start saving in progress
     setProcessing(true);
     setFailureReason(null);
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pos-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     try {
       const res = await createSale({
@@ -214,8 +223,9 @@ function BillingInner() {
         })),
         billDiscount: Number(discountAmount) || 0,
         overallDiscount: Number(discountAmount) || 0,
-        paidAmount: paidAmount === "" ? grandTotal : Number(paidAmount),
+        paidAmount: effectivePaid,
         paymentMethod,
+        idempotencyKey,
       });
 
       const sale = res.data.data!;
@@ -552,15 +562,48 @@ function BillingInner() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Paid Amount (₹)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-700">Paid Amount (₹)</label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setPaidAmount(Number(grandTotal.toFixed(2)))}
+                      className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200 cursor-pointer"
+                    >
+                      Full
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaidAmount(0)}
+                      className="text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200 cursor-pointer"
+                    >
+                      Unpaid
+                    </button>
+                  </div>
+                </div>
                 <input
                   type="number"
+                  min="0"
+                  max={Number(grandTotal.toFixed(2))}
                   step="0.01"
                   placeholder={String(grandTotal)}
                   className="w-full px-2.5 py-2 rounded-xl border border-slate-200 bg-white font-mono font-semibold text-slate-800 text-xs focus:border-blue-500 focus:outline-none shadow-xs"
                   value={paidAmount}
-                  onChange={(e) => setPaidAmount(e.target.value ? Number(e.target.value) : "")}
+                  onChange={(e) => setPaidAmount(e.target.value !== "" ? Number(e.target.value) : "")}
                 />
+                {cart.length > 0 && (() => {
+                  const previewPaid = paidAmount === "" ? grandTotal : Number(paidAmount);
+                  const previewDue = Math.max(0, grandTotal - previewPaid);
+                  const previewStatus = previewPaid >= grandTotal - 0.01 ? "PAID" : previewPaid > 0.01 ? "PARTIAL" : "UNPAID";
+                  return (
+                    <div className="mt-1 flex items-center justify-between text-[10px]">
+                      <span className={`font-bold ${previewStatus === "PAID" ? "text-emerald-700" : previewStatus === "PARTIAL" ? "text-amber-700" : "text-rose-700"}`}>
+                        Status: {previewStatus}
+                      </span>
+                      <span className="font-mono text-slate-500">Due: ₹{previewDue.toFixed(2)}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

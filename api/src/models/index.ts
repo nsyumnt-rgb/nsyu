@@ -155,6 +155,9 @@ Order.hasMany(OrderItem, { foreignKey: "order_id", as: "items" });
 OrderItem.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 
 Order.belongsTo(Sale, { foreignKey: "converted_sale_id", as: "convertedSale" });
+Sale.belongsTo(Order, { foreignKey: "order_id", as: "sourceOrder" });
+Order.hasOne(Sale, { foreignKey: "order_id", as: "billedSale" });
+CustomerLedger.belongsTo(Sale, { foreignKey: "sale_id", as: "linkedSale" });
 
 /* ---------------- Customer Portal ---------------- */
 Customer.hasOne(CustomerAccount, { foreignKey: "customer_id", as: "account" });

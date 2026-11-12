@@ -86,11 +86,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
       if (_selectedStatusFilter == 'Pending' && o.status != OrderStatus.pending) return false;
       if (_selectedStatusFilter == 'Confirmed' && o.status != OrderStatus.confirmed) return false;
       if (_selectedStatusFilter == 'Delivered' && o.status != OrderStatus.delivered) return false;
-      if (_selectedStatusFilter == 'Billed' && o.status != OrderStatus.convertedToBill) return false;
+      if (_selectedStatusFilter == 'Billed' && !o.isBilled) return false;
       return true;
     }).toList();
 
-    const totalCount = 125;
+    final totalCount = allOrdersList.length;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -206,11 +206,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Orders',
                           style: TextStyle(
                             fontSize: 18,
@@ -220,7 +220,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                         Text(
                           'All Orders ($totalCount)',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: Color(0xFF64748B),
@@ -422,7 +422,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     } else if (o.status == OrderStatus.confirmed) {
       badgeBg = const Color(0xFFE0F2FE);
       badgeFg = const Color(0xFF0284C7);
-    } else if (o.status == OrderStatus.convertedToBill) {
+    } else if (o.isBilled) {
       badgeBg = const Color(0xFFCCFBF1);
       badgeFg = const Color(0xFF0D9488);
       status = 'Billed';

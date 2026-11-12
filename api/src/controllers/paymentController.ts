@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { CustomerLedger, Sale, Customer, Shop, Notification, sequelize } from "../models";
+import { computeBillPaymentStatus } from "../models/Sale";
 import { streamReceiptPdf } from "../utils/pdf";
 import { logAudit } from "../utils/audit";
-import { recordLedgerEntry } from "../utils/ledger";
+import { recordCustomerPaymentTransaction, recordLedgerEntry } from "../utils/ledger";
 import { Op } from "sequelize";
 
 function formatPaymentResponse(entry: any) {
@@ -12,11 +13,11 @@ function formatPaymentResponse(entry: any) {
     owner_id: entry.owner_id,
     shop_id: entry.shop_id,
     customer_id: entry.customer_id,
-    sale_id: entry.reference_id,
+    sale_id: entry.sale_id || entry.reference_id,
     type: "sale_payment",
     amount: entry.amount,
     method: entry.payment_method || "cash",
-    transaction_id: null,
+    transaction_id: entry.reference_code || null,
     payment_date: entry.entry_date,
     notes: entry.notes || entry.description,
     status: entry.status === "reversed" ? "cancelled" : "completed",
@@ -111,159 +112,84 @@ export async function createPayment(req: Request, res: Response) {
   let cleanType = String(type || "sale_payment").toLowerCase().trim();
   if (!validTypes.includes(cleanType)) cleanType = "sale_payment";
 
+  const idempotencyKey =
+    String(req.headers["x-idempotency-key"] || req.body.idempotencyKey || req.body.clientRequestId || "").trim() || null;
+
   try {
-    const result = await sequelize.transaction(async (t) => {
-      let resolvedSaleId = saleId ? Number(saleId) : null;
-      if (!resolvedSaleId && (req.body.invoiceNumber || req.body.billNumber || req.body.invoice_number)) {
-        const invNum = String(req.body.invoiceNumber || req.body.billNumber || req.body.invoice_number).trim();
-        const foundSale = await Sale.findOne({ where: { invoice_number: invNum, owner_id: ownerId }, transaction: t });
-        if (foundSale) resolvedSaleId = foundSale.id;
-      }
+    const result = await recordCustomerPaymentTransaction({
+      ownerId,
+      shopId,
+      customerId: customerId ? Number(customerId) : null,
+      saleId: saleId ? Number(saleId) : null,
+      invoiceNumber: req.body.invoiceNumber || req.body.billNumber || req.body.invoice_number || null,
+      amount: numAmount,
+      paymentMethod: cleanMethod,
+      referenceCode: req.body.referenceCode || transactionId || null,
+      idempotencyKey,
+      notes: notes || "Payment received",
+      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+      actorType,
+      actorId,
+      isOwner: req.auth!.isOwner,
+      allowAdvance: Boolean(req.body.allowAdvance),
+      referenceType: saleId ? "SalePayment" : "Payment",
+    });
 
-      let targetCustId = customerId ? Number(customerId) : null;
-      if ((!targetCustId || isNaN(targetCustId)) && resolvedSaleId) {
-        const saleForCust = await Sale.findOne({ where: { id: resolvedSaleId, owner_id: ownerId }, transaction: t });
-        if (saleForCust) targetCustId = saleForCust.customer_id;
-      }
-      if (!targetCustId || isNaN(targetCustId)) {
-        const firstCust = await Customer.findOne({ where: { owner_id: ownerId }, transaction: t });
-        if (!firstCust) throw Object.assign(new Error("No customer found"), { status: 404 });
-        targetCustId = firstCust.id;
-      }
-
-      const receiptCode = `RCP-${Date.now()}`;
-      const { entry: ledgerEntry } = await recordLedgerEntry({
-        ownerId,
-        shopId,
-        customerId: targetCustId,
-        entryType: "credit",
-        amount: numAmount,
-        referenceType: "Payment",
-        referenceId: resolvedSaleId ?? undefined,
-        referenceCode: receiptCode,
-        paymentMethod: cleanMethod,
-        notes: notes || "Payment received",
-        description: notes || `Payment received (${cleanMethod.toUpperCase()})`,
-        actorType,
-        actorId,
-        entryDate: paymentDate ? new Date(paymentDate) : new Date(),
-        externalTransaction: t,
-      });
-
-      // If saleId provided, update that sale
-      if (resolvedSaleId) {
-        const sale = await Sale.findOne({ where: { id: resolvedSaleId, owner_id: ownerId }, transaction: t, lock: t.LOCK.UPDATE });
-        if (sale) {
-          if (sale.status === "cancelled") {
-            throw Object.assign(new Error("Cannot add payment to a cancelled bill"), { status: 400 });
-          }
-          const currentPaid = Number(sale.paid_amount || 0);
-          const total = Number(sale.total_amount || 0);
-          const newPaid = Math.round((currentPaid + numAmount) * 100) / 100;
-          if (newPaid > total + 0.01) {
-            throw Object.assign(
-              new Error(`Payment amount ₹${numAmount} exceeds remaining due amount of ₹${Math.max(0, total - currentPaid)}`),
-              { status: 400 }
-            );
-          }
-          const roundedPaid = Math.min(total, newPaid);
-          const remainingDue = Math.max(0, Math.round((total - roundedPaid) * 100) / 100);
-          sale.paid_amount = roundedPaid;
-          sale.due_amount = remainingDue <= 0.01 ? 0 : remainingDue;
-          sale.status = sale.due_amount <= 0.01 ? "paid" : "partially_paid";
-          await sale.save({ transaction: t });
-        }
-      } else {
-        // Allocate to unpaid sales chronologically
-        const unpaidSales = await Sale.findAll({
-          where: {
-            owner_id: ownerId,
-            customer_id: targetCustId,
-            status: ["unpaid", "partially_paid"],
-          },
-          order: [["created_at", "ASC"]],
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-        let remaining = numAmount;
-        for (const s of unpaidSales) {
-          if (remaining <= 0) break;
-          const due = Math.max(0, Number(s.due_amount));
-          const apply = Math.min(remaining, due);
-          s.paid_amount = Math.round((Number(s.paid_amount) + apply) * 100) / 100;
-          s.due_amount = Math.max(0, Math.round((Number(s.total_amount) - Number(s.paid_amount)) * 100) / 100);
-          if (s.due_amount <= 0.01) {
-            s.due_amount = 0;
-            s.status = "paid";
-          } else {
-            s.status = "partially_paid";
-          }
-          await s.save({ transaction: t });
-          remaining = Math.round((remaining - apply) * 100) / 100;
-        }
-      }
-
+    if (!result.idempotent) {
       await logAudit({
         req,
         module: "ledger",
         action: "payment",
         entityType: "CustomerLedger",
-        entityId: ledgerEntry.id,
-        details: { amount: numAmount, method: cleanMethod, customerId: targetCustId },
+        entityId: result.entry.id,
+        details: { amount: numAmount, method: cleanMethod, customerId: result.customer.id, saleId: result.sale?.id ?? null },
       });
 
-      // In-app notification for payment received
       try {
-        const targetCust = await Customer.findByPk(targetCustId, { transaction: t });
-        const custName = targetCust ? targetCust.name : "Customer";
-        await Notification.create(
-          {
-            owner_id: ownerId,
-            shop_id: shopId,
-            recipient_type: "owner",
-            recipient_id: ownerId,
-            type: "payment_received",
-            title: `Payment Received: ₹${numAmount}`,
-            message: `₹${numAmount} received via ${cleanMethod.toUpperCase()} from ${custName}.`,
-            reference_type: "Payment",
-            reference_id: ledgerEntry.id,
-            is_read: false,
-          },
-          { transaction: t }
-        );
-
-        if (targetCustId) {
-          await Notification.create(
-            {
-              owner_id: ownerId,
-              shop_id: shopId,
-              recipient_type: "customer",
-              recipient_id: targetCustId,
-              type: "payment_received",
-              title: `Payment Received: ₹${numAmount}`,
-              message: `Your payment of ₹${numAmount} via ${cleanMethod.toUpperCase()} has been recorded.`,
-              reference_type: "Payment",
-              reference_id: ledgerEntry.id,
-              is_read: false,
-            },
-            { transaction: t }
-          );
-        }
+        const custName = result.customer ? result.customer.name : "Customer";
+        await Notification.create({
+          owner_id: ownerId,
+          shop_id: shopId,
+          recipient_type: "owner",
+          recipient_id: ownerId,
+          type: "payment_received",
+          title: `Payment Received: ₹${numAmount}`,
+          message: `₹${numAmount} received via ${cleanMethod.toUpperCase()} from ${custName}.`,
+          reference_type: "Payment",
+          reference_id: result.entry.id,
+          is_read: false,
+        });
+        await Notification.create({
+          owner_id: ownerId,
+          shop_id: shopId,
+          recipient_type: "customer",
+          recipient_id: result.customer.id,
+          type: "payment_received",
+          title: `Payment Received: ₹${numAmount}`,
+          message: `Your payment of ₹${numAmount} via ${cleanMethod.toUpperCase()} has been recorded.`,
+          reference_type: "Payment",
+          reference_id: result.entry.id,
+          is_read: false,
+        });
       } catch (notifErr) {
         console.error("Failed to create payment notification:", notifErr);
       }
+    }
 
-      return ledgerEntry;
-    });
-
-    const fullPayment = await CustomerLedger.findByPk(result.id, {
+    const fullPayment = await CustomerLedger.findByPk(result.entry.id, {
       include: [
         { model: Customer, as: "customer" },
         { model: Shop, as: "shop" },
       ],
     });
 
-    return res.status(201).json({ success: true, data: formatPaymentResponse(fullPayment) });
+    return res.status(result.idempotent ? 200 : 201).json({
+      success: true,
+      idempotent: result.idempotent,
+      data: formatPaymentResponse(fullPayment),
+      sale: result.sale,
+      updatedSales: result.updatedSales,
+    });
   } catch (err: any) {
     return res.status(err.status || 500).json({ success: false, message: err.message });
   }
@@ -313,12 +239,14 @@ export async function cancelPayment(req: Request, res: Response) {
       entry.notes = [entry.notes, reason ? `Cancelled: ${reason}` : "Cancelled"].filter(Boolean).join(" | ");
       await entry.save({ transaction: t });
 
-      if (entry.reference_id && entry.reference_type !== "Customer") {
-        const sale = await Sale.findOne({ where: { id: entry.reference_id }, transaction: t, lock: t.LOCK.UPDATE });
+      const targetSaleId = entry.sale_id || (entry.reference_type !== "Customer" ? entry.reference_id : null);
+      if (targetSaleId) {
+        const sale = await Sale.findOne({ where: { id: targetSaleId }, transaction: t, lock: t.LOCK.UPDATE });
         if (sale) {
           sale.paid_amount = Math.max(0, Number(sale.paid_amount) - Number(entry.amount));
-          sale.due_amount = Number(sale.total_amount) - sale.paid_amount;
-          sale.status = sale.due_amount <= 0 ? "paid" : sale.paid_amount > 0 ? "partially_paid" : "unpaid";
+          sale.due_amount = Math.max(0, Number(sale.total_amount) - sale.paid_amount);
+          sale.status = sale.due_amount <= 0.01 ? "paid" : sale.paid_amount > 0.01 ? "partially_paid" : "unpaid";
+          sale.payment_status = computeBillPaymentStatus(sale.total_amount, sale.paid_amount, sale.status);
           await sale.save({ transaction: t });
         }
       }
