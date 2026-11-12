@@ -182,6 +182,45 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Future<void> _handleCustomerOtpLogin() async {
+    final identifier = _identifierCtrl.text.trim();
+    if (identifier.isEmpty) {
+      setState(() {
+        _error = 'Please enter your registered email or mobile number first.';
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final res = await CustomerPortalService().requestOtp(identifier: identifier);
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      final maskedEmail = res['maskedEmail']?.toString();
+      final code = res['verificationCode']?.toString() ?? res['otp']?.toString();
+      final msg = res['message']?.toString();
+
+      await CustomerOtpDialog.show(
+        context,
+        identifier: identifier,
+        maskedEmail: maskedEmail,
+        initialOtp: code,
+        message: msg,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
   void _showCustomerForgotPasswordDialog() {
     final idCtrl = TextEditingController(text: _identifierCtrl.text.trim());
     final otpCtrl = TextEditingController();
@@ -286,10 +325,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         });
                         try {
                           final res = await CustomerPortalService().forgotPassword(identifier: val);
+                          final code = res['verificationCode']?.toString() ?? res['otp']?.toString();
                           setDialogState(() {
                             dialogLoading = false;
                             otpSent = true;
                             dialogMessage = res['message']?.toString() ?? 'Code sent to registered email';
+                            if (code != null && code.isNotEmpty) {
+                              otpCtrl.text = code;
+                            }
                           });
                         } catch (err) {
                           setDialogState(() {
@@ -736,12 +779,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 8),
                             Center(
                               child: TextButton.icon(
-                                onPressed: () {
-                                  CustomerOtpDialog.show(
-                                    context,
-                                    identifier: _identifierCtrl.text.trim(),
-                                  );
-                                },
+                                onPressed: _loading ? null : _handleCustomerOtpLogin,
                                 icon: const Icon(Icons.mark_email_read_outlined, size: 16, color: Color(0xFF1D4ED8)),
                                 label: const Text(
                                   'Log in with 4-Digit OTP Code instead',

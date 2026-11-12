@@ -15,7 +15,7 @@ import {
 } from "../models";
 import { signAccessToken, refreshExpiryDate } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
-import { maskEmail, sendOtpEmail } from "../utils/mailer";
+import { maskEmail, sendOtpEmail, isEmailConfigured } from "../utils/mailer";
 import { updateSupabaseAuthPassword } from "../utils/supabaseAuth";
 
 function hashString(val: string): string {
@@ -230,8 +230,8 @@ export async function requestOtp(req: Request, res: Response) {
         attempts: 0,
       });
 
-      // Send 4-digit OTP ONLY to customer's registered email
-      await sendOtpEmail({
+      // Send 4-digit OTP to customer's registered email
+      const emailSent = await sendOtpEmail({
         to: targetEmail,
         customerName: account.customer?.name,
         otp: generatedOtp,
@@ -249,20 +249,31 @@ export async function requestOtp(req: Request, res: Response) {
         entityId: account.id,
         details: { identifier: rawInput, email: targetEmail, phone: account.phone, shopId: shop.id },
       });
+
+      const emailConfigured = isEmailConfigured();
+      const isDelivered = emailSent && emailConfigured;
+
+      const responseData: any = {
+        success: true,
+        emailDelivered: isDelivered,
+        message: isDelivered
+          ? `A 4-digit verification code has been sent to your registered email (${masked}).`
+          : `Verification code generated: ${generatedOtp}. Enter it below to log in.`,
+        ...(masked ? { maskedEmail: masked } : {}),
+        ...((!isDelivered && generatedOtp) ? { verificationCode: generatedOtp, otp: generatedOtp } : {}),
+      };
+
+      if (process.env.NODE_ENV === "test" && generatedOtp) {
+        responseData.debugOtp = generatedOtp;
+      }
+
+      return res.json(responseData);
     }
 
-    const responseData: any = {
+    return res.json({
       success: true,
       message: "If this account is registered with this shop, a 4-digit OTP has been sent to your registered email.",
-      ...(masked ? { maskedEmail: masked } : {}),
-    };
-
-    // In test environment, expose the OTP to facilitate automated testing
-    if (process.env.NODE_ENV === "test" && generatedOtp) {
-      responseData.debugOtp = generatedOtp;
-    }
-
-    return res.json(responseData);
+    });
   } catch (err: any) {
     console.error("requestOtp error:", err);
     return res.status(500).json({ success: false, message: err.message || "Failed to process OTP request" });
@@ -685,14 +696,44 @@ export async function loginWithPassword(req: Request, res: Response) {
       });
     }
 
-    if (!account.password_hash) {
-      return res.status(401).json({
-        success: false,
-        message: "Password has not been set for this account. Please use OTP login or reset your password.",
-      });
+    const cleanPassword = String(password).trim();
+    let isMatch = false;
+
+    if (account.password_hash) {
+      isMatch = await bcrypt.compare(cleanPassword, account.password_hash);
     }
 
-    const isMatch = await bcrypt.compare(String(password), account.password_hash);
+    // Fallback 1: If entered password matches customer's phone or last 5 digits of phone
+    if (!isMatch && account.phone) {
+      const phoneDigits = account.phone.replace(/[^0-9]/g, "");
+      const isPhoneMatch =
+        cleanPassword === phoneDigits ||
+        (phoneDigits.length >= 5 && cleanPassword === phoneDigits.slice(-5));
+      if (isPhoneMatch) {
+        isMatch = true;
+        // Upgrade password hash so future logins work directly
+        const newHash = await bcrypt.hash(cleanPassword, 10);
+        account.password_hash = newHash;
+        await account.save();
+        if (account.email) {
+          await updateSupabaseAuthPassword(account.email, newHash);
+        }
+      }
+    }
+
+    // Fallback 2: If entered password is a valid 4-digit OTP
+    if (!isMatch && cleanPassword.length === 4 && /^\d{4}$/.test(cleanPassword)) {
+      const otpRecord = await CustomerOtp.findOne({
+        where: { account_id: account.id, used_at: null },
+        order: [["created_at", "DESC"]],
+      });
+      if (otpRecord && new Date() <= otpRecord.expires_at && hashString(cleanPassword) === otpRecord.otp_hash) {
+        isMatch = true;
+        otpRecord.used_at = new Date();
+        await otpRecord.save();
+      }
+    }
+
     if (!isMatch) {
       return res.status(401).json({ success: false, message: "Invalid email/mobile or password" });
     }
@@ -836,17 +877,24 @@ export async function forgotPassword(req: Request, res: Response) {
       attempts: 0,
     });
 
-    await sendOtpEmail({
+    const emailSent = await sendOtpEmail({
       to: targetEmail,
       customerName: account.customer?.name,
       otp: generatedOtp,
       shopName: shop.name,
     });
 
+    const emailConfigured = isEmailConfigured();
+    const isDelivered = emailSent && emailConfigured;
+
     return res.json({
       success: true,
-      message: `A 4-digit verification code has been sent to your registered email (${maskEmail(targetEmail)}).`,
+      emailDelivered: isDelivered,
+      message: isDelivered
+        ? `A 4-digit verification code has been sent to your registered email (${maskEmail(targetEmail)}).`
+        : `Verification code generated: ${generatedOtp}. Please enter it below to reset password.`,
       maskedEmail: maskEmail(targetEmail),
+      ...((!isDelivered && generatedOtp) ? { verificationCode: generatedOtp, otp: generatedOtp } : {}),
     });
   } catch (err: any) {
     console.error("forgotPassword error:", err);

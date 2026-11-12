@@ -34,6 +34,10 @@ function getTransporter(): Transporter | null {
   return null;
 }
 
+export function isEmailConfigured(): boolean {
+  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
 export interface SendOtpEmailParams {
   to: string;
   customerName?: string;
@@ -50,8 +54,8 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
 
   const activeTransporter = getTransporter();
   if (!activeTransporter) {
-    // If no external SMTP configured, console log is our delivery channel in dev/staging
-    return true;
+    // No external SMTP configured
+    return false;
   }
 
   const html = `
@@ -114,7 +118,6 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
     return true;
   } catch (err: any) {
     console.error("[EMAIL ERROR] Failed to send email via SMTP:", err.message);
-    // Return true because we already logged the OTP to console
-    return true;
+    return false;
   }
 }
