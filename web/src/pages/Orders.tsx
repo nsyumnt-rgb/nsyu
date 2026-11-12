@@ -94,30 +94,69 @@ export default function Orders() {
   });
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [convertingToBill, setConvertingToBill] = useState(false);
+  const [orderToConvert, setOrderToConvert] = useState<OrderRecord | null>(null);
+  const [convertPaymentMode, setConvertPaymentMode] = useState<"full" | "unpaid" | "custom">("full");
+  const [convertPaidAmount, setConvertPaidAmount] = useState<string>("");
+  const [convertPaymentMethod, setConvertPaymentMethod] = useState<string>("cash");
+  const [convertNotes, setConvertNotes] = useState<string>("");
 
-  async function handleConvertToBill(orderId: number) {
-    if (convertingToBill) return;
-    if (
-      !window.confirm(
-        "Are you sure you want to convert this order into an official tax bill? This is a strictly one-time action that deducts inventory and posts to the customer ledger."
-      )
-    ) {
+  function openConvertModal(ord: OrderRecord) {
+    const isDelivered = (ord.status || "").toLowerCase() === "delivered";
+    if (!isDelivered) {
+      alert(
+        `Order #${ord.order_number} must be in "Delivered" status to convert to a bill (current status is "${ord.status}").\n\nPlease update order status to Delivered first.`
+      );
       return;
     }
+    setOrderToConvert(ord);
+    setConvertPaymentMode("full");
+    setConvertPaidAmount(String(Number(ord.total_amount || 0)));
+    setConvertPaymentMethod("cash");
+    setConvertNotes(`Converted from Order #${ord.order_number}`);
+  }
+
+  async function handleConvertSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!orderToConvert) return;
+    if (convertingToBill) return;
+
+    const total = Number(orderToConvert.total_amount || 0);
+    let finalPaid = 0;
+    if (convertPaymentMode === "full") {
+      finalPaid = total;
+    } else if (convertPaymentMode === "custom") {
+      finalPaid = Number(convertPaidAmount || 0);
+      if (isNaN(finalPaid) || finalPaid < 0) {
+        alert("Please enter a valid payment amount.");
+        return;
+      }
+      if (finalPaid > total + 0.01) {
+        alert(`Paid amount (₹${finalPaid}) cannot exceed order total (₹${total}).`);
+        return;
+      }
+    } else {
+      finalPaid = 0;
+    }
+
     setConvertingToBill(true);
     try {
-      const res = await convertOrderToBill(orderId);
+      const res = await convertOrderToBill(orderToConvert.id, {
+        paidAmount: finalPaid,
+        paymentMethod: convertPaymentMethod,
+        notes: convertNotes,
+      });
       const payload = res?.data?.data as any;
       const convertedOrder = payload?.order || payload;
       const generatedBill = payload?.bill;
       if (convertedOrder && convertedOrder.id) {
         setSelectedOrder(convertedOrder);
       }
+      setOrderToConvert(null);
       await loadOrdersData();
       alert(
         generatedBill?.invoice_number
-          ? `Order converted to official bill #${generatedBill.invoice_number} successfully!`
-          : "Order converted to official tax invoice successfully!"
+          ? `Order #${orderToConvert.order_number} converted to Bill #${generatedBill.invoice_number} successfully!\n\nCustomer ledger updated: Debit ₹${total}${finalPaid > 0 ? `, Payment Credit ₹${finalPaid}` : ""}.`
+          : "Order converted to official tax bill successfully! Customer ledger updated."
       );
       setStep("view");
     } catch (err) {
@@ -489,6 +528,7 @@ export default function Orders() {
                 >
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
                   <option value="processing">Processing</option>
                   <option value="shipped">Shipped</option>
                   <option value="delivered">Delivered</option>
@@ -739,14 +779,32 @@ export default function Orders() {
                                     >
                                       ✏️
                                     </button>
-                                    <button
-                                      title="Convert to Official Bill"
-                                      disabled={convertingToBill}
-                                      onClick={() => handleConvertToBill(ord.id)}
-                                      className="text-slate-500 hover:text-emerald-700 text-sm disabled:opacity-40"
-                                    >
-                                      🧾
-                                    </button>
+                                    {ord.status.toLowerCase() === "delivered" ? (
+                                      <button
+                                        title="Convert to Official Bill (Order Delivered)"
+                                        disabled={convertingToBill}
+                                        onClick={() => openConvertModal(ord)}
+                                        className="text-emerald-600 hover:text-emerald-700 font-bold text-sm disabled:opacity-40"
+                                      >
+                                        🧾
+                                      </button>
+                                    ) : (
+                                      <button
+                                        title={`Status: ${ord.status}. Mark as Delivered to convert to bill.`}
+                                        onClick={() => {
+                                          setSelectedOrder(ord);
+                                          setStatusUpdateForm({
+                                            status: "Delivered",
+                                            payment_status: ord.payment_status || "Paid",
+                                            remarks: "Marking as Delivered for bill conversion.",
+                                          });
+                                          setStep("update_status");
+                                        }}
+                                        className="text-slate-300 hover:text-amber-600 text-sm"
+                                      >
+                                        🧾
+                                      </button>
+                                    )}
                                   </>
                                 )}
                                 <button
@@ -1322,16 +1380,35 @@ export default function Orders() {
                   }
                   return (
                     <>
-                      {selectedOrder.status !== "cancelled" && (
+                      {selectedOrder.status.toLowerCase() === "delivered" ? (
                         <button
-                          onClick={() => handleConvertToBill(selectedOrder.id)}
+                          onClick={() => openConvertModal(selectedOrder)}
                           disabled={convertingToBill}
                           className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50"
                         >
                           <span>🧾</span>
                           <span>{convertingToBill ? "Converting..." : "Convert to Official Bill"}</span>
                         </button>
-                      )}
+                      ) : selectedOrder.status !== "cancelled" ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
+                            <span>ℹ️</span> Status: {selectedOrder.status}. Mark as Delivered to convert to bill.
+                          </span>
+                          <button
+                            onClick={() => {
+                              setStatusUpdateForm({
+                                status: "Delivered",
+                                payment_status: selectedOrder.payment_status || "Paid",
+                                remarks: "Order marked Delivered.",
+                              });
+                              setStep("update_status");
+                            }}
+                            className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1"
+                          >
+                            <span>📦</span> Mark Delivered
+                          </button>
+                        </div>
+                      ) : null}
                       <button
                         onClick={() => {
                           setStatusUpdateForm({
@@ -1575,7 +1652,7 @@ export default function Orders() {
               {/* Progress Stepper Bar */}
               <div className="relative flex items-center justify-between max-w-2xl mx-auto py-4">
                 <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-slate-200 z-0" />
-                {["Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map((st) => {
+                {["Pending", "Confirmed", "Delivered", "Cancelled"].map((st) => {
                   const isActive =
                     statusUpdateForm.status.toLowerCase() === st.toLowerCase();
                   return (
@@ -1623,6 +1700,7 @@ export default function Orders() {
                     className="input !py-2 text-xs w-full bg-white font-medium"
                   >
                     <option>Pending</option>
+                    <option>Confirmed</option>
                     <option>Processing</option>
                     <option>Shipped</option>
                     <option>Delivered</option>
@@ -2190,6 +2268,155 @@ export default function Orders() {
                 No order selected. Please select an order from the Order List to view notifications.
               </div>
             )}
+          </div>
+        )}
+
+        {/* ================================================================ */}
+        {/* CONVERT TO BILL MODAL                                            */}
+        {/* ================================================================ */}
+        {orderToConvert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="p-4 bg-emerald-700 text-white flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🧾</span>
+                  <div>
+                    <h3 className="font-bold text-sm">Convert Order to Bill</h3>
+                    <p className="text-[11px] text-emerald-100">Order #{orderToConvert.order_number} (Delivered)</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOrderToConvert(null)}
+                  className="text-emerald-200 hover:text-white text-lg font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleConvertSubmit} className="p-5 space-y-4">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Customer:</span>
+                    <span className="font-bold text-slate-800">{orderToConvert.customer?.name || "Walk-in Customer"}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Order Total:</span>
+                    <span className="font-extrabold text-emerald-700 text-sm">₹ {Number(orderToConvert.total_amount).toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600">
+                    <span>Status:</span>
+                    <span className="font-bold text-emerald-700 uppercase tracking-wider">{orderToConvert.status}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                    Payment Received on Delivery:
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConvertPaymentMode("full");
+                        setConvertPaidAmount(String(Number(orderToConvert.total_amount || 0)));
+                      }}
+                      className={clsx(
+                        "py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center",
+                        convertPaymentMode === "full"
+                          ? "bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-200"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      Full (₹{Number(orderToConvert.total_amount).toLocaleString("en-IN")})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConvertPaymentMode("unpaid");
+                        setConvertPaidAmount("0");
+                      }}
+                      className={clsx(
+                        "py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center",
+                        convertPaymentMode === "unpaid"
+                          ? "bg-amber-50 border-amber-500 text-amber-800 ring-2 ring-amber-200"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      Unpaid (₹0 Due)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConvertPaymentMode("custom")}
+                      className={clsx(
+                        "py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center",
+                        convertPaymentMode === "custom"
+                          ? "bg-blue-50 border-blue-500 text-blue-800 ring-2 ring-blue-200"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      Custom Partial
+                    </button>
+                  </div>
+                </div>
+
+                {convertPaymentMode === "custom" && (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Amount Received (₹):</label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      max={Number(orderToConvert.total_amount)}
+                      value={convertPaidAmount}
+                      onChange={(e) => setConvertPaidAmount(e.target.value)}
+                      placeholder="Enter amount collected..."
+                      className="input !py-1.5 text-xs w-full font-bold"
+                      required
+                    />
+                  </div>
+                )}
+
+                {convertPaymentMode !== "unpaid" && (
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">Payment Method:</label>
+                    <select
+                      value={convertPaymentMethod}
+                      onChange={(e) => setConvertPaymentMethod(e.target.value)}
+                      className="input !py-1.5 text-xs w-full bg-white font-medium"
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="upi">UPI / Online</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="card">Card</option>
+                      <option value="cheque">Cheque</option>
+                    </select>
+                  </div>
+                )}
+
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-[11px] text-blue-900 leading-relaxed">
+                  ℹ️ <strong>Strictly One-Time Conversion:</strong> Converts Order #{orderToConvert.order_number} to an official tax bill, deducts warehouse stock, and posts accurate debit & payment credit entries to the customer ledger.
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setOrderToConvert(null)}
+                    className="btn-secondary !py-1.5 !px-3 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={convertingToBill}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <span>🧾</span>
+                    <span>{convertingToBill ? "Converting & Posting..." : "Convert to Bill & Post to Ledger"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </div>

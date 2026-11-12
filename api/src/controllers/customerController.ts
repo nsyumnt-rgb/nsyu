@@ -1,31 +1,135 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+import bcrypt from "bcryptjs";
 import { Customer, Sale, CustomerLedger, CustomerAccount, CustomerRefreshToken, Shop } from "../models";
 import { logAudit } from "../utils/audit";
+import { syncCustomerToSupabaseAuth, updateSupabaseAuthPassword } from "../utils/supabaseAuth";
+
+function normalizePhone(raw: string): string {
+  return raw.replace(/[^0-9]/g, "").slice(-10);
+}
+
+function isValidEmail(val: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+}
 
 export async function createCustomer(req: Request, res: Response) {
-  const { name, phone, email, address, gstin, openingBalance, notes } = req.body;
-  if (!name) return res.status(400).json({ success: false, message: "name is required" });
+  const {
+    name,
+    shopName,
+    shop_name,
+    phone,
+    mobile,
+    email,
+    address,
+    gstin,
+    openingBalance,
+    opening_balance,
+    password,
+    notes,
+  } = req.body;
+
+  // Validation
+  const trimmedName = String(name || "").trim();
+  if (!trimmedName) {
+    return res.status(400).json({ success: false, message: "Customer Name is required" });
+  }
+
+  const rawPhone = String(phone || mobile || "").trim();
+  const cleanPhone = normalizePhone(rawPhone);
+  if (!cleanPhone || cleanPhone.length !== 10) {
+    return res.status(400).json({ success: false, message: "A valid 10-digit Mobile Number is required" });
+  }
+
+  const trimmedAddress = String(address || "").trim();
+  if (!trimmedAddress) {
+    return res.status(400).json({ success: false, message: "Address is required" });
+  }
+
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  if (!cleanEmail || !isValidEmail(cleanEmail)) {
+    return res.status(400).json({ success: false, message: "A valid Email address is required" });
+  }
+
+  const rawPassword = String(password || "").trim();
+  if (!rawPassword || rawPassword.length < 6) {
+    return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
+  }
+
+  const ownerId = req.auth!.ownerId;
+
+  // Check uniqueness within owner
+  const existingPhone = await Customer.findOne({
+    where: { owner_id: ownerId, phone: cleanPhone },
+  });
+  if (existingPhone) {
+    return res.status(409).json({
+      success: false,
+      message: `A customer with mobile number ${cleanPhone} already exists.`,
+    });
+  }
+
+  const existingEmail = await Customer.findOne({
+    where: { owner_id: ownerId, email: cleanEmail },
+  });
+  if (existingEmail) {
+    return res.status(409).json({
+      success: false,
+      message: `A customer with email ${cleanEmail} already exists.`,
+    });
+  }
+
+  const effectiveShopName = (shopName || shop_name) ? String(shopName || shop_name).trim() : null;
+  const rawOpBal = openingBalance !== undefined ? openingBalance : opening_balance;
+  const numOpBal = Number(rawOpBal) || 0;
+
+  // Resolve shop for customer account
+  let shopId = req.auth!.shopId;
+  if (!shopId) {
+    const shop = await Shop.findOne({ where: { owner_id: ownerId, status: "active" }, order: [["id", "ASC"]] });
+    shopId = shop ? shop.id : 1;
+  }
+
+  // Hash password using bcrypt
+  const passwordHash = await bcrypt.hash(rawPassword, 10);
+
+  // Sync to Supabase Auth (auth.users & auth.identities)
+  const supabaseUid = await syncCustomerToSupabaseAuth(cleanEmail, passwordHash, trimmedName, cleanPhone);
 
   const customer = await Customer.create({
-    owner_id: req.auth!.ownerId,
-    name,
-    phone: phone ?? null,
-    email: email ?? null,
-    address: address ?? null,
-    gstin: gstin ?? null,
-    opening_balance: Number(openingBalance) || 0,
-    current_balance: Number(openingBalance) || 0,
-    notes: notes ?? null,
+    owner_id: ownerId,
+    name: trimmedName,
+    shop_name: effectiveShopName,
+    phone: cleanPhone,
+    email: cleanEmail,
+    address: trimmedAddress,
+    gstin: gstin ? String(gstin).trim() : null,
+    opening_balance: numOpBal,
+    current_balance: numOpBal,
+    supabase_uid: supabaseUid || null,
+    notes: notes ? String(notes).trim() : null,
   });
 
-  if (Number(openingBalance) !== 0) {
-    const numOpBal = Number(openingBalance);
+  // Create CustomerAccount for portal login
+  await CustomerAccount.create({
+    customer_id: customer.id,
+    shop_id: shopId,
+    owner_id: ownerId,
+    phone: cleanPhone,
+    email: cleanEmail,
+    password_hash: passwordHash,
+    supabase_uid: supabaseUid || null,
+    status: "active",
+    created_by: req.auth!.employeeId || req.auth!.ownerId,
+  });
+
+  // Opening balance ledger impact
+  if (numOpBal !== 0) {
     const entryType = numOpBal > 0 ? "debit" : "credit";
     const absOpBal = Math.abs(numOpBal);
     await CustomerLedger.create({
-      owner_id: req.auth!.ownerId,
-      shop_id: req.auth!.shopId || 1,
+      owner_id: ownerId,
+      shop_id: shopId,
       customer_id: customer.id,
       entry_type: entryType,
       amount: absOpBal,
@@ -35,7 +139,9 @@ export async function createCustomer(req: Request, res: Response) {
       entry_date: new Date(),
       actor_type: req.auth!.isOwner ? "owner" : "employee",
       actor_id: req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || 1),
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn("Failed to create opening balance ledger entry:", err.message);
+    });
   }
 
   await logAudit({ req, module: "customers", action: "create", entityType: "Customer", entityId: customer.id });
@@ -99,15 +205,70 @@ export async function updateCustomer(req: Request, res: Response) {
   const customer = await Customer.findOne({ where: { id: req.params.customerId, owner_id: req.auth!.ownerId } });
   if (!customer) return res.status(404).json({ success: false, message: "Customer not found" });
 
-  const { name, phone, email, address, gstin, status, notes } = req.body;
-  if (name !== undefined) customer.name = name;
-  if (phone !== undefined) customer.phone = phone;
-  if (email !== undefined) customer.email = email;
+  const { name, shopName, shop_name, phone, email, address, gstin, status, notes, password } = req.body;
+  if (name !== undefined) customer.name = String(name).trim();
+  if (shopName !== undefined || shop_name !== undefined) {
+    customer.shop_name = String(shopName || shop_name || "").trim() || null;
+  }
+
+  let phoneUpdated = false;
+  if (phone !== undefined) {
+    const cleanPhone = normalizePhone(String(phone));
+    if (cleanPhone && cleanPhone !== customer.phone) {
+      const conflict = await Customer.findOne({
+        where: { owner_id: req.auth!.ownerId, phone: cleanPhone, id: { [Op.ne]: customer.id } },
+      });
+      if (conflict) {
+        return res.status(409).json({ success: false, message: `Mobile number ${cleanPhone} already in use` });
+      }
+      customer.phone = cleanPhone;
+      phoneUpdated = true;
+    }
+  }
+
+  let emailUpdated = false;
+  if (email !== undefined) {
+    const cleanEmail = String(email).trim().toLowerCase();
+    if (cleanEmail && cleanEmail !== customer.email) {
+      if (!isValidEmail(cleanEmail)) {
+        return res.status(400).json({ success: false, message: "Invalid email address format" });
+      }
+      const conflict = await Customer.findOne({
+        where: { owner_id: req.auth!.ownerId, email: cleanEmail, id: { [Op.ne]: customer.id } },
+      });
+      if (conflict) {
+        return res.status(409).json({ success: false, message: `Email ${cleanEmail} already in use` });
+      }
+      customer.email = cleanEmail;
+      emailUpdated = true;
+    }
+  }
+
   if (address !== undefined) customer.address = address;
   if (gstin !== undefined) customer.gstin = gstin;
   if (status !== undefined) customer.status = status;
   if (notes !== undefined) customer.notes = notes;
+
   await customer.save();
+
+  // If password or credentials changed, sync CustomerAccount & Supabase Auth
+  if (password && String(password).trim().length >= 6) {
+    const passwordHash = await bcrypt.hash(String(password).trim(), 10);
+    await CustomerAccount.update(
+      { password_hash: passwordHash },
+      { where: { customer_id: customer.id } }
+    );
+    if (customer.email) {
+      await updateSupabaseAuthPassword(customer.email, passwordHash);
+    }
+  }
+
+  if (emailUpdated || phoneUpdated) {
+    const accountUpdates: any = {};
+    if (customer.email) accountUpdates.email = customer.email;
+    if (customer.phone) accountUpdates.phone = customer.phone;
+    await CustomerAccount.update(accountUpdates, { where: { customer_id: customer.id } });
+  }
 
   await logAudit({ req, module: "customers", action: "update", entityType: "Customer", entityId: customer.id });
   return res.json({ success: true, data: customer });

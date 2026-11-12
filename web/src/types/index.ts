@@ -313,10 +313,13 @@ export interface Customer {
   id: number;
   owner_id: number;
   name: string;
+  shop_name?: string | null;
   phone: string;
   email?: string;
   address?: string;
+  opening_balance?: number;
   current_balance: number;
+  supabase_uid?: string | null;
   status: "active" | "inactive";
   created_at?: string;
 }

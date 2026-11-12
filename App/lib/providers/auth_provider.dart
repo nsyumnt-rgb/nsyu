@@ -247,6 +247,43 @@ class AuthProvider extends ChangeNotifier {
     return false;
   }
 
+  /// Customer Portal Email / Mobile + Password Login
+  Future<bool> loginAsCustomerWithPassword({
+    required String identifier,
+    required String password,
+    String? shopCode,
+  }) async {
+    try {
+      final effectiveId = identifier.trim();
+      final res = await CustomerPortalService().loginWithPassword(
+        identifier: effectiveId,
+        password: password.trim(),
+        shopCode: shopCode,
+      );
+      final customer = res['customer'] as Map<String, dynamic>?;
+
+      _isLoggedIn = true;
+      _isCustomer = true;
+      _userName = customer?['name']?.toString() ?? 'Customer';
+      _registeredMobile = customer?['phone']?.toString() ?? effectiveId;
+      _userEmail = customer?['email']?.toString() ?? '';
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_loggedInKey, true);
+      await prefs.setBool(_isCustomerKey, true);
+      await prefs.setString(_userNameKey, _userName);
+      await prefs.setString(_mobileKey, _registeredMobile!);
+      if (_userEmail.isNotEmpty) {
+        await prefs.setString(_userEmailKey, _userEmail);
+      }
+
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Customer Portal Email / Mobile + 4-Digit OTP Login
   Future<bool> loginAsCustomer({
     String? identifier,

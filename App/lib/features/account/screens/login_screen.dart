@@ -120,32 +120,18 @@ class _LoginScreenState extends State<LoginScreen> {
             }
           });
         } else {
-          // Attempt standard credential login or request OTP
-          final success = await auth.login(identifier, password);
+          // Customer Email/Mobile + Password Login
+          final success = await auth.loginAsCustomerWithPassword(
+            identifier: identifier,
+            password: password,
+          );
           if (!mounted) return;
-          if (success) {
-            setState(() => _loading = false);
-          } else {
-            // If standard login fails for customer, request 4-digit OTP to registered email
-            try {
-              final otpRes = await CustomerPortalService().requestOtp(identifier: identifier);
-              if (!mounted) return;
-              setState(() {
-                _loading = false;
-              });
-              CustomerOtpDialog.show(
-                context,
-                identifier: identifier,
-                maskedEmail: otpRes['maskedEmail'] as String?,
-              );
-            } catch (otpErr) {
-              if (!mounted) return;
-              setState(() {
-                _loading = false;
-                _error = otpErr.toString().replaceAll('Exception: ', '');
-              });
+          setState(() {
+            _loading = false;
+            if (!success) {
+              _error = 'Invalid customer credentials. Please verify your email and password, or use 4-digit OTP login.';
             }
-          }
+          });
         }
       } else {
         // Staff / Owner Login
@@ -183,6 +169,181 @@ class _LoginScreenState extends State<LoginScreen> {
           _identifierCtrl.text = phone;
         });
       },
+    );
+  }
+
+  void _showCustomerForgotPasswordDialog() {
+    final idCtrl = TextEditingController(text: _identifierCtrl.text.trim());
+    final otpCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    bool otpSent = false;
+    bool dialogLoading = false;
+    String? dialogError;
+    String? dialogMessage;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            otpSent ? 'Reset Customer Password' : 'Forgot Password',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (dialogError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      dialogError!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
+                if (dialogMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      dialogMessage!,
+                      style: const TextStyle(color: Colors.green, fontSize: 12),
+                    ),
+                  ),
+                if (!otpSent) ...[
+                  const Text(
+                    'Enter your registered email address or mobile number. We will send a 4-digit verification code.',
+                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: idCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Email or Mobile',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ] else ...[
+                  TextField(
+                    controller: otpCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 4,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 8),
+                    decoration: const InputDecoration(
+                      labelText: '4-Digit Verification Code',
+                      border: OutlineInputBorder(),
+                      counterText: '',
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: newPassCtrl,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'New Password (Min 6 chars)',
+                      prefixIcon: Icon(Icons.lock_outline),
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            if (!otpSent)
+              ElevatedButton(
+                onPressed: dialogLoading
+                    ? null
+                    : () async {
+                        final val = idCtrl.text.trim();
+                        if (val.isEmpty) {
+                          setDialogState(() => dialogError = 'Please enter email or mobile');
+                          return;
+                        }
+                        setDialogState(() {
+                          dialogLoading = true;
+                          dialogError = null;
+                        });
+                        try {
+                          final res = await CustomerPortalService().forgotPassword(identifier: val);
+                          setDialogState(() {
+                            dialogLoading = false;
+                            otpSent = true;
+                            dialogMessage = res['message']?.toString() ?? 'Code sent to registered email';
+                          });
+                        } catch (err) {
+                          setDialogState(() {
+                            dialogLoading = false;
+                            dialogError = err.toString().replaceAll('Exception: ', '');
+                          });
+                        }
+                      },
+                child: dialogLoading
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Send Code'),
+              )
+            else
+              ElevatedButton(
+                onPressed: dialogLoading
+                    ? null
+                    : () async {
+                        final otp = otpCtrl.text.trim();
+                        final pass = newPassCtrl.text.trim();
+                        if (otp.length != 4) {
+                          setDialogState(() => dialogError = 'Enter 4-digit code');
+                          return;
+                        }
+                        if (pass.length < 6) {
+                          setDialogState(() => dialogError = 'Password must be at least 6 characters');
+                          return;
+                        }
+                        setDialogState(() {
+                          dialogLoading = true;
+                          dialogError = null;
+                        });
+                        try {
+                          await CustomerPortalService().resetPassword(
+                            identifier: idCtrl.text.trim(),
+                            otp: otp,
+                            newPassword: pass,
+                          );
+                          if (!ctx.mounted) return;
+                          Navigator.pop(ctx);
+                          if (!mounted) return;
+                          setState(() {
+                            _passwordCtrl.text = pass;
+                            _identifierCtrl.text = idCtrl.text.trim();
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password reset successfully! Please log in.'),
+                              backgroundColor: Color(0xFF16A34A),
+                            ),
+                          );
+                        } catch (err) {
+                          setDialogState(() {
+                            dialogLoading = false;
+                            dialogError = err.toString().replaceAll('Exception: ', '');
+                          });
+                        }
+                      },
+                child: dialogLoading
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Reset Password'),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -457,13 +618,17 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          'Please contact your administrator or store owner to reset password.'),
-                                      backgroundColor: Color(0xFF1D4ED8),
-                                    ),
-                                  );
+                                  if (_isCustomerMode) {
+                                    _showCustomerForgotPasswordDialog();
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Please contact your administrator or store owner to reset password.'),
+                                        backgroundColor: Color(0xFF1D4ED8),
+                                      ),
+                                    );
+                                  }
                                 },
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.zero,
@@ -557,6 +722,28 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
+                          if (_isCustomerMode) ...[
+                            const SizedBox(height: 8),
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  CustomerOtpDialog.show(
+                                    context,
+                                    identifier: _identifierCtrl.text.trim(),
+                                  );
+                                },
+                                icon: const Icon(Icons.mark_email_read_outlined, size: 16, color: Color(0xFF1D4ED8)),
+                                label: const Text(
+                                  'Log in with 4-Digit OTP Code instead',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF1D4ED8),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 16),
 
                           // "or" Divider

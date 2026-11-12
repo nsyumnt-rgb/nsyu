@@ -3,7 +3,9 @@ class Customer {
   final String id;
   final String? referenceCode;
   String name;
+  String? shopName;
   String mobile;
+  String? email;
   String address;
   double currentBalance;
   double openingBalance;
@@ -13,7 +15,9 @@ class Customer {
     required this.id,
     this.referenceCode,
     required this.name,
+    this.shopName,
     this.mobile = '',
+    this.email,
     this.address = '',
     this.currentBalance = 0.0,
     this.openingBalance = 0.0,
@@ -24,7 +28,9 @@ class Customer {
         id: json['id']?.toString() ?? '',
         referenceCode: json['reference_code']?.toString() ?? json['referenceCode']?.toString(),
         name: json['name']?.toString() ?? '',
-        mobile: json['mobile']?.toString() ?? '',
+        shopName: json['shop_name']?.toString() ?? json['shopName']?.toString(),
+        mobile: json['mobile']?.toString() ?? json['phone']?.toString() ?? '',
+        email: json['email']?.toString(),
         address: json['address']?.toString() ?? '',
         currentBalance: double.tryParse(json['current_balance']?.toString() ?? json['currentBalance']?.toString() ?? '0') ?? 0.0,
         openingBalance: double.tryParse(json['opening_balance']?.toString() ?? json['openingBalance']?.toString() ?? '0') ?? 0.0,
@@ -35,7 +41,9 @@ class Customer {
         id: json['id']?.toString() ?? '',
         referenceCode: json['reference_code']?.toString() ?? json['referenceCode']?.toString(),
         name: json['name']?.toString() ?? '',
+        shopName: json['shop_name']?.toString() ?? json['shopName']?.toString(),
         mobile: json['phone']?.toString() ?? json['mobile']?.toString() ?? '',
+        email: json['email']?.toString(),
         address: json['address']?.toString() ?? '',
         currentBalance: double.tryParse(json['current_balance']?.toString() ?? json['currentBalance']?.toString() ?? '0') ?? 0.0,
         openingBalance: double.tryParse(json['opening_balance']?.toString() ?? json['openingBalance']?.toString() ?? '0') ?? 0.0,
@@ -46,7 +54,9 @@ class Customer {
         'id': id,
         'reference_code': referenceCode,
         'name': name,
+        'shop_name': shopName,
         'mobile': mobile,
+        'email': email,
         'address': address,
         'current_balance': currentBalance,
         'opening_balance': openingBalance,

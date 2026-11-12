@@ -292,10 +292,173 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     }
   }
 
+  Future<Map<String, dynamic>?> _showConvertOrderDialog(BuildContext context, SavedOrder order) async {
+    final money = NumberFormat('#,##0.00');
+    final total = order.total;
+    String mode = 'full';
+    final amountCtrl = TextEditingController(text: total.toStringAsFixed(0));
+    String method = 'cash';
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            return AlertDialog(
+              title: const Text('Convert Order to Bill', style: TextStyle(fontWeight: FontWeight.w700)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Order #${order.orderNumber}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text('Customer: ${order.customerName.isEmpty ? "Walk-in" : order.customerName}', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                          const SizedBox(height: 4),
+                          Text('Order Total: ₹${money.format(total)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF006837))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text('Payment Received on Delivery:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        ChoiceChip(
+                          label: Text('Full (₹${money.format(total).replaceAll(".00", "")})'),
+                          selected: mode == 'full',
+                          onSelected: (_) => setDialogState(() {
+                            mode = 'full';
+                            amountCtrl.text = total.toStringAsFixed(0);
+                          }),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Unpaid (₹0)'),
+                          selected: mode == 'unpaid',
+                          onSelected: (_) => setDialogState(() {
+                            mode = 'unpaid';
+                            amountCtrl.text = '0';
+                          }),
+                        ),
+                        ChoiceChip(
+                          label: const Text('Custom'),
+                          selected: mode == 'custom',
+                          onSelected: (_) => setDialogState(() => mode = 'custom'),
+                        ),
+                      ],
+                    ),
+                    if (mode == 'custom') ...[
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: amountCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Amount Received',
+                          prefixText: '₹ ',
+                          isDense: true,
+                        ),
+                      ),
+                    ],
+                    if (mode != 'unpaid') ...[
+                      const SizedBox(height: 12),
+                      const Text('Payment Method:', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Cash'),
+                            selected: method == 'cash',
+                            onSelected: (_) => setDialogState(() => method = 'cash'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('UPI'),
+                            selected: method == 'upi',
+                            onSelected: (_) => setDialogState(() => method = 'upi'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Bank Transfer'),
+                            selected: method == 'bank_transfer',
+                            onSelected: (_) => setDialogState(() => method = 'bank_transfer'),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Card'),
+                            selected: method == 'card',
+                            onSelected: (_) => setDialogState(() => method = 'card'),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    const Text(
+                      'This action is strictly one-time. The bill will be generated, stock deducted, and customer ledger updated.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, null),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    double finalAmt = total;
+                    if (mode == 'unpaid') {
+                      finalAmt = 0.0;
+                    } else if (mode == 'custom') {
+                      finalAmt = double.tryParse(amountCtrl.text.trim()) ?? 0.0;
+                    }
+                    if (finalAmt > total + 0.01) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Paid amount cannot exceed order total ₹${money.format(total)}')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(ctx, {
+                      'paidAmount': finalAmt,
+                      'paymentMethod': method,
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF006837),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Convert & Post to Ledger'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _convertToBill(BuildContext context, SavedOrder order) async {
     if (order.isBilled) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Order #${order.orderNumber} is already billed.')),
+      );
+      return;
+    }
+    if (order.status != OrderStatus.delivered) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Order #${order.orderNumber} must be in Delivered status to convert to a bill (current: ${order.status.label}). Please update status to Delivered first.',
+          ),
+        ),
       );
       return;
     }
@@ -307,35 +470,19 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Convert Order to Bill?'),
-        content: Text(
-          'Convert Order #${order.orderNumber} (₹${_money.format(order.total)}) into a bill?\n\n'
-          'This action is strictly one-time. Once billed, this order cannot be modified or converted again.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF006837),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Convert to Bill'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
+    final convertDetails = await _showConvertOrderDialog(context, order);
+    if (convertDetails == null || !mounted) return;
+
+    final double paidAmt = (convertDetails['paidAmount'] as num?)?.toDouble() ?? 0.0;
+    final String payMethod = (convertDetails['paymentMethod'] as String?) ?? 'cash';
 
     setState(() => _converting = true);
     try {
-      final createdBill = await ordersProvider.convertOrderToBill(order);
+      final createdBill = await ordersProvider.convertOrderToBill(
+        order,
+        paidAmount: paidAmt,
+        paymentMethod: payMethod,
+      );
 
       await Future.wait([
         billsProvider.syncFromSupabase(),
@@ -360,8 +507,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         SnackBar(
           content: Text(
             createdBill != null
-                ? 'Order #${order.orderNumber} converted to Bill #${createdBill.billNumber}'
-                : 'Order #${order.orderNumber} converted to bill.',
+                ? 'Order #${order.orderNumber} converted to Bill #${createdBill.billNumber}. Ledger updated.'
+                : 'Order #${order.orderNumber} converted to bill. Ledger updated.',
           ),
         ),
       );
@@ -524,7 +671,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     ],
                   ),
                 ),
-                if (!o.isBilled && o.status != OrderStatus.cancelled)
+                if (!o.isBilled && o.status == OrderStatus.delivered)
                   const PopupMenuItem(
                     value: 'convert',
                     child: Row(
@@ -735,7 +882,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          if (!o.isBilled && o.status != OrderStatus.cancelled)
+          if (!o.isBilled && o.status == OrderStatus.delivered)
             ElevatedButton.icon(
               onPressed: _converting ? null : () => _convertToBill(context, o),
               icon: _converting
@@ -746,7 +893,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     )
                   : const Icon(Icons.receipt_long_outlined, size: 18),
               label: Text(
-                _converting ? 'Converting Order to Bill...' : 'Convert to Bill (One-Time)',
+                _converting ? 'Converting Order to Bill...' : 'Convert to Bill & Add to Ledger',
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
               ),
               style: ElevatedButton.styleFrom(
@@ -755,6 +902,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
+              ),
+            )
+          else if (!o.isBilled && o.status != OrderStatus.cancelled)
+            InkWell(
+              onTap: () => _showStatusPicker(context, o),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFDE68A)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 18, color: Color(0xFFD97706)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Status: ${o.status.label}. Mark as Delivered to convert to bill.',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF92400E)),
+                      ),
+                    ),
+                    const Text(
+                      'Update >',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFFD97706)),
+                    ),
+                  ],
+                ),
               ),
             )
           else if (o.isBilled)

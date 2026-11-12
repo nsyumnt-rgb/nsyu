@@ -6,6 +6,10 @@ import {
   refreshCustomerToken,
   logoutCustomer,
   selfRegisterCustomer,
+  loginWithPassword,
+  forgotPassword,
+  resetPasswordWithOtp,
+  getPortalDashboard,
 } from "../controllers/customerAuthController";
 import {
   getPortalCategories,
@@ -42,14 +46,20 @@ import {
 const router = Router();
 
 /* ---------------- Auth (Public) ---------------- */
+router.post("/auth/login", loginWithPassword);
 router.post("/auth/request-otp", requestOtp);
 router.post("/auth/verify-otp", verifyOtp);
+router.post("/auth/forgot-password", forgotPassword);
+router.post("/auth/reset-password", resetPasswordWithOtp);
 router.post("/auth/refresh", refreshCustomerToken);
 router.post("/auth/logout", logoutCustomer);
 router.post("/auth/register", selfRegisterCustomer);
 
 /* ---------------- Protected Customer Routes ---------------- */
 router.use(requireCustomer);
+
+// Dashboard
+router.get("/dashboard", getPortalDashboard);
 
 // Catalog
 router.get("/catalog/categories", getPortalCategories);

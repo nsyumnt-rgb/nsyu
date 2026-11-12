@@ -11,8 +11,10 @@ export interface CustomerAccountAttributes {
   shop_id: number;
   owner_id: number;
   phone: string;
+  email?: string | null;
   status: CustomerAccountStatus;
   password_hash?: string | null;
+  supabase_uid?: string | null;
   last_login_at?: Date | null;
   created_by?: number | null;
   approved_by?: number | null;
@@ -23,7 +25,7 @@ export interface CustomerAccountAttributes {
 export interface CustomerAccountCreationAttributes
   extends Optional<
     CustomerAccountAttributes,
-    "id" | "password_hash" | "last_login_at" | "created_by" | "approved_by" | "created_at" | "updated_at"
+    "id" | "email" | "password_hash" | "supabase_uid" | "last_login_at" | "created_by" | "approved_by" | "created_at" | "updated_at"
   > {}
 
 export class CustomerAccount
@@ -35,8 +37,10 @@ export class CustomerAccount
   public shop_id!: number;
   public owner_id!: number;
   public phone!: string;
+  public email?: string | null;
   public status!: CustomerAccountStatus;
   public password_hash?: string | null;
+  public supabase_uid?: string | null;
   public last_login_at?: Date | null;
   public created_by?: number | null;
   public approved_by?: number | null;
@@ -52,12 +56,14 @@ CustomerAccount.init(
     shop_id: { type: DataTypes.INTEGER, allowNull: false },
     owner_id: { type: DataTypes.INTEGER, allowNull: false },
     phone: { type: DataTypes.STRING(20), allowNull: false },
+    email: { type: DataTypes.STRING(150), allowNull: true },
     status: {
       type: DataTypes.ENUM(...CUSTOMER_ACCOUNT_STATUSES),
       allowNull: false,
       defaultValue: "active",
     },
     password_hash: { type: DataTypes.STRING(255), allowNull: true },
+    supabase_uid: { type: DataTypes.UUID, allowNull: true },
     last_login_at: { type: DataTypes.DATE, allowNull: true },
     created_by: { type: DataTypes.INTEGER, allowNull: true },
     approved_by: { type: DataTypes.INTEGER, allowNull: true },

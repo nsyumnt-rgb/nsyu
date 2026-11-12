@@ -255,21 +255,37 @@ class SupabaseService {
   Future<Customer> addCustomer({
     required String name,
     required String mobile,
+    String? shopName,
+    String? email,
+    String? password,
     String address = '',
     double openingBalance = 0.0,
   }) async {
     await ensureAuth();
     final url = Uri.parse('${SupabaseConfig.apiUrl}/customers');
+    final Map<String, dynamic> bodyMap = {
+      'name': name.trim(),
+      'phone': mobile.trim(),
+      'mobile': mobile.trim(),
+      'address': address.trim(),
+      'opening_balance': openingBalance,
+      'openingBalance': openingBalance,
+    };
+    if (shopName != null && shopName.trim().isNotEmpty) {
+      bodyMap['shopName'] = shopName.trim();
+      bodyMap['shop_name'] = shopName.trim();
+    }
+    if (email != null && email.trim().isNotEmpty) {
+      bodyMap['email'] = email.trim();
+    }
+    if (password != null && password.trim().isNotEmpty) {
+      bodyMap['password'] = password.trim();
+    }
+
     final res = await http.post(
       url,
       headers: _headers,
-      body: jsonEncode({
-        'name': name.trim(),
-        'phone': mobile.trim(),
-        'address': address.trim(),
-        'opening_balance': openingBalance,
-        'openingBalance': openingBalance,
-      }),
+      body: jsonEncode(bodyMap),
     );
 
     if (res.statusCode >= 300) {

@@ -25,16 +25,16 @@ function round2(n: number): number {
 }
 
 const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
-  pending: ["confirmed", "processing", "cancelled"],
-  confirmed: ["processing", "delivered", "completed", "cancelled"],
-  processing: ["completed", "delivered", "shipped", "cancelled"],
-  shipped: ["delivered", "completed", "cancelled"],
-  delivered: ["completed"],
+  pending: ["confirmed", "processing", "shipped", "delivered", "cancelled"],
+  confirmed: ["pending", "processing", "shipped", "delivered", "completed", "cancelled"],
+  processing: ["pending", "confirmed", "shipped", "delivered", "completed", "cancelled"],
+  shipped: ["pending", "confirmed", "processing", "delivered", "completed", "cancelled"],
+  delivered: ["pending", "confirmed", "processing", "completed", "cancelled"],
   completed: [],
   converted_to_bill: [],
   BILLED: [],
   billed: [],
-  cancelled: [],
+  cancelled: ["pending", "confirmed"],
 };
 
 /**
@@ -586,6 +586,16 @@ export async function convertOrderToBill(req: Request, res: Response) {
         throw Object.assign(new Error("Cannot convert a cancelled order into a bill"), { status: 400 });
       }
 
+      const currentStatusLower = String(order.status || "").trim().toLowerCase();
+      if (currentStatusLower !== "delivered") {
+        throw Object.assign(
+          new Error(
+            `Order #${order.order_number} must be in "Delivered" status to convert to a bill (current status is "${order.status}"). Please update the order status to Delivered first.`
+          ),
+          { status: 400, code: "ORDER_NOT_DELIVERED" }
+        );
+      }
+
       const existingLinkedSale = await Sale.findOne({
         where: { order_id: order.id },
         transaction: t,
@@ -652,7 +662,10 @@ export async function convertOrderToBill(req: Request, res: Response) {
 
       const orderTotal = round2(Number(order.total_amount || 0));
       const advance = round2(Number(order.advance_amount || 0));
-      const requestedPaid = round2(Number(paidAmount || 0));
+      let requestedPaid = round2(Number(paidAmount || 0));
+      if ((req.body.paymentStatus === "PAID" || req.body.payment_status === "PAID") && requestedPaid === 0) {
+        requestedPaid = orderTotal;
+      }
       if (requestedPaid > orderTotal + 0.01) {
         throw Object.assign(
           new Error(`Paid amount (₹${requestedPaid}) cannot exceed order total (₹${orderTotal})`),

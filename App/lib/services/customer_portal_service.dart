@@ -66,6 +66,97 @@ class CustomerPortalService {
   }
 
   /* ---------------- Auth ---------------- */
+  Future<Map<String, dynamic>> loginWithPassword({
+    required String identifier,
+    required String password,
+    String? shopCode,
+  }) async {
+    final effectiveId = identifier.trim();
+    final isEmail = effectiveId.contains('@');
+    final url = Uri.parse('$_portalBaseUrl/auth/login');
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'identifier': effectiveId,
+        if (isEmail) 'email': effectiveId else 'phone': effectiveId,
+        'password': password.trim(),
+        if (shopCode != null && shopCode.isNotEmpty) 'shopCode': shopCode.trim(),
+      }),
+    );
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final payload = data['data'] as Map<String, dynamic>;
+      await _persistSession(
+        payload['accessToken'].toString(),
+        payload['refreshToken'].toString(),
+        payload['customer'] as Map<String, dynamic>,
+      );
+      return payload;
+    }
+    throw Exception(data['message'] ?? 'Login failed (HTTP ${res.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> forgotPassword({
+    required String identifier,
+    String? shopCode,
+  }) async {
+    final effectiveId = identifier.trim();
+    final isEmail = effectiveId.contains('@');
+    final url = Uri.parse('$_portalBaseUrl/auth/forgot-password');
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'identifier': effectiveId,
+        if (isEmail) 'email': effectiveId else 'phone': effectiveId,
+        if (shopCode != null && shopCode.isNotEmpty) 'shopCode': shopCode.trim(),
+      }),
+    );
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return data;
+    }
+    throw Exception(data['message'] ?? 'Password reset request failed (HTTP ${res.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> resetPassword({
+    required String identifier,
+    required String otp,
+    required String newPassword,
+    String? shopCode,
+  }) async {
+    final effectiveId = identifier.trim();
+    final isEmail = effectiveId.contains('@');
+    final url = Uri.parse('$_portalBaseUrl/auth/reset-password');
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'identifier': effectiveId,
+        if (isEmail) 'email': effectiveId else 'phone': effectiveId,
+        'otp': otp.trim(),
+        'newPassword': newPassword.trim(),
+        if (shopCode != null && shopCode.isNotEmpty) 'shopCode': shopCode.trim(),
+      }),
+    );
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return data;
+    }
+    throw Exception(data['message'] ?? 'Password reset failed (HTTP ${res.statusCode})');
+  }
+
+  Future<Map<String, dynamic>> getDashboard() async {
+    final url = Uri.parse('$_portalBaseUrl/dashboard');
+    final res = await http.get(url, headers: _headers);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      return data['data'] as Map<String, dynamic>;
+    }
+    throw Exception(data['message'] ?? 'Failed to load dashboard (HTTP ${res.statusCode})');
+  }
+
   Future<Map<String, dynamic>> requestOtp({
     String? identifier,
     String? phone,

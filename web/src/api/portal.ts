@@ -57,6 +57,45 @@ portalApi.interceptors.response.use(
 );
 
 /* ---------------- Auth API ---------------- */
+export async function loginCustomerWithPasswordApi(identifier: string, password: string, shopCode?: string, shopId?: number) {
+  const isEmail = identifier.includes("@");
+  const payload: any = { password, shopCode, shopId };
+  if (isEmail) {
+    payload.email = identifier.trim().toLowerCase();
+  } else {
+    payload.phone = identifier.trim();
+  }
+  payload.identifier = identifier.trim();
+  const res = await portalApi.post("/customer-portal/auth/login", payload);
+  return res.data;
+}
+
+export async function forgotPasswordApi(identifier: string, shopCode?: string, shopId?: number) {
+  const isEmail = identifier.includes("@");
+  const payload: any = { shopCode, shopId };
+  if (isEmail) {
+    payload.email = identifier.trim().toLowerCase();
+  } else {
+    payload.phone = identifier.trim();
+  }
+  payload.identifier = identifier.trim();
+  const res = await portalApi.post("/customer-portal/auth/forgot-password", payload);
+  return res.data;
+}
+
+export async function resetPasswordApi(identifier: string, otp: string, newPassword: string, shopCode?: string, shopId?: number) {
+  const isEmail = identifier.includes("@");
+  const payload: any = { otp, newPassword, shopCode, shopId };
+  if (isEmail) {
+    payload.email = identifier.trim().toLowerCase();
+  } else {
+    payload.phone = identifier.trim();
+  }
+  payload.identifier = identifier.trim();
+  const res = await portalApi.post("/customer-portal/auth/reset-password", payload);
+  return res.data;
+}
+
 export async function requestOtpApi(identifier: string, shopCode?: string, shopId?: number) {
   const isEmail = identifier.includes("@");
   const payload: any = { identifier, shopCode, shopId };
@@ -195,6 +234,11 @@ export async function markAllPortalNotificationsReadApi() {
 
 export async function getPortalProfileApi(): Promise<PortalCustomer> {
   const res = await portalApi.get("/customer-portal/me");
+  return res.data?.data;
+}
+
+export async function getPortalDashboardApi() {
+  const res = await portalApi.get("/customer-portal/dashboard");
   return res.data?.data;
 }
 

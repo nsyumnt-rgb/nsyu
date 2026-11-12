@@ -113,6 +113,9 @@ class OrdersProvider extends ChangeNotifier {
     if (order.isBilled) {
       throw Exception('Order #${order.orderNumber} has already been converted to a bill.');
     }
+    if (order.status != OrderStatus.delivered) {
+      throw Exception('Order #${order.orderNumber} must be in Delivered status to convert to a bill (current status: ${order.status.label}).');
+    }
     int? orderId = order.id;
     if (orderId == null) {
       await syncFromSupabase();
@@ -123,6 +126,9 @@ class OrdersProvider extends ChangeNotifier {
       if (refreshed != null) {
         if (refreshed.isBilled) {
           throw Exception('Order #${order.orderNumber} has already been converted to a bill.');
+        }
+        if (refreshed.status != OrderStatus.delivered) {
+          throw Exception('Order #${order.orderNumber} must be in Delivered status to convert to a bill (current status: ${refreshed.status.label}).');
         }
         orderId = refreshed.id;
       }

@@ -52,6 +52,9 @@ class CustomerProvider extends ChangeNotifier {
   Future<Customer> addCustomer(
     String name,
     String mobile, {
+    String? shopName,
+    String? email,
+    String? password,
     String address = '',
     double openingBalance = 0.0,
     bool isSupplier = false,
@@ -61,9 +64,12 @@ class CustomerProvider extends ChangeNotifier {
       created = await _supabaseService.addCustomer(
         name: name,
         mobile: mobile,
+        shopName: shopName,
+        email: email,
+        password: password,
         address: address,
         openingBalance: openingBalance,
-      ).timeout(const Duration(seconds: 2));
+      ).timeout(const Duration(seconds: 4));
       created.isSupplier = isSupplier;
     } catch (_) {
       final nextNum = _customers.length + 1;
@@ -71,7 +77,9 @@ class CustomerProvider extends ChangeNotifier {
       created = Customer(
         id: id,
         name: name.trim(),
+        shopName: shopName?.trim(),
         mobile: mobile.trim(),
+        email: email?.trim(),
         address: address.trim(),
         openingBalance: openingBalance,
         currentBalance: openingBalance,

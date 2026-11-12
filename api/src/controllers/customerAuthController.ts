@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { Op } from "sequelize";
 import {
   CustomerAccount,
@@ -9,10 +10,13 @@ import {
   Shop,
   ShopPortalSettings,
   Notification,
+  Order,
+  Sale,
 } from "../models";
 import { signAccessToken, refreshExpiryDate } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
 import { maskEmail, sendOtpEmail } from "../utils/mailer";
+import { updateSupabaseAuthPassword } from "../utils/supabaseAuth";
 
 function hashString(val: string): string {
   return crypto.createHash("sha256").update(val).digest("hex");
@@ -587,5 +591,383 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
   } catch (err: any) {
     console.error("selfRegisterCustomer error:", err);
     return res.status(500).json({ success: false, message: err.message || "Registration failed" });
+  }
+}
+
+/**
+ * POST /api/customer-portal/auth/login
+ * Customer email/phone + password authentication.
+ */
+export async function loginWithPassword(req: Request, res: Response) {
+  try {
+    const { identifier: rawIdentifier, email: rawEmail, phone: rawPhone, password, shopCode, shopId: inputShopId } = req.body;
+    const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
+
+    if (!rawInput || !password) {
+      return res.status(400).json({ success: false, message: "Email/Mobile and password are required" });
+    }
+
+    // Resolve shop
+    let shop: Shop | null = null;
+    if (shopCode) {
+      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+    } else if (inputShopId) {
+      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
+    } else {
+      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
+    }
+
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+
+    const resolved = await resolveCustomerAccount(rawInput, shop);
+    const { account } = resolved;
+
+    if (!account) {
+      return res.status(401).json({ success: false, message: "Invalid email/mobile or password" });
+    }
+
+    if (account.status !== "active") {
+      return res.status(403).json({
+        success: false,
+        message: account.status === "pending_approval"
+          ? "Your customer account is pending shop approval"
+          : "Your customer account has been disabled",
+      });
+    }
+
+    if (!account.password_hash) {
+      return res.status(401).json({
+        success: false,
+        message: "Password has not been set for this account. Please use OTP login or reset your password.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(String(password), account.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid email/mobile or password" });
+    }
+
+    // Issue tokens
+    const accessToken = signAccessToken({
+      ownerId: account.owner_id,
+      shopId: account.shop_id,
+      customerId: account.customer_id,
+      accountId: account.id,
+      phone: account.phone,
+      isOwner: false,
+      isCustomer: true,
+      roleCode: "customer",
+      roleName: "Customer",
+    });
+
+    const rawRefreshToken = crypto.randomBytes(40).toString("hex");
+    const refreshHash = hashString(rawRefreshToken);
+    const refreshExpiry = refreshExpiryDate();
+
+    await CustomerRefreshToken.create({
+      account_id: account.id,
+      token_hash: refreshHash,
+      expires_at: refreshExpiry,
+    });
+
+    account.last_login_at = new Date();
+    await account.save();
+
+    await logAudit({
+      req,
+      module: "customer_portal",
+      action: "password_login_success",
+      entityType: "CustomerAccount",
+      entityId: account.id,
+      details: { identifier: rawInput, phone: account.phone, shopId: shop.id },
+    });
+
+    const customerRecord = account.customer || (await Customer.findByPk(account.customer_id));
+    if (!customerRecord) {
+      return res.status(404).json({ success: false, message: "Associated customer record not found" });
+    }
+
+    return res.json({
+      success: true,
+      message: "Login successful",
+      data: {
+        accessToken,
+        refreshToken: rawRefreshToken,
+        customer: {
+          id: customerRecord.id,
+          name: customerRecord.name,
+          shopName: customerRecord.shop_name,
+          phone: customerRecord.phone,
+          email: customerRecord.email,
+          address: customerRecord.address,
+          currentBalance: Number(customerRecord.current_balance || 0),
+          shop: {
+            id: shop.id,
+            name: shop.name,
+            code: shop.code,
+            address: shop.address,
+            phone: shop.phone,
+          },
+        },
+      },
+    });
+  } catch (err: any) {
+    console.error("loginWithPassword error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Login failed" });
+  }
+}
+
+/**
+ * POST /api/customer-portal/auth/forgot-password
+ * Sends 4-digit OTP to customer's registered email for password reset.
+ */
+export async function forgotPassword(req: Request, res: Response) {
+  try {
+    const { identifier: rawIdentifier, email: rawEmail, phone: rawPhone, shopCode, shopId: inputShopId } = req.body;
+    const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
+
+    if (!rawInput) {
+      return res.status(400).json({ success: false, message: "Email or mobile number is required" });
+    }
+
+    let shop: Shop | null = null;
+    if (shopCode) {
+      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+    } else if (inputShopId) {
+      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
+    } else {
+      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
+    }
+
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+
+    const resolved = await resolveCustomerAccount(rawInput, shop);
+    const { account, email } = resolved;
+
+    if (!account) {
+      return res.status(404).json({ success: false, message: "Customer account not found" });
+    }
+
+    const targetEmail = email || account.customer?.email;
+    if (!targetEmail || !targetEmail.includes("@")) {
+      return res.status(400).json({
+        success: false,
+        message: "No email address registered for this customer account. Please contact the shop to update your email.",
+      });
+    }
+
+    // Rate-limiting check
+    const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+    const recentCount = await CustomerOtp.count({
+      where: {
+        account_id: account.id,
+        created_at: { [Op.gte]: fifteenMinsAgo },
+      },
+    });
+
+    if (recentCount >= 5) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many password reset requests. Please wait 15 minutes before trying again.",
+      });
+    }
+
+    const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    const otpHash = hashString(generatedOtp);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await CustomerOtp.create({
+      account_id: account.id,
+      phone: account.phone,
+      shop_id: shop.id,
+      otp_hash: otpHash,
+      expires_at: expiresAt,
+      attempts: 0,
+    });
+
+    await sendOtpEmail({
+      to: targetEmail,
+      customerName: account.customer?.name,
+      otp: generatedOtp,
+      shopName: shop.name,
+    });
+
+    return res.json({
+      success: true,
+      message: `A 4-digit verification code has been sent to your registered email (${maskEmail(targetEmail)}).`,
+      maskedEmail: maskEmail(targetEmail),
+    });
+  } catch (err: any) {
+    console.error("forgotPassword error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed to process request" });
+  }
+}
+
+/**
+ * POST /api/customer-portal/auth/reset-password
+ * Verifies 4-digit OTP and updates customer password.
+ */
+export async function resetPasswordWithOtp(req: Request, res: Response) {
+  try {
+    const { identifier: rawIdentifier, email: rawEmail, phone: rawPhone, otp, newPassword, shopCode, shopId: inputShopId } = req.body;
+    const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
+
+    if (!rawInput || !otp || !newPassword) {
+      return res.status(400).json({ success: false, message: "Email/Mobile, 4-digit OTP, and new password are required" });
+    }
+
+    const cleanOtp = String(otp).trim();
+    if (cleanOtp.length !== 4) {
+      return res.status(400).json({ success: false, message: "OTP must be exactly 4 digits" });
+    }
+
+    const cleanPassword = String(newPassword).trim();
+    if (cleanPassword.length < 6) {
+      return res.status(400).json({ success: false, message: "New password must be at least 6 characters" });
+    }
+
+    let shop: Shop | null = null;
+    if (shopCode) {
+      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+    } else if (inputShopId) {
+      shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
+    } else {
+      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
+    }
+
+    if (!shop) {
+      return res.status(404).json({ success: false, message: "Shop not found" });
+    }
+
+    const resolved = await resolveCustomerAccount(rawInput, shop);
+    const { account } = resolved;
+
+    if (!account) {
+      return res.status(404).json({ success: false, message: "Customer account not found" });
+    }
+
+    const latestOtp = await CustomerOtp.findOne({
+      where: {
+        account_id: account.id,
+        shop_id: shop.id,
+        used_at: null,
+      },
+      order: [["created_at", "DESC"]],
+    });
+
+    if (!latestOtp) {
+      return res.status(400).json({ success: false, message: "No active verification code found. Please request a new one." });
+    }
+
+    if (latestOtp.attempts >= 5) {
+      return res.status(400).json({ success: false, message: "Too many failed attempts. Please request a new code." });
+    }
+
+    if (new Date() > latestOtp.expires_at) {
+      return res.status(400).json({ success: false, message: "Verification code has expired. Please request a new one." });
+    }
+
+    const inputHash = hashString(cleanOtp);
+    if (inputHash !== latestOtp.otp_hash) {
+      latestOtp.attempts += 1;
+      await latestOtp.save();
+      return res.status(400).json({ success: false, message: "Invalid verification code" });
+    }
+
+    // Mark OTP as used
+    latestOtp.used_at = new Date();
+    await latestOtp.save();
+
+    // Hash new password and save
+    const passwordHash = await bcrypt.hash(cleanPassword, 10);
+    account.password_hash = passwordHash;
+    await account.save();
+
+    // Sync to Supabase Auth
+    if (account.email) {
+      await updateSupabaseAuthPassword(account.email, passwordHash);
+    }
+
+    // Revoke all existing sessions
+    await CustomerRefreshToken.update(
+      { revoked_at: new Date() },
+      { where: { account_id: account.id, revoked_at: null } }
+    );
+
+    return res.json({
+      success: true,
+      message: "Password reset successfully! You can now log in with your new password.",
+    });
+  } catch (err: any) {
+    console.error("resetPasswordWithOtp error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed to reset password" });
+  }
+}
+
+/**
+ * GET /api/customer-portal/dashboard
+ * Real customer-specific dashboard metrics from actual database records.
+ */
+export async function getPortalDashboard(req: Request, res: Response) {
+  try {
+    const customerId = req.customer!.customerId;
+    const shopId = req.customer!.shopId;
+
+    const [customer, shop, totalBills, totalOrders, pendingOrders, completedOrders] = await Promise.all([
+      Customer.findByPk(customerId),
+      Shop.findByPk(shopId),
+      Sale.count({ where: { customer_id: customerId, shop_id: shopId } }),
+      Order.count({ where: { customer_id: customerId, shop_id: shopId } }),
+      Order.count({
+        where: {
+          customer_id: customerId,
+          shop_id: shopId,
+          status: { [Op.in]: ["pending", "confirmed", "processing", "ready"] },
+        },
+      }),
+      Order.count({
+        where: {
+          customer_id: customerId,
+          shop_id: shopId,
+          status: { [Op.in]: ["delivered", "billed", "completed"] },
+        },
+      }),
+    ]);
+
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Customer profile not found" });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        customerName: customer.name,
+        shopName: customer.shop_name || shop?.name || "NSYU Store",
+        mobileNumber: customer.phone,
+        email: customer.email,
+        address: customer.address,
+        outstandingBalance: Math.round(Number(customer.current_balance || 0) * 100) / 100,
+        totalBills,
+        totalOrders,
+        pendingOrders,
+        completedOrders,
+        shop: shop
+          ? {
+              id: shop.id,
+              name: shop.name,
+              code: shop.code,
+              phone: shop.phone,
+              address: shop.address,
+            }
+          : null,
+      },
+    });
+  } catch (err: any) {
+    console.error("getPortalDashboard error:", err);
+    return res.status(500).json({ success: false, message: err.message || "Failed to load dashboard metrics" });
   }
 }

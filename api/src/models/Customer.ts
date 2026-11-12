@@ -15,6 +15,7 @@ interface CustomerAttributes {
   id: number;
   owner_id: number;
   name: string;
+  shop_name?: string | null;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
@@ -24,12 +25,13 @@ interface CustomerAttributes {
   status: "active" | "inactive";
   notes?: string | null;
   reference_code?: string | null;
+  supabase_uid?: string | null;
 }
 
 interface CustomerCreationAttributes
   extends Optional<
     CustomerAttributes,
-    "id" | "phone" | "email" | "address" | "gstin" | "opening_balance" | "current_balance" | "status" | "notes" | "reference_code"
+    "id" | "shop_name" | "phone" | "email" | "address" | "gstin" | "opening_balance" | "current_balance" | "status" | "notes" | "reference_code" | "supabase_uid"
   > {}
 
 export class Customer
@@ -39,6 +41,7 @@ export class Customer
   public id!: number;
   public owner_id!: number;
   public name!: string;
+  public shop_name?: string | null;
   public phone?: string | null;
   public email?: string | null;
   public address?: string | null;
@@ -48,6 +51,7 @@ export class Customer
   public status!: "active" | "inactive";
   public notes?: string | null;
   public reference_code?: string | null;
+  public supabase_uid?: string | null;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 }
@@ -57,6 +61,7 @@ Customer.init(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     owner_id: { type: DataTypes.INTEGER, allowNull: false },
     name: { type: DataTypes.STRING(150), allowNull: false },
+    shop_name: { type: DataTypes.STRING(150), allowNull: true },
     phone: { type: DataTypes.STRING(20), allowNull: true },
     email: { type: DataTypes.STRING(150), allowNull: true },
     address: { type: DataTypes.STRING(255), allowNull: true },
@@ -66,6 +71,7 @@ Customer.init(
     status: { type: DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
     notes: { type: DataTypes.STRING(255), allowNull: true },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
+    supabase_uid: { type: DataTypes.UUID, allowNull: true },
   },
   {
     sequelize,

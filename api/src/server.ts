@@ -22,6 +22,14 @@ async function ensureSingleLedgerSchema() {
       CREATE UNIQUE INDEX IF NOT EXISTS sales_owner_client_request_uidx ON public.sales (owner_id, client_request_id) WHERE client_request_id IS NOT NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS customer_ledger_idempotency_key_uidx ON public.customer_ledger (owner_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS customer_ledger_credit_ref_code_uidx ON public.customer_ledger (owner_id, reference_code) WHERE reference_code IS NOT NULL AND entry_type = 'credit' AND status = 'active';
+      ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS shop_name VARCHAR(150);
+      ALTER TABLE public.customers ADD COLUMN IF NOT EXISTS supabase_uid UUID;
+      CREATE UNIQUE INDEX IF NOT EXISTS customers_owner_email_uidx ON public.customers (owner_id, LOWER(TRIM(email))) WHERE email IS NOT NULL AND TRIM(email) != '';
+      CREATE UNIQUE INDEX IF NOT EXISTS customers_owner_phone_uidx ON public.customers (owner_id, TRIM(phone)) WHERE phone IS NOT NULL AND TRIM(phone) != '';
+      ALTER TABLE public.customer_accounts ADD COLUMN IF NOT EXISTS email VARCHAR(150);
+      ALTER TABLE public.customer_accounts ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+      ALTER TABLE public.customer_accounts ADD COLUMN IF NOT EXISTS supabase_uid UUID;
+      CREATE UNIQUE INDEX IF NOT EXISTS customer_accounts_owner_email_uidx ON public.customer_accounts (owner_id, LOWER(TRIM(email))) WHERE email IS NOT NULL AND TRIM(email) != '';
       DO $$
       BEGIN
         IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payments') THEN

@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { usePortalStore } from "../../store/portalStore";
-import { listPortalOrdersApi, listPortalBillsApi, getPortalProfileApi } from "../../api/portal";
+import {
+  listPortalOrdersApi,
+  listPortalBillsApi,
+  getPortalProfileApi,
+  getPortalDashboardApi,
+} from "../../api/portal";
 
 export default function PortalHome() {
   const customer = usePortalStore((s) => s.customer);
@@ -9,16 +14,27 @@ export default function PortalHome() {
 
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [recentBills, setRecentBills] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<{
+    customerName: string;
+    shopName: string;
+    mobileNumber: string;
+    outstandingBalance: number;
+    totalBills: number;
+    totalOrders: number;
+    pendingOrders: number;
+    completedOrders: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadDashboardData() {
       setLoading(true);
       try {
-        const [ordersRes, billsRes, profileRes] = await Promise.allSettled([
+        const [ordersRes, billsRes, profileRes, dashRes] = await Promise.allSettled([
           listPortalOrdersApi({ limit: 3 }),
           listPortalBillsApi({ limit: 3 }),
           getPortalProfileApi(),
+          getPortalDashboardApi(),
         ]);
 
         if (ordersRes.status === "fulfilled" && ordersRes.value?.data) {
@@ -26,6 +42,9 @@ export default function PortalHome() {
         }
         if (billsRes.status === "fulfilled" && billsRes.value?.data) {
           setRecentBills(billsRes.value.data);
+        }
+        if (dashRes.status === "fulfilled" && dashRes.value) {
+          setDashboardStats(dashRes.value);
         }
         if (profileRes.status === "fulfilled" && profileRes.value) {
           updateCustomerProfile(profileRes.value);
@@ -38,22 +57,25 @@ export default function PortalHome() {
     loadDashboardData();
   }, [updateCustomerProfile]);
 
-  const balance = Number(customer?.currentBalance ?? 0);
+  const balance = Number(dashboardStats?.outstandingBalance ?? customer?.currentBalance ?? 0);
+  const customerName = dashboardStats?.customerName || customer?.name || "Valued Customer";
+  const shopName = dashboardStats?.shopName || customer?.shop?.name || "NSYU Store";
+  const mobile = dashboardStats?.mobileNumber || customer?.phone || "";
 
   return (
     <div className="space-y-6">
       {/* Welcome & Shop Banner */}
       <div className="bg-gradient-to-r from-[#047857] to-[#065F46] rounded-2xl p-6 md:p-8 text-white shadow-md relative overflow-hidden">
         <div className="relative z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-medium mb-3 backdrop-blur-sm">
-            <span>Shop: {customer?.shop?.name}</span>
-            {customer?.shop?.code && <span className="opacity-75">({customer.shop.code})</span>}
+          <div className="inline-flex flex-wrap items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-100 text-xs font-medium mb-3 backdrop-blur-sm">
+            <span>Shop: {shopName}</span>
+            {mobile && <span className="opacity-75">• Mobile: +91 {mobile}</span>}
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Welcome back, {customer?.name || "Valued Customer"}!
+            Welcome, {customerName}!
           </h1>
           <p className="text-emerald-100 text-sm mt-1 max-w-xl">
-            Order products directly from {customer?.shop?.name}'s live catalog, track order statuses in real-time, and check your statement anytime.
+            Order products directly from {shopName}'s live catalog, track order statuses in real-time, and check your statement anytime.
           </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
@@ -78,17 +100,17 @@ export default function PortalHome() {
         <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-white/5 rounded-full pointer-events-none" />
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* Real Database KPI Metrics Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Outstanding Balance */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 col-span-2 md:col-span-1 flex flex-col justify-between">
           <div className="flex items-center justify-between text-gray-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Outstanding Balance</span>
             <LedgerIcon className="w-5 h-5 text-gray-400" />
           </div>
           <div>
             <div
-              className={`text-2xl md:text-3xl font-black ${
+              className={`text-2xl font-black ${
                 balance > 0 ? "text-rose-600" : balance < 0 ? "text-emerald-600" : "text-gray-800"
               }`}
             >
@@ -102,58 +124,70 @@ export default function PortalHome() {
                 : "No pending balance"}
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <Link
-              to="/portal/ledger"
-              className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold flex items-center justify-between"
-            >
-              <span>View Statement & Payments</span>
-              <span>&rarr;</span>
+          <div className="mt-3 pt-2 border-t border-gray-100">
+            <Link to="/portal/ledger" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
+              View Statement &rarr;
             </Link>
           </div>
         </div>
 
-        {/* Shop Contact Details */}
+        {/* Total Bills */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
           <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Shop Details</span>
-            <ShopIcon className="w-5 h-5 text-gray-400" />
+            <span className="text-xs font-semibold uppercase tracking-wider">Total Bills</span>
+            <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded">Bills</span>
           </div>
-          <div className="space-y-1 text-sm">
-            <div className="font-bold text-gray-800">{customer?.shop?.name}</div>
-            {customer?.shop?.phone && (
-              <div className="text-xs text-gray-600 flex items-center gap-1.5">
-                <PhoneIcon className="w-3.5 h-3.5 text-gray-400" />
-                <span>+91 {customer.shop.phone}</span>
-              </div>
-            )}
-            {customer?.shop?.address && (
-              <div className="text-xs text-gray-600 line-clamp-2">{customer.shop.address}</div>
-            )}
+          <div>
+            <div className="text-2xl font-black text-gray-900">
+              {dashboardStats?.totalBills ?? recentBills.length}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Tax invoices generated</div>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-gray-400">
-            Contact shop directly for order queries or cash settlements
+          <div className="mt-3 pt-2 border-t border-gray-100">
+            <Link to="/portal/bills" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
+              View All Bills &rarr;
+            </Link>
           </div>
         </div>
 
-        {/* Quick Help Card */}
+        {/* Total Orders */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
           <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Order Support</span>
-            <SupportIcon className="w-5 h-5 text-gray-400" />
+            <span className="text-xs font-semibold uppercase tracking-wider">Total Orders</span>
+            <OrdersIcon className="w-5 h-5 text-gray-400" />
           </div>
-          <div className="text-xs text-gray-600 space-y-2">
-            <p className="leading-relaxed">
-              Orders placed here are received immediately by shop sales staff. Once reviewed and packed, staff converts them to official tax invoices.
-            </p>
+          <div>
+            <div className="text-2xl font-black text-gray-900">
+              {dashboardStats?.totalOrders ?? recentOrders.length}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Orders placed with shop</div>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <Link
-              to="/portal/orders"
-              className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold flex items-center justify-between"
-            >
-              <span>Track Active Orders</span>
-              <span>&rarr;</span>
+          <div className="mt-3 pt-2 border-t border-gray-100">
+            <Link to="/portal/orders" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
+              Track Orders &rarr;
+            </Link>
+          </div>
+        </div>
+
+        {/* Orders Pipeline (Pending & Completed) */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-gray-500 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider">Order Status</span>
+            <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded">Status</span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-amber-700 font-semibold">Pending / In Progress:</span>
+              <span className="font-bold text-gray-900">{dashboardStats?.pendingOrders ?? 0}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-emerald-700 font-semibold">Completed / Billed:</span>
+              <span className="font-bold text-gray-900">{dashboardStats?.completedOrders ?? 0}</span>
+            </div>
+          </div>
+          <div className="mt-3 pt-2 border-t border-gray-100">
+            <Link to="/portal/orders" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
+              View Timeline &rarr;
             </Link>
           </div>
         </div>
@@ -341,30 +375,6 @@ function LedgerIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function ShopIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  );
-}
-
-function PhoneIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-    </svg>
-  );
-}
-
-function SupportIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
     </svg>
   );
 }
