@@ -236,6 +236,7 @@ export async function requestOtp(req: Request, res: Response) {
         customerName: account.customer?.name,
         otp: generatedOtp,
         shopName: shop.name,
+        shopId: shop.id,
       });
 
       masked = maskEmail(targetEmail);
@@ -882,6 +883,7 @@ export async function forgotPassword(req: Request, res: Response) {
       customerName: account.customer?.name,
       otp: generatedOtp,
       shopName: shop.name,
+      shopId: shop.id,
     });
 
     const emailConfigured = isEmailConfigured();

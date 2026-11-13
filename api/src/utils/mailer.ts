@@ -38,21 +38,44 @@ export function isEmailConfigured(): boolean {
   return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
+export async function getTransporterForShop(shopId?: number): Promise<Transporter | null> {
+  const envTransporter = getTransporter();
+  if (envTransporter) return envTransporter;
+
+  if (shopId) {
+    try {
+      const { Shop } = require("../models");
+      const shop = await Shop.findByPk(shopId);
+      const smtp = (shop?.settings as any)?.smtp;
+      if (smtp?.host && smtp?.user && smtp?.pass) {
+        return nodemailer.createTransport({
+          host: smtp.host,
+          port: Number(smtp.port) || 587,
+          secure: smtp.secure === true || Number(smtp.port) === 465,
+          auth: { user: smtp.user, pass: smtp.pass },
+        });
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
 export interface SendOtpEmailParams {
   to: string;
   customerName?: string;
   otp: string;
   shopName?: string;
+  shopId?: number;
 }
 
 export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean> {
-  const { to, customerName, otp, shopName } = params;
+  const { to, customerName, otp, shopName, shopId } = params;
   const storeName = shopName || "NSYU Business";
   const name = customerName || "Valued Customer";
 
   console.log(`[EMAIL DISPATCH] ✉️  OTP [${otp}] dispatched to ${to} (${name}) for ${storeName}`);
 
-  const activeTransporter = getTransporter();
+  const activeTransporter = await getTransporterForShop(shopId);
   if (!activeTransporter) {
     // No external SMTP configured
     return false;

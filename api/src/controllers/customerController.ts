@@ -205,10 +205,20 @@ export async function updateCustomer(req: Request, res: Response) {
   const customer = await Customer.findOne({ where: { id: req.params.customerId, owner_id: req.auth!.ownerId } });
   if (!customer) return res.status(404).json({ success: false, message: "Customer not found" });
 
-  const { name, shopName, shop_name, phone, email, address, gstin, status, notes, password } = req.body;
+  const { name, shopName, shop_name, phone, email, address, gstin, status, notes, password, opening_balance, openingBalance } = req.body;
   if (name !== undefined) customer.name = String(name).trim();
   if (shopName !== undefined || shop_name !== undefined) {
     customer.shop_name = String(shopName || shop_name || "").trim() || null;
+  }
+
+  if (opening_balance !== undefined || openingBalance !== undefined) {
+    const rawBal = opening_balance !== undefined ? opening_balance : openingBalance;
+    const numBal = parseFloat(String(rawBal));
+    if (!isNaN(numBal)) {
+      const diff = numBal - Number(customer.opening_balance || 0);
+      customer.opening_balance = numBal;
+      customer.current_balance = Number(customer.current_balance || 0) + diff;
+    }
   }
 
   let phoneUpdated = false;
@@ -254,10 +264,24 @@ export async function updateCustomer(req: Request, res: Response) {
   // If password or credentials changed, sync CustomerAccount & Supabase Auth
   if (password && String(password).trim().length >= 6) {
     const passwordHash = await bcrypt.hash(String(password).trim(), 10);
-    await CustomerAccount.update(
-      { password_hash: passwordHash },
-      { where: { customer_id: customer.id } }
-    );
+    const [acc, created] = await CustomerAccount.findOrCreate({
+      where: { customer_id: customer.id },
+      defaults: {
+        customer_id: customer.id,
+        shop_id: req.auth!.shopId || 1,
+        owner_id: req.auth!.ownerId,
+        phone: customer.phone,
+        email: customer.email,
+        password_hash: passwordHash,
+        status: "active",
+      },
+    });
+    if (!created) {
+      acc.password_hash = passwordHash;
+      if (customer.email) acc.email = customer.email;
+      if (customer.phone) acc.phone = customer.phone;
+      await acc.save();
+    }
     if (customer.email) {
       await updateSupabaseAuthPassword(customer.email, passwordHash);
     }

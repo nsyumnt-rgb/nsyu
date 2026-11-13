@@ -76,14 +76,14 @@ class CustomerProvider extends ChangeNotifier {
     return created;
   }
 
-  Future<void> updateCustomer(Customer customer) async {
+  Future<void> updateCustomer(Customer customer, {String? password}) async {
     final idx = _customers.indexWhere((c) => c.id == customer.id);
     if (idx != -1) {
       _customers[idx] = customer;
       await _store.saveCustomers(_customers);
       notifyListeners();
       try {
-        await _supabaseService.updateCustomer(customer);
+        await _supabaseService.updateCustomer(customer, password: password);
       } catch (_) {}
     }
   }

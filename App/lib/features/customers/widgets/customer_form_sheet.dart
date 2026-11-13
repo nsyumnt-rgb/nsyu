@@ -306,46 +306,97 @@ class CustomerEditSheet extends StatefulWidget {
 
 class _CustomerEditSheetState extends State<CustomerEditSheet> {
   late final TextEditingController _nameCtrl;
+  late final TextEditingController _shopNameCtrl;
   late final TextEditingController _mobileCtrl;
   late final TextEditingController _addressCtrl;
+  late final TextEditingController _balanceCtrl;
+  late final TextEditingController _emailCtrl;
+  late final TextEditingController _passwordCtrl;
+  bool _obscurePassword = true;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.customer.name);
+    _shopNameCtrl = TextEditingController(text: widget.customer.shopName ?? '');
     _mobileCtrl = TextEditingController(text: widget.customer.mobile);
     _addressCtrl = TextEditingController(text: widget.customer.address);
+    _balanceCtrl = TextEditingController(
+        text: widget.customer.openingBalance == 0
+            ? '0.00'
+            : widget.customer.openingBalance.toStringAsFixed(2));
+    _emailCtrl = TextEditingController(text: widget.customer.email ?? '');
+    _passwordCtrl = TextEditingController();
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _shopNameCtrl.dispose();
     _mobileCtrl.dispose();
     _addressCtrl.dispose();
+    _balanceCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _handleSave() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      showAppSnackBar(context, 'Please enter name', isError: true);
+      showAppSnackBar(context, 'Please enter Customer Name', isError: true);
       return;
     }
+
+    final rawMobile = _mobileCtrl.text.replaceAll(RegExp(r'\D'), '');
+    if (rawMobile.length != 10) {
+      showAppSnackBar(context, 'Please enter a valid 10-digit Mobile Number', isError: true);
+      return;
+    }
+
+    final email = _emailCtrl.text.trim();
+    if (email.isNotEmpty && !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+      showAppSnackBar(context, 'Please enter a valid Email Address', isError: true);
+      return;
+    }
+
+    final address = _addressCtrl.text.trim();
+    if (address.isEmpty) {
+      showAppSnackBar(context, 'Please enter Address / Location', isError: true);
+      return;
+    }
+
+    final password = _passwordCtrl.text.trim();
+    if (password.isNotEmpty && password.length < 6) {
+      showAppSnackBar(context, 'Password must be at least 6 characters', isError: true);
+      return;
+    }
+
     setState(() => _saving = true);
     try {
+      final openBal = double.tryParse(_balanceCtrl.text.trim()) ?? widget.customer.openingBalance;
       widget.customer.name = name;
-      widget.customer.mobile = _mobileCtrl.text.trim();
-      widget.customer.address = _addressCtrl.text.trim();
+      widget.customer.shopName = _shopNameCtrl.text.trim().isNotEmpty ? _shopNameCtrl.text.trim() : null;
+      widget.customer.mobile = rawMobile;
+      widget.customer.address = address;
+      widget.customer.openingBalance = openBal;
+      widget.customer.email = email.isNotEmpty ? email : null;
+
       final provider = context.read<CustomerProvider>();
-      await provider.updateCustomer(widget.customer);
+      await provider.updateCustomer(
+        widget.customer,
+        password: password.isNotEmpty ? password : null,
+      );
+
       if (!mounted) return;
       context.read<CatalogProvider>().updateCustomerInfo(widget.customer);
       Navigator.pop(context, true);
+      showAppSnackBar(context, 'Customer updated successfully!');
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      showAppSnackBar(context, 'Failed to update party: $e', isError: true);
+      showAppSnackBar(context, 'Failed to update customer: $e', isError: true);
     }
   }
 
@@ -378,9 +429,12 @@ class _CustomerEditSheetState extends State<CustomerEditSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat('#,##0');
+    final money = NumberFormat('#,##0.00');
 
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.90,
+      ),
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -391,131 +445,204 @@ class _CustomerEditSheetState extends State<CustomerEditSheet> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.edit,
-                      color: Color(0xFF1D4ED8), size: 22),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Edit Customer',
-                          style: TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.w700)),
-                      Text('ID: ${widget.customer.id}',
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Color(0xFF64748B))),
-                    ],
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nameCtrl,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Customer Name *',
-              prefixIcon: Icon(Icons.person_outline),
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _mobileCtrl,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'Mobile Number',
-              prefixIcon: Icon(Icons.phone_outlined),
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _addressCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Address / Location',
-              prefixIcon: Icon(Icons.location_on_outlined),
-              border: OutlineInputBorder(),
-              isDense: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Current Balance',
-                    style:
-                        TextStyle(fontSize: 12.5, color: Color(0xFF475569))),
-                Text(
-                  '₹${money.format(widget.customer.currentBalance)}',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: widget.customer.currentBalance > 0
-                        ? AppColors.red
-                        : AppColors.billGreen,
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.edit_note_rounded,
+                        color: Color(0xFF1D4ED8), size: 24),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Edit Customer',
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.w700)),
+                        Text('Customer ID: ${widget.customer.id}',
+                            style: const TextStyle(
+                                fontSize: 11.5, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1D4ED8),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+            const SizedBox(height: 16),
+
+            // 1. Customer Name *
+            TextField(
+              controller: _nameCtrl,
+              autofocus: false,
+              decoration: const InputDecoration(
+                labelText: 'Customer Name *',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
-            onPressed: _saving ? null : _handleSave,
-            child: _saving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
-                  )
-                : const Text('Save Changes',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
-              side: const BorderSide(color: Color(0xFFFCA5A5)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+            const SizedBox(height: 12),
+
+            // 2. Mobile Number
+            TextField(
+              controller: _mobileCtrl,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              decoration: const InputDecoration(
+                labelText: 'Mobile Number *',
+                prefixIcon: Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(),
+                isDense: true,
+                counterText: '',
+              ),
             ),
-            icon: const Icon(Icons.delete_outline, size: 18),
-            label: const Text('Delete Party',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            onPressed: _saving ? null : _handleDelete,
-          ),
-        ],
+            const SizedBox(height: 12),
+
+            // 3. Shop Name (Optional)
+            TextField(
+              controller: _shopNameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Shop Name (Optional)',
+                prefixIcon: Icon(Icons.storefront_outlined),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 4. Address / Location
+            TextField(
+              controller: _addressCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Address / Location *',
+                prefixIcon: Icon(Icons.location_on_outlined),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 5. Opening Balance (₹)
+            TextField(
+              controller: _balanceCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true, signed: true),
+              decoration: const InputDecoration(
+                labelText: 'Opening Balance (₹) (+ Due, - Adv)',
+                prefixIcon: Icon(Icons.currency_rupee),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 6. Email
+            TextField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email Address (For Portal Login)',
+                prefixIcon: Icon(Icons.email_outlined),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 7. Password (Show/Hide)
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
+                labelText: 'Password (Leave blank to keep current)',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Current Balance Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Current Outstanding Balance',
+                      style:
+                          TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: Color(0xFF475569))),
+                  Text(
+                    '₹${money.format(widget.customer.currentBalance)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: widget.customer.currentBalance > 0
+                          ? AppColors.red
+                          : AppColors.billGreen,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Save Changes Button
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1D4ED8),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _saving ? null : _handleSave,
+              child: _saving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Text('Save Changes',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 10),
+
+            // Delete Party Button
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFFCA5A5)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Delete Party',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              onPressed: _saving ? null : _handleDelete,
+            ),
+          ],
+        ),
       ),
     );
   }

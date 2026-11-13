@@ -305,7 +305,10 @@ class SupabaseService {
   }
 
   /// Updates an existing customer in Supabase PostgreSQL
-  Future<void> updateCustomer(Customer customer) async {
+  Future<void> updateCustomer(
+    Customer customer, {
+    String? password,
+  }) async {
     await ensureAuth();
     final id = int.tryParse(customer.id.replaceAll(RegExp(r'[^0-9]'), '')) ?? customer.id;
     final url = Uri.parse('${SupabaseConfig.apiUrl}/customers/$id');
@@ -314,8 +317,12 @@ class SupabaseService {
       headers: _headers,
       body: jsonEncode({
         'name': customer.name.trim(),
+        'shop_name': customer.shopName?.trim(),
         'phone': customer.mobile.trim(),
+        'email': customer.email?.trim(),
         'address': customer.address.trim(),
+        'opening_balance': customer.openingBalance,
+        if (password != null && password.trim().isNotEmpty) 'password': password.trim(),
       }),
     );
     if (res.statusCode >= 300) {
