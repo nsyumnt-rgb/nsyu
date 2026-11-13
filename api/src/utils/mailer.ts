@@ -34,29 +34,37 @@ function getTransporter(): Transporter | null {
   return null;
 }
 
-export function isEmailConfigured(): boolean {
-  return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+export async function isEmailConfigured(shopId?: number): Promise<boolean> {
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return true;
+  try {
+    const { Shop } = require("../models");
+    const targetShopId = shopId || 1;
+    const shop = await Shop.findByPk(targetShopId);
+    const smtp = (shop?.settings as any)?.smtp;
+    if (smtp?.host && smtp?.user && smtp?.pass) return true;
+  } catch (_) {}
+  return false;
 }
 
-export async function getTransporterForShop(shopId?: number): Promise<Transporter | null> {
+export async function getTransporterForShop(shopId?: number): Promise<{ transporter: Transporter; from?: string } | null> {
   const envTransporter = getTransporter();
-  if (envTransporter) return envTransporter;
+  if (envTransporter) return { transporter: envTransporter, from: process.env.SMTP_FROM };
 
-  if (shopId) {
-    try {
-      const { Shop } = require("../models");
-      const shop = await Shop.findByPk(shopId);
-      const smtp = (shop?.settings as any)?.smtp;
-      if (smtp?.host && smtp?.user && smtp?.pass) {
-        return nodemailer.createTransport({
-          host: smtp.host,
-          port: Number(smtp.port) || 587,
-          secure: smtp.secure === true || Number(smtp.port) === 465,
-          auth: { user: smtp.user, pass: smtp.pass },
-        });
-      }
-    } catch (_) {}
-  }
+  try {
+    const { Shop } = require("../models");
+    const targetShopId = shopId || 1;
+    const shop = await Shop.findByPk(targetShopId);
+    const smtp = (shop?.settings as any)?.smtp;
+    if (smtp?.host && smtp?.user && smtp?.pass) {
+      const t = nodemailer.createTransport({
+        host: smtp.host,
+        port: Number(smtp.port) || 587,
+        secure: smtp.secure === true || Number(smtp.port) === 465,
+        auth: { user: smtp.user, pass: smtp.pass },
+      });
+      return { transporter: t, from: smtp.from || smtp.user };
+    }
+  } catch (_) {}
   return null;
 }
 
@@ -75,8 +83,8 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
 
   console.log(`[EMAIL DISPATCH] ✉️  OTP [${otp}] dispatched to ${to} (${name}) for ${storeName}`);
 
-  const activeTransporter = await getTransporterForShop(shopId);
-  if (!activeTransporter) {
+  const active = await getTransporterForShop(shopId);
+  if (!active) {
     // No external SMTP configured
     return false;
   }
@@ -131,13 +139,14 @@ export async function sendOtpEmail(params: SendOtpEmailParams): Promise<boolean>
   `;
 
   try {
-    await activeTransporter.sendMail({
-      from: process.env.SMTP_FROM || `"${storeName}" <no-reply@nsyu.local>`,
+    await active.transporter.sendMail({
+      from: active.from || process.env.SMTP_FROM || `"${storeName}" <no-reply@nsyu.local>`,
       to,
       subject: `${otp} is your verification code for ${storeName}`,
       text: `Hello ${name},\n\nYour verification code for ${storeName} Customer Portal is: ${otp}\n\nThis code is valid for 5 minutes. Never share this code with anyone.\n\nThank you,\n${storeName}`,
       html,
     });
+    console.log(`[EMAIL DISPATCH SUCCESS] ✉️ Real email delivered to ${to} via Gmail SMTP!`);
     return true;
   } catch (err: any) {
     console.error("[EMAIL ERROR] Failed to send email via SMTP:", err.message);

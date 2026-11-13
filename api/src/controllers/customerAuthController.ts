@@ -251,7 +251,7 @@ export async function requestOtp(req: Request, res: Response) {
         details: { identifier: rawInput, email: targetEmail, phone: account.phone, shopId: shop.id },
       });
 
-      const emailConfigured = isEmailConfigured();
+      const emailConfigured = await isEmailConfigured(shop.id);
       const isDelivered = emailSent && emailConfigured;
 
       const responseData: any = {
@@ -886,7 +886,7 @@ export async function forgotPassword(req: Request, res: Response) {
       shopId: shop.id,
     });
 
-    const emailConfigured = isEmailConfigured();
+    const emailConfigured = await isEmailConfigured(shop.id);
     const isDelivered = emailSent && emailConfigured;
 
     return res.json({
