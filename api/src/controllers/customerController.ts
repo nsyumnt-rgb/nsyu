@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { Customer, Sale, CustomerLedger, CustomerAccount, CustomerRefreshToken, Shop } from "../models";
 import { logAudit } from "../utils/audit";
 import { syncCustomerToSupabaseAuth, updateSupabaseAuthPassword } from "../utils/supabaseAuth";
+import { sendOutstandingReminderEmail } from "../utils/mailer";
 
 function normalizePhone(raw: string): string {
   return raw.replace(/[^0-9]/g, "").slice(-10);
@@ -508,5 +509,85 @@ export async function rejectPortalRequest(req: Request, res: Response) {
     return res.json({ success: true, message: "Portal registration rejected" });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Rejection failed" });
+  }
+}
+
+/**
+ * POST /api/customers/:customerId/send-reminder
+ * Sends an email reminder with outstanding balance and pending bills.
+ */
+export async function sendCustomerPaymentReminder(req: Request, res: Response) {
+  try {
+    const ownerId = req.auth!.ownerId;
+    const shopId = req.auth!.shopId || 1;
+    const customerId = Number(req.params.customerId);
+
+    const customer = await Customer.findOne({
+      where: { id: customerId, owner_id: ownerId },
+      include: [{ model: CustomerAccount, as: "account" }],
+    });
+
+    if (!customer) {
+      return res.status(404).json({ success: false, message: "Customer not found" });
+    }
+
+    const currentBalance = Number(customer.current_balance || 0);
+    if (currentBalance <= 0 && !req.body.force) {
+      return res.status(400).json({
+        success: false,
+        message: `Customer has no outstanding due balance (Current balance: ₹${currentBalance}).`,
+      });
+    }
+
+    // Fetch unpaid or partially paid bills
+    const unpaidSales = await Sale.findAll({
+      where: {
+        customer_id: customer.id,
+        owner_id: ownerId,
+        payment_status: { [Op.in]: ["UNPAID", "PARTIAL", "PARTIALLY_PAID"] },
+        due_amount: { [Op.gt]: 0 },
+      },
+      order: [["invoice_date", "ASC"]],
+      limit: 10,
+    });
+
+    const unpaidBillsSummary = unpaidSales.map((s) => ({
+      invoiceNumber: s.invoice_number,
+      invoiceDate: s.invoice_date,
+      totalAmount: Number(s.total_amount),
+      dueAmount: Number(s.due_amount),
+    }));
+
+    const result = await sendOutstandingReminderEmail({
+      ownerId,
+      shopId,
+      customerId: customer.id,
+      customerEmail: customer.email || (customer as any).account?.email,
+      customerName: customer.name,
+      outstandingBalance: currentBalance,
+      unpaidBills: unpaidBillsSummary,
+    });
+
+    if (result.skipped) {
+      return res.status(400).json({
+        success: false,
+        message: "Customer does not have a registered email address. Cannot send email reminder.",
+      });
+    }
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: result.error || "Failed to dispatch reminder email",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Outstanding payment reminder sent to ${customer.email || (customer as any).account?.email}`,
+      emailNotificationId: result.emailNotificationId,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to send payment reminder" });
   }
 }

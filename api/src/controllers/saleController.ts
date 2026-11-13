@@ -20,6 +20,7 @@ import { generateUniqueReceiptCode, recordCustomerPaymentTransaction, recordLedg
 import { nextInvoiceNumber } from "../utils/invoice";
 import { logAudit } from "../utils/audit";
 import { streamBillPdf } from "../utils/pdf";
+import { sendBillEmail, sendPaymentReceiptEmail } from "../utils/mailer";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -468,6 +469,55 @@ export async function createSale(req: Request, res: Response) {
     });
 
     const sale = await Sale.findByPk(result, { include: saleIncludes });
+
+    // Asynchronously dispatch bill email & payment receipt confirmation after DB commit
+    if (sale && sale.customer_id) {
+      setImmediate(async () => {
+        try {
+          const saleAny = sale as any;
+          const itemSummaries = (saleAny.items || []).map((it: any) => ({
+            productName: it.product_name,
+            quantity: Number(it.quantity),
+            rate: Number(it.rate),
+            totalAmount: Number(it.total_amount),
+          }));
+
+          await sendBillEmail({
+            ownerId,
+            shopId,
+            customerId: sale.customer_id,
+            customerEmail: saleAny.customer?.email,
+            customerName: saleAny.customer?.name,
+            invoiceNumber: sale.invoice_number,
+            totalAmount: Number(sale.total_amount),
+            paidAmount: Number(sale.paid_amount),
+            dueAmount: Number(sale.due_amount),
+            paymentStatus: sale.payment_status || sale.status,
+            invoiceDate: sale.invoice_date,
+            items: itemSummaries,
+          });
+
+          if (Number(sale.paid_amount) > 0) {
+            await sendPaymentReceiptEmail({
+              ownerId,
+              shopId,
+              customerId: sale.customer_id,
+              customerEmail: saleAny.customer?.email,
+              customerName: saleAny.customer?.name,
+              receiptCode: transactionId || undefined,
+              amount: Number(sale.paid_amount),
+              paymentMethod: sale.payment_method,
+              paymentDate: sale.invoice_date,
+              invoiceNumber: sale.invoice_number,
+              currentBalance: Number(saleAny.customer?.current_balance ?? sale.due_amount),
+            });
+          }
+        } catch (mailErr: any) {
+          console.warn("[MAIL TRIGGER WARN] Failed to dispatch sale email triggers:", mailErr.message);
+        }
+      });
+    }
+
     return res.status(201).json({ success: true, data: sale });
   } catch (err: any) {
     const pgCode = err?.original?.code || err?.parent?.code || err?.code;

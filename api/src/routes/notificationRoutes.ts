@@ -7,11 +7,19 @@ import {
   markRead,
   markAllRead,
   getAlerts,
+  listEmailHistory,
+  retryEmail,
+  retryFailedEmailsEndpoint,
 } from "../controllers/notificationController";
 
 const router = Router();
 
 router.use(authenticate, requireShop);
+
+// Email notification history and retry operations
+router.get("/emails/history", listEmailHistory);
+router.post("/emails/:id/retry", retryEmail);
+router.post("/emails/retry-failed", retryFailedEmailsEndpoint);
 
 // Self-service — every actor only ever sees notifications addressed to them
 router.get("/", listMyNotifications);

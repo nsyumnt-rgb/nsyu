@@ -4,6 +4,7 @@ import { computeBillPaymentStatus } from "../models/Sale";
 import { streamReceiptPdf } from "../utils/pdf";
 import { logAudit } from "../utils/audit";
 import { recordCustomerPaymentTransaction, recordLedgerEntry } from "../utils/ledger";
+import { sendPaymentReceiptEmail } from "../utils/mailer";
 import { Op } from "sequelize";
 
 function formatPaymentResponse(entry: any) {
@@ -182,6 +183,31 @@ export async function createPayment(req: Request, res: Response) {
         { model: Shop, as: "shop" },
       ],
     });
+
+    // Asynchronously dispatch payment receipt email confirmation
+    if (fullPayment && fullPayment.customer_id) {
+      setImmediate(async () => {
+        try {
+          const fpAny = fullPayment as any;
+          await sendPaymentReceiptEmail({
+            ownerId,
+            shopId,
+            customerId: fullPayment.customer_id,
+            customerEmail: fpAny.customer?.email,
+            customerName: fpAny.customer?.name,
+            receiptCode: fullPayment.reference_code || transactionId || undefined,
+            amount: Number(fullPayment.amount),
+            paymentMethod: fullPayment.payment_method || cleanMethod,
+            paymentDate: fullPayment.entry_date,
+            invoiceNumber: result.sale?.invoice_number || req.body.invoiceNumber,
+            currentBalance: Number(fpAny.customer?.current_balance ?? 0),
+            notes: fullPayment.notes || notes,
+          });
+        } catch (mailErr: any) {
+          console.warn("[MAIL TRIGGER WARN] Failed to dispatch payment receipt email:", mailErr.message);
+        }
+      });
+    }
 
     return res.status(result.idempotent ? 200 : 201).json({
       success: true,

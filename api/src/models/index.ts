@@ -35,6 +35,7 @@ import { OrderStatusHistory } from "./OrderStatusHistory";
 import { ShopPortalSettings } from "./ShopPortalSettings";
 import { PlatformAuditLog } from "./PlatformAuditLog";
 import { StatusHistory } from "./StatusHistory";
+import { EmailNotification } from "./EmailNotification";
 
 /* ---------------- Owner ---------------- */
 Owner.hasMany(Shop, { foreignKey: "owner_id", as: "shops" });
@@ -179,6 +180,12 @@ OrderStatusHistory.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 Shop.hasOne(ShopPortalSettings, { foreignKey: "shop_id", as: "portalSettings" });
 ShopPortalSettings.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
 
+/* ---------------- Email Notifications ---------------- */
+Shop.hasMany(EmailNotification, { foreignKey: "shop_id", as: "emailNotifications" });
+EmailNotification.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+Customer.hasMany(EmailNotification, { foreignKey: "customer_id", as: "emailNotifications" });
+EmailNotification.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
+
 export {
   sequelize,
   Owner,
@@ -219,4 +226,5 @@ export {
   ShopPortalSettings,
   PlatformAuditLog,
   StatusHistory,
+  EmailNotification,
 };

@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import { Notification } from "../models";
+import { Notification, EmailNotification, Customer } from "../models";
 import { getComputedAlerts } from "../utils/notifications";
+import { retryEmailNotification, retryAllFailedEmails } from "../utils/mailer";
 
 function buildNotificationWhere(req: Request) {
   const ownerId = req.auth!.ownerId;
@@ -93,4 +94,70 @@ export async function markAllRead(req: Request, res: Response) {
 export async function getAlerts(req: Request, res: Response) {
   const alerts = await getComputedAlerts(req.auth!.ownerId, req.auth!.shopId ?? undefined);
   return res.json({ success: true, data: alerts });
+}
+
+/* ---------------- Email Notification History & Retries ---------------- */
+
+export async function listEmailHistory(req: Request, res: Response) {
+  try {
+    const ownerId = req.auth!.ownerId;
+    const { customerId, status, notificationType, limit, offset } = req.query;
+
+    const where: any = { owner_id: ownerId };
+    if (!req.auth!.isOwner && req.auth!.shopId) {
+      where.shop_id = req.auth!.shopId;
+    }
+    if (customerId) where.customer_id = Number(customerId);
+    if (status) where.status = String(status);
+    if (notificationType) where.notification_type = String(notificationType);
+
+    const limitNum = Math.min(Number(limit) || 50, 100);
+    const offsetNum = Number(offset) || 0;
+
+    const { count, rows } = await EmailNotification.findAndCountAll({
+      where,
+      include: [
+        { model: Customer, as: "customer", attributes: ["id", "name", "phone", "email"] },
+      ],
+      order: [["created_at", "DESC"]],
+      limit: limitNum,
+      offset: offsetNum,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        total: count,
+        emails: rows,
+        limit: limitNum,
+        offset: offsetNum,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to load email history" });
+  }
+}
+
+export async function retryEmail(req: Request, res: Response) {
+  try {
+    const ownerId = req.auth!.ownerId;
+    const id = Number(req.params.id);
+
+    const result = await retryEmailNotification(id, ownerId);
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to retry email" });
+  }
+}
+
+export async function retryFailedEmailsEndpoint(req: Request, res: Response) {
+  try {
+    const ownerId = req.auth!.ownerId;
+    const shopId = req.auth!.isOwner ? (req.query.shopId ? Number(req.query.shopId) : undefined) : req.auth!.shopId;
+
+    const summary = await retryAllFailedEmails(ownerId, shopId);
+    return res.json({ success: true, data: summary });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to retry failed emails" });
+  }
 }

@@ -12,6 +12,7 @@ import {
   listPortalRequests,
   approvePortalRequest,
   rejectPortalRequest,
+  sendCustomerPaymentReminder,
 } from "../controllers/customerController";
 
 const router = Router();
@@ -30,5 +31,6 @@ router.put("/:customerId", requirePermission("customers", "edit"), updateCustome
 router.post("/:customerId/portal/invite", requirePermission("customers", "edit"), inviteCustomerToPortal);
 router.post("/:customerId/portal/disable", requirePermission("customers", "edit"), disableCustomerPortal);
 router.post("/:customerId/portal/enable", requirePermission("customers", "edit"), enableCustomerPortal);
+router.post("/:customerId/send-reminder", requirePermission("customers", "edit"), sendCustomerPaymentReminder);
 
 export default router;

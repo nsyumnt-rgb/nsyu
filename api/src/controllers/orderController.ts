@@ -19,6 +19,7 @@ import { PAYMENT_METHODS, PaymentMethod, computeBillPaymentStatus, computeSaleSt
 import { recordStockMovement } from "../utils/inventory";
 import { generateUniqueReceiptCode, recordLedgerEntry } from "../utils/ledger";
 import { nextInvoiceNumber } from "../utils/invoice";
+import { sendBillEmail, sendPaymentReceiptEmail } from "../utils/mailer";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -858,6 +859,55 @@ export async function convertOrderToBill(req: Request, res: Response) {
         ],
       }),
     ]);
+
+    // Asynchronously dispatch bill email & receipt confirmation after DB commit
+    const targetBill = refreshedBill || conversionResult.sale;
+    if (targetBill && targetBill.customer_id) {
+      setImmediate(async () => {
+        try {
+          const tbAny = targetBill as any;
+          const itemSummaries = (tbAny.items || []).map((it: any) => ({
+            productName: it.product_name,
+            quantity: Number(it.quantity),
+            rate: Number(it.rate),
+            totalAmount: Number(it.total_amount),
+          }));
+
+          await sendBillEmail({
+            ownerId,
+            shopId: targetBill.shop_id || 1,
+            customerId: targetBill.customer_id,
+            customerEmail: tbAny.customer?.email,
+            customerName: tbAny.customer?.name,
+            invoiceNumber: targetBill.invoice_number,
+            totalAmount: Number(targetBill.total_amount),
+            paidAmount: Number(targetBill.paid_amount),
+            dueAmount: Number(targetBill.due_amount),
+            paymentStatus: targetBill.payment_status || targetBill.status,
+            invoiceDate: targetBill.invoice_date,
+            items: itemSummaries,
+          });
+
+          if (Number(targetBill.paid_amount) > 0) {
+            await sendPaymentReceiptEmail({
+              ownerId,
+              shopId: targetBill.shop_id || 1,
+              customerId: targetBill.customer_id,
+              customerEmail: tbAny.customer?.email,
+              customerName: tbAny.customer?.name,
+              receiptCode: undefined,
+              amount: Number(targetBill.paid_amount),
+              paymentMethod: targetBill.payment_method,
+              paymentDate: targetBill.invoice_date,
+              invoiceNumber: targetBill.invoice_number,
+              currentBalance: Number(tbAny.customer?.current_balance ?? targetBill.due_amount),
+            });
+          }
+        } catch (mailErr: any) {
+          console.warn("[MAIL TRIGGER WARN] Failed to dispatch order-to-bill email triggers:", mailErr.message);
+        }
+      });
+    }
 
     return res.status(201).json({
       success: true,

@@ -45,6 +45,30 @@ async function ensureSingleLedgerSchema() {
           DROP TABLE IF EXISTS public.payments CASCADE;
         END IF;
       END $$;
+      CREATE TABLE IF NOT EXISTS public.email_notifications (
+        id BIGSERIAL PRIMARY KEY,
+        owner_id INTEGER NOT NULL,
+        shop_id INTEGER,
+        customer_id INTEGER REFERENCES public.customers(id) ON DELETE SET NULL,
+        recipient_email VARCHAR(255) NOT NULL,
+        recipient_name VARCHAR(150),
+        notification_type VARCHAR(50) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        attempts INTEGER NOT NULL DEFAULT 1,
+        max_attempts INTEGER NOT NULL DEFAULT 3,
+        last_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        sent_at TIMESTAMPTZ,
+        error_message TEXT,
+        reference_type VARCHAR(50),
+        reference_id BIGINT,
+        payload JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS email_notif_owner_status_idx ON public.email_notifications (owner_id, status);
+      CREATE INDEX IF NOT EXISTS email_notif_customer_idx ON public.email_notifications (customer_id);
+      CREATE INDEX IF NOT EXISTS email_notif_type_idx ON public.email_notifications (notification_type);
     `);
     console.log("✅ Single ledger schema verified");
   } catch (err) {
