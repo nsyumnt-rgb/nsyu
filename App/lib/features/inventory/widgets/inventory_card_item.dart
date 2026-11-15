@@ -44,7 +44,7 @@ class InventoryCardItem extends StatelessWidget {
           color: const Color(0xFFF8FAFC),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? const Color(0xFF006837) : const Color(0xFFE2E8F0),
+            color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -311,9 +311,9 @@ class InventoryCardItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
+              color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFDCFCE7)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Row(
               children: [
@@ -324,11 +324,11 @@ class InventoryCardItem extends StatelessWidget {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.lock_outline,
-                            color: Color(0xFF1E293B), size: 19),
+                            color: Color(0xFF2563EB), size: 19),
                       ),
                       const SizedBox(width: 10),
                       Column(
@@ -355,7 +355,7 @@ class InventoryCardItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(width: 1, height: 34, color: const Color(0xFFDCFCE7)),
+                Container(width: 1, height: 34, color: const Color(0xFFE2E8F0)),
 
                 Expanded(
                   child: Row(
@@ -365,11 +365,11 @@ class InventoryCardItem extends StatelessWidget {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDCFCE7),
+                          color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.all_inbox_rounded,
-                            color: Color(0xFF1E293B), size: 19),
+                            color: Color(0xFF2563EB), size: 19),
                       ),
                       const SizedBox(width: 10),
                       Column(
@@ -490,7 +490,7 @@ class InventoryCardItem extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w900,
-                            color: Color(0xFF15803D),
+                            color: Color(0xFF1D4ED8),
                           ),
                         ),
                       ],
@@ -569,7 +569,7 @@ class InventoryCardItem extends StatelessWidget {
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF006837),
+                      backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(

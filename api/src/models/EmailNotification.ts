@@ -106,3 +106,4 @@ EmailNotification.init(
     ],
   }
 );
+

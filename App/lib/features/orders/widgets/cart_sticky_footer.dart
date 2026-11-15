@@ -122,14 +122,14 @@ class CartStickyFooter extends StatelessWidget {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.phone, size: 14, color: Color(0xFF006837)),
+                    Icon(Icons.phone, size: 14, color: Color(0xFF16A34A)),
                     SizedBox(width: 4),
                     Text(
                       'Send on WhatsApp',
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF006837),
+                        color: Color(0xFF16A34A),
                       ),
                     ),
                   ],
@@ -141,11 +141,11 @@ class CartStickyFooter extends StatelessWidget {
             ElevatedButton(
               onPressed: (saving || isEmptyCart) ? null : onCreateBillOrOrder,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF006837),
+                backgroundColor: const Color(0xFF2563EB),
                 disabledBackgroundColor: const Color(0xFFCBD5E1),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 elevation: 0,
               ),
               child: saving

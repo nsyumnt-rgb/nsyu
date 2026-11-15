@@ -273,10 +273,10 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
+                              color: const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.receipt_long, color: Color(0xFF16A34A), size: 20),
+                            child: const Icon(Icons.receipt_long, color: Color(0xFF2563EB), size: 20),
                           ),
                           const SizedBox(width: 10),
                           Column(
@@ -397,7 +397,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF006837)),
+                              border: Border.all(color: const Color(0xFF2563EB)),
                             ),
                             child: TextField(
                               controller: paidCtrl,
@@ -459,7 +459,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                     height: 46,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF006837),
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
@@ -540,7 +540,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF006837) : const Color(0xFFF1F5F9),
+          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
@@ -636,7 +636,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(66),
         child: Container(
-          color: const Color(0xFF006837),
+          color: const Color(0xFF0F2756),
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -734,7 +734,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                             const Spacer(),
                             if (_documentMode == 'Bill')
                               const Icon(Icons.check,
-                                  size: 18, color: Color(0xFF16A34A)),
+                                  size: 18, color: Color(0xFF2563EB)),
                           ],
                         ),
                       ),
@@ -756,7 +756,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                             const Spacer(),
                             if (_documentMode == 'Order')
                               const Icon(Icons.check,
-                                  size: 18, color: Color(0xFF16A34A)),
+                                  size: 18, color: Color(0xFF2563EB)),
                           ],
                         ),
                       ),

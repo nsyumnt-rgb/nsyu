@@ -128,28 +128,32 @@ class _LedgerScreenState extends State<LedgerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        top: false,
         child: Column(
           children: [
-            // Top Green Status Banner
-            Container(
-              height: MediaQuery.of(context).padding.top,
-              color: const Color(0xFF16A34A),
-            ),
-
-            // Top App Bar
+            // Top App Bar — Clean, White & Navy Header
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Row(
                 children: [
-                  // Circle Avatar in Amber
+                  // Navy Monogram Avatar
                   Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF59E0B),
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                      ),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     alignment: Alignment.center,
                     child: Text(
@@ -163,7 +167,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   ),
                   const SizedBox(width: 12),
 
-                  // Business Name ▾ and Phone Number
+                  // Business Name & Phone Number
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,13 +179,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
                             Text(
                               businessName,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 16.5,
                                 fontWeight: FontWeight.w800,
                                 color: Color(0xFF0F172A),
+                                letterSpacing: -0.3,
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF0F172A)),
+                            const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
                           ],
                         ),
                         if (businessPhone.isNotEmpty)
@@ -200,6 +205,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   // Right Icons: Share, Bell, Search
                   _circleIconButton(
                     icon: Icons.share_outlined,
+                    tooltip: 'Share Ledger Statement',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -215,6 +221,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     children: [
                       _circleIconButton(
                         icon: Icons.notifications_none_rounded,
+                        tooltip: 'Notifications',
                         onTap: () {
                           final notifs = context.read<NotificationsProvider>();
                           Navigator.push(
@@ -233,7 +240,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
-                              color: Color(0xFFEF4444),
+                              color: Color(0xFFDC2626),
                               shape: BoxShape.circle,
                             ),
                             child: Text(
@@ -248,6 +255,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   const SizedBox(width: 8),
                   _circleIconButton(
                     icon: Icons.search_rounded,
+                    tooltip: 'Search Accounts',
                     onTap: () => setState(() => _showSearch = !_showSearch),
                   ),
                 ],
@@ -277,7 +285,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 ),
               ),
 
-            // Horizontal Filter Chips matching Image 1
+            // Horizontal Filter Chips — Clean Navy & Subtle Blue Theme
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
@@ -297,10 +305,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFFE8F5E9) : const Color(0xFFF1F5F9),
+                                  color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: isSelected ? const Color(0xFF16A34A) : Colors.transparent,
+                                    color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
                                     width: 1.2,
                                   ),
                                 ),
@@ -309,7 +317,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                    color: isSelected ? const Color(0xFF16A34A) : const Color(0xFF475569),
+                                    color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
                                   ),
                                 ),
                               ),
@@ -330,10 +338,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       width: 36,
                       height: 36,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFE8F5E9),
+                        color: Color(0xFFEFF6FF),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.person_add_alt_1_rounded, size: 19, color: Color(0xFF16A34A)),
+                      child: const Icon(Icons.person_add_alt_1_rounded, size: 19, color: Color(0xFF2563EB)),
                     ),
                   ),
                 ],
@@ -382,8 +390,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
     );
   }
 
-  Widget _circleIconButton({required IconData icon, required VoidCallback onTap}) {
-    return InkWell(
+  Widget _circleIconButton({required IconData icon, required VoidCallback onTap, String? tooltip}) {
+    final btn = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
@@ -396,6 +404,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
         child: Icon(icon, size: 19, color: const Color(0xFF334155)),
       ),
     );
+    if (tooltip != null) {
+      return Tooltip(message: tooltip, child: btn);
+    }
+    return btn;
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -507,10 +519,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     width: 36,
                     height: 36,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFE8F5E9),
+                      color: Color(0xFFEFF6FF),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.tune_rounded, size: 18, color: Color(0xFF16A34A)),
+                    child: const Icon(Icons.tune_rounded, size: 18, color: Color(0xFF2563EB)),
                   ),
                   if (_activeChip != 'Customer')
                     Positioned(

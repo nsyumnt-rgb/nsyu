@@ -138,8 +138,8 @@ class CartFinancialSummary extends StatelessWidget {
                         Container(
                           height: 20,
                           decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFF006837)),
-                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(color: const Color(0xFF2563EB)),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -147,19 +147,19 @@ class CartFinancialSummary extends StatelessWidget {
                               InkWell(
                                 onTap: () => onToggleDiscountType(false),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5),
                                   color: !isDiscountPercent
-                                      ? const Color(0xFF006837)
+                                      ? const Color(0xFF2563EB)
                                       : Colors.white,
                                   child: Center(
                                     child: Text(
                                       '₹',
                                       style: TextStyle(
-                                        fontSize: 9,
+                                        fontSize: 9.5,
                                         fontWeight: FontWeight.bold,
                                         color: !isDiscountPercent
                                             ? Colors.white
-                                            : const Color(0xFF006837),
+                                            : const Color(0xFF2563EB),
                                       ),
                                     ),
                                   ),
@@ -168,19 +168,19 @@ class CartFinancialSummary extends StatelessWidget {
                               InkWell(
                                 onTap: () => onToggleDiscountType(true),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 5),
                                   color: isDiscountPercent
-                                      ? const Color(0xFF006837)
+                                      ? const Color(0xFF2563EB)
                                       : Colors.white,
                                   child: Center(
                                     child: Text(
                                       '%',
                                       style: TextStyle(
-                                        fontSize: 9,
+                                        fontSize: 9.5,
                                         fontWeight: FontWeight.bold,
                                         color: isDiscountPercent
                                             ? Colors.white
-                                            : const Color(0xFF006837),
+                                            : const Color(0xFF2563EB),
                                       ),
                                     ),
                                   ),
@@ -224,10 +224,21 @@ class CartFinancialSummary extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF006837),
-                    borderRadius: BorderRadius.circular(6),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x200F2756),
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

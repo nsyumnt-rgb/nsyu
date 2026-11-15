@@ -8,14 +8,6 @@ class CustomerListTile extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onEdit;
 
-  static const avatarPalettes = [
-    (Color(0xFFEDE9FE), Color(0xFF6D28D9)), // purple
-    (Color(0xFFE0F2FE), Color(0xFF0284C7)), // sky
-    (Color(0xFFDBEAFE), Color(0xFF1D4ED8)), // blue
-    (Color(0xFFF0FDF4), Color(0xFF16A34A)), // green
-    (Color(0xFFFEF3C7), Color(0xFFD97706)), // amber
-  ];
-
   const CustomerListTile({
     super.key,
     required this.customer,
@@ -37,7 +29,6 @@ class CustomerListTile extends StatelessWidget {
             .join()
             .toUpperCase();
 
-    final palette = avatarPalettes[index % avatarPalettes.length];
     final code = (customer.referenceCode != null &&
             customer.referenceCode!.isNotEmpty)
         ? customer.referenceCode!
@@ -70,15 +61,25 @@ class CustomerListTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: palette.$1,
-                  child: Text(
-                    initials,
-                    style: TextStyle(
-                      color: palette.$2,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                      ),
                     ),
                   ),
                 ),

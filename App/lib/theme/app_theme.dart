@@ -1,42 +1,47 @@
 import 'package:flutter/material.dart';
 
-/// ── NSYU Design System — Foundation ─────────────────────────────────────
-/// Palette: Logo Blue (primary) · Silver (secondary) · Red (accent) ·
-/// Green (success). All existing field NAMES are kept unchanged (navy,
-/// steelBlue, red, muted, billGreen, text, border, bg, card, silver) so
-/// every screen that already reads AppColors.xxx picks up the new palette
-/// automatically — no per-screen rename needed.
+/// ── NSYU Premium Design System — Foundation ─────────────────────────────────
+/// Palette: Modern Enterprise White, Navy Blue, and Subtle Blue Theme.
+/// Built for commercial trust, high readability, and effortless non-technical use.
 class AppColors {
-  // Primary — logo blue (used for AppBars, headers, badges, primary actions)
-  static const navy = Color(0xFF1D4ED8); // rich logo blue (was near-black navy)
-  static const navy2 = Color(0xFF1E40AF); // darker blue, for gradients
-  static const steelBlue = Color(0xFF2563EB); // slightly lighter blue accent
+  // Primary Navy & Blue Spectrum
+  static const deepNavy = Color(0xFF0A1D3F); // Deepest authoritative navy
+  static const navy = Color(0xFF0F2756); // Deep rich royal navy (primary)
+  static const navy2 = Color(0xFF1E3A8A); // Classic navy blue
+  static const steelBlue = Color(0xFF2563EB); // Vibrant electric blue accent
+  static const skyBlue = Color(0xFF3B82F6); // Interactive light blue
+  static const surfaceBlue = Color(0xFFEFF6FF); // Soft blue tint for active chips/cards
+  static const surfaceBlueLight = Color(0xFFF0F5FF);
+  static const badgeBlue = Color(0xFFDBEAFE);
 
-  // Secondary — silver
+  // Secondary & Silver Scale
   static const silver = Color(0xFFCBD5E1);
   static const silverDark = Color(0xFF94A3B8);
 
-  // Accent — red
-  static const red = Color(0xFFDC2626);
-  static const redLight = Color(0xFFFEE2E2);
+  // Status & Financial Accents
+  static const billGreen = Color(0xFF059669); // Emerald success green
+  static const billGreenLight = Color(0xFFECFDF5);
+  static const billGreenBorder = Color(0xFFA7F3D0);
 
-  // Success — green
-  static const billGreen = Color(0xFF16A34A);
-  static const billGreenLight = Color(0xFFDCFCE7);
+  static const red = Color(0xFFDC2626); // Clean due/danger red
+  static const redLight = Color(0xFFFEF2F2);
+  static const redBorder = Color(0xFFFECACA);
 
-  // Warning
-  static const warning = Color(0xFFF59E0B);
-  static const warningLight = Color(0xFFFEF3C7);
+  static const warning = Color(0xFFD97706); // Warm amber
+  static const warningLight = Color(0xFFFFFBEB);
+  static const warningBorder = Color(0xFFFDE68A);
 
-  // Neutrals
-  static const bg = Color(0xFFF8FAFC);
-  static const card = Color(0xFFFFFFFF);
-  static const border = Color(0xFFE2E8F0);
-  static const text = Color(0xFF0F172A);
-  static const muted = Color(0xFF64748B);
+  // Neutrals & Surfaces
+  static const bg = Color(0xFFF8FAFC); // Clean slate background
+  static const card = Color(0xFFFFFFFF); // Pure white card surface
+  static const border = Color(0xFFE2E8F0); // Subtle, crisp card border
+  static const borderLight = Color(0xFFF1F5F9);
+  static const text = Color(0xFF0F172A); // Dark navy/slate primary text
+  static const textSecondary = Color(0xFF334155);
+  static const muted = Color(0xFF64748B); // Slate muted secondary text
 }
 
-/// Reusable gradients for headers, primary buttons, and highlight cards.
+/// Reusable gradients for headers, primary buttons, and highlight hero cards.
 class AppGradients {
   static const primary = LinearGradient(
     begin: Alignment.topLeft,
@@ -44,10 +49,22 @@ class AppGradients {
     colors: [AppColors.navy, AppColors.steelBlue],
   );
 
+  static const deepNavy = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [AppColors.deepNavy, AppColors.navy2],
+  );
+
+  static const subtleBlue = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+  );
+
   static const success = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF16A34A), Color(0xFF22C55E)],
+    colors: [Color(0xFF059669), Color(0xFF10B981)],
   );
 
   static const accent = LinearGradient(
@@ -57,56 +74,106 @@ class AppGradients {
   );
 }
 
-/// Consistent spacing scale — use these instead of ad-hoc numbers
-/// (12, 14, 20, 22 etc.) so gaps line up across screens.
+/// Consistent spacing scale across the app.
 class AppSpacing {
+  static const xxs = 4.0;
   static const xs = 8.0;
   static const sm = 16.0;
   static const md = 24.0;
   static const lg = 32.0;
+  static const xl = 40.0;
 }
 
-/// Typography hierarchy — pick the right level instead of defaulting
-/// everything to ~14px body text.
+/// Standardized card and container box decorations.
+class AppDecorations {
+  static BoxDecoration card({
+    Color color = Colors.white,
+    double radius = 16.0,
+    Color borderColor = AppColors.border,
+    double borderWidth = 1.0,
+    double shadowOpacity = 0.04,
+  }) {
+    return BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: borderColor, width: borderWidth),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFF0F172A).withValues(alpha: shadowOpacity),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    );
+  }
+
+  static BoxDecoration badge({
+    required Color bg,
+    required Color border,
+    double radius = 20.0,
+  }) {
+    return BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: border, width: 1.0),
+    );
+  }
+}
+
+/// Typography hierarchy with clean weights and line heights.
 class AppTextStyles {
   static const heading = TextStyle(
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: FontWeight.w800,
     color: AppColors.text,
+    letterSpacing: -0.3,
     height: 1.2,
   );
+
   static const section = TextStyle(
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: FontWeight.w700,
     color: AppColors.text,
+    letterSpacing: -0.2,
     height: 1.25,
   );
+
   static const body = TextStyle(
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: FontWeight.w500,
     color: AppColors.text,
     height: 1.35,
   );
+
   static const subtitle = TextStyle(
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: FontWeight.w600,
     color: AppColors.muted,
     height: 1.3,
   );
+
   static const hint = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     color: AppColors.muted,
     height: 1.2,
   );
+
+  static const currencyLarge = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w800,
+    color: AppColors.text,
+    letterSpacing: -0.5,
+  );
+
+  static const currencyMedium = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    color: AppColors.text,
+  );
 }
 
 ThemeData buildAppTheme() => _buildTheme(Brightness.light);
-
-/// Dark-theme counterpart — same palette/spacing/type-scale, just remapped
-/// onto dark surfaces so text/icons keep proper contrast. Wire this up as
-/// `darkTheme: buildAppDarkTheme()` + `themeMode: ThemeMode.system` in
-/// MaterialApp to get automatic light/dark switching.
 ThemeData buildAppDarkTheme() => _buildTheme(Brightness.dark);
 
 ThemeData _buildTheme(Brightness brightness) {
@@ -116,31 +183,24 @@ ThemeData _buildTheme(Brightness brightness) {
   final border = isDark ? const Color(0xFF283248) : AppColors.border;
   final text = isDark ? const Color(0xFFE2E8F0) : AppColors.text;
   final muted = isDark ? const Color(0xFF94A3B8) : AppColors.muted;
-  // A lighter blue reads better than the deep logo-navy against dark
-  // surfaces, while still being unmistakably "the same brand blue".
-  final primary = isDark ? const Color(0xFF60A5FA) : AppColors.navy;
-  // Text/icons placed ON TOP of a primary-colored surface (e.g. button
-  // labels on a navy button) — white on the light theme's dark navy, but
-  // dark text on the dark theme's lighter blue, so contrast stays high
-  // either way instead of quietly failing accessibility checks.
+  final primary = isDark ? const Color(0xFF60A5FA) : AppColors.steelBlue;
   final onPrimary = isDark ? const Color(0xFF06111F) : Colors.white;
 
   final base = ThemeData(
     useMaterial3: true,
     brightness: brightness,
     fontFamily: 'Roboto',
-    // Ensures every tappable control (buttons, list tiles, icon buttons)
-    // gets at least a 48x48 touch target, per accessibility guidelines.
     materialTapTargetSize: MaterialTapTargetSize.padded,
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
+
   return base.copyWith(
     scaffoldBackgroundColor: bg,
     colorScheme: base.colorScheme.copyWith(
       brightness: brightness,
       primary: primary,
       onPrimary: onPrimary,
-      secondary: AppColors.silverDark,
+      secondary: AppColors.steelBlue,
       tertiary: AppColors.red,
       onTertiary: Colors.white,
       surface: card,
@@ -164,40 +224,36 @@ ThemeData _buildTheme(Brightness brightness) {
         )
         .apply(bodyColor: text, displayColor: text),
     appBarTheme: AppBarTheme(
-      backgroundColor: isDark ? card : AppColors.navy,
-      foregroundColor: Colors.white,
+      backgroundColor: isDark ? card : Colors.white,
+      foregroundColor: isDark ? Colors.white : AppColors.text,
       elevation: 0,
-      scrolledUnderElevation: 2,
+      scrolledUnderElevation: 1,
       centerTitle: false,
-      titleTextStyle: const TextStyle(
-        color: Colors.white,
-        fontSize: 18,
+      iconTheme: IconThemeData(color: isDark ? Colors.white : AppColors.text, size: 22),
+      titleTextStyle: TextStyle(
+        color: isDark ? Colors.white : AppColors.text,
+        fontSize: 17.5,
         fontWeight: FontWeight.w700,
-        letterSpacing: .3,
+        letterSpacing: -0.2,
       ),
     ),
     cardTheme: CardThemeData(
       color: card,
-      elevation: 2,
+      elevation: 0,
       surfaceTintColor: Colors.transparent,
-      shadowColor: (isDark ? Colors.black : AppColors.navy).withValues(alpha: isDark ? 0.4 : 0.08),
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: border),
+        side: BorderSide(color: border, width: 1.0),
       ),
     ),
-    // Primary CTA — solid fill with the brand color and a clearly readable
-    // label color (chosen per-theme above), plus a soft shadow so it reads
-    // as raised/tappable instead of flat.
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primary,
         foregroundColor: onPrimary,
         disabledBackgroundColor: primary.withValues(alpha: 0.4),
         disabledForegroundColor: onPrimary.withValues(alpha: 0.7),
-        elevation: 1,
-        shadowColor: primary.withValues(alpha: 0.35),
+        elevation: 0,
         minimumSize: const Size(64, 48),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
@@ -207,15 +263,8 @@ ThemeData _buildTheme(Brightness brightness) {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-      ).copyWith(
-        elevation: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.pressed) ? 0 : 1,
-        ),
       ),
     ),
-    // MD3's dedicated "filled button" — used for the strongest calls to
-    // action (e.g. Save/Confirm dialogs). Same treatment as ElevatedButton
-    // so both read consistently across the app.
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primary,
@@ -230,7 +279,7 @@ ThemeData _buildTheme(Brightness brightness) {
       style: OutlinedButton.styleFrom(
         foregroundColor: primary,
         minimumSize: const Size(64, 48),
-        side: BorderSide(color: primary, width: 1.4),
+        side: BorderSide(color: primary, width: 1.2),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: 14,
@@ -250,25 +299,21 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
-        minimumSize: const Size(44, 44),
+        minimumSize: const Size(40, 40),
         foregroundColor: text,
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: AppColors.red,
+      backgroundColor: AppColors.steelBlue,
       foregroundColor: Colors.white,
       elevation: 3,
       highlightElevation: 6,
     ),
     chipTheme: base.chipTheme.copyWith(
-      backgroundColor: isDark ? const Color(0xFF1C2436) : AppColors.bg,
-      selectedColor: primary,
-      // Bug fix: previously the selected-chip label kept the default
-      // (dark) text color, which was nearly unreadable against the navy
-      // selected background. Now it flips to a high-contrast color that
-      // matches whichever color is on top of `primary` in this theme.
-      labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: text),
-      secondaryLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: onPrimary),
+      backgroundColor: isDark ? const Color(0xFF1C2436) : const Color(0xFFF1F5F9),
+      selectedColor: AppColors.surfaceBlue,
+      labelStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: text),
+      secondaryLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.steelBlue),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: border),
@@ -277,8 +322,8 @@ ThemeData _buildTheme(Brightness brightness) {
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: isDark ? const Color(0xFF1A2338) : Colors.white,
-      hintStyle: TextStyle(color: muted),
-      labelStyle: TextStyle(color: muted),
+      hintStyle: TextStyle(color: muted, fontSize: 13.5),
+      labelStyle: TextStyle(color: muted, fontSize: 13.5),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 14,
         vertical: 14,
@@ -293,7 +338,7 @@ ThemeData _buildTheme(Brightness brightness) {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: primary, width: 1.8),
+        borderSide: const BorderSide(color: AppColors.steelBlue, width: 1.8),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -302,7 +347,7 @@ ThemeData _buildTheme(Brightness brightness) {
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: isDark ? const Color(0xFF1E293B) : AppColors.text,
-      contentTextStyle: const TextStyle(color: Colors.white, fontSize: 13.5),
+      contentTextStyle: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w500),
       behavior: SnackBarBehavior.floating,
       elevation: 4,
       insetPadding: const EdgeInsets.symmetric(
@@ -336,8 +381,7 @@ ThemeData _buildTheme(Brightness brightness) {
   );
 }
 
-/// Helper to show a consistent, modern success/error snackbar from
-/// anywhere in the app: `showAppSnackBar(context, 'Saved!')`.
+/// Helper to show a consistent, modern success/error snackbar from anywhere in the app.
 void showAppSnackBar(
   BuildContext context,
   String message, {
@@ -349,7 +393,7 @@ void showAppSnackBar(
     SnackBar(
       duration: duration,
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       backgroundColor: isError ? AppColors.red : AppColors.billGreen,
       content: Row(
         children: [
@@ -360,7 +404,10 @@ void showAppSnackBar(
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            child: Text(
+              message,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13.5),
+            ),
           ),
         ],
       ),

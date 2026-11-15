@@ -163,13 +163,14 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                                 horizontal: 16, vertical: 6),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? const Color(0xFF1D4ED8)
-                                  : const Color(0xFFF1F5F9),
+                                  ? const Color(0xFFEFF6FF)
+                                  : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: isSelected
-                                    ? const Color(0xFF1D4ED8)
+                                    ? const Color(0xFF2563EB)
                                     : const Color(0xFFE2E8F0),
+                                width: isSelected ? 1.4 : 1.0,
                               ),
                             ),
                             child: Text(
@@ -180,7 +181,7 @@ class _CustomerPickerScreenState extends State<CustomerPickerScreen> {
                                     ? FontWeight.w700
                                     : FontWeight.w500,
                                 color: isSelected
-                                    ? Colors.white
+                                    ? const Color(0xFF1D4ED8)
                                     : const Color(0xFF475569),
                               ),
                             ),

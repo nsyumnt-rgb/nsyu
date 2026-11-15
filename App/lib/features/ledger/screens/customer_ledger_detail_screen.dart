@@ -207,12 +207,28 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircleAvatar(
-                          radius: 19,
-                          backgroundColor: const Color(0xFF16A34A),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
                           child: Text(
                             name.isNotEmpty ? name[0].toUpperCase() : 'C',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -319,10 +335,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFE8F5E9) : Colors.transparent,
+                    color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                      color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
                       width: isSelected ? 1.4 : 1.0,
                     ),
                   ),
@@ -331,7 +347,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? const Color(0xFF16A34A) : const Color(0xFF64748B),
+                      color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
                     ),
                   ),
                 ),

@@ -467,10 +467,10 @@ class _BillScreenState extends State<BillScreen> {
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E60D5),
+              backgroundColor: const Color(0xFF2563EB),
               disabledBackgroundColor: const Color(0xFF94A3B8),
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ),

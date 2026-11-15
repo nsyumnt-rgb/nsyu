@@ -28,7 +28,7 @@ class CatalogHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF006837),
+      color: const Color(0xFF0F2756),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -54,7 +54,7 @@ class CatalogHeader extends StatelessWidget {
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00522B),
+                      color: const Color(0xFF1E3A8A),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 19),
@@ -123,12 +123,12 @@ class CatalogHeader extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add, size: 16, color: Color(0xFF006837)),
+                          Icon(Icons.add, size: 16, color: Color(0xFF2563EB)),
                           SizedBox(width: 4),
                           Text(
                             'Add Product',
                             style: TextStyle(
-                              color: Color(0xFF006837),
+                              color: Color(0xFF2563EB),
                               fontSize: 11.5,
                               fontWeight: FontWeight.w800,
                             ),
@@ -222,7 +222,7 @@ class CatalogHeader extends StatelessWidget {
                             onTap: onScanBarcode,
                             child: const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF006837)),
+                              child: Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF2563EB)),
                             ),
                           ),
                         ],
@@ -243,12 +243,12 @@ class CatalogHeader extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.tune_rounded, size: 17, color: Color(0xFF006837)),
+                          Icon(Icons.tune_rounded, size: 17, color: Color(0xFF2563EB)),
                           SizedBox(width: 4),
                           Text(
                             'Filter',
                             style: TextStyle(
-                              color: Color(0xFF006837),
+                              color: Color(0xFF2563EB),
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),

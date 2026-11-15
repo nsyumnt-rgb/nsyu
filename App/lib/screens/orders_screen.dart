@@ -49,18 +49,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     super.dispose();
   }
 
-  Color _avatarBgForName(String name) {
-    final lower = name.toLowerCase();
-    if (lower.startsWith('k')) return const Color(0xFF38BDF8); // Light Blue
-    if (lower.startsWith('g')) return const Color(0xFF14B8A6); // Teal
-    if (lower.startsWith('v')) return const Color(0xFF8B5CF6); // Purple
-    if (lower.startsWith('r')) return const Color(0xFF9333EA); // Purple dark
-    if (lower.startsWith('s')) return const Color(0xFF78716C); // Brown/Grey
-    if (lower.startsWith('a')) return const Color(0xFFF87171); // Coral/Red
-    if (lower.startsWith('m')) return const Color(0xFF2563EB); // Royal Blue
-    return const Color(0xFFF43F5E); // Pink/Rose
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -93,35 +81,39 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final totalCount = allOrdersList.length;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
-        top: false,
         child: Column(
           children: [
-            // Top Green Status Banner matching Image 6 Left
-            Container(
-              height: MediaQuery.of(context).padding.top,
-              color: const Color(0xFF16A34A),
-            ),
-
-            // Top App Bar matching Image 6 Left
+            // Top App Bar
             Container(
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               child: Row(
                 children: [
-                  // Circle Avatar 'N' in Amber
+                  // Navy-to-SteelBlue Monogram
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF59E0B),
-                      shape: BoxShape.circle,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x200F2756),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      'N',
-                      style: TextStyle(
+                    child: Text(
+                      shopName.isNotEmpty ? shopName[0].toUpperCase() : 'N',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
@@ -201,9 +193,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
               ),
             ),
 
-            // Secondary Row: Orders / All Orders (125) & Filter, + New Order button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+            // Secondary Row: Orders / All Orders (count) & Filter, + New Order button
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
               child: Row(
                 children: [
                   Expanded(
@@ -242,24 +235,42 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     icon: const Icon(Icons.filter_list_rounded, color: Color(0xFF0F172A), size: 22),
                     onPressed: _showPeriodPicker,
                   ),
-                  const SizedBox(width: 4),
-                  // Circular Green + Button
+                  const SizedBox(width: 6),
+                  // New Order Button
                   InkWell(
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const OrderCartScreen()),
                       );
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF16A34A),
-                        shape: BoxShape.circle,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x302563EB),
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      child: const Center(
-                        child: Icon(Icons.add, color: Colors.white, size: 22),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, color: Colors.white, size: 18),
+                          SizedBox(width: 4),
+                          Text(
+                            'Order',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -353,10 +364,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     duration: const Duration(milliseconds: 150),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE8F5E9) : const Color(0xFFF8FAFC),
+                      color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                        color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
                         width: isSelected ? 1.4 : 1.0,
                       ),
                     ),
@@ -365,7 +376,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? const Color(0xFF16A34A) : const Color(0xFF475569),
+                        color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
                       ),
                     ),
                   ),
@@ -409,158 +420,184 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // ORDER LIST TILES matching Reference Design
+  // ORDER LIST TILES
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildOrderTile(SavedOrder o) {
-    Color badgeBg = const Color(0xFFFEF3C7);
+    Color badgeBg = const Color(0xFFFFFBEB);
     Color badgeFg = const Color(0xFFD97706);
     String status = o.status.label;
 
     if (o.status == OrderStatus.delivered) {
-      badgeBg = const Color(0xFFDCFCE7);
-      badgeFg = const Color(0xFF16A34A);
+      badgeBg = const Color(0xFFECFDF5);
+      badgeFg = const Color(0xFF059669);
     } else if (o.status == OrderStatus.confirmed) {
-      badgeBg = const Color(0xFFE0F2FE);
-      badgeFg = const Color(0xFF0284C7);
+      badgeBg = const Color(0xFFEFF6FF);
+      badgeFg = const Color(0xFF2563EB);
     } else if (o.isBilled) {
-      badgeBg = const Color(0xFFCCFBF1);
+      badgeBg = const Color(0xFFF0FDFA);
       badgeFg = const Color(0xFF0D9488);
       status = 'Billed';
     } else if (o.status == OrderStatus.cancelled) {
-      badgeBg = const Color(0xFFFEE2E2);
+      badgeBg = const Color(0xFFFEF2F2);
       badgeFg = const Color(0xFFDC2626);
     }
 
-    final avatarBg = _avatarBgForName(o.customerName);
     final initial = o.customerName.isNotEmpty ? o.customerName[0].toUpperCase() : 'C';
 
-    return InkWell(
-      onTap: () {
-        // Find matching customer or construct lightweight model
-        final custProvider = context.read<CustomerProvider>();
-        Customer? targetCust;
-        for (final c in custProvider.customers) {
-          if (c.name.trim().toLowerCase() == o.customerName.trim().toLowerCase() ||
-              (o.customerPhone.isNotEmpty && c.mobile == o.customerPhone)) {
-            targetCust = c;
-            break;
-          }
-        }
-        final cust = targetCust ??
-            Customer(
-              id: '0',
-              name: o.customerName,
-              mobile: o.customerPhone,
-              currentBalance: 0.0,
-            );
-
-        // Open Right Screen (Customer Order Details with Overview, Bills, Orders, Payments, Ledger)
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => CustomerLedgerDetailScreen(
-              partyName: o.customerName,
-              customer: cust,
-              initialTab: 'Orders',
-            ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F2756),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: avatarBg,
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {
+            // Find matching customer or construct lightweight model
+            final custProvider = context.read<CustomerProvider>();
+            Customer? targetCust;
+            for (final c in custProvider.customers) {
+              if (c.name.trim().toLowerCase() == o.customerName.trim().toLowerCase() ||
+                  (o.customerPhone.isNotEmpty && c.mobile == o.customerPhone)) {
+                targetCust = c;
+                break;
+              }
+            }
+            final cust = targetCust ??
+                Customer(
+                  id: '0',
+                  name: o.customerName,
+                  mobile: o.customerPhone,
+                  currentBalance: 0.0,
+                );
+
+            // Open Right Screen (Customer Order Details with Overview, Bills, Orders, Payments, Ledger)
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CustomerLedgerDetailScreen(
+                  partyName: o.customerName,
+                  customer: cust,
+                  initialTab: 'Orders',
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Row 1: Customer Name & Status Badge
-                  Row(
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(13),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initial,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          o.customerName.isNotEmpty ? o.customerName : 'Walk-in Customer',
-                          style: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                      // Row 1: Customer Name & Status Badge
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              o.customerName.isNotEmpty ? o.customerName : 'Walk-in Customer',
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0F172A),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: badgeBg,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            color: badgeFg,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: badgeBg,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              status.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                                color: badgeFg,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
+                      const SizedBox(height: 4),
 
-                  // Row 2: Order # & Date ... Total Amount
-                  Row(
-                    children: [
-                      Text(
-                        'Order #${o.orderNumber}  |  ${_dateFormat.format(o.date)}',
-                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                      // Row 2: Order # & Date ... Total Amount
+                      Row(
+                        children: [
+                          Text(
+                            'Order #${o.orderNumber}  |  ${_dateFormat.format(o.date)}',
+                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '₹${_money.format(o.total)}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
                       ),
-                      const Spacer(),
-                      Text(
-                        '₹${_money.format(o.total)}',
-                        style: const TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
+                      const SizedBox(height: 4),
 
-                  // Row 3: Items count ... Chevron
-                  Row(
-                    children: [
-                      const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${o.items.length} ${o.items.length == 1 ? "item" : "items"}',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      // Row 3: Items count ... Chevron
+                      Row(
+                        children: [
+                          const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${o.items.length} ${o.items.length == 1 ? "item" : "items"}',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
+                        ],
                       ),
-                      const Spacer(),
-                      const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -581,7 +618,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ...['Today', 'This Week', 'This Month', 'Last 3 Months', 'All Time'].map(
               (p) => ListTile(
                 title: Text(p),
-                trailing: _selectedPeriodFilter == p ? const Icon(Icons.check, color: Color(0xFF16A34A)) : null,
+                trailing: _selectedPeriodFilter == p ? const Icon(Icons.check, color: Color(0xFF2563EB)) : null,
                 onTap: () {
                   setState(() => _selectedPeriodFilter = p);
                   Navigator.pop(ctx);

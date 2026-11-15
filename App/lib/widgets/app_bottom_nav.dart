@@ -167,33 +167,36 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeGreen = Color(0xFF16A34A);
-    const inactiveSlate = Color(0xFF475569);
+    const activeBlue = Color(0xFF1D4ED8);
+    const activePillBg = Color(0xFFEFF6FF);
+    const inactiveSlate = Color(0xFF64748B);
 
-    final itemColor = active ? activeGreen : inactiveSlate;
+    final itemColor = active ? activeBlue : inactiveSlate;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Center(
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFE8F5E9) : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+            color: active ? activePillBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               iconBuilder(active, itemColor),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 10.5,
+                  fontSize: 11,
                   fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                   color: itemColor,
+                  letterSpacing: -0.1,
                 ),
               ),
             ],

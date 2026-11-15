@@ -222,9 +222,9 @@ class CatalogProductCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
+              color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDCFCE7)),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Row(
               children: [
@@ -308,14 +308,14 @@ class CatalogProductCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
+              color: const Color(0xFFEFF6FF),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFDCFCE7)),
+              border: Border.all(color: const Color(0xFFDBEAFE)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.local_offer_outlined, color: Color(0xFF16A34A), size: 20),
+                const Icon(Icons.local_offer_outlined, color: Color(0xFF2563EB), size: 20),
                 const SizedBox(width: 8),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +326,7 @@ class CatalogProductCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF15803D),
+                        color: Color(0xFF1E3A8A),
                       ),
                     ),
                     Text(
@@ -334,7 +334,7 @@ class CatalogProductCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF16A34A),
+                        color: Color(0xFF1D4ED8),
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -434,7 +434,7 @@ class CatalogProductCard extends StatelessWidget {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF006837),
+                            backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
                             elevation: 0,
                             minimumSize: const Size(double.infinity, 38),

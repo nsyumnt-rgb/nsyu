@@ -90,10 +90,12 @@ class BillPaymentSection extends StatelessWidget {
               ),
               Text(
                 '₹ ${_money.format(provider.remainingOutstanding)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF16A34A),
+                  color: provider.remainingOutstanding > 0
+                      ? const Color(0xFFDC2626)
+                      : const Color(0xFF16A34A),
                 ),
               ),
             ],

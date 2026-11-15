@@ -85,8 +85,9 @@ class CartCustomerCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
+                color: const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
               ),
               child: const Row(
                 children: [
@@ -95,11 +96,11 @@ class CartCustomerCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF006837),
+                      color: Color(0xFF1D4ED8),
                     ),
                   ),
                   SizedBox(width: 2),
-                  Icon(Icons.chevron_right, size: 14, color: Color(0xFF006837)),
+                  Icon(Icons.chevron_right, size: 14, color: Color(0xFF1D4ED8)),
                 ],
               ),
             ),

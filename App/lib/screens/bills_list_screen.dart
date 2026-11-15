@@ -97,33 +97,37 @@ class _BillsListScreenState extends State<BillsListScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        top: false,
         child: Column(
           children: [
-            // Top Green Status Banner matching Image 6 Left
-            Container(
-              height: MediaQuery.of(context).padding.top,
-              color: const Color(0xFF16A34A),
-            ),
-
-            // Top App Bar matching Image 6 Left
+            // Top App Bar — Clean, White & Navy Header
             Container(
               color: Colors.white,
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
               child: Row(
                 children: [
-                  // Circle Avatar 'N' in Amber
+                  // Navy Monogram Avatar
                   Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF59E0B),
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                      ),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     alignment: Alignment.center,
-                    child: const Text(
-                      'N',
-                      style: TextStyle(
+                    child: Text(
+                      shopName.isNotEmpty ? shopName[0].toUpperCase() : 'N',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
@@ -245,7 +249,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
                     onPressed: _showPeriodPicker,
                   ),
                   const SizedBox(width: 4),
-                  // Circular Green + Button matching Image 6 Left
+                  // Primary Blue + Button
                   InkWell(
                     onTap: () {
                       Navigator.of(context).push(
@@ -256,9 +260,16 @@ class _BillsListScreenState extends State<BillsListScreen> {
                     child: Container(
                       width: 36,
                       height: 36,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF16A34A),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB),
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: const Center(
                         child: Icon(Icons.add, color: Colors.white, size: 22),

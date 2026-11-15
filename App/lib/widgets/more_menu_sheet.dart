@@ -238,17 +238,17 @@ class MoreMenuSheet extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          height: 98,
-          padding: const EdgeInsets.all(10),
+          height: 100,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
@@ -258,15 +258,16 @@ class MoreMenuSheet extends StatelessWidget {
               Container(
                 width: 38,
                 height: 38,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE8F5E9), // Soft light green circle
-                  shape: BoxShape.circle,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF), // Soft subtle blue tint
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFDBEAFE)),
                 ),
                 child: Center(
                   child: Icon(
                     icon,
                     size: 20,
-                    color: const Color(0xFF006837), // Forest green icon
+                    color: const Color(0xFF1D4ED8), // Royal blue icon
                   ),
                 ),
               ),
@@ -280,9 +281,10 @@ class MoreMenuSheet extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         color: Color(0xFF0F172A),
                         height: 1.15,
+                        letterSpacing: -0.1,
                       ),
                     ),
                   ),

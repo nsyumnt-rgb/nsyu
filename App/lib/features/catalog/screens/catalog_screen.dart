@@ -71,7 +71,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.qr_code_scanner, color: Color(0xFF006837)),
+            Icon(Icons.qr_code_scanner, color: Color(0xFF2563EB)),
             SizedBox(width: 8),
             Text(
               'Scan / Search SKU',
@@ -104,7 +104,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF006837),
+              backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -250,19 +250,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFF006837) : const Color(0xFFF8FAFC),
+                        color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF006837) : const Color(0xFFE2E8F0),
-                          width: 1,
+                          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                          width: isSelected ? 1.4 : 1,
                         ),
                       ),
                       child: Text(
                         cat,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
                         ),
                       ),
                     ),
@@ -330,7 +330,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: Color(0xFF006837)),
+            CircularProgressIndicator(color: Color(0xFF2563EB)),
             SizedBox(height: 14),
             Text(
               'Loading products from catalog...',

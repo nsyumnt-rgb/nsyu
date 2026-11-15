@@ -190,7 +190,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   return ChoiceChip(
                     label: Text(cat),
                     selected: isSelected,
-                    selectedColor: const Color(0xFF006837),
+                    selectedColor: const Color(0xFF2563EB),
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : const Color(0xFF1E293B),
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -209,7 +209,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 height: 44,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF006837),
+                    backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
@@ -233,7 +233,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.qr_code_scanner, color: Color(0xFF006837)),
+            Icon(Icons.qr_code_scanner, color: Color(0xFF2563EB)),
             SizedBox(width: 8),
             Text('Scan / Search SKU',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -264,7 +264,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF006837),
+              backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -363,7 +363,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               child: const Text(
                 'Reset Filters',
                 style: TextStyle(
-                  color: Color(0xFF006837),
+                  color: Color(0xFF2563EB),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -411,7 +411,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           children: [
             // 1. TOP HEADER & APPBAR
             Container(
-              color: const Color(0xFF006837),
+              color: const Color(0xFF0F2756),
               child: SafeArea(
                 bottom: false,
                 child: Padding(
@@ -436,7 +436,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF00522B),
+                              color: const Color(0xFF1E3A8A),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(Icons.inventory_2_outlined,
@@ -463,7 +463,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                                    color: Colors.white70,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -486,12 +486,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.add, size: 16, color: Color(0xFF006837)),
+                                  Icon(Icons.add, size: 16, color: Color(0xFF2563EB)),
                                   SizedBox(width: 4),
                                   Text(
                                     'Add Product',
                                     style: TextStyle(
-                                      color: Color(0xFF006837),
+                                      color: Color(0xFF2563EB),
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w800,
                                     ),
@@ -550,7 +550,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                     child: const Padding(
                                       padding: EdgeInsets.symmetric(horizontal: 10),
                                       child: Icon(Icons.qr_code_scanner,
-                                          size: 18, color: Color(0xFF006837)),
+                                          size: 18, color: Color(0xFF2563EB)),
                                     ),
                                   ),
                                 ],
@@ -571,12 +571,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               child: const Row(
                                 children: [
                                   Icon(Icons.filter_alt_outlined,
-                                      size: 17, color: Color(0xFF006837)),
+                                      size: 17, color: Color(0xFF2563EB)),
                                   SizedBox(width: 4),
                                   Text(
                                     'Filter',
                                     style: TextStyle(
-                                      color: Color(0xFF006837),
+                                      color: Color(0xFF2563EB),
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -611,13 +611,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFF006837) : Colors.white,
+                            color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: isSelected
-                                  ? const Color(0xFF006837)
+                                  ? const Color(0xFF2563EB)
                                   : const Color(0xFFE2E8F0),
-                              width: 1,
+                              width: isSelected ? 1.4 : 1,
                             ),
                           ),
                           child: Text(
@@ -627,7 +627,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               fontWeight:
                                   isSelected ? FontWeight.w800 : FontWeight.w500,
                               color: isSelected
-                                  ? Colors.white
+                                  ? const Color(0xFF1D4ED8)
                                   : const Color(0xFF334155),
                             ),
                           ),

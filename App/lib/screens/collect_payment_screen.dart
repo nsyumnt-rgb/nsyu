@@ -134,7 +134,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF16A34A),
+              backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -277,7 +277,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF006837),
+                      backgroundColor: const Color(0xFF2563EB),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -328,11 +328,25 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
             margin: const EdgeInsets.only(bottom: 8),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: const Color(0xFF38BDF8),
+              leading: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
                 child: Text(
                   c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
               title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -388,9 +402,18 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                       }
                     },
                   ),
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: const Color(0xFF38BDF8),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    alignment: Alignment.center,
                     child: Text(
                       initial,
                       style: const TextStyle(
@@ -418,7 +441,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                         ),
                         const SizedBox(height: 1),
                         Text(
-                          '₹${_money.format(due > 0 ? due : 4510)} Due',
+                          '₹${_money.format(due > 0 ? due : 0)} Due',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -454,13 +477,13 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Thick Green Underline Accent
+                  // Thick Royal Blue Underline Accent
                   Center(
                     child: Container(
                       width: 130,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF16A34A),
+                        color: const Color(0xFF2563EB),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -480,12 +503,15 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? Colors.white : const Color(0xFF334155),
+                            color: selected ? const Color(0xFF1D4ED8) : const Color(0xFF334155),
                           ),
                         ),
                         selected: selected,
-                        selectedColor: const Color(0xFF16A34A),
+                        selectedColor: const Color(0xFFEFF6FF),
                         backgroundColor: const Color(0xFFF1F5F9),
+                        side: BorderSide(
+                          color: selected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                        ),
                         onSelected: (_) => setState(() => _method = m),
                       );
                     }).toList(),
@@ -496,7 +522,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   _buildActionCard(
                     leadingIcon: Icons.description_outlined,
                     title: _notes.isNotEmpty ? _notes : 'Add Notes',
-                    trailing: const Icon(Icons.mic_none, color: Color(0xFF16A34A), size: 22),
+                    trailing: const Icon(Icons.mic_none, color: Color(0xFF2563EB), size: 22),
                     onTap: _showAddNotesDialog,
                   ),
                   const SizedBox(height: 14),
@@ -515,25 +541,25 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   _buildActionCard(
                     leadingIcon: Icons.camera_alt_outlined,
                     title: 'Add Bills',
-                    trailing: const Icon(Icons.add, color: Color(0xFF16A34A), size: 22),
+                    trailing: const Icon(Icons.add, color: Color(0xFF2563EB), size: 22),
                     onTap: () {
                       showAppSnackBar(context, 'Invoice/Bill attachment ready');
                     },
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Wide Green Button: ✓ Confirm matching Image 3 ──
+                  // ── Wide Royal Blue Button: ✓ Confirm ──
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
                       onPressed: _isSubmitting ? null : _confirmAndSavePayment,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF16A34A),
+                        backgroundColor: const Color(0xFF2563EB),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(26),
+                          borderRadius: BorderRadius.circular(14),
                         ),
                       ),
                       child: _isSubmitting

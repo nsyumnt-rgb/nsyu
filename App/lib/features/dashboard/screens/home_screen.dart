@@ -379,115 +379,173 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  DashboardQuickActionItem(
-                    label: 'New Bill',
-                    icon: Icons.receipt_long_rounded,
-                    color: const Color(0xFFEA580C),
-                    bg: const Color(0xFFFFF7ED),
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const BillScreen())),
+                      DashboardQuickActionItem(
+                        label: 'New Bill',
+                        icon: Icons.receipt_long_rounded,
+                        color: const Color(0xFF2563EB),
+                        bg: const Color(0xFFEFF6FF),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const BillScreen())),
+                      ),
+                      DashboardQuickActionItem(
+                        label: 'New Order',
+                        icon: Icons.shopping_bag_outlined,
+                        color: const Color(0xFF059669),
+                        bg: const Color(0xFFECFDF5),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const OrderCartScreen())),
+                      ),
+                      DashboardQuickActionItem(
+                        label: 'Add Customer',
+                        icon: Icons.person_add_alt_1_rounded,
+                        color: const Color(0xFF0F2756),
+                        bg: const Color(0xFFF1F5F9),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const CustomerPickerScreen())),
+                      ),
+                      DashboardQuickActionItem(
+                        label: 'Add Product',
+                        icon: Icons.add_box_outlined,
+                        color: const Color(0xFF0D9488),
+                        bg: const Color(0xFFF0FDFA),
+                        onTap: () => _showAddProductDialog(catalog),
+                      ),
+                    ],
                   ),
-                  DashboardQuickActionItem(
-                    label: 'New Order',
-                    icon: Icons.shopping_bag_outlined,
-                    color: const Color(0xFF16A34A),
-                    bg: const Color(0xFFF0FDF4),
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const OrderCartScreen())),
-                  ),
-                  DashboardQuickActionItem(
-                    label: 'Add Product',
-                    icon: Icons.add_box_outlined,
-                    color: const Color(0xFF0D9488),
-                    bg: const Color(0xFFF0FDFA),
-                    onTap: () => _showAddProductDialog(catalog),
-                  ),
-                  DashboardQuickActionItem(
-                    label: 'Add Customer',
-                    icon: Icons.person_add_alt_1_outlined,
-                    color: const Color(0xFF1D4ED8),
-                    bg: const Color(0xFFEFF6FF),
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const CustomerPickerScreen())),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
+                  const SizedBox(height: 22),
 
-              // Recent Transactions preview
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Recent Bills',
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A))),
-                  TextButton(
-                    onPressed: () => widget.onNavigate(2),
-                    child: const Text('View All',
-                        style: TextStyle(
-                            color: Color(0xFF1D4ED8),
-                            fontWeight: FontWeight.w600)),
+                  // Recent Transactions preview
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Recent Invoices',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0F172A),
+                              letterSpacing: -0.2)),
+                      TextButton(
+                        onPressed: () => widget.onNavigate(1),
+                        child: const Text('View All',
+                            style: TextStyle(
+                                color: Color(0xFF2563EB),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13)),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              if (bills.recentBills.isEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0))),
-                  child: const Center(
-                      child: Text('No bills yet today',
-                          style: TextStyle(color: Color(0xFF94A3B8)))),
-                )
-              else
-                for (final b in bills.recentBills.take(3))
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(b.billNumber,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                    color: Color(0xFF0F172A))),
-                            Text(
-                                b.customerName.isNotEmpty
-                                    ? b.customerName
-                                    : 'Walk-in Customer',
-                                style: const TextStyle(
-                                    fontSize: 11.5,
-                                    color: Color(0xFF64748B))),
+                  const SizedBox(height: 8),
+                  if (bills.recentBills.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0))),
+                      child: const Center(
+                          child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.receipt_outlined, size: 36, color: Color(0xFFCBD5E1)),
+                          SizedBox(height: 8),
+                          Text('No bills generated yet today',
+                              style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
+                        ],
+                      )),
+                    )
+                  else
+                    for (final b in bills.recentBills.take(4))
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
-                        Text('₹${money.format(b.total)}',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: Color(0xFF1D4ED8))),
-                      ],
-                    ),
-                  ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.description_outlined, size: 20, color: Color(0xFF2563EB)),
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(b.billNumber,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 13.5,
+                                            color: Color(0xFF0F172A))),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                        b.customerName.isNotEmpty
+                                            ? b.customerName
+                                            : 'Walk-in Customer',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF64748B))),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text('₹${money.format(b.total)}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14.5,
+                                        color: Color(0xFF0F172A))),
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: b.due <= 0
+                                        ? const Color(0xFFECFDF5)
+                                        : const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    b.due <= 0 ? 'PAID' : 'DUE',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: b.due <= 0
+                                          ? const Color(0xFF059669)
+                                          : const Color(0xFFDC2626),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
             ],
           ),
         ),
