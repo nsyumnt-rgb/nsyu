@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../models/bill_pdf_data.dart';
 import '../../services/bill_pdf_service.dart';
 import '../../services/customer_portal_service.dart';
+import '../../theme/app_theme.dart';
 
 class PortalBillDetailScreen extends StatefulWidget {
   final int billId;
@@ -72,9 +73,7 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
       await BillPdfService.previewAndPrint(pdfData);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate PDF: $e')),
-        );
+        showAppSnackBar(context, 'Failed to generate PDF: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _generatingPdf = false);
@@ -89,12 +88,22 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
       await BillPdfService.shareBill(pdfData);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share PDF: $e')),
-        );
+        showAppSnackBar(context, 'Failed to share PDF: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _generatingPdf = false);
+    }
+  }
+
+  StatusChipVariant _getPaymentStatusVariant(String status) {
+    switch (status.toUpperCase()) {
+      case 'PAID':
+        return StatusChipVariant.success;
+      case 'PARTIAL':
+        return StatusChipVariant.warning;
+      case 'UNPAID':
+      default:
+        return StatusChipVariant.danger;
     }
   }
 
@@ -102,22 +111,59 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
+        backgroundColor: AppColors.bg,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1D4ED8),
-          title: const Text('Invoice Details', style: TextStyle(color: Colors.white)),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.navy900, AppColors.navy700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text('Invoice Details', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
         ),
-        body: const Center(child: CircularProgressIndicator(color: Color(0xFF1D4ED8))),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SkeletonLoader.list(count: 3),
+        ),
       );
     }
 
     if (_error != null || _bill == null) {
       return Scaffold(
+        backgroundColor: AppColors.bg,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1D4ED8),
-          title: const Text('Invoice Details', style: TextStyle(color: Colors.white)),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.navy900, AppColors.navy700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text('Invoice Details', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
         ),
         body: Center(
-          child: Text(_error ?? 'Invoice not found', style: const TextStyle(color: Color(0xFF64748B))),
+          child: EmptyState(
+            icon: Icons.error_outline_rounded,
+            title: 'Invoice Not Found',
+            subtitle: _error ?? 'Unable to find invoice details.',
+            buttonLabel: 'Retry',
+            onButtonPressed: _fetchBill,
+          ),
         ),
       );
     }
@@ -138,17 +184,31 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
     final dateStr = dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt)) : 'N/A';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.navy900, AppColors.navy700],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           invNum,
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.white),
+            icon: _generatingPdf
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.share_outlined, color: Colors.white),
             tooltip: 'Share Invoice PDF',
             onPressed: _generatingPdf ? null : _handleSharePdf,
           ),
@@ -164,17 +224,9 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Bill Header Card
-            Container(
+            // ── 1. Bill Header & Billed-To Card ──
+            AppCard(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                ],
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -184,67 +236,66 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
                       Expanded(
                         child: Text(
                           shop['name']?.toString() ?? 'NSYU Shop',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.navy900),
                         ),
                       ),
-                      _buildStatusBadge(payStatus),
+                      StatusChip(
+                        label: payStatus,
+                        variant: _getPaymentStatusVariant(payStatus),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text('Invoice Date: $dateStr', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                  Text('Invoice Date: $dateStr', style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
                   if (shop['address'] != null)
-                    Text(shop['address'].toString(), style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    Text(shop['address'].toString(), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
                   if (shop['gstin'] != null)
-                    Text('GSTIN: ${shop['gstin']}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
-                  const Divider(height: 24),
+                    Text('GSTIN: ${shop['gstin']}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                  const Divider(height: 24, color: AppColors.border),
 
                   // Billed To
-                  const Text('BILLED TO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8), letterSpacing: 0.5)),
+                  const Text(
+                    'BILLED TO',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     cust['name']?.toString() ?? 'Customer',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.navy900),
                   ),
                   if (cust['phone'] != null)
-                    Text('Mobile: +91 ${cust['phone']}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                    Text('Mobile: +91 ${cust['phone']}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   if (cust['address'] != null)
-                    Text(cust['address'].toString(), style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                    Text(cust['address'].toString(), style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Items List
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                ],
-              ),
+            // ── 2. Purchased Items & Financial Breakdown ──
+            AppCard(
+              padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Purchased Products',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF0F172A)),
+                          'Purchased Items',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy900),
                         ),
                         Text(
-                          '${items.length} items',
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                          '${items.length} ${items.length == 1 ? "item" : "items"}',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, color: AppColors.border),
                   ...items.map((it) {
                     final pName = it['product_name']?.toString() ?? 'Item';
                     final q = ((it['quantity'] ?? 1) as num).toInt();
@@ -254,9 +305,9 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
                     final lineTot = ((it['line_total'] ?? it['total'] ?? q * rate) as num).toDouble();
 
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                        border: Border(bottom: BorderSide(color: AppColors.border, width: 0.5)),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,19 +318,21 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
                               children: [
                                 Text(
                                   pName,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   'Qty: $q × ₹${rate.toStringAsFixed(2)}  •  Subtotal: ₹${lineSub.toStringAsFixed(2)}${lineGst > 0 ? " • GST: ₹${lineGst.toStringAsFixed(2)}" : ""}',
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
                                 ),
                               ],
                             ),
                           ),
-                          Text(
-                            '₹${lineTot.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF0F172A)),
+                          AmountText(
+                            amount: lineTot,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
                           ),
                         ],
                       ),
@@ -288,23 +341,23 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
 
                   // Totals Section
                   Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        _buildSummaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
+                        _buildSummaryLine('Subtotal', subtotal),
                         if (discount > 0)
-                          _buildSummaryRow('Discount', '-₹${discount.toStringAsFixed(2)}', color: const Color(0xFF16A34A)),
+                          _buildSummaryLine('Discount', -discount, color: AppColors.success),
                         if (tax > 0)
-                          _buildSummaryRow('GST Tax', '₹${tax.toStringAsFixed(2)}'),
-                        const Divider(height: 18),
-                        _buildSummaryRow('Total Amount', '₹${total.toStringAsFixed(2)}', isBold: true, fontSize: 15),
+                          _buildSummaryLine('GST Tax', tax),
+                        const Divider(height: 20, color: AppColors.border),
+                        _buildSummaryLine('Total Amount', total, isBold: true, fontSize: 15),
                         const SizedBox(height: 6),
-                        _buildSummaryRow('Paid Amount', '₹${paid.toStringAsFixed(2)}', color: const Color(0xFF16A34A), isBold: true),
+                        _buildSummaryLine('Paid Amount', paid, color: AppColors.success, isBold: true),
                         const SizedBox(height: 6),
-                        _buildSummaryRow(
+                        _buildSummaryLine(
                           'Remaining Due',
-                          '₹${balanceDue > 0 ? balanceDue.toStringAsFixed(2) : "0.00"}',
-                          color: balanceDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                          balanceDue > 0 ? balanceDue : 0,
+                          color: balanceDue > 0 ? AppColors.danger : AppColors.success,
                           isBold: true,
                           fontSize: 15,
                         ),
@@ -317,26 +370,18 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
 
             const SizedBox(height: 16),
 
-            // Payment History Section
+            // ── 3. Payment History Section ──
             if (payments.isNotEmpty) ...[
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                  ],
-                ),
+              AppCard(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Payment History',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF0F172A)),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy900),
                     ),
-                    const Divider(height: 16),
+                    const Divider(height: 20, color: AppColors.border),
                     ...payments.map((pm) {
                       final pAmt = ((pm['amount'] ?? 0) as num).toDouble();
                       final pMode = (pm['payment_mode'] ?? pm['payment_method'] ?? 'CASH').toString().toUpperCase();
@@ -344,20 +389,22 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
                       final pDateStr = pDt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(pDt)) : '';
 
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 10),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.check_circle, size: 16, color: Color(0xFF16A34A)),
+                                const Icon(Icons.check_circle_rounded, size: 18, color: AppColors.success),
                                 const SizedBox(width: 8),
-                                Text('$pDateStr ($pMode)', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+                                Text('$pDateStr ($pMode)', style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary)),
                               ],
                             ),
-                            Text(
-                              '₹${pAmt.toStringAsFixed(2)}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF16A34A)),
+                            AmountText(
+                              amount: pAmt,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.success,
                             ),
                           ],
                         ),
@@ -369,33 +416,21 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Action Buttons
+            // ── 4. Action Buttons ──
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF1D4ED8),
-                      side: const BorderSide(color: Color(0xFF1D4ED8)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.print_outlined, size: 18),
-                    label: const Text('Print / Preview', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: SecondaryButton(
+                    label: 'Print / Preview',
+                    icon: Icons.print_outlined,
                     onPressed: _generatingPdf ? null : _handlePrintPdf,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1D4ED8),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.share_outlined, size: 18),
-                    label: const Text('Share PDF', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: PrimaryButton(
+                    label: 'Share PDF',
+                    icon: Icons.share_outlined,
                     onPressed: _generatingPdf ? null : _handleSharePdf,
                   ),
                 ),
@@ -408,7 +443,7 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isBold = false, Color? color, double fontSize = 12.5}) {
+  Widget _buildSummaryLine(String label, double amount, {bool isBold = false, Color? color, double fontSize = 12.5}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -419,39 +454,16 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: const Color(0xFF64748B),
+              color: isBold ? AppColors.navy900 : AppColors.textSecondary,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
-              color: color ?? const Color(0xFF0F172A),
-            ),
+          AmountText(
+            amount: amount,
+            fontSize: fontSize,
+            fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+            color: color ?? AppColors.textPrimary,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    Color bg = const Color(0xFFFEE2E2);
-    Color text = const Color(0xFFDC2626);
-    if (status == 'PAID') {
-      bg = const Color(0xFFDCFCE7);
-      text = const Color(0xFF16A34A);
-    } else if (status == 'PARTIAL') {
-      bg = const Color(0xFFFEF3C7);
-      text = const Color(0xFFB45309);
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(
-        status,
-        style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.bold),
       ),
     );
   }

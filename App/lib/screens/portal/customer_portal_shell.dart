@@ -4,8 +4,8 @@ import '../../providers/customer_portal_provider.dart';
 import '../../theme/app_theme.dart';
 import 'portal_home_screen.dart';
 import 'portal_catalog_screen.dart';
-import 'portal_cart_screen.dart';
 import 'portal_orders_screen.dart';
+import 'portal_ledger_screen.dart';
 import 'portal_more_screen.dart';
 
 class CustomerPortalShell extends StatefulWidget {
@@ -19,8 +19,8 @@ class _CustomerPortalShellState extends State<CustomerPortalShell> {
   final List<Widget> _pages = const [
     PortalHomeScreen(),
     PortalCatalogScreen(),
-    PortalCartScreen(),
     PortalOrdersScreen(),
+    PortalLedgerScreen(),
     PortalMoreScreen(),
   ];
 
@@ -35,9 +35,8 @@ class _CustomerPortalShellState extends State<CustomerPortalShell> {
   @override
   Widget build(BuildContext context) {
     final portal = context.watch<CustomerPortalProvider>();
-    final cartCount = portal.cartItemCount;
     final unread = portal.unreadNotifications;
-    final currentIndex = portal.selectedTabIndex;
+    final currentIndex = portal.selectedTabIndex.clamp(0, _pages.length - 1);
 
     return Scaffold(
       body: IndexedStack(
@@ -63,25 +62,15 @@ class _CustomerPortalShellState extends State<CustomerPortalShell> {
             selectedIcon: Icon(Icons.grid_view, color: AppColors.navy900),
             label: 'Catalog',
           ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: cartCount > 0,
-              label: Text(cartCount > 99 ? '99+' : '$cartCount'),
-              backgroundColor: AppColors.danger,
-              child: const Icon(Icons.shopping_cart_outlined),
-            ),
-            selectedIcon: Badge(
-              isLabelVisible: cartCount > 0,
-              label: Text(cartCount > 99 ? '99+' : '$cartCount'),
-              backgroundColor: AppColors.danger,
-              child: const Icon(Icons.shopping_cart, color: AppColors.navy900),
-            ),
-            label: 'Cart',
-          ),
           const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long, color: AppColors.navy900),
             label: 'Orders',
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            selectedIcon: Icon(Icons.account_balance_wallet, color: AppColors.navy900),
+            label: 'Ledger',
           ),
           NavigationDestination(
             icon: Badge(

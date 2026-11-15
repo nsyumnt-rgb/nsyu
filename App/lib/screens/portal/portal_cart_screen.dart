@@ -136,7 +136,10 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                       ),
                     );
                   } else {
-                    portal.switchTab(3);
+                    portal.switchTab(2);
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
                   }
                 },
               ),
@@ -145,6 +148,9 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                 onPressed: () {
                   Navigator.pop(ctx);
                   portal.switchTab(1); // Back to Catalog
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
                 },
                 child: const Text(
                   'Continue Shopping',
@@ -185,6 +191,12 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
           ),
         ),
         elevation: 0,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         title: Text(
           items.isNotEmpty ? 'My Cart (${items.length} items)' : 'My Cart',
           style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
@@ -228,7 +240,12 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                 title: 'Your Cart is Empty',
                 subtitle: 'Browse the catalog to add products to your cart.',
                 buttonLabel: 'Explore Catalog',
-                onButtonPressed: () => portal.switchTab(1),
+                onButtonPressed: () {
+                  portal.switchTab(1);
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
+                },
               ),
             )
           : SingleChildScrollView(

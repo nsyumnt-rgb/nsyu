@@ -9,7 +9,7 @@ import 'portal_notifications_screen.dart';
 import 'portal_order_detail_screen.dart';
 import 'portal_bill_detail_screen.dart';
 import 'portal_bills_screen.dart';
-import 'portal_ledger_screen.dart';
+import 'portal_cart_screen.dart';
 
 class PortalHomeScreen extends StatefulWidget {
   const PortalHomeScreen({super.key});
@@ -93,6 +93,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     final totalOrders = (dbMetrics?['totalOrders'] as num?)?.toInt() ?? _recentOrders.length;
     final pendingOrders = (dbMetrics?['pendingOrders'] as num?)?.toInt() ?? 0;
     final unread = portal.unreadNotifications;
+    final cartCount = portal.cartItemCount;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -125,6 +126,21 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Badge(
+              isLabelVisible: cartCount > 0,
+              label: Text('$cartCount'),
+              backgroundColor: AppColors.warning,
+              child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+            ),
+            tooltip: 'My Cart',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PortalCartScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: Badge(
               isLabelVisible: unread > 0,
@@ -169,12 +185,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
               // ── Hero Outstanding Balance Card ──
               AppCard(
                 padding: const EdgeInsets.all(18),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PortalLedgerScreen()),
-                  );
-                },
+                onTap: () => portal.switchTab(3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -216,9 +227,9 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                               ? 'You have advance deposit credit'
                               : 'No pending payments on your account'),
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
                     ),
                   ],
                 ),
@@ -252,7 +263,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                       subtitle: 'Placed',
                       icon: Icons.shopping_bag_outlined,
                       color: AppColors.blue600,
-                      onTap: () => portal.switchTab(3),
+                      onTap: () => portal.switchTab(2),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -263,7 +274,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                       subtitle: 'Active',
                       icon: Icons.hourglass_top_rounded,
                       color: pendingOrders > 0 ? AppColors.warning : AppColors.textSecondary,
-                      onTap: () => portal.switchTab(3),
+                      onTap: () => portal.switchTab(2),
                     ),
                   ),
                 ],
@@ -281,12 +292,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'My Ledger',
                       subtitle: 'Statement & Balance',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const PortalLedgerScreen()),
-                        );
-                      },
+                      onTap: () => portal.switchTab(3),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -322,7 +328,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                       icon: Icons.local_shipping_outlined,
                       title: 'My Orders',
                       subtitle: 'Track Deliveries',
-                      onTap: () => portal.switchTab(3),
+                      onTap: () => portal.switchTab(2),
                     ),
                   ),
                 ],

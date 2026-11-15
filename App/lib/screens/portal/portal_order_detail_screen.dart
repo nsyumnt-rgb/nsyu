@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/customer_portal_service.dart';
+import '../../theme/app_theme.dart';
 import 'portal_bill_detail_screen.dart';
 
 class PortalOrderDetailScreen extends StatefulWidget {
@@ -42,13 +43,20 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Cancel Order?', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to cancel this pending order? This action cannot be reversed.'),
+        content: const Text(
+          'Are you sure you want to cancel this pending order? This action cannot be reversed.',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Back')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Keep Order', style: TextStyle(color: AppColors.textSecondary)),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: AppColors.danger,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Yes, Cancel Order'),
@@ -64,21 +72,11 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
       await _service.cancelOrder(widget.orderId);
       await _fetchOrder();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Order has been cancelled successfully.'),
-            backgroundColor: Color(0xFF16A34A),
-          ),
-        );
+        showAppSnackBar(context, 'Order has been cancelled successfully.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
+        showAppSnackBar(context, e.toString().replaceAll('Exception: ', ''), isError: true);
       }
     } finally {
       if (mounted) setState(() => _cancelling = false);
@@ -110,22 +108,59 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
+        backgroundColor: AppColors.bg,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1D4ED8),
-          title: const Text('Order Details', style: TextStyle(color: Colors.white)),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.navy900, AppColors.navy700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text('Order Details', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
         ),
-        body: const Center(child: CircularProgressIndicator(color: Color(0xFF1D4ED8))),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SkeletonLoader.list(count: 3),
+        ),
       );
     }
 
     if (_error != null || _order == null) {
       return Scaffold(
+        backgroundColor: AppColors.bg,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1D4ED8),
-          title: const Text('Order Details', style: TextStyle(color: Colors.white)),
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.navy900, AppColors.navy700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text('Order Details', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
         ),
         body: Center(
-          child: Text(_error ?? 'Order not found', style: const TextStyle(color: Color(0xFF64748B))),
+          child: EmptyState(
+            icon: Icons.error_outline_rounded,
+            title: 'Unable to Load Order',
+            subtitle: _error ?? 'Order details could not be found.',
+            buttonLabel: 'Retry',
+            onButtonPressed: _fetchOrder,
+          ),
         ),
       );
     }
@@ -148,13 +183,25 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
     final isCancelled = status.toLowerCase() == 'cancelled' || status.toLowerCase() == 'rejected';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.navy900, AppColors.navy700],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
-          'Order #$orderNum',
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          '#$orderNum',
+          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -162,17 +209,9 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Order Workflow Timeline Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                ],
-              ),
+            // ── 1. Order Status Tracking Stepper ──
+            AppCard(
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -181,93 +220,126 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
                     children: [
                       const Text(
                         'ORDER STATUS TRACKER',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                      Text(dateStr, style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
+                      Text(
+                        dateStr,
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 18),
 
                   if (isCancelled)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEE2E2),
-                        borderRadius: BorderRadius.circular(10),
+                        color: AppColors.dangerBg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFECACA)),
                       ),
                       child: Column(
                         children: [
                           const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 18),
-                              SizedBox(width: 6),
+                              Icon(Icons.cancel_rounded, color: AppColors.danger, size: 20),
+                              SizedBox(width: 8),
                               Text(
                                 'Order Cancelled / Rejected',
-                                style: TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.bold, fontSize: 13),
+                                style: TextStyle(
+                                  color: AppColors.danger,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
                               ),
                             ],
                           ),
                           if (cancelReason != null && cancelReason.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 6),
                             Text(
                               'Reason: $cancelReason',
-                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF7F1D1D)),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12, color: Color(0xFF991B1B)),
                             ),
                           ],
                         ],
                       ),
                     )
                   else
-                    // 5-step workflow tracker
+                    // 5-step visual tracking timeline
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: workflowSteps.asMap().entries.map((entry) {
                         final idx = entry.key;
                         final stepName = entry.value;
-                        final isPassed = currentStepIdx >= idx;
+                        final isPassed = currentStepIdx > idx;
                         final isCurrent = currentStepIdx == idx;
 
-                        return Column(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: isCurrent
-                                    ? const Color(0xFF1D4ED8)
-                                    : isPassed
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFFF1F5F9),
-                                shape: BoxShape.circle,
-                                border: isCurrent ? Border.all(color: const Color(0xFFDBEAFE), width: 3) : null,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  isPassed ? '✓' : '${idx + 1}',
-                                  style: TextStyle(
-                                    color: (isPassed || isCurrent) ? Colors.white : const Color(0xFF94A3B8),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                        Color circleBg;
+                        Color circleFg;
+                        Border? circleBorder;
+
+                        if (isCurrent) {
+                          circleBg = AppColors.navy900;
+                          circleFg = Colors.white;
+                          circleBorder = Border.all(color: AppColors.blue100, width: 3);
+                        } else if (isPassed) {
+                          circleBg = AppColors.successBg;
+                          circleFg = AppColors.success;
+                          circleBorder = Border.all(color: const Color(0xFFBBF7D0));
+                        } else {
+                          circleBg = AppColors.bg;
+                          circleFg = AppColors.textSecondary;
+                          circleBorder = Border.all(color: AppColors.border);
+                        }
+
+                        return Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: circleBg,
+                                  shape: BoxShape.circle,
+                                  border: circleBorder,
+                                ),
+                                child: Center(
+                                  child: isPassed
+                                      ? const Icon(Icons.check_rounded, size: 16, color: AppColors.success)
+                                      : Text(
+                                          '${idx + 1}',
+                                          style: TextStyle(
+                                            color: circleFg,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              stepName,
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                                color: isCurrent
-                                    ? const Color(0xFF1D4ED8)
-                                    : isPassed
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF94A3B8),
+                              const SizedBox(height: 6),
+                              Text(
+                                stepName,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                                  color: isCurrent
+                                      ? AppColors.navy900
+                                      : (isPassed ? AppColors.success : AppColors.textSecondary),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         );
                       }).toList(),
                     ),
@@ -275,32 +347,46 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
               ),
             ),
 
+            // ── 2. Converted Invoice Banner (if fulfilled) ──
             if (convertedSaleId != null) ...[
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: AppColors.blue50,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  border: Border.all(color: AppColors.blue100),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.receipt_long, color: Color(0xFF1D4ED8), size: 22),
-                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.receipt_long_rounded, color: AppColors.navy900, size: 20),
+                    ),
+                    const SizedBox(width: 12),
                     const Expanded(
-                      child: Text(
-                        'Tax Invoice generated for this fulfilled order.',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Tax Invoice Generated',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.navy900),
+                          ),
+                          Text(
+                            'Official bill is available for download.',
+                            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          ),
+                        ],
                       ),
                     ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1D4ED8),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.navy900,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () {
@@ -309,73 +395,84 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
                           MaterialPageRoute(builder: (_) => PortalBillDetailScreen(billId: convertedSaleId)),
                         );
                       },
-                      child: const Text('View Bill', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                      child: const Text('View Bill', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
               ),
             ],
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Delivery Details Card
+            // ── 3. Delivery Address Card ──
             if (shippingAddress != null && shippingAddress.isNotEmpty) ...[
-              Container(
+              AppCard(
                 padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, color: Color(0xFF1D4ED8), size: 20),
-                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.location_on_outlined, color: AppColors.blue600, size: 20),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Delivery Address', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                          Text(shippingAddress, style: const TextStyle(fontSize: 12.5, color: Color(0xFF0F172A), fontWeight: FontWeight.w600)),
+                          const Text(
+                            'DELIVERY ADDRESS',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textSecondary,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            shippingAddress,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
             ],
 
-            // Ordered Items
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                ],
-              ),
+            // ── 4. Ordered Products & Price Breakdown ──
+            AppCard(
+              padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(16),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           'Ordered Products',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF0F172A)),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy900),
                         ),
                         Text(
-                          '${items.length} items',
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                          '${items.length} ${items.length == 1 ? "item" : "items"}',
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, color: AppColors.border),
                   ...items.map((it) {
                     final pName = it['product_name']?.toString() ?? 'Product';
                     final q = ((it['quantity'] ?? 1) as num).toInt();
@@ -383,9 +480,9 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
                     final lineTot = ((it['line_total'] ?? q * rate) as num).toDouble();
 
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+                        border: Border(bottom: BorderSide(color: AppColors.border, width: 0.5)),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -396,37 +493,61 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
                               children: [
                                 Text(
                                   pName,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   'Qty: $q × ₹${rate.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
                                 ),
                               ],
                             ),
                           ),
-                          Text(
-                            '₹${lineTot.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF0F172A)),
+                          AmountText(
+                            amount: lineTot,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
                           ),
                         ],
                       ),
                     );
                   }),
 
-                  // Financial Summary
+                  // Price Summary Lines
                   Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        _buildSummaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
+                        _buildSummaryLine('Subtotal', subtotal),
                         if (discount > 0)
-                          _buildSummaryRow('Discount', '-₹${discount.toStringAsFixed(2)}', color: const Color(0xFF16A34A)),
+                          _buildSummaryLine('Discount', -discount, color: AppColors.success),
                         if (tax > 0)
-                          _buildSummaryRow('GST Tax', '₹${tax.toStringAsFixed(2)}'),
-                        const Divider(height: 18),
-                        _buildSummaryRow('Order Total', '₹${total.toStringAsFixed(2)}', isBold: true, fontSize: 15, color: const Color(0xFF1D4ED8)),
+                          _buildSummaryLine('GST Tax', tax),
+                        const Divider(height: 20, color: AppColors.border),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Grand Total',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.navy900,
+                              ),
+                            ),
+                            AmountText(
+                              amount: total,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.navy900,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -434,21 +555,15 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // Cancel Order Action if Pending
+            // ── 5. Cancel Action if Pending ──
             if (status.toLowerCase() == 'pending')
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFDC2626),
-                    side: const BorderSide(color: Color(0xFFDC2626)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  icon: const Icon(Icons.cancel_outlined, size: 18),
-                  label: Text(_cancelling ? 'Cancelling Order...' : 'Cancel Order'),
+                child: SecondaryButton(
+                  label: _cancelling ? 'Cancelling Order...' : 'Cancel Order',
+                  icon: Icons.cancel_outlined,
                   onPressed: _cancelling ? null : _handleCancel,
                 ),
               ),
@@ -460,7 +575,7 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isBold = false, Color? color, double fontSize = 12.5}) {
+  Widget _buildSummaryLine(String label, double amount, {Color? color}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -468,19 +583,17 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: const Color(0xFF64748B),
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
-              color: color ?? const Color(0xFF0F172A),
-            ),
+          AmountText(
+            amount: amount,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: color ?? AppColors.textPrimary,
           ),
         ],
       ),

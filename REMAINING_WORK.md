@@ -65,15 +65,36 @@ $$\text{Cart} \longrightarrow \text{Order} \longrightarrow \text{Bill} \longrigh
 | **Short / Negative Stock Billing** | **COMPLETED** | Enabled `allowNegativeStock: true` in Shop Settings. Billing proceeds when stock is short, and stock shows negative (`Stock: -X`) in red. |
 | **In-App Notifications** | **COMPLETED** | Added `NotificationsProvider`, dynamic badge counts across screens, deep navigation to bills/orders/catalog/ledger. |
 | **Premium Login Page Redesign** | **COMPLETED** | Modern 3D enterprise login UI aligned with user design mock. |
+| **Customer Portal Complete Redesign** | **COMPLETED** | Complete commercial UI/UX overhaul of customer mobile interface across 10 screens with unified navy, white, soft blue and pastel purple design system, 5-tab shell (Home, Catalog, Orders, Ledger, Profile), persistent cart access, visual order tracker timeline, and zero mock/dummy data. |
 
 ---
 
 ## 4. Test Suite & Verification Matrix
 - **Backend Jest Tests:** `11/11` suites passed, `79/79` tests passed (`PASS`).
 - **Flutter Widget Tests:** `7/7` tests passed (`PASS`).
-- **Flutter Analyzer:** 0 issues found (`flutter analyze`).
+- **Flutter Analyzer:** 0 issues found (`flutter analyze` — clean pass across entire codebase).
+- **Flutter Debug APK Build:** Succeeded (`flutter build apk --debug` built `app-debug.apk` in 45.3s).
 - **Web Frontend Build:** 0 errors (`npm run build`).
 - **Backend TypeScript Compilation:** 0 errors (`npx tsc --noEmit`).
+
+---
+
+## 5. Customer Portal Complete UI/UX Redesign Summary
+
+All customer-facing screens have been redesigned from scratch with a unified commercial aesthetic:
+- **Design Language:** Modern Navy (`#0B1F4B`, `#12337A`), clean white surfaces, soft blue (`#EFF6FF`, `#DBEAFE`), and delicate pastel purple accents (`#EDE9FE`, `#7C3AED`), with red/green restricted strictly to monetary status.
+- **Customer Navigation Shell (`customer_portal_shell.dart`):** 5 primary tabs (1. Home, 2. Catalog, 3. Orders, 4. Ledger, 5. Profile) with Cart accessible across all headers with live badge count.
+- **Customer Dashboard (`portal_home_screen.dart`):** Personalized customer header, shop branding, hero balance card with status pill, 3 metric cards (Bills, Orders, Pending), quick action shortcuts, and segmented activity lists (Orders, Bills, Payments).
+- **Product Catalog (`portal_catalog_screen.dart`):** Category chips, search filtering, vector & network image cards, live stock badges (`In Stock`, `Low Stock`, `Out of Stock`), quantity stepper modal, and 1-tap cart additions.
+- **Shopping Cart (`portal_cart_screen.dart`):** Customer delivery address card, item list with quantity controls, subtotal/tax/discount/grand total breakdown, and direct order placement.
+- **My Orders (`portal_orders_screen.dart`):** Filter chips (All, Pending, Processing, Completed, Cancelled), `AppCard` order rows, item summaries, `AmountText`, `StatusChip`, skeleton loader & empty state.
+- **Order Tracking & Details (`portal_order_detail_screen.dart`):** 5-step interactive workflow tracker (`Pending` $\rightarrow$ `Confirmed` $\rightarrow$ `Processing` $\rightarrow$ `Ready` $\rightarrow$ `Completed`), delivery address, purchased item rates, invoice link banner, and pending order cancellation dialog.
+- **My Bills (`portal_bills_screen.dart`):** Filter chips (All, Unpaid, Partial, Paid), invoice tiles with invoice number, date, Total, Paid, and Due amounts using `AmountText` and `StatusChip`.
+- **Invoice Details (`portal_bill_detail_screen.dart`):** Billed-to card, purchased line items with unit prices and totals, tax/discount lines, payment history, and PDF preview/sharing.
+- **Account Ledger (`portal_ledger_screen.dart`):** Hero outstanding balance card, opening balance, invoiced, and settled metrics; date range filtering; transaction cards with Debit / Credit badges, running balance, and detailed modal sheet.
+- **Notifications Center (`portal_notifications_screen.dart`):** Unified navy + soft purple/blue styling, unread indicator dot, category icons, skeleton loader & empty state.
+- **Customer Profile (`portal_more_screen.dart`):** Squircle initials avatar, verified customer badge, read-only account overview, contact information editor, secure password reset modal with OTP.
+- **Backend & Logic Integrity:** 100% preservation of all existing Supabase tables, REST APIs, cart calculations, authentication tokens, and business logic with zero hardcoded or dummy records.
 
 ---
 

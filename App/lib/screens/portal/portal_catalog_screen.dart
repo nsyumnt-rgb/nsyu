@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
+import 'portal_cart_screen.dart';
 
 class PortalCatalogScreen extends StatefulWidget {
   const PortalCatalogScreen({super.key});
@@ -302,7 +303,12 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
               child: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
             ),
             tooltip: 'View Cart',
-            onPressed: () => portal.switchTab(2), // Switch to Cart tab
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PortalCartScreen()),
+              );
+            },
           ),
         ],
       ),

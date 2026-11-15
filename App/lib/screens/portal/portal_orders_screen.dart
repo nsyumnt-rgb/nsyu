@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
+import '../../theme/app_theme.dart';
 import 'portal_order_detail_screen.dart';
 
 class PortalOrdersScreen extends StatefulWidget {
@@ -47,32 +50,69 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
     }
   }
 
-  final _tabs = const [
-    {'id': 'all', 'label': 'All'},
+  static const _tabs = [
+    {'id': 'all', 'label': 'All Orders'},
     {'id': 'pending', 'label': 'Pending'},
     {'id': 'processing', 'label': 'Processing'},
     {'id': 'completed', 'label': 'Completed'},
     {'id': 'cancelled', 'label': 'Cancelled'},
   ];
 
+  StatusChipVariant _getStatusVariant(String status) {
+    final s = status.toLowerCase();
+    if (s == 'pending') return StatusChipVariant.warning;
+    if (s == 'confirmed' || s == 'processing' || s == 'ready' || s == 'shipped') {
+      return StatusChipVariant.info;
+    }
+    if (s == 'delivered' || s == 'completed' || s == 'billed') {
+      return StatusChipVariant.success;
+    }
+    if (s == 'cancelled' || s == 'rejected') {
+      return StatusChipVariant.danger;
+    }
+    return StatusChipVariant.neutral;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final portal = context.read<CustomerPortalProvider>();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.navy900, AppColors.navy700],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
         title: const Text(
-          'My Orders & Tracking',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          'My Orders',
+          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            tooltip: 'Refresh',
+            onPressed: _loadOrders,
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Filter Tabs
+          // Filter Tabs Bar
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+            ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -84,16 +124,25 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                       label: Text(tab['label']!),
                       selected: isSel,
                       onSelected: (selected) {
-                        setState(() => _statusFilter = tab['id']!);
-                        _loadOrders();
+                        if (selected) {
+                          setState(() => _statusFilter = tab['id']!);
+                          _loadOrders();
+                        }
                       },
-                      selectedColor: const Color(0xFF1D4ED8),
-                      backgroundColor: Colors.white,
-                      labelStyle: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.bold,
-                        color: isSel ? Colors.white : const Color(0xFF475569),
+                      selectedColor: AppColors.navy900,
+                      backgroundColor: AppColors.bg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                        side: BorderSide(
+                          color: isSel ? AppColors.navy900 : AppColors.border,
+                        ),
                       ),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                        color: isSel ? Colors.white : AppColors.textSecondary,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     ),
                   );
                 }).toList(),
@@ -104,21 +153,31 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
           // Orders List
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF1D4ED8)))
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SkeletonLoader.list(count: 4),
+                  )
                 : _orders.isEmpty
                     ? Center(
-                        child: Text(
-                          _statusFilter != 'all' ? 'No $_statusFilter orders.' : 'No orders placed yet.',
-                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                        child: EmptyState(
+                          icon: Icons.receipt_long_outlined,
+                          title: _statusFilter != 'all'
+                              ? 'No $_statusFilter orders found'
+                              : 'No orders placed yet',
+                          subtitle: _statusFilter != 'all'
+                              ? 'You do not have any orders with status "$_statusFilter".'
+                              : 'Browse our product catalog to place your first order.',
+                          buttonLabel: 'Explore Catalog',
+                          onButtonPressed: () => portal.switchTab(1),
                         ),
                       )
                     : RefreshIndicator(
-                        color: const Color(0xFF1D4ED8),
+                        color: AppColors.blue600,
                         onRefresh: _loadOrders,
                         child: ListView.separated(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           itemCount: _orders.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, idx) {
                             final ord = _orders[idx];
                             final id = (ord['id'] as num).toInt();
@@ -126,98 +185,166 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                             final status = ord['status']?.toString() ?? 'pending';
                             final total = ((ord['total_amount'] ?? 0) as num).toDouble();
                             final dt = ord['createdAt']?.toString();
-                            final dateStr = dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt)) : '';
+                            final dateStr = dt != null
+                                ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt))
+                                : '';
                             final items = (ord['items'] as List<dynamic>?) ?? [];
-                            final itemsCount = items.fold<int>(0, (sum, it) => sum + (((it['quantity'] ?? 1) as num).toInt()));
+                            final itemsCount = items.fold<int>(
+                              0,
+                              (sum, it) => sum + (((it['quantity'] ?? 1) as num).toInt()),
+                            );
                             final isBilled = ord['converted_sale_id'] != null;
 
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                                boxShadow: const [
-                                  BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                                ],
-                              ),
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => PortalOrderDetailScreen(orderId: id)),
-                                  ).then((_) => _loadOrders());
-                                },
-                                borderRadius: BorderRadius.circular(16),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                            // Summary string of items
+                            final itemNames = items
+                                .map((it) => it['product_name']?.toString() ?? 'Item')
+                                .take(2)
+                                .join(', ');
+                            final summaryText = items.length > 2
+                                ? '$itemNames +${items.length - 2} more'
+                                : (itemNames.isNotEmpty ? itemNames : '$itemsCount item(s)');
+
+                            return AppCard(
+                              padding: const EdgeInsets.all(16),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PortalOrderDetailScreen(orderId: id),
+                                  ),
+                                ).then((_) => _loadOrders());
+                              },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Top row: order number + status chips
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.shopping_bag_outlined, size: 18, color: Color(0xFF1D4ED8)),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                '#$orderNum',
-                                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
-                                              ),
-                                            ],
+                                          Container(
+                                            padding: const EdgeInsets.all(7),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.blue50,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.receipt_long_rounded,
+                                              size: 16,
+                                              color: AppColors.navy900,
+                                            ),
                                           ),
-                                          Row(
-                                            children: [
-                                              _buildStatusPill(status),
-                                              if (isBilled) ...[
-                                                const SizedBox(width: 4),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                                  decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(4)),
-                                                  child: const Text('BILLED', style: TextStyle(color: Color(0xFF16A34A), fontSize: 9, fontWeight: FontWeight.bold)),
-                                                ),
-                                              ],
-                                            ],
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '#$orderNum',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 14.5,
+                                              color: AppColors.navy900,
+                                            ),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        dateStr,
-                                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                      ),
-                                      const Divider(height: 18),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const Text('ITEMS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '$itemsCount ${itemsCount == 1 ? "unit" : "units"}',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF475569)),
-                                              ),
-                                            ],
+                                          StatusChip(
+                                            label: status.toUpperCase(),
+                                            variant: _getStatusVariant(status),
                                           ),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              const Text('TOTAL AMOUNT', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '₹${total.toStringAsFixed(2)}',
-                                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF0F172A)),
-                                              ),
-                                            ],
-                                          ),
-                                          const Icon(Icons.chevron_right, size: 20, color: Color(0xFF94A3B8)),
+                                          if (isBilled) ...[
+                                            const SizedBox(width: 6),
+                                            const StatusChip(
+                                              label: 'BILLED',
+                                              variant: StatusChipVariant.success,
+                                            ),
+                                          ],
                                         ],
                                       ),
                                     ],
                                   ),
-                                ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    dateStr,
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    summaryText,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: AppColors.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const Divider(height: 20, color: AppColors.border),
+                                  // Bottom row: items quantity + total amount + arrow
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'QUANTITY',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.textSecondary,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '$itemsCount ${itemsCount == 1 ? "unit" : "units"}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Row(
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              const Text(
+                                                'ORDER TOTAL',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.textSecondary,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              AmountText(
+                                                amount: total,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppColors.navy900,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.chevron_right_rounded,
+                                            size: 20,
+                                            color: AppColors.textSecondary,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -225,34 +352,6 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                       ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatusPill(String status) {
-    Color bg = const Color(0xFFF1F5F9);
-    Color text = const Color(0xFF475569);
-    final s = status.toLowerCase();
-    if (s == 'pending') {
-      bg = const Color(0xFFFEF3C7);
-      text = const Color(0xFFB45309);
-    } else if (s == 'confirmed' || s == 'processing' || s == 'ready') {
-      bg = const Color(0xFFDBEAFE);
-      text = const Color(0xFF1D4ED8);
-    } else if (s == 'delivered' || s == 'completed' || s == 'billed') {
-      bg = const Color(0xFFDCFCE7);
-      text = const Color(0xFF16A34A);
-    } else if (s == 'cancelled' || s == 'rejected') {
-      bg = const Color(0xFFFEE2E2);
-      text = const Color(0xFFDC2626);
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(color: text, fontSize: 9.5, fontWeight: FontWeight.bold),
       ),
     );
   }
