@@ -28,27 +28,22 @@ class CartStickyFooter extends StatelessWidget {
 
   static final NumberFormat _money = NumberFormat('#,##0.00');
 
-  Widget _buildFooterIconBtn(
-    BuildContext context,
-    IconData icon,
-    String label,
-    VoidCallback onTap,
-  ) {
+  Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-        child: Column(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: const Color(0xFF0F172A)),
-            const SizedBox(height: 2),
+            Icon(icon, size: 15, color: AppColors.textSecondary),
+            const SizedBox(width: 4),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 9,
-                color: Color(0xFF0F172A),
+                fontSize: 11,
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -65,118 +60,122 @@ class CartStickyFooter extends StatelessWidget {
         : (provider.billItems.isEmpty && provider.orderItems.isEmpty));
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        border: Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Save as Draft
-            _buildFooterIconBtn(context, Icons.save_outlined, 'Save as Draft', () {
-              if (isEmptyCart) {
-                showAppSnackBar(context, 'Cart is empty. Add products first.', isError: true);
-                return;
-              }
-              onCreateBillOrOrder();
-            }),
-
-            // Print
-            _buildFooterIconBtn(context, Icons.print_outlined, 'Print', () {
-              showAppSnackBar(context, 'Opening print layout...');
-            }),
-
-            // Share
-            _buildFooterIconBtn(context, Icons.share_outlined, 'Share', () {
-              Share.share('Cart Summary: Grand Total ₹${_money.format(grandTotal)}');
-            }),
-
-            // Send on WhatsApp Button (Mint pill)
-            InkWell(
-              onTap: () {
-                final phone = provider.selectedCustomer?.mobile ?? '';
-                if (phone.isEmpty) {
-                  showAppSnackBar(
-                    context,
-                    'Please select a customer with a valid mobile number',
-                  );
-                  return;
-                }
-                final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-                launchUrl(
-                  Uri.parse(
-                    'https://wa.me/$digits?text=Hello,%20your%20bill%20total%20is%20%E2%82%B9${_money.format(grandTotal)}',
-                  ),
-                  mode: LaunchMode.externalApplication,
-                );
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.phone, size: 14, color: Color(0xFF16A34A)),
-                    SizedBox(width: 4),
-                    Text(
-                      'Send on WhatsApp',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF16A34A),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Top Action Strip: Draft • Share • WhatsApp
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildQuickAction(Icons.save_outlined, 'Draft', () {
+                    if (isEmptyCart) {
+                      showAppSnackBar(context, 'Cart is empty. Add products first.', isError: true);
+                      return;
+                    }
+                    onCreateBillOrOrder();
+                  }),
+                  _buildQuickAction(Icons.share_outlined, 'Share', () {
+                    Share.share('Cart Total: ₹${_money.format(grandTotal)}');
+                  }),
+                  _buildQuickAction(Icons.chat_bubble_outline_rounded, 'WhatsApp', () {
+                    final phone = provider.selectedCustomer?.mobile ?? '';
+                    if (phone.isEmpty) {
+                      showAppSnackBar(context, 'Please select a customer with a mobile number');
+                      return;
+                    }
+                    final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+                    launchUrl(
+                      Uri.parse(
+                        'https://wa.me/$digits?text=Hello,%20your%20bill%20total%20is%20%E2%82%B9${_money.format(grandTotal)}',
                       ),
-                    ),
-                  ],
-                ),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  }),
+                ],
               ),
-            ),
+              const SizedBox(height: 8),
 
-            // Create Bill > / Create Order > Button
-            ElevatedButton(
-              onPressed: (saving || isEmptyCart) ? null : onCreateBillOrOrder,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                disabledBackgroundColor: const Color(0xFFCBD5E1),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                elevation: 0,
-              ),
-              child: saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Row(
+              // Bottom Row: Total & Primary Button
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.description_outlined,
-                            size: 15, color: Colors.white),
-                        const SizedBox(width: 4),
                         Text(
-                          documentMode == 'Bill' ? 'Save' : 'Create Order',
+                          'Total (${provider.totalCartQty} items)',
                           style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500,
                           ),
+                        ),
+                        const SizedBox(height: 2),
+                        AmountText(
+                          amount: grandTotal,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.navy900,
                         ),
                       ],
                     ),
-            ),
-          ],
+                  ),
+                  const SizedBox(width: 14),
+
+                  // Big Action Button
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: (saving || isEmptyCart) ? null : onCreateBillOrOrder,
+                      icon: saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : Icon(
+                              documentMode == 'Bill' ? Icons.check_circle_outline_rounded : Icons.shopping_bag_outlined,
+                              size: 18,
+                            ),
+                      label: Text(
+                        documentMode == 'Bill' ? 'Save Bill' : 'Place Order',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.navy900,
+                        disabledBackgroundColor: AppColors.border,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

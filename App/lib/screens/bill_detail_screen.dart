@@ -8,6 +8,7 @@ import '../models/saved_bill.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../services/bill_pdf_service.dart';
+import '../theme/app_theme.dart';
 import 'collect_payment_screen.dart';
 import 'customer_ledger_detail_screen.dart';
 
@@ -312,7 +313,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF006837),
+              backgroundColor: AppColors.navy900,
               foregroundColor: Colors.white,
             ),
             onPressed: () {

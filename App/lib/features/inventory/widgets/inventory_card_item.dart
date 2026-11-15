@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/catalog_item.dart';
+import '../../../theme/app_theme.dart';
 import 'charger_illustration.dart';
 
 class InventoryCardItem extends StatelessWidget {
@@ -246,6 +247,20 @@ class InventoryCardItem extends StatelessWidget {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 5),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: (item.qty.clamp(0, 50) / 50.0),
+                        minHeight: 3.5,
+                        backgroundColor: AppColors.border,
+                        valueColor: AlwaysStoppedAnimation(
+                          item.qty > 5
+                              ? AppColors.success
+                              : (item.qty > 0 ? AppColors.warning : AppColors.danger),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 7),
 

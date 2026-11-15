@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../models/customer.dart';
 import '../models/saved_bill.dart';
+import '../navigation/app_navigation.dart';
 import '../providers/auth_provider.dart';
 import '../providers/bills_provider.dart';
-import '../providers/customer_provider.dart';
 import '../providers/notifications_provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_bottom_nav.dart';
-import 'customer_ledger_detail_screen.dart';
 import 'order_cart_screen.dart';
 import 'notifications_screen.dart';
 
@@ -47,18 +46,6 @@ class _BillsListScreenState extends State<BillsListScreen> {
   void dispose() {
     _searchCtrl.dispose();
     super.dispose();
-  }
-
-  Color _avatarBgForName(String name) {
-    final lower = name.toLowerCase();
-    if (lower.startsWith('k')) return const Color(0xFF38BDF8); // Light Blue
-    if (lower.startsWith('g')) return const Color(0xFF14B8A6); // Teal
-    if (lower.startsWith('v')) return const Color(0xFF8B5CF6); // Purple
-    if (lower.startsWith('r')) return const Color(0xFF9333EA); // Purple dark
-    if (lower.startsWith('s')) return const Color(0xFF78716C); // Brown/Grey
-    if (lower.startsWith('a')) return const Color(0xFFF87171); // Coral/Red
-    if (lower.startsWith('m')) return const Color(0xFF2563EB); // Royal Blue
-    return const Color(0xFFF43F5E); // Pink/Rose
   }
 
   @override
@@ -207,7 +194,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
               ),
             ),
 
-            // Secondary Row: Bills / All Bills (125) & Filter, + New Bill button
+            // Secondary Row: Bills / All Bills & Filter, + New Bill button
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
               child: Row(
@@ -219,9 +206,9 @@ class _BillsListScreenState extends State<BillsListScreen> {
                         const Text(
                           'Bills',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.navy900,
                           ),
                         ),
                         Text(
@@ -229,51 +216,35 @@ class _BillsListScreenState extends State<BillsListScreen> {
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF64748B),
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.search, color: Color(0xFF0F172A), size: 22),
-                    onPressed: () {
-                      setState(() {
-                        _searchOpen = !_searchOpen;
-                        if (!_searchOpen) _searchCtrl.clear();
-                      });
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.filter_list_rounded, color: Color(0xFF0F172A), size: 22),
+                    icon: const Icon(Icons.filter_list_rounded, color: AppColors.navy900, size: 22),
+                    tooltip: 'Filter period',
                     onPressed: _showPeriodPicker,
                   ),
-                  const SizedBox(width: 4),
-                  // Primary Blue + Button
-                  InkWell(
-                    onTap: () {
+                  const SizedBox(width: 6),
+                  ElevatedButton.icon(
+                    onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const OrderCartScreen()),
                       );
                     },
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF2563EB).withValues(alpha: 0.3),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.add, color: Colors.white, size: 22),
-                      ),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text(
+                      'New Bill',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.navy900,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ],
@@ -284,10 +255,11 @@ class _BillsListScreenState extends State<BillsListScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Container(
-                  height: 40,
+                  height: 42,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.bg,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: TextField(
                     controller: _searchCtrl,
@@ -295,7 +267,8 @@ class _BillsListScreenState extends State<BillsListScreen> {
                     onChanged: (v) => setState(() {}),
                     decoration: const InputDecoration(
                       hintText: 'Search by bill number or customer name...',
-                      prefixIcon: Icon(Icons.search, size: 18),
+                      hintStyle: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textSecondary),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(vertical: 10),
                       isDense: true,
@@ -304,27 +277,30 @@ class _BillsListScreenState extends State<BillsListScreen> {
                 ),
               ),
 
-            // ── Horizontal Filter Chips matching Image 6 Left ──
+            // ── Horizontal Filter Chips ──
             _buildFilterChipsRow(),
-            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const Divider(height: 1, color: AppColors.border),
 
             // ── Bills List View ──
-            if (filteredBills.isEmpty)
-              const Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.receipt_long_outlined, size: 52, color: Color(0xFFCBD5E1)),
-                        SizedBox(height: 12),
-                        Text('No bills found', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF334155))),
-                        SizedBox(height: 6),
-                        Text('Create your first bill by tapping the + button in the header.', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-                      ],
-                    ),
-                  ),
+            if (!billsProvider.loaded)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: SkeletonLoader.list(count: 6),
+                ),
+              )
+            else if (filteredBills.isEmpty)
+              Expanded(
+                child: EmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'No bills found',
+                  subtitle: 'Create your first bill by tapping "+ New Bill"',
+                  buttonLabel: '+ New Bill',
+                  onButtonPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const OrderCartScreen()),
+                    );
+                  },
                 ),
               )
             else
@@ -364,12 +340,12 @@ class _BillsListScreenState extends State<BillsListScreen> {
                   borderRadius: BorderRadius.circular(20),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE8F5E9) : const Color(0xFFF8FAFC),
+                      color: isSelected ? AppColors.blue50 : AppColors.bg,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
+                        color: isSelected ? AppColors.blue600 : AppColors.border,
                         width: isSelected ? 1.4 : 1.0,
                       ),
                     ),
@@ -378,7 +354,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? const Color(0xFF16A34A) : const Color(0xFF475569),
+                        color: isSelected ? AppColors.navy900 : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -393,24 +369,24 @@ class _BillsListScreenState extends State<BillsListScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppColors.bg,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF64748B)),
+                    const Icon(Icons.calendar_today_outlined, size: 13, color: AppColors.textSecondary),
                     const SizedBox(width: 6),
                     Text(
                       _selectedPeriodFilter,
                       style: const TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.keyboard_arrow_down, size: 16, color: Color(0xFF64748B)),
+                    const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textSecondary),
                   ],
                 ),
               ),
@@ -422,68 +398,38 @@ class _BillsListScreenState extends State<BillsListScreen> {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // BILL LIST TILES matching Reference Design (Image 6 Left)
+  // BILL LIST TILES
   // ──────────────────────────────────────────────────────────────────────────
   Widget _buildRealBillTile(SavedBill b) {
     final isPaid = b.isPaid || b.due <= 0;
     final isPartial = !isPaid && b.paidAmount > 0;
     final status = isPaid ? 'Paid' : (isPartial ? 'Partial' : 'Unpaid');
-
-    Color badgeBg = const Color(0xFFDCFCE7);
-    Color badgeFg = const Color(0xFF16A34A);
-    if (status == 'Unpaid') {
-      badgeBg = const Color(0xFFFEE2E2);
-      badgeFg = const Color(0xFFDC2626);
-    } else if (status == 'Partial') {
-      badgeBg = const Color(0xFFFEF3C7);
-      badgeFg = const Color(0xFFD97706);
-    }
-
-    final avatarBg = _avatarBgForName(b.customerName);
     final initial = b.customerName.isNotEmpty ? b.customerName[0].toUpperCase() : 'C';
 
     return InkWell(
       onTap: () {
-        // Find matching customer or construct lightweight model
-        final custProvider = context.read<CustomerProvider>();
-        Customer? targetCust;
-        for (final c in custProvider.customers) {
-          if (c.name.trim().toLowerCase() == b.customerName.trim().toLowerCase() ||
-              (b.customerPhone.isNotEmpty && c.mobile == b.customerPhone)) {
-            targetCust = c;
-            break;
-          }
-        }
-        final cust = targetCust ??
-            Customer(
-              id: '0',
-              name: b.customerName,
-              mobile: b.customerPhone,
-              currentBalance: b.due,
-            );
-
-        // Open Right Screen (Customer Bill Details with Overview, Bills, Payments, Ledger)
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => CustomerLedgerDetailScreen(
-              partyName: b.customerName,
-              customer: cust,
-              initialTab: 'Bills',
-            ),
-          ),
-        );
+        AppNavigation.openBillDetails(context, bill: b);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9))),
+          border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: avatarBg,
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.navy900, AppColors.blue600],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
               child: Text(
                 initial,
                 style: const TextStyle(
@@ -507,26 +453,18 @@ class _BillsListScreenState extends State<BillsListScreen> {
                           style: const TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: badgeBg,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800,
-                            color: badgeFg,
-                          ),
-                        ),
+                      const SizedBox(width: 8),
+                      StatusChip(
+                        label: status,
+                        variant: isPaid
+                            ? StatusChipVariant.success
+                            : (isPartial ? StatusChipVariant.warning : StatusChipVariant.danger),
                       ),
                     ],
                   ),
@@ -535,18 +473,19 @@ class _BillsListScreenState extends State<BillsListScreen> {
                   // Row 2: Bill # & Date ... Total Amount
                   Row(
                     children: [
-                      Text(
-                        'Bill #${b.billNumber}  |  ${_dateFormat.format(b.date)}',
-                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '₹${_money.format(b.total)}',
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w800,
-                          color: isPaid ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      Expanded(
+                        child: Text(
+                          'Bill #${b.billNumber} • ${_dateFormat.format(b.date)}',
+                          style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
+                      AmountText(
+                        amount: b.total,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: isPaid ? AppColors.success : AppColors.danger,
                       ),
                     ],
                   ),
@@ -555,21 +494,21 @@ class _BillsListScreenState extends State<BillsListScreen> {
                   // Row 3: Items count ... Paid amount (if partial) ... Chevron
                   Row(
                     children: [
-                      const Icon(Icons.description_outlined, size: 13, color: Color(0xFF64748B)),
+                      const Icon(Icons.receipt_outlined, size: 13, color: AppColors.textSecondary),
                       const SizedBox(width: 4),
                       Text(
                         '${b.items.length} ${b.items.length == 1 ? "item" : "items"}',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                       ),
                       const Spacer(),
                       if (isPartial) ...[
                         Text(
                           'Paid: ₹${_money.format(b.paidAmount)}',
-                          style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.success),
                         ),
                         const SizedBox(width: 6),
                       ],
-                      const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
+                      const Icon(Icons.chevron_right, size: 16, color: AppColors.textSecondary),
                     ],
                   ),
                 ],

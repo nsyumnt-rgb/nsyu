@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/customer_portal_service.dart';
+import '../../theme/app_theme.dart';
 import 'portal_bill_detail_screen.dart';
 
 class PortalBillsScreen extends StatefulWidget {
@@ -39,13 +40,22 @@ class _PortalBillsScreenState extends State<PortalBillsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.navy900),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'My Bills & Invoices',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: AppColors.navy900,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: Column(
@@ -53,7 +63,7 @@ class _PortalBillsScreenState extends State<PortalBillsScreen> {
           // Filter Tabs
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
                 _buildFilterChip('All', 'all'),
@@ -66,22 +76,27 @@ class _PortalBillsScreenState extends State<PortalBillsScreen> {
               ],
             ),
           ),
+          const Divider(height: 1, color: AppColors.border),
 
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF1D4ED8)))
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SkeletonLoader.list(count: 6),
+                  )
                 : _bills.isEmpty
                     ? const Center(
-                        child: Text(
-                          'No invoices found for this filter.',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                        child: EmptyState(
+                          icon: Icons.receipt_long_outlined,
+                          title: 'No Invoices Found',
+                          subtitle: 'No bills match your currently selected filter.',
                         ),
                       )
                     : RefreshIndicator(
-                        color: const Color(0xFF1D4ED8),
+                        color: AppColors.blue600,
                         onRefresh: _loadBills,
                         child: ListView.separated(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           itemCount: _bills.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, idx) {
@@ -95,89 +110,81 @@ class _PortalBillsScreenState extends State<PortalBillsScreen> {
                             final dt = b['date']?.toString() ?? b['createdAt']?.toString();
                             final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
 
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                                boxShadow: const [
-                                  BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                                ],
-                              ),
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => PortalBillDetailScreen(billId: id)),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(14),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                            return AppCard(
+                              padding: const EdgeInsets.all(14),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => PortalBillDetailScreen(billId: id)),
+                                );
+                              },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Row(
-                                            children: [
-                                              const Icon(Icons.receipt_outlined, size: 18, color: Color(0xFF1D4ED8)),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                invNum,
-                                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
-                                              ),
-                                            ],
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.blue50,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(Icons.receipt_outlined, size: 16, color: AppColors.blue600),
                                           ),
-                                          _buildStatusBadge(payStatus),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            invNum,
+                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.navy900),
+                                          ),
                                         ],
                                       ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'Date: $dateStr',
-                                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                      ),
-                                      const Divider(height: 16),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      _buildStatusBadge(payStatus),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Date: $dateStr',
+                                    style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                                  ),
+                                  const Divider(height: 18, color: AppColors.border),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              const Text('TOTAL AMOUNT', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                                              const SizedBox(height: 2),
-                                              Text('₹${total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0F172A))),
-                                            ],
-                                          ),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              const Text('PAID AMOUNT', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                                              const SizedBox(height: 2),
-                                              Text('₹${paid.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF16A34A))),
-                                            ],
-                                          ),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              const Text('DUE AMOUNT', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '₹${balanceDue > 0 ? balanceDue.toStringAsFixed(2) : "0.00"}',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w900,
-                                                  fontSize: 13,
-                                                  color: balanceDue > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                                                ),
-                                              ),
-                                            ],
+                                          const Text('TOTAL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                          const SizedBox(height: 2),
+                                          AmountText(amount: total, fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.navy900),
+                                        ],
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          const Text('PAID', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                          const SizedBox(height: 2),
+                                          AmountText(amount: paid, fontSize: 13.5, fontWeight: FontWeight.w700, color: AppColors.success),
+                                        ],
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          const Text('DUE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                                          const SizedBox(height: 2),
+                                          AmountText(
+                                            amount: balanceDue > 0 ? balanceDue : 0.0,
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: balanceDue > 0 ? AppColors.danger : AppColors.success,
                                           ),
                                         ],
                                       ),
                                     ],
                                   ),
-                                ),
+                                ],
                               ),
                             );
                           },
@@ -191,43 +198,41 @@ class _PortalBillsScreenState extends State<PortalBillsScreen> {
 
   Widget _buildFilterChip(String label, String id) {
     final isSel = _statusFilter == id;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSel,
-      selectedColor: const Color(0xFF1D4ED8),
-      backgroundColor: Colors.white,
-      labelStyle: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-        color: isSel ? Colors.white : const Color(0xFF475569),
-      ),
-      onSelected: (val) {
-        if (val) {
-          setState(() => _statusFilter = id);
-          _loadBills();
-        }
+    return InkWell(
+      onTap: () {
+        setState(() => _statusFilter = id);
+        _loadBills();
       },
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? AppColors.blue50 : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSel ? AppColors.blue600 : AppColors.border,
+            width: isSel ? 1.4 : 1.0,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+            color: isSel ? AppColors.navy900 : AppColors.textSecondary,
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildStatusBadge(String status) {
-    Color bg = const Color(0xFFFEE2E2);
-    Color text = const Color(0xFFDC2626);
     if (status == 'PAID') {
-      bg = const Color(0xFFDCFCE7);
-      text = const Color(0xFF16A34A);
+      return const StatusChip(label: 'PAID', variant: StatusChipVariant.success);
     } else if (status == 'PARTIAL') {
-      bg = const Color(0xFFFEF3C7);
-      text = const Color(0xFFB45309);
+      return const StatusChip(label: 'PARTIAL', variant: StatusChipVariant.warning);
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(
-        status,
-        style: TextStyle(color: text, fontSize: 10, fontWeight: FontWeight.bold),
-      ),
-    );
+    return const StatusChip(label: 'UNPAID', variant: StatusChipVariant.danger);
   }
 }

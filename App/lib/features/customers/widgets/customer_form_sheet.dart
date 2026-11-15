@@ -137,16 +137,18 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.person_add,
-                        color: Color(0xFF1D4ED8), size: 22),
+                    const Icon(Icons.person_add_rounded,
+                        color: AppColors.navy900, size: 22),
                     const SizedBox(width: 8),
                     Text(_isSupplier ? 'Add New Supplier' : 'Add New Customer',
                         style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w700)),
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.navy900)),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -157,11 +159,11 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
                 ChoiceChip(
                   label: const Text('Customer'),
                   selected: !_isSupplier,
-                  selectedColor: const Color(0xFFDBEAFE),
+                  selectedColor: AppColors.blue50,
                   labelStyle: TextStyle(
                     color: !_isSupplier
-                        ? const Color(0xFF1D4ED8)
-                        : const Color(0xFF475569),
+                        ? AppColors.navy900
+                        : AppColors.textSecondary,
                     fontWeight: !_isSupplier ? FontWeight.w700 : FontWeight.w500,
                   ),
                   onSelected: (val) {
@@ -172,11 +174,11 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
                 ChoiceChip(
                   label: const Text('Supplier'),
                   selected: _isSupplier,
-                  selectedColor: const Color(0xFFDCFCE7),
+                  selectedColor: AppColors.blue50,
                   labelStyle: TextStyle(
                     color: _isSupplier
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFF475569),
+                        ? AppColors.navy900
+                        : AppColors.textSecondary,
                     fontWeight: _isSupplier ? FontWeight.w700 : FontWeight.w500,
                   ),
                   onSelected: (val) {
@@ -268,25 +270,10 @@ class _CustomerAddSheetState extends State<CustomerAddSheet> {
               ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1D4ED8),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
+            PrimaryButton(
+              label: _isSupplier ? 'Save Supplier' : 'Save Customer',
+              loading: _saving,
               onPressed: _saving ? null : _handleSave,
-              child: _saving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                  : Text(_isSupplier ? 'Save Supplier' : 'Save Customer',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -456,23 +443,25 @@ class _CustomerEditSheetState extends State<CustomerEditSheet> {
                 Row(
                   children: [
                     const Icon(Icons.edit_note_rounded,
-                        color: Color(0xFF1D4ED8), size: 24),
+                        color: AppColors.navy900, size: 24),
                     const SizedBox(width: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text('Edit Customer',
                             style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.w700)),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.navy900)),
                         Text('Customer ID: ${widget.customer.id}',
                             style: const TextStyle(
-                                fontSize: 11.5, color: Color(0xFF64748B))),
+                                fontSize: 11.5, color: AppColors.textSecondary)),
                       ],
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -605,36 +594,21 @@ class _CustomerEditSheetState extends State<CustomerEditSheet> {
             const SizedBox(height: 20),
 
             // Save Changes Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1D4ED8),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
+            PrimaryButton(
+              label: 'Save Changes',
+              loading: _saving,
               onPressed: _saving ? null : _handleSave,
-              child: _saving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Text('Save Changes',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 10),
 
             // Delete Party Button
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFDC2626),
+                foregroundColor: AppColors.danger,
                 side: const BorderSide(color: Color(0xFFFCA5A5)),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(14)),
               ),
               icon: const Icon(Icons.delete_outline, size: 18),
               label: const Text('Delete Party',

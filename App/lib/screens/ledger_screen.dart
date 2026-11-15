@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../features/dashboard/screens/home_screen.dart';
 import '../models/customer.dart';
 import '../models/saved_bill.dart';
 import '../providers/auth_provider.dart';
 import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/notifications_provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'customer_ledger_detail_screen.dart';
 import 'customer_picker_screen.dart';
@@ -48,17 +50,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
     _searchCtrl.dispose();
     super.dispose();
   }
-
-  static const _avatarColors = [
-    Color(0xFF3B82F6), // blue
-    Color(0xFF0D9488), // teal
-    Color(0xFF8B5CF6), // purple
-    Color(0xFFA855F7), // purple-pink
-    Color(0xFF78350F), // brown
-    Color(0xFFEA580C), // orange
-  ];
-
-  Color _avatarColor(int i) => _avatarColors[i % _avatarColors.length];
 
   String _initials(String name) => name.trim().isEmpty
       ? '?'
@@ -202,7 +193,18 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     ),
                   ),
 
-                  // Right Icons: Share, Bell, Search
+                  // Right Icons: Dashboard, Share, Bell, Search
+                  _circleIconButton(
+                    icon: Icons.dashboard_outlined,
+                    tooltip: 'Dashboard & Sales',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => HomeScreen(onNavigate: widget.onNavigate)),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
                   _circleIconButton(
                     icon: Icons.share_outlined,
                     tooltip: 'Share Ledger Statement',
@@ -328,20 +330,33 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     ),
                   ),
 
-                  // Add Contact '+' button on right
+                  // Add Customer button on right
                   InkWell(
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const CustomerPickerScreen()),
                     ),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEFF6FF),
-                        shape: BoxShape.circle,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.navy900,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.person_add_alt_1_rounded, size: 19, color: Color(0xFF2563EB)),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 15, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'Customer',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -369,8 +384,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       const SizedBox(height: 14),
                     ],
 
-                    // Customer Accounts List matching Image 1
-                    if (allParties.isEmpty)
+                    // Customer Accounts List
+                    if (!customers.loaded || !bills.loaded)
+                      SkeletonLoader.list(count: 4)
+                    else if (allParties.isEmpty)
                       _buildEmptyState()
                     else
                       for (int i = 0; i < allParties.length; i++)
@@ -484,18 +501,26 @@ class _LedgerScreenState extends State<LedgerScreen> {
                         child: Icon(
                           _hideBalance ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                           size: 18,
-                          color: const Color(0xFF64748B),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        _hideBalance ? '₹ ••••••' : '₹ ${money.format(totalOutstanding)}',
-                        style: const TextStyle(
+                      if (_hideBalance)
+                        const Text(
+                          '••••••',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.danger,
+                          ),
+                        )
+                      else
+                        AmountText(
+                          amount: totalOutstanding,
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFFDC2626), // bold red/orange matching Image 1
+                          color: AppColors.danger,
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -670,7 +695,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
     }
 
     final dueAmount = party.totalDue;
-    final isDefaulter = dueAmount > 15000;
     final lastPayment = _lastPaymentDate(bills, party.name);
     final lastPaymentAmt = _lastPaymentAmount(bills, party.name);
 
@@ -725,53 +749,38 @@ class _LedgerScreenState extends State<LedgerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              // Avatar with DEFAULTER badge or green rupee badge
-              Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: _avatarColor(index),
-                    child: Text(
-                      _initials(party.name),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
-                    ),
+              // Unified Signature Navy Squircle Monogram
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.navy900, AppColors.blue600],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  if (isDefaulter)
-                    Positioned(
-                      bottom: -4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDC2626),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          'DEFAULTER',
-                          style: TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    )
-                  else
-                    Positioned(
-                      bottom: -2,
-                      right: -2,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF16A34A),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.currency_rupee, color: Colors.white, size: 10),
-                      ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x140B1F4B),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
                     ),
-                ],
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  _initials(party.name),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
               ),
               const SizedBox(width: 14),
 
-              // Title and Subtitle
+              // Title and Subtitle with 2-line flexible wrapping
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -781,19 +790,20 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       style: const TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
                     Row(
                       children: [
                         if (hasGreenCheck) ...[
-                          const Icon(Icons.check, size: 13, color: Color(0xFF16A34A)),
+                          const Icon(Icons.check, size: 13, color: AppColors.success),
                           const SizedBox(width: 4),
                         ] else if (hasRedCalendar) ...[
-                          const Icon(Icons.calendar_today_outlined, size: 12, color: Color(0xFFDC2626)),
+                          const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.danger),
                           const SizedBox(width: 4),
                         ],
                         Expanded(
@@ -802,7 +812,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
-                              color: hasRedCalendar ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                              color: hasRedCalendar ? AppColors.danger : AppColors.textSecondary,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -814,36 +824,31 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 ),
               ),
 
-              // Trailing Due / Advance / Settled Amount
+              const SizedBox(width: 10),
+
+              // Trailing Amount with StatusChip
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '₹${money.format(dueAmount.abs())}',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: dueAmount > 0
-                              ? const Color(0xFFDC2626)
-                              : dueAmount < 0
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
-                    ],
+                  AmountText(
+                    amount: dueAmount.abs(),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: dueAmount > 0
+                        ? AppColors.danger
+                        : dueAmount < 0
+                            ? AppColors.success
+                            : AppColors.textPrimary,
                   ),
-                  Text(
-                    dueAmount > 0 ? 'Due' : dueAmount < 0 ? 'Advance' : 'Settled',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
-                    ),
+                  const SizedBox(height: 3),
+                  StatusChip(
+                    label: dueAmount > 0 ? 'Due' : dueAmount < 0 ? 'Advance' : 'Settled',
+                    variant: dueAmount > 0
+                        ? StatusChipVariant.danger
+                        : dueAmount < 0
+                            ? StatusChipVariant.success
+                            : StatusChipVariant.neutral,
+                    fontSize: 10,
                   ),
                 ],
               ),
@@ -855,20 +860,18 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      alignment: Alignment.center,
-      child: const Column(
-        children: [
-          Icon(Icons.people_outline, size: 48, color: Color(0xFF94A3B8)),
-          SizedBox(height: 12),
-          Text(
-            'No customer accounts found.\nThey appear here automatically as bills are saved.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-          ),
-        ],
-      ),
+    return EmptyState(
+      icon: Icons.people_outline_rounded,
+      title: 'No Customers Found',
+      subtitle: _query.isNotEmpty
+          ? 'No accounts matching "$_query".'
+          : 'Customer accounts appear here automatically as bills and payments are recorded.',
+      buttonLabel: _query.isEmpty ? 'Add First Customer' : null,
+      onButtonPressed: _query.isEmpty
+          ? () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CustomerPickerScreen()),
+              )
+          : null,
     );
   }
 }

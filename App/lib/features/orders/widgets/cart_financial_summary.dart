@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../../theme/app_theme.dart';
 
-class CartFinancialSummary extends StatelessWidget {
+class CartFinancialSummary extends StatefulWidget {
   final double subtotal;
   final double discountAmount;
   final double taxAmount;
@@ -23,27 +23,33 @@ class CartFinancialSummary extends StatelessWidget {
     required this.onDiscountChanged,
   });
 
-  static final NumberFormat _money = NumberFormat('#,##0.00');
+  @override
+  State<CartFinancialSummary> createState() => _CartFinancialSummaryState();
+}
 
-  static Widget _calcRow(String label, String value) {
+class _CartFinancialSummaryState extends State<CartFinancialSummary> {
+  bool _showTerms = false;
+
+  Widget _buildSummaryRow(String label, double amount, {bool isNegative = false, bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: Color(0xFF64748B),
-            fontWeight: FontWeight.w500,
+          style: TextStyle(
+            fontSize: isBold ? 14 : 12.5,
+            color: isBold ? AppColors.textPrimary : AppColors.textSecondary,
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
-          ),
+        AmountText(
+          amount: amount,
+          fontSize: isBold ? 18 : 13.5,
+          fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+          color: isNegative
+              ? AppColors.danger
+              : (isBold ? AppColors.navy900 : AppColors.textPrimary),
+          prefix: isNegative ? '- ' : null,
         ),
       ],
     );
@@ -51,224 +57,180 @@ class CartFinancialSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
       children: [
-        // Left Card: Terms & Conditions
-        Expanded(
-          flex: 5,
-          child: Container(
-            padding: const EdgeInsets.all(10),
+        AppCard(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Financial Summary',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Subtotal
+              _buildSummaryRow('Sub Total', widget.subtotal),
+              const SizedBox(height: 10),
+
+              // Discount Row with Mode Toggle & Input
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Discount',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Mini Toggle [ ₹ | % ]
+                      Container(
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Row(
+                          children: [
+                            InkWell(
+                              onTap: () => widget.onToggleDiscountType(false),
+                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(6)),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: !widget.isDiscountPercent ? AppColors.navy900 : Colors.transparent,
+                                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(5)),
+                                ),
+                                child: Text(
+                                  '₹',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: !widget.isDiscountPercent ? Colors.white : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () => widget.onToggleDiscountType(true),
+                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(6)),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: widget.isDiscountPercent ? AppColors.navy900 : Colors.transparent,
+                                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                                ),
+                                child: Text(
+                                  '%',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: widget.isDiscountPercent ? Colors.white : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    width: 90,
+                    height: 32,
+                    child: TextField(
+                      controller: widget.discountValCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.danger),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: AppColors.border)),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: const BorderSide(color: AppColors.blue600)),
+                      ),
+                      onChanged: widget.onDiscountChanged,
+                    ),
+                  ),
+                ],
+              ),
+
+              if (widget.discountAmount > 0) ...[
+                const SizedBox(height: 6),
+                _buildSummaryRow('Discount Applied', widget.discountAmount, isNegative: true),
+              ],
+
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 10),
+                child: Divider(height: 1, color: AppColors.border),
+              ),
+
+              // Grand Total
+              _buildSummaryRow('Grand Total', widget.grandTotal, isBold: true),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Terms and conditions toggle
+        InkWell(
+          onTap: () => setState(() => _showTerms = !_showTerms),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
+                const Text(
+                  'Terms & Conditions',
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                ),
+                const Spacer(),
+                Icon(
+                  _showTerms ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_showTerms)
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
             ),
             child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.description_outlined, size: 15, color: Color(0xFF0F172A)),
-                    SizedBox(width: 5),
-                    Text(
-                      'Terms & Conditions',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Text(
-                  '1. Warranty as per product company rule.',
-                  style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B), height: 1.3),
-                ),
+                Text('1. Warranty as per product company guidelines.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                 SizedBox(height: 3),
-                Text(
-                  '2. Payment must be cleared within maximum 21 days.',
-                  style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B), height: 1.3),
-                ),
+                Text('2. Payment must be cleared within 21 days maximum.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                 SizedBox(height: 3),
-                Text(
-                  '3. 5% charges add per week after due date.',
-                  style: TextStyle(fontSize: 9.5, color: Color(0xFF64748B), height: 1.3),
-                ),
+                Text('3. Subject to jurisdiction of local courts only.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
               ],
             ),
           ),
-        ),
-        const SizedBox(width: 10),
-
-        // Right Card: Financial Calculations
-        Expanded(
-          flex: 5,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              children: [
-                _calcRow('Sub Total', '₹${_money.format(subtotal)}'),
-                const SizedBox(height: 6),
-
-                // Discount Row with Toggle (₹ | %)
-                // Discount Row with Mode Toggle & Value Input
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Discount',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF64748B),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        // Mini Toggle [ ₹ | % ]
-                        Container(
-                          height: 20,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFF2563EB)),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              InkWell(
-                                onTap: () => onToggleDiscountType(false),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                                  color: !isDiscountPercent
-                                      ? const Color(0xFF2563EB)
-                                      : Colors.white,
-                                  child: Center(
-                                    child: Text(
-                                      '₹',
-                                      style: TextStyle(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: !isDiscountPercent
-                                            ? Colors.white
-                                            : const Color(0xFF2563EB),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              InkWell(
-                                onTap: () => onToggleDiscountType(true),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                                  color: isDiscountPercent
-                                      ? const Color(0xFF2563EB)
-                                      : Colors.white,
-                                  child: Center(
-                                    child: Text(
-                                      '%',
-                                      style: TextStyle(
-                                        fontSize: 9.5,
-                                        fontWeight: FontWeight.bold,
-                                        color: isDiscountPercent
-                                            ? Colors.white
-                                            : const Color(0xFF2563EB),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Value Input
-                    Container(
-                      width: 52,
-                      height: 22,
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: TextField(
-                        controller: discountValCtrl,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 11, fontWeight: FontWeight.bold),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: onDiscountChanged,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-
-                _calcRow('Tax (GST)', '₹ ${_money.format(taxAmount)}'),
-                const SizedBox(height: 8),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x200F2756),
-                        blurRadius: 6,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Grand Total',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '₹ ${_money.format(grandTotal)}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
 }
-

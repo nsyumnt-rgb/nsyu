@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../providers/customer_portal_provider.dart';
+import '../../theme/app_theme.dart';
 import 'portal_order_detail_screen.dart';
 
 class PortalCartScreen extends StatefulWidget {
@@ -42,20 +43,17 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
     final items = (cart?['items'] as List<dynamic>?) ?? [];
 
     if (items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Your cart is empty. Please add products first.')),
-      );
+      showAppSnackBar(context, 'Your cart is empty. Please add products first.', isError: true);
       return;
     }
 
     // Check for stock errors
     for (final it in items) {
       if (it['exceedsStock'] == true || it['isUnavailable'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${it['name']} exceeds available stock. Please adjust quantity.'),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
+        showAppSnackBar(
+          context,
+          '${it['name']} exceeds available stock. Please adjust quantity.',
+          isError: true,
         );
         return;
       }
@@ -93,60 +91,64 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                 width: 64,
                 height: 64,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFDCFCE7),
+                  color: AppColors.successBg,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 40),
+                child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 40),
               ),
               const SizedBox(height: 16),
               const Text(
                 'Order Placed Successfully!',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.navy900),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 'Order #$orderNumber',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF1D4ED8)),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.navy900),
               ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'STATUS: PENDING',
-                  style: TextStyle(color: Color(0xFFB45309), fontSize: 11, fontWeight: FontWeight.bold),
-                ),
+              const SizedBox(height: 6),
+              const StatusChip(
+                label: 'PENDING CONFIRMATION',
+                variant: StatusChipVariant.warning,
               ),
               const SizedBox(height: 12),
               Text(
-                'Total Amount: ₹${total.toStringAsFixed(2)}\nYour order has been sent to the store. Placing an order does not create a bill until fulfilled.',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
+                'Total: ₹${total.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.navy900),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'The shop has been notified. They will confirm and fulfill your order soon.',
                 textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.3),
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1D4ED8),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    if (orderId != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => PortalOrderDetailScreen(orderId: orderId)),
-                      );
-                    }
-                  },
-                  child: const Text('Track Order', style: TextStyle(fontWeight: FontWeight.bold)),
+              PrimaryButton(
+                label: 'View Order Details',
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  if (orderId != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PortalOrderDetailScreen(orderId: orderId),
+                      ),
+                    );
+                  } else {
+                    portal.switchTab(3);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  portal.switchTab(1); // Back to Catalog
+                },
+                child: const Text(
+                  'Continue Shopping',
+                  style: TextStyle(color: AppColors.navy900, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -156,12 +158,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: const Color(0xFFDC2626),
-        ),
-      );
+      showAppSnackBar(context, 'Failed to place order: $e', isError: true);
     }
   }
 
@@ -169,41 +166,28 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
   Widget build(BuildContext context) {
     final portal = context.watch<CustomerPortalProvider>();
     final cart = portal.cart;
-    final cust = portal.customer;
     final items = (cart?['items'] as List<dynamic>?) ?? [];
-    final cartCount = portal.cartItemCount;
-    final subtotal = ((cart?['subtotal'] ?? 0) as num).toDouble();
-    final discount = ((cart?['discountAmount'] ?? 0) as num).toDouble();
-    final tax = ((cart?['taxAmount'] ?? 0) as num).toDouble();
-    final grandTotal = portal.cartEstimatedTotal;
+    final subtotal = ((cart?['subtotal'] ?? cart?['estimatedTotal'] ?? 0) as num).toDouble();
+    final taxTotal = ((cart?['taxTotal'] ?? cart?['tax_total'] ?? 0) as num).toDouble();
+    final grandTotal = ((cart?['grandTotal'] ?? cart?['estimatedTotal'] ?? (subtotal + taxTotal)) as num).toDouble();
+    final cust = portal.customer;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.navy900, AppColors.navy700],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
-        title: Row(
-          children: [
-            Badge(
-              label: Text('$cartCount'),
-              backgroundColor: const Color(0xFFDC2626),
-              child: const Icon(Icons.shopping_cart, color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Shopping Cart',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '$cartCount ${cartCount == 1 ? "Item" : "Items"}',
-                  style: const TextStyle(color: Color(0xFFDBEAFE), fontSize: 11),
-                ),
-              ],
-            ),
-          ],
+        title: Text(
+          items.isNotEmpty ? 'My Cart (${items.length} items)' : 'My Cart',
+          style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
         ),
         actions: [
           if (items.isNotEmpty)
@@ -217,7 +201,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                       FilledButton(
-                        style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+                        style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
                         onPressed: () => Navigator.pop(ctx, true),
                         child: const Text('Clear'),
                       ),
@@ -239,57 +223,22 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
 
       body: items.isEmpty
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDBEAFE),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.shopping_cart_outlined, size: 40, color: Color(0xFF1D4ED8)),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Your Cart is Empty',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Browse the catalog to add items to your cart.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1D4ED8),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () => portal.switchTab(1),
-                    child: const Text('Explore Catalog'),
-                  ),
-                ],
+              child: EmptyState(
+                icon: Icons.shopping_cart_outlined,
+                title: 'Your Cart is Empty',
+                subtitle: 'Browse the catalog to add products to your cart.',
+                buttonLabel: 'Explore Catalog',
+                onButtonPressed: () => portal.switchTab(1),
               ),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Customer Delivery Card
-                  Container(
+                  AppCard(
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [
-                        BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                      ],
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -298,10 +247,10 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDBEAFE),
+                                color: AppColors.blue50,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.person_pin, color: Color(0xFF1D4ED8), size: 18),
+                              child: const Icon(Icons.person_pin_rounded, color: AppColors.navy900, size: 20),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -310,11 +259,11 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                                 children: [
                                   Text(
                                     (cust?['name'] ?? 'Customer').toString(),
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.navy900),
                                   ),
                                   Text(
                                     'Mobile: +91 ${cust?['phone'] ?? ''}',
-                                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                                    style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
                                   ),
                                 ],
                               ),
@@ -327,11 +276,12 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                           decoration: InputDecoration(
                             labelText: 'Delivery / Shop Address',
                             labelStyle: const TextStyle(fontSize: 12),
-                            prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
+                            prefixIcon: const Icon(Icons.location_on_outlined, size: 18, color: AppColors.textSecondary),
                             filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
+                            fillColor: AppColors.bg,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                             isDense: true,
                           ),
                         ),
@@ -339,13 +289,10 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
 
                   // Cart Items List
-                  const Text(
-                    'Selected Products',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-                  ),
+                  const SectionHeader(title: 'Selected Products'),
                   const SizedBox(height: 8),
 
                   ListView.separated(
@@ -364,16 +311,8 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                       final exceedsStock = item['exceedsStock'] == true;
                       final availableStock = (item['availableStock'] as num?)?.toInt() ?? 0;
 
-                      return Container(
+                      return AppCard(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: exceedsStock ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0)),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                          ],
-                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -385,16 +324,16 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                                   width: 58,
                                   height: 58,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF8FAFC),
+                                    color: AppColors.bg,
                                     borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    border: Border.all(color: AppColors.border),
                                   ),
                                   child: img != null && img.isNotEmpty
                                       ? ClipRRect(
                                           borderRadius: BorderRadius.circular(10),
                                           child: Image.network(img, fit: BoxFit.contain),
                                         )
-                                      : const Icon(Icons.image_outlined, color: Color(0xFF94A3B8)),
+                                      : const Icon(Icons.image_outlined, color: AppColors.textSecondary),
                                 ),
                                 const SizedBox(width: 12),
 
@@ -405,19 +344,21 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                                     children: [
                                       Text(
                                         name,
-                                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.navy900),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 3),
-                                      Text(
-                                        'Unit Price: ₹${unitPrice.toStringAsFixed(2)}',
-                                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                                      Row(
+                                        children: [
+                                          const Text('Unit: ', style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                                          AmountText(amount: unitPrice, fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                        ],
                                       ),
                                       if (exceedsStock)
                                         Text(
                                           'Only $availableStock left in stock!',
-                                          style: const TextStyle(fontSize: 10.5, color: Color(0xFFDC2626), fontWeight: FontWeight.bold),
+                                          style: const TextStyle(fontSize: 10.5, color: AppColors.danger, fontWeight: FontWeight.bold),
                                         ),
                                     ],
                                   ),
@@ -425,7 +366,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
 
                                 // Remove button
                                 IconButton(
-                                  icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFDC2626)),
+                                  icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.danger),
                                   onPressed: () => portal.setCartItem(prodId, 0),
                                   tooltip: 'Remove',
                                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -434,7 +375,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                               ],
                             ),
 
-                            const Divider(height: 16),
+                            const Divider(height: 16, color: AppColors.border),
 
                             // Quantity Stepper and Item Total Row
                             Row(
@@ -443,43 +384,47 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                                 // Stepper
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
+                                    color: AppColors.bg,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    border: Border.all(color: AppColors.border),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.remove, size: 16, color: Color(0xFF1D4ED8)),
-                                        padding: EdgeInsets.zero,
+                                        icon: const Icon(Icons.remove, size: 16, color: AppColors.navy900),
                                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                        onPressed: () => portal.setCartItem(prodId, qty - 1),
+                                        padding: EdgeInsets.zero,
+                                        onPressed: () {
+                                          portal.setCartItem(prodId, qty - 1);
+                                        },
                                       ),
-                                      Text(
-                                        '$qty',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                      Container(
+                                        constraints: const BoxConstraints(minWidth: 28),
+                                        alignment: Alignment.center,
+                                        child: Text(
+                                          '$qty',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.navy900),
+                                        ),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.add, size: 16, color: Color(0xFF1D4ED8)),
-                                        padding: EdgeInsets.zero,
+                                        icon: const Icon(Icons.add, size: 16, color: AppColors.navy900),
                                         constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                                        onPressed: () => portal.setCartItem(prodId, qty + 1),
+                                        padding: EdgeInsets.zero,
+                                        onPressed: () {
+                                          portal.setCartItem(prodId, qty + 1);
+                                        },
                                       ),
                                     ],
                                   ),
                                 ),
 
-                                // Line Total
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    const Text('ITEM TOTAL', style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
-                                    Text(
-                                      '₹${lineTotal.toStringAsFixed(2)}',
-                                      style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                                    ),
-                                  ],
+                                // Item Total
+                                AmountText(
+                                  amount: lineTotal,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.navy900,
                                 ),
                               ],
                             ),
@@ -489,40 +434,47 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     },
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 18),
 
                   // Order Summary Card
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [
-                        BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 2)),
-                      ],
-                    ),
+                  AppCard(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
-                          padding: EdgeInsets.all(14),
-                          child: Text(
-                            'Order Summary',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF0F172A)),
-                          ),
+                        const Text(
+                          'Payment & Price Details',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.navy900),
                         ),
-                        const Divider(height: 1),
-                        Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
+                        const SizedBox(height: 12),
+                        _buildSummaryRow('Items Subtotal', subtotal),
+                        if (taxTotal > 0)
+                          _buildSummaryRow('Estimated Tax / GST', taxTotal),
+                        const Divider(height: 16, color: AppColors.border),
+                        _buildSummaryRow(
+                          'Grand Total',
+                          grandTotal,
+                          isBold: true,
+                          fontSize: 16,
+                          color: AppColors.navy900,
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.blue50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
                             children: [
-                              _buildSummaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
-                              if (discount > 0)
-                                _buildSummaryRow('Discount', '-₹${discount.toStringAsFixed(2)}', color: const Color(0xFF16A34A)),
-                              if (tax > 0)
-                                _buildSummaryRow('GST Tax', '₹${tax.toStringAsFixed(2)}'),
-                              const Divider(height: 18),
-                              _buildSummaryRow('Grand Total', '₹${grandTotal.toStringAsFixed(2)}', isBold: true, fontSize: 16, color: const Color(0xFF1D4ED8)),
+                              Icon(Icons.info_outline, size: 16, color: AppColors.blue600),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Payment will be recorded to your Ledger balance upon delivery.',
+                                  style: TextStyle(fontSize: 11, color: AppColors.navy900),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -532,31 +484,27 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
 
                   const SizedBox(height: 14),
 
-                  // Order Notes (Optional)
-                  Container(
+                  // Order Note Card
+                  AppCard(
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Order Notes (Optional)',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                          'Order Note / Remarks (Optional)',
+                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppColors.navy900),
                         ),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _noteCtrl,
                           decoration: InputDecoration(
                             hintText: 'Any special instructions for the store...',
-                            hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                            hintStyle: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                             filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
+                            fillColor: AppColors.bg,
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppColors.border)),
                             isDense: true,
                           ),
                         ),
@@ -567,25 +515,11 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                   const SizedBox(height: 20),
 
                   // Place Order CTA
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1D4ED8),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 2,
-                      ),
-                      icon: _submitting
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.check_circle_outline, color: Colors.white),
-                      label: Text(
-                        _submitting ? 'Placing Order...' : 'Place Order (₹${grandTotal.toStringAsFixed(2)})',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                      onPressed: _submitting ? null : _handlePlaceOrder,
-                    ),
+                  PrimaryButton(
+                    label: 'Place Order',
+                    icon: Icons.check_circle_outline,
+                    loading: _submitting,
+                    onPressed: _submitting ? null : _handlePlaceOrder,
                   ),
                   const SizedBox(height: 28),
                 ],
@@ -594,7 +528,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, {bool isBold = false, Color? color, double fontSize = 12.5}) {
+  Widget _buildSummaryRow(String label, double amount, {bool isBold = false, Color? color, double fontSize = 13}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -605,16 +539,14 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
             style: TextStyle(
               fontSize: fontSize,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: const Color(0xFF64748B),
+              color: isBold ? AppColors.navy900 : AppColors.textSecondary,
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: isBold ? FontWeight.w900 : FontWeight.bold,
-              color: color ?? const Color(0xFF0F172A),
-            ),
+          AmountText(
+            amount: amount,
+            fontSize: fontSize,
+            fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+            color: color ?? AppColors.navy900,
           ),
         ],
       ),

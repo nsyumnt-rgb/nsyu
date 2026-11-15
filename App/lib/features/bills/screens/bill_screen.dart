@@ -93,18 +93,19 @@ class _BillScreenState extends State<BillScreen> {
     final customer = provider.selectedCustomer;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.navy900),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
           'New Bill',
           style: TextStyle(
-            color: Color(0xFF0F172A),
+            color: AppColors.navy900,
             fontWeight: FontWeight.w700,
             fontSize: 18,
           ),
@@ -112,12 +113,12 @@ class _BillScreenState extends State<BillScreen> {
         actions: [
           IconButton(
             tooltip: 'Select Customer',
-            icon: const Icon(Icons.person_add_alt_outlined, color: Color(0xFF0F172A)),
+            icon: const Icon(Icons.person_add_alt_outlined, color: AppColors.navy900),
             onPressed: () => _editCustomer(provider),
           ),
           IconButton(
             tooltip: 'More options',
-            icon: const Icon(Icons.more_vert, color: Color(0xFF0F172A)),
+            icon: const Icon(Icons.more_vert_rounded, color: AppColors.navy900),
             onPressed: () => _showMoreMenu(context, provider),
           ),
         ],
@@ -158,11 +159,11 @@ class _BillScreenState extends State<BillScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          height: 44,
+          height: 46,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
           ),
           child: TextField(
             controller: _searchCtrl,
@@ -170,20 +171,20 @@ class _BillScreenState extends State<BillScreen> {
             style: const TextStyle(fontSize: 13.5),
             decoration: InputDecoration(
               hintText: 'Search product by name, code or barcode...',
-              hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
-              prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF64748B)),
+              hintStyle: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+              prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.textSecondary),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.list_alt_rounded,
-                        color: Color(0xFF64748B), size: 20),
+                        color: AppColors.navy900, size: 20),
                     tooltip: 'Browse Products',
                     onPressed: () => _showViewProductsSheet(context, provider),
                   ),
                   IconButton(
                     icon: const Icon(Icons.document_scanner_outlined,
-                        color: Color(0xFF64748B), size: 20),
+                        color: AppColors.navy900, size: 20),
                     tooltip: 'Scan Barcode',
                     onPressed: () => _showScanBarcodeDialog(context, provider),
                   ),
@@ -191,7 +192,7 @@ class _BillScreenState extends State<BillScreen> {
               ),
               border: InputBorder.none,
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
         ),
@@ -273,39 +274,56 @@ class _BillScreenState extends State<BillScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        color: AppColors.blue50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.blue100),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: const Color(0xFF1D4ED8),
-            child: Text(
-              _initials(name),
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.navy900, AppColors.navy700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                _initials(name),
+                style: const TextStyle(
+                    color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+              ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Color(0xFF0F172A))),
-                Text('$custId · $phone',
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                    color: AppColors.navy900,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '$custId · $phone',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                ),
               ],
             ),
           ),
           if (customer != null)
             IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF1D4ED8)),
+              icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.navy900),
               tooltip: 'Edit customer info',
               onPressed: () => _openInlineEditCustomer(provider, customer),
             ),
@@ -313,11 +331,14 @@ class _BillScreenState extends State<BillScreen> {
             onPressed: () => _editCustomer(provider),
             style: TextButton.styleFrom(
                 padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
-            child: const Text('Change',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1D4ED8))),
+            child: const Text(
+              'Change',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.blue600,
+              ),
+            ),
           ),
         ],
       ),
@@ -432,7 +453,7 @@ class _BillScreenState extends State<BillScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        border: Border(top: BorderSide(color: AppColors.border)),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
@@ -444,35 +465,44 @@ class _BillScreenState extends State<BillScreen> {
       child: SafeArea(
         top: false,
         bottom: true,
-        child: SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton.icon(
-            onPressed: provider.billItems.isEmpty || _saving
-                ? null
-                : () => _saveAndFinish(provider),
-            icon: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.check_circle_outline, size: 20, color: Colors.white),
-            label: Text(
-              _saving ? 'Saving...' : 'Save Bill',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-                color: Colors.white,
+        child: Row(
+          children: [
+            Expanded(
+              flex: 4,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${provider.billItems.length} items',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  AmountText(
+                    amount: provider.totalAmountPayable,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.navy900,
+                  ),
+                ],
               ),
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              disabledBackgroundColor: const Color(0xFF94A3B8),
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 5,
+              child: PrimaryButton(
+                label: 'Save Bill',
+                icon: Icons.check_circle_outline,
+                loading: _saving,
+                onPressed: provider.billItems.isEmpty || _saving
+                    ? null
+                    : () => _saveAndFinish(provider),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

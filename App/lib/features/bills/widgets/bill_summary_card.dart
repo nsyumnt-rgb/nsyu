@@ -1,60 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../theme/app_theme.dart';
 
 class BillSummaryCard extends StatelessWidget {
   final CatalogProvider provider;
 
   const BillSummaryCard({super.key, required this.provider});
 
-  static final NumberFormat _money = NumberFormat('#,##0.00');
-
   static Widget _summaryLine(
-    String label,
-    String value, {
+    String label, {
+    required double amount,
     bool isBold = false,
-    double fontSize = 13,
+    double fontSize = 13.5,
     Color? valueColor,
+    String? prefix,
   }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
-            color: isBold ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+              color: isBold ? AppColors.navy900 : AppColors.textSecondary,
+            ),
           ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
-            color: valueColor ?? const Color(0xFF0F172A),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (prefix != null)
+                Text(
+                  prefix,
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                    color: valueColor ?? AppColors.navy900,
+                  ),
+                ),
+              AmountText(
+                amount: amount,
+                fontSize: fontSize,
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w600,
+                color: valueColor ?? AppColors.navy900,
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -62,55 +64,50 @@ class BillSummaryCard extends StatelessWidget {
             'Bill Summary',
             style: TextStyle(
               fontWeight: FontWeight.w700,
-              fontSize: 14.5,
-              color: Color(0xFF0F172A),
+              fontSize: 15,
+              color: AppColors.navy900,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _summaryLine(
             'Subtotal (${provider.billItems.length} items)',
-            '₹ ${_money.format(provider.billSubtotal)}',
+            amount: provider.billSubtotal,
           ),
-          if (provider.billDiscount > 0) ...[
-            const SizedBox(height: 6),
+          if (provider.billDiscount > 0)
             _summaryLine(
               'Discount',
-              '- ₹ ${_money.format(provider.billDiscount)}',
-              valueColor: const Color(0xFF16A34A),
+              amount: provider.billDiscount,
+              prefix: '- ',
+              valueColor: AppColors.success,
             ),
-          ],
-          if (provider.billTax > 0) ...[
-            const SizedBox(height: 6),
+          if (provider.billTax > 0)
             _summaryLine(
               'Tax / GST',
-              '+ ₹ ${_money.format(provider.billTax)}',
+              amount: provider.billTax,
+              prefix: '+ ',
             ),
-          ],
-          const SizedBox(height: 6),
           _summaryLine(
             'Bill Total',
-            '₹ ${_money.format(provider.finalBillTotal)}',
+            amount: provider.finalBillTotal,
           ),
-          if (provider.previousOutstanding > 0) ...[
-            const SizedBox(height: 6),
+          if (provider.previousOutstanding > 0)
             _summaryLine(
               'Previous Outstanding',
-              '₹ ${_money.format(provider.previousOutstanding)}',
-              valueColor: const Color(0xFFDC2626),
+              amount: provider.previousOutstanding,
+              prefix: '+ ',
+              valueColor: AppColors.danger,
             ),
-          ],
           const SizedBox(height: 8),
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          const Divider(height: 1, color: AppColors.border),
           const SizedBox(height: 8),
           _summaryLine(
             'Grand Total',
-            '₹ ${_money.format(provider.totalAmountPayable)}',
+            amount: provider.totalAmountPayable,
             isBold: true,
-            fontSize: 16,
+            fontSize: 16.5,
           ),
         ],
       ),
     );
   }
 }
-

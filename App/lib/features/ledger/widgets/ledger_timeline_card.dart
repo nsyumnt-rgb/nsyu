@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../navigation/app_navigation.dart';
+import '../../../theme/app_theme.dart';
 
 class LedgerDatePill extends StatelessWidget {
   final String date;
@@ -14,15 +15,15 @@ class LedgerDatePill extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         decoration: BoxDecoration(
-          color: const Color(0xFFE2E8F0),
+          color: AppColors.border.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           date,
           style: const TextStyle(
             fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF475569),
+            fontWeight: FontWeight.w600,
+            color: AppColors.textSecondary,
           ),
         ),
       ),
@@ -34,6 +35,7 @@ class LedgerBillCard extends StatelessWidget {
   final String billNo;
   final String time;
   final double amount;
+  final double? runningBalance;
   final bool hasPdf;
   final bool isRedBadge;
   final NumberFormat moneyFormatter;
@@ -43,6 +45,7 @@ class LedgerBillCard extends StatelessWidget {
     required this.billNo,
     required this.time,
     required this.amount,
+    this.runningBalance,
     required this.moneyFormatter,
     this.hasPdf = false,
     this.isRedBadge = false,
@@ -50,34 +53,22 @@ class LedgerBillCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
+    return AppCard(
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: isRedBadge ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
-                  shape: BoxShape.circle,
+                  color: AppColors.blue50,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  Icons.arrow_upward,
-                  color: isRedBadge ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                child: const Icon(
+                  Icons.receipt_outlined,
+                  color: AppColors.navy900,
                   size: 20,
                 ),
               ),
@@ -91,24 +82,36 @@ class LedgerBillCard extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.navy900,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       time,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
                   ],
                 ),
               ),
-              Text(
-                '₹${moneyFormatter.format(amount)}',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFFEA580C),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  AmountText(
+                    amount: amount,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy900,
+                  ),
+                  if (runningBalance != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Bal: ₹${moneyFormatter.format(runningBalance)}',
+                      style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -117,9 +120,9 @@ class LedgerBillCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppColors.bg,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppColors.border),
               ),
               child: Row(
                 children: [
@@ -129,7 +132,7 @@ class LedgerBillCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: const Center(
                       child: Text(
@@ -137,7 +140,7 @@ class LedgerBillCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
+                          color: AppColors.navy900,
                         ),
                       ),
                     ),
@@ -152,12 +155,12 @@ class LedgerBillCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF0F172A),
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         Text(
-                          '1.2 MB',
-                          style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
+                          'Tap to view / print',
+                          style: TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
                         ),
                       ],
                     ),
@@ -170,21 +173,21 @@ class LedgerBillCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.blue50,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF16A34A), width: 1.2),
+                        border: Border.all(color: AppColors.blue600, width: 1.0),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.visibility_outlined, size: 14, color: Color(0xFF16A34A)),
+                          Icon(Icons.visibility_outlined, size: 14, color: AppColors.blue600),
                           SizedBox(width: 4),
                           Text(
                             'View Bill',
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF16A34A),
+                              color: AppColors.blue600,
                             ),
                           ),
                         ],
@@ -205,6 +208,7 @@ class LedgerPaymentCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final double amount;
+  final double? runningBalance;
   final NumberFormat moneyFormatter;
 
   const LedgerPaymentCard({
@@ -212,35 +216,24 @@ class LedgerPaymentCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.amount,
+    this.runningBalance,
     required this.moneyFormatter,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
+    return AppCard(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
           Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              color: Color(0xFFDCFCE7),
-              shape: BoxShape.circle,
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.arrow_downward, color: Color(0xFF16A34A), size: 20),
+            child: const Icon(Icons.arrow_downward_rounded, color: AppColors.success, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -252,28 +245,39 @@ class LedgerPaymentCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.textPrimary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                 ),
               ],
             ),
           ),
-          Text(
-            '₹${moneyFormatter.format(amount)}',
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF16A34A),
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AmountText(
+                amount: amount,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.success,
+              ),
+              if (runningBalance != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  'Bal: ₹${moneyFormatter.format(runningBalance)}',
+                  style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
+                ),
+              ],
+            ],
           ),
         ],
       ),
     );
   }
 }
-

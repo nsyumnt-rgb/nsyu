@@ -10,6 +10,7 @@ import '../providers/bills_provider.dart';
 import '../providers/customer_provider.dart';
 import '../providers/orders_provider.dart';
 import '../services/bill_pdf_service.dart';
+import '../theme/app_theme.dart';
 import 'bill_detail_screen.dart';
 import 'customer_ledger_detail_screen.dart';
 
@@ -324,7 +325,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           const SizedBox(height: 2),
                           Text('Customer: ${order.customerName.isEmpty ? "Walk-in" : order.customerName}', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
                           const SizedBox(height: 4),
-                          Text('Order Total: ₹${money.format(total)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF006837))),
+                          Text('Order Total: ₹${money.format(total)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppColors.navy900)),
                         ],
                       ),
                     ),
@@ -432,7 +433,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     });
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF006837),
+                    backgroundColor: AppColors.navy900,
                     foregroundColor: Colors.white,
                   ),
                   child: const Text('Convert & Post to Ledger'),

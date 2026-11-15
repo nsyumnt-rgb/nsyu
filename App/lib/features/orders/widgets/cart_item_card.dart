@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../../../models/bill_item.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../theme/app_theme.dart';
 import '../../../widgets/product_item_icon.dart';
 
 class CartItemCard extends StatefulWidget {
@@ -22,7 +21,6 @@ class CartItemCard extends StatefulWidget {
 }
 
 class _CartItemCardState extends State<CartItemCard> {
-  final _money = NumberFormat('#,##0');
   late TextEditingController _priceCtrl;
   late TextEditingController _qtyCtrl;
 
@@ -63,30 +61,31 @@ class _CartItemCardState extends State<CartItemCard> {
     super.dispose();
   }
 
+  void _updateQty(int newQty) {
+    if (newQty < 1) return;
+    setState(() {
+      widget.item.qty = newQty;
+      _qtyCtrl.text = newQty.toString();
+    });
+    if (widget.isOrder) {
+      widget.provider.updateOrderItemQty(widget.item.code, newQty);
+    } else {
+      widget.provider.updateItemQty(widget.item.code, newQty);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final it = widget.item;
     final isOrder = widget.isOrder;
     final provider = widget.provider;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Icon + Name / Code / Stock + Delete
+          // Top Row: Thumbnail + Title / Stock + Delete Button
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -94,7 +93,7 @@ class _CartItemCardState extends State<CartItemCard> {
                 name: it.desc,
                 category: it.category,
                 sku: it.code,
-                size: 42,
+                size: 44,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -106,7 +105,7 @@ class _CartItemCardState extends State<CartItemCard> {
                       style: const TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
+                        color: AppColors.textPrimary,
                         height: 1.25,
                       ),
                       maxLines: 2,
@@ -119,35 +118,29 @@ class _CartItemCardState extends State<CartItemCard> {
                           it.code,
                           style: const TextStyle(
                             fontSize: 11,
-                            color: Color(0xFF64748B),
+                            color: AppColors.textSecondary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                           decoration: BoxDecoration(
-                            color: it.availableStock < 0
-                                ? const Color(0xFFFEE2E2)
-                                : (it.availableStock == 0
-                                    ? const Color(0xFFFEF3C7)
-                                    : const Color(0xFFDCFCE7)),
+                            color: it.availableStock > 0
+                                ? AppColors.successBg
+                                : (it.availableStock == 0 ? AppColors.warningBg : AppColors.dangerBg),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            it.availableStock < 0
+                            it.availableStock > 0
                                 ? 'Stock: ${it.availableStock}'
-                                : (it.availableStock == 0
-                                    ? 'Stock: 0'
-                                    : 'In Stock: ${it.availableStock}'),
+                                : (it.availableStock == 0 ? 'Stock: 0' : 'Stock: ${it.availableStock}'),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              color: it.availableStock < 0
-                                  ? const Color(0xFFDC2626)
-                                  : (it.availableStock == 0
-                                      ? const Color(0xFFD97706)
-                                      : const Color(0xFF16A34A)),
+                              color: it.availableStock > 0
+                                  ? AppColors.success
+                                  : (it.availableStock == 0 ? AppColors.warning : AppColors.danger),
                             ),
                           ),
                         ),
@@ -157,7 +150,7 @@ class _CartItemCardState extends State<CartItemCard> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFEF4444)),
+                icon: const Icon(Icons.delete_outline_rounded, size: 21, color: AppColors.danger),
                 onPressed: () {
                   if (isOrder) {
                     provider.removeOrderItem(it.code);
@@ -172,87 +165,68 @@ class _CartItemCardState extends State<CartItemCard> {
             ],
           ),
 
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: AppColors.border),
           const SizedBox(height: 10),
 
-          // Bottom Row: Editable Price TextField + Editable Qty Stepper/TextField + Item Total
+          // Bottom Row: Rate + Stepper + Line Total
           Row(
             children: [
-              // 1. Direct Editable Price Input
+              // Rate / Unit Price Input
               Expanded(
                 flex: 4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Price',
+                      'Rate (₹)',
                       style: TextStyle(
-                        fontSize: 10.5,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       height: 36,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
+                        color: AppColors.bg,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      child: Row(
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(left: 8, right: 2),
-                            child: Text(
-                              '₹',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF334155),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: _priceCtrl,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(decimal: true),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0F172A),
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding:
-                                    EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                              ),
-                              onChanged: (val) {
-                                final p =
-                                    double.tryParse(val.replaceAll(',', '').trim());
-                                if (p != null) {
-                                  setState(() {
-                                    it.price = p;
-                                  });
-                                  provider.updateOrderItemPrice(it.code, p);
-                                  provider.updateItemPrice(it.code, p);
-                                }
-                              },
-                            ),
-                          ),
-                        ],
+                      child: TextField(
+                        controller: _priceCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.navy900,
+                        ),
+                        decoration: const InputDecoration(
+                          prefixText: ' ₹ ',
+                          prefixStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.navy900),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        ),
+                        onChanged: (val) {
+                          final p = double.tryParse(val.replaceAll(',', '').trim());
+                          if (p != null) {
+                            setState(() {
+                              it.price = p;
+                            });
+                            provider.updateOrderItemPrice(it.code, p);
+                            provider.updateItemPrice(it.code, p);
+                          }
+                        },
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
 
-              const SizedBox(width: 10),
-
-              // 2. Direct Editable Quantity Input with Stepper [-] [TextField] [+]
+              // Quantity Stepper: [-] [qty] [+]
               Expanded(
                 flex: 5,
                 child: Column(
@@ -261,9 +235,9 @@ class _CartItemCardState extends State<CartItemCard> {
                     const Text(
                       'Quantity',
                       style: TextStyle(
-                        fontSize: 10.5,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -272,45 +246,69 @@ class _CartItemCardState extends State<CartItemCard> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      alignment: Alignment.center,
-                      child: TextField(
-                        controller: _qtyCtrl,
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF0F172A),
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding:
-                              EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                        ),
-                        onChanged: (val) {
-                          final trimmed = val.trim();
-                          if (trimmed.isEmpty) return;
-                          final q = int.tryParse(trimmed);
-                          if (q != null && q >= 1) {
-                            setState(() {
-                              it.qty = q;
-                            });
-                            provider.updateOrderItemQty(it.code, q);
-                            provider.updateItemQty(it.code, q);
-                          }
-                        },
+                      child: Row(
+                        children: [
+                          InkWell(
+                            onTap: () => _updateQty(it.qty - 1),
+                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                            child: Container(
+                              width: 30,
+                              height: 36,
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.remove, size: 16, color: AppColors.textPrimary),
+                            ),
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _qtyCtrl,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                              ),
+                              onChanged: (val) {
+                                final q = int.tryParse(val.trim());
+                                if (q != null && q >= 1) {
+                                  setState(() {
+                                    it.qty = q;
+                                  });
+                                  if (isOrder) {
+                                    provider.updateOrderItemQty(it.code, q);
+                                  } else {
+                                    provider.updateItemQty(it.code, q);
+                                  }
+                                }
+                              },
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => _updateQty(it.qty + 1),
+                            borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                            child: Container(
+                              width: 30,
+                              height: 36,
+                              alignment: Alignment.center,
+                              child: const Icon(Icons.add, size: 16, color: AppColors.navy900),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
 
-              const SizedBox(width: 10),
-
-              // 3. Item Total (Price * Qty)
+              // Line Total
               Expanded(
                 flex: 4,
                 child: Column(
@@ -319,21 +317,17 @@ class _CartItemCardState extends State<CartItemCard> {
                     const Text(
                       'Total',
                       style: TextStyle(
-                        fontSize: 10.5,
-                        color: Color(0xFF64748B),
-                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(
-                      '₹${_money.format(it.price * it.qty)}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF0F172A),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    AmountText(
+                      amount: it.price * it.qty,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.navy900,
                     ),
                   ],
                 ),
@@ -345,4 +339,3 @@ class _CartItemCardState extends State<CartItemCard> {
     );
   }
 }
-

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../theme/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/supabase_service.dart';
 import '../../../services/customer_portal_service.dart';
@@ -406,7 +407,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: const Color(0xFFF0F7FF),
       body: Stack(
         children: [
-          // ── 1. Top Vibrant Blue Background with Wave ──
+          // ── 1. Top Navy Brand Gradient Header ──
           Positioned(
             top: 0,
             left: 0,
@@ -418,9 +419,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFF38BDF8), // Sky blue
-                      Color(0xFF2563EB), // Vibrant blue
-                      Color(0xFF1D4ED8), // Royal blue
+                      AppColors.navy900,
+                      AppColors.navy700,
+                      AppColors.blue600,
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -462,7 +463,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Official NSYU App Logo, Title, Features
-                    const LoginHeaderWidget(),
+                    GestureDetector(
+                      onLongPress: _showServerSettings,
+                      child: const LoginHeaderWidget(),
+                    ),
+                    if (_isConnected == false && !_checkingConnection)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Connection offline ($_connectionDetails). Long-press logo for settings.',
+                          style: const TextStyle(fontSize: 11, color: Colors.white70),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     const SizedBox(height: 22),
 
                     // ── 4. Main White Floating Card ──
@@ -727,53 +740,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                           const SizedBox(height: 16),
 
-                          // Gradient Blue [ -> Login ] Button
-                          InkWell(
-                            onTap: _loading ? null : _handleLogin,
-                            borderRadius: BorderRadius.circular(14),
-                            child: Container(
-                              height: 48,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
-                                borderRadius: BorderRadius.circular(14),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF1D4ED8).withValues(alpha: 0.35),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Center(
-                                child: _loading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2, color: Colors.white),
-                                      )
-                                    : const Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.arrow_forward_rounded,
-                                              color: Colors.white, size: 18),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'Login',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                              ),
-                            ),
+                          // Primary Login Button
+                          PrimaryButton(
+                            label: 'Login',
+                            onPressed: _handleLogin,
+                            loading: _loading,
+                            height: 52,
+                            radius: 14,
+                            backgroundColor: AppColors.navy900,
+                            icon: Icons.login_rounded,
                           ),
                           if (_isCustomerMode) ...[
                             const SizedBox(height: 8),
@@ -808,98 +783,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Outlined [ 👤+ Create Account ] Button
-                          OutlinedButton(
+                          // Secondary Create Account Button
+                          SecondaryButton(
+                            label: 'Create Account',
                             onPressed: _showCreateAccount,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              side: const BorderSide(color: Color(0xFF1D4ED8), width: 1.4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              backgroundColor: Colors.white,
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.person_add_alt_1_outlined,
-                                    color: Color(0xFF1D4ED8), size: 18),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Create Account',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF1D4ED8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Supabase Connection Status Pill (Inside Card at Bottom)
-                          InkWell(
-                            onTap: _showServerSettings,
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8.5),
-                              decoration: BoxDecoration(
-                                color: _isConnected == true
-                                    ? const Color(0xFFF0FDF4)
-                                    : const Color(0xFFFEF2F2),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: _isConnected == true
-                                      ? const Color(0xFFBBF7D0)
-                                      : const Color(0xFFFECACA),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: _checkingConnection
-                                          ? Colors.amber
-                                          : (_isConnected == true
-                                              ? const Color(0xFF16A34A)
-                                              : const Color(0xFFEF4444)),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _checkingConnection
-                                          ? 'Connecting to Supabase...'
-                                          : (_isConnected == true
-                                              ? (_connectionDetails.isNotEmpty
-                                                  ? _connectionDetails
-                                                  : 'Supabase PostgreSQL Connected')
-                                              : 'Backend Offline — Tap to Configure'),
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: _isConnected == true
-                                            ? const Color(0xFF15803D)
-                                            : const Color(0xFF991B1B),
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Icon(
-                                    Icons.storage_rounded,
-                                    size: 16,
-                                    color: _isConnected == true
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF991B1B),
-                                  ),
-                                ],
-                              ),
-                            ),
+                            height: 48,
+                            radius: 14,
+                            icon: Icons.person_add_alt_1_outlined,
                           ),
                         ],
                       ),

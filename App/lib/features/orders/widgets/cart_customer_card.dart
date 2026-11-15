@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../theme/app_theme.dart';
 
 class CartCustomerCard extends StatelessWidget {
   final String customerName;
@@ -16,35 +17,38 @@ class CartCustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
+    final bool hasCustomer = customerName != 'Select Customer';
+
+    return AppCard(
       padding: const EdgeInsets.all(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // User Icon inside rounded box
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.navy900, AppColors.blue600],
+              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.person_outline, color: Color(0xFF64748B), size: 22),
+            child: Center(
+              child: hasCustomer
+                  ? Text(
+                      customerName.isNotEmpty ? customerName[0].toUpperCase() : 'C',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    )
+                  : const Icon(Icons.person_add_alt_1_outlined, color: Colors.white, size: 20),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
 
           Expanded(
             child: Column(
@@ -53,54 +57,58 @@ class CartCustomerCard extends StatelessWidget {
                 const Text(
                   'Customer',
                   style: TextStyle(
-                    fontSize: 10.5,
-                    color: Color(0xFF64748B),
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
                     fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  customerName,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Mobile: $customerMobile  |  $customerAddress',
-                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                  customerName,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasCustomer ? '$customerMobile • $customerAddress' : 'Tap to select customer from directory',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
 
-          // Select Customer > Pill Button
+          // Select Customer Pill
           InkWell(
             onTap: onSelectCustomer,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFBFDBFE)),
+                color: AppColors.blue50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.blue100),
               ),
-              child: const Row(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Select Customer',
-                    style: TextStyle(
-                      fontSize: 11,
+                    hasCustomer ? 'Change' : 'Select',
+                    style: const TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1D4ED8),
+                      color: AppColors.navy900,
                     ),
                   ),
-                  SizedBox(width: 2),
-                  Icon(Icons.chevron_right, size: 14, color: Color(0xFF1D4ED8)),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right, size: 14, color: AppColors.navy900),
                 ],
               ),
             ),
@@ -110,4 +118,3 @@ class CartCustomerCard extends StatelessWidget {
     );
   }
 }
-

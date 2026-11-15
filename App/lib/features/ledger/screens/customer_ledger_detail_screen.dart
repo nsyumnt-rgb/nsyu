@@ -9,8 +9,11 @@ import '../../../models/customer_ledger_entry.dart';
 import '../../../providers/bills_provider.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/payments_provider.dart';
+import '../../../providers/catalog_provider.dart';
 import '../../../services/supabase_service.dart';
 import '../../../screens/collect_payment_screen.dart';
+import '../../../screens/order_cart_screen.dart';
+import '../../../theme/app_theme.dart';
 
 import '../widgets/ledger_timeline_card.dart';
 import '../widgets/customer_bills_tab_view.dart';
@@ -171,13 +174,13 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
     final currentOutstanding = _backendEntries.isNotEmpty ? _currentBalance : (totalSales - totalPayments);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(72),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
-            border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+            border: Border(bottom: BorderSide(color: AppColors.border)),
           ),
           child: SafeArea(
             bottom: false,
@@ -186,92 +189,104 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Color(0xFF0F172A)),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.textPrimary),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  InkWell(
-                    onTap: () => CustomerProfileSheetHelper.showProfileSheet(
-                      context: context,
-                      customer: cust,
-                      partyName: widget.partyName,
-                      currentBalance: currentOutstanding,
-                      moneyFormatter: _money,
-                      onCustomerUpdated: (updated) {
-                        setState(() {
-                          _customer = updated;
-                          _currentBalance = updated.currentBalance;
-                        });
-                      },
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
-                            ),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF2563EB).withValues(alpha: 0.2),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => CustomerProfileSheetHelper.showProfileSheet(
+                        context: context,
+                        customer: cust,
+                        partyName: widget.partyName,
+                        currentBalance: currentOutstanding,
+                        moneyFormatter: _money,
+                        onCustomerUpdated: (updated) {
+                          setState(() {
+                            _customer = updated;
+                            _currentBalance = updated.currentBalance;
+                          });
+                        },
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [AppColors.navy900, AppColors.blue600],
                               ),
-                            ],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : 'C',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
+                            ),
                           ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : 'C',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Row(
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF0F172A),
-                                  ),
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        name,
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    const Icon(Icons.chevron_right, size: 16, color: AppColors.textSecondary),
+                                  ],
                                 ),
-                                const Icon(Icons.chevron_right, size: 16, color: Color(0xFF94A3B8)),
+                                Text(
+                                  phone,
+                                  style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ],
                             ),
-                            Text(
-                              phone,
-                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.description_outlined, color: Color(0xFF0F172A), size: 22),
-                    tooltip: 'Statement',
-                    onPressed: () => _printStatement(timeline, currentOutstanding),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.success, size: 21),
+                    tooltip: 'WhatsApp',
+                    onPressed: () {
+                      final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+                      if (digits.isNotEmpty && digits != '-') {
+                        launchUrl(Uri.parse('https://wa.me/$digits'), mode: LaunchMode.externalApplication);
+                      }
+                    },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.phone_outlined, color: Color(0xFF16A34A), size: 22),
+                    icon: const Icon(Icons.phone_outlined, color: AppColors.navy900, size: 21),
                     tooltip: 'Call Customer',
                     onPressed: () async {
                       if (phone.isNotEmpty && phone != '-') {
                         launchUrl(Uri(scheme: 'tel', path: phone));
                       }
                     },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.description_outlined, color: AppColors.navy900, size: 21),
+                    tooltip: 'Statement',
+                    onPressed: () => _printStatement(timeline, currentOutstanding),
                   ),
                 ],
               ),
@@ -335,10 +350,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+                    color: isSelected ? AppColors.blue50 : Colors.transparent,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                      color: isSelected ? AppColors.blue600 : AppColors.border,
                       width: isSelected ? 1.4 : 1.0,
                     ),
                   ),
@@ -347,7 +362,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                      color: isSelected ? AppColors.navy900 : AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -364,68 +379,103 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
       children: [
         // Total Due Header Card
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFF1F5F9)),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x06000000),
-                blurRadius: 6,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
+        AppCard(
+          padding: const EdgeInsets.all(18),
           child: Column(
             children: [
-              Text(
-                currentOutstanding > 0
-                    ? 'Total Due'
-                    : (currentOutstanding < 0 ? 'Advance Balance' : 'All Settled'),
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: currentOutstanding > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  StatusChip(
+                    label: currentOutstanding > 0
+                        ? 'Outstanding Due'
+                        : (currentOutstanding < 0 ? 'Advance Balance' : 'All Settled'),
+                    variant: currentOutstanding > 0
+                        ? StatusChipVariant.danger
+                        : (currentOutstanding < 0 ? StatusChipVariant.success : StatusChipVariant.neutral),
+                  ),
+                  if (timeline.isNotEmpty)
+                    Text(
+                      'Last: ${_dateFormat.format(timeline.first.entryDate)}',
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              AmountText(
+                amount: currentOutstanding.abs(),
+                fontSize: 30,
+                fontWeight: FontWeight.w800,
+                color: currentOutstanding > 0 ? AppColors.danger : AppColors.success,
               ),
               const SizedBox(height: 6),
-              Text(
-                '₹ ${_money.format(currentOutstanding.abs())}',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: currentOutstanding > 0 ? const Color(0xFFEA580C) : const Color(0xFF16A34A),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Last Transaction',
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: Color(0xFF94A3B8)),
-              ),
-              const SizedBox(height: 4),
-              if (timeline.isNotEmpty) ...[
+              if (timeline.isNotEmpty)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(_dateFormat.format(timeline.first.entryDate), style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    const Text(' • ', style: TextStyle(color: Color(0xFFCBD5E1))),
+                    Text(_dateFormat.format(timeline.first.entryDate), style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+                    const Text(' • ', style: TextStyle(color: AppColors.border)),
                     Text(
                       timeline.first.isCredit
-                          ? '₹ ${_money.format(timeline.first.amount)} Received'
-                          : '₹ ${_money.format(timeline.first.amount)} Billed',
+                          ? '₹${_money.format(timeline.first.amount)} Received'
+                          : '₹${_money.format(timeline.first.amount)} Billed',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: timeline.first.isCredit ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                        color: timeline.first.isCredit ? AppColors.success : AppColors.danger,
                       ),
                     ),
                   ],
-                ),
-              ] else ...[
-                const Text('No transactions yet', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-              ],
+                )
+              else
+                const Text('No transactions yet', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        onPressed: _openCollectPayment,
+                        icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                        label: const Text('Add Payment', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.navy900,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          final cust = _customer ?? widget.customer;
+                          if (cust != null) {
+                            context.read<CatalogProvider>().selectCustomer(cust);
+                          }
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const OrderCartScreen()),
+                          );
+                        },
+                        icon: const Icon(Icons.receipt_long_outlined, size: 16, color: AppColors.navy900),
+                        label: const Text('New Bill', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navy900)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.blue50,
+                          foregroundColor: AppColors.navy900,
+                          elevation: 0,
+                          side: const BorderSide(color: AppColors.blue100, width: 1.2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -439,17 +489,17 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.receipt_long_outlined, size: 48, color: Color(0xFFCBD5E1)),
+                  Icon(Icons.receipt_long_outlined, size: 48, color: AppColors.border),
                   SizedBox(height: 12),
                   Text(
                     'No transactions recorded yet',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF334155)),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary),
                   ),
                   SizedBox(height: 4),
                   Text(
                     'Bills and payments for this customer will appear here.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
                 ],
               ),
@@ -484,6 +534,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
               billNo: ref.isNotEmpty ? ref : 'INV-${e.referenceId ?? "001"}',
               time: timeStr,
               amount: e.amount,
+              runningBalance: e.runningBalance,
               moneyFormatter: _money,
               hasPdf: true,
             ),
@@ -492,9 +543,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           widgets.add(Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: LedgerPaymentCard(
-              title: 'Payment',
+              title: 'Payment Received',
               subtitle: '${e.description.contains("Cash") ? "Cash" : "Payment"} • $timeStr',
               amount: e.amount,
+              runningBalance: e.runningBalance,
               moneyFormatter: _money,
             ),
           ));

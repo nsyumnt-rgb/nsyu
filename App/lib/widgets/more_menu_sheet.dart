@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../features/dashboard/screens/home_screen.dart';
+import '../screens/about_app_screen.dart';
 import '../screens/business_info_screen.dart';
+import '../screens/customer_picker_screen.dart';
 import '../screens/help_support_screen.dart';
 import '../screens/inventory_screen.dart';
 import '../screens/profile_screen.dart';
@@ -8,12 +11,11 @@ import '../screens/visibility_settings_screen.dart';
 import '../theme/app_theme.dart';
 import 'app_bottom_nav.dart';
 
-/// Modal bottom sheet matching Reference Image ("More Options")
-/// Features:
-/// - "More Options" header with center drag handle and circular close ✕ button
-/// - 3-Column Grid of 9 rounded rectangular cards with soft green circular icons,
-///   descriptive labels, and right-pointing chevrons (>)
-/// - Integrated bottom navigation bar with active More tab
+/// Modal bottom sheet matching Specification ("More Options")
+/// Grouped into distinct sections:
+/// - Business (Dashboard, Inventory, Suppliers, Kaccha Khaata, Auto Reminder)
+/// - Account (Account, Profile, Settings)
+/// - Support (Help, About)
 class MoreMenuSheet extends StatelessWidget {
   final ValueChanged<int> onNavigate;
   final BottomNavMode navMode;
@@ -40,13 +42,16 @@ class MoreMenuSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 16,
+            color: Color(0x1A0F172A),
+            blurRadius: 20,
             offset: Offset(0, -4),
           ),
         ],
@@ -76,8 +81,9 @@ class MoreMenuSheet extends StatelessWidget {
                 'More Options',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.2,
                 ),
               ),
               InkWell(
@@ -95,120 +101,151 @@ class MoreMenuSheet extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // 3-Column Grid of 9 Cards matching Reference Image
-          Column(
-            children: [
-              // Row 1: Account >, Profile >, Help >
-              Row(
+          // Scrollable Section Groups
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.description_outlined,
-                    label: 'Account',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessInfoScreen()));
-                    },
+                  // ── Section 1: Business ──
+                  _buildSectionHeader('BUSINESS'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.dashboard_outlined,
+                        label: 'Dashboard',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen(onNavigate: onNavigate)));
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.inventory_2_outlined,
+                        label: 'Inventory',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const InventoryScreen()));
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.local_shipping_outlined,
+                        label: 'Suppliers',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerPickerScreen(showSuppliersOnly: true)));
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.person_outline_rounded,
-                    label: 'Profile',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(onNavigate: onNavigate)));
-                    },
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.edit_note_rounded,
+                        label: 'Kaccha\nKhaata',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showKacchaKhaataSheet(context);
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.more_time_rounded,
+                        label: 'Auto\nReminder',
+                        onTap: () {
+                          Navigator.pop(context);
+                          _showAutoReminderSheet(context);
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(child: SizedBox()), // spacer for 3-grid balance
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.volunteer_activism_outlined,
-                    label: 'Help',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
-                    },
+                  const SizedBox(height: 16),
+
+                  // ── Section 2: Account ──
+                  _buildSectionHeader('ACCOUNT'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.storefront_outlined,
+                        label: 'Account',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessInfoScreen()));
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.person_outline_rounded,
+                        label: 'Profile',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(onNavigate: onNavigate)));
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.settings_outlined,
+                        label: 'Settings',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const VisibilitySettingsScreen()));
+                        },
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+
+                  // ── Section 3: Support ──
+                  _buildSectionHeader('SUPPORT'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.help_outline_rounded,
+                        label: 'Help',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _buildOptionCard(
+                        context,
+                        icon: Icons.info_outline_rounded,
+                        label: 'About',
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutAppScreen()));
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(child: SizedBox()),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                 ],
               ),
-              const SizedBox(height: 12),
-
-              // Row 2: Settings >, Bill >, Inventory > (Highlighted)
-              Row(
-                children: [
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.settings_outlined,
-                    label: 'Settings',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const VisibilitySettingsScreen()));
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.receipt_long_outlined,
-                    label: 'Bill',
-                    onTap: () {
-                      Navigator.pop(context);
-                      onNavigate(1); // Switch to Bills tab
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.inventory_2_outlined,
-                    label: 'Inventory',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const InventoryScreen()));
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Row 3: Auto Reminder >, Catalog >, Kaccha Khaata >
-              Row(
-                children: [
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.more_time_rounded,
-                    label: 'Auto\nReminder',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showAutoReminderSheet(context);
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.menu_book_rounded,
-                    label: 'Catalog',
-                    onTap: () {
-                      Navigator.pop(context);
-                      onNavigate(3); // Switch to Catalog tab
-                    },
-                  ),
-                  const SizedBox(width: 10),
-                  _buildOptionCard(
-                    context,
-                    icon: Icons.edit_note_rounded,
-                    label: 'Kaccha\nKhaata',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showKacchaKhaataSheet(context);
-                    },
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 8),
 
           // Integrated Bottom Navigation Bar with active More pill
           AppBottomNav(
@@ -223,6 +260,18 @@ class MoreMenuSheet extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textSecondary,
+        letterSpacing: 0.8,
       ),
     );
   }

@@ -8,6 +8,7 @@ import '../../../providers/catalog_provider.dart';
 import '../../../widgets/animated_feedback_dialog.dart';
 import '../../../widgets/app_bottom_nav.dart';
 import '../../../screens/edit_product_screen.dart';
+import '../../../theme/app_theme.dart';
 import '../widgets/charger_illustration.dart';
 import '../widgets/inventory_card_item.dart';
 import '../widgets/inventory_spreadsheet_table.dart';
@@ -338,39 +339,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.search_off, size: 48, color: Color(0xFF94A3B8)),
-            const SizedBox(height: 12),
-            const Text(
-              'No products match your search/filter.',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF334155),
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () {
-                _searchCtrl.clear();
-                _onCategorySelected('All (125)');
-              },
-              child: const Text(
-                'Reset Filters',
-                style: TextStyle(
-                  color: Color(0xFF2563EB),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.search_off_rounded,
+      title: 'No products match your search or filter.',
+      subtitle: 'Try adjusting your search query or selected category.',
+      buttonLabel: 'Reset Filters',
+      onButtonPressed: () {
+        _searchCtrl.clear();
+        _onCategorySelected('All (${_catalog.length})');
+      },
     );
   }
 
@@ -385,6 +362,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
     final filtered = _filteredCatalog;
     final totalItems = filtered.length;
+    final totalCount = liveProducts.length;
+    final lowStockCount = liveProducts.where((p) => p.stock > 0 && p.stock <= 5).length;
+    final outOfStockCount = liveProducts.where((p) => p.stock <= 0).length;
 
     final dynamicCategories = <String>['All (${_catalog.length})'];
     for (final c in catalogProvider.categories) {
@@ -611,12 +591,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 6),
                           decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFEFF6FF) : Colors.white,
+                            color: isSelected ? AppColors.blue50 : Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: isSelected
-                                  ? const Color(0xFF2563EB)
-                                  : const Color(0xFFE2E8F0),
+                                  ? AppColors.blue600
+                                  : AppColors.border,
                               width: isSelected ? 1.4 : 1,
                             ),
                           ),
@@ -627,8 +607,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               fontWeight:
                                   isSelected ? FontWeight.w800 : FontWeight.w500,
                               color: isSelected
-                                  ? const Color(0xFF1D4ED8)
-                                  : const Color(0xFF334155),
+                                  ? AppColors.navy900
+                                  : AppColors.textSecondary,
                             ),
                           ),
                         ),
@@ -638,7 +618,74 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
             ),
-            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            const Divider(height: 1, color: AppColors.border),
+
+            // Stock Metrics Strip (Total Items • Low Stock • Out of Stock)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              color: Colors.white,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.blue100),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Total Items', style: TextStyle(fontSize: 10.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text('$totalCount', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.navy900)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.warningBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Low Stock', style: TextStyle(fontSize: 10.5, color: AppColors.warning, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text('$lowStockCount', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.warning)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.dangerBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFECACA)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Out of Stock', style: TextStyle(fontSize: 10.5, color: AppColors.danger, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text('$outOfStockCount', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.danger)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppColors.border),
 
             // 3. MAIN BODY (CARD VIEW OR TABLE VIEW)
             Expanded(

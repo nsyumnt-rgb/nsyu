@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
+import '../../theme/app_theme.dart';
 import 'portal_notifications_screen.dart';
 import 'portal_order_detail_screen.dart';
 import 'portal_bill_detail_screen.dart';
@@ -55,7 +56,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy900)),
         content: const Text('Are you sure you want to log out of your customer portal?'),
         actions: [
           TextButton(
@@ -64,7 +65,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: AppColors.danger,
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(ctx, true),
@@ -85,7 +86,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     final cust = portal.customer;
     final dbMetrics = portal.dashboardData;
     final shop = (cust?['shop'] as Map<String, dynamic>?) ?? {};
-    final shopName = dbMetrics?['shopName']?.toString() ?? shop['name']?.toString() ?? 'NSYU Shop';
+    final shopName = dbMetrics?['shopName']?.toString() ?? shop['name']?.toString() ?? 'NSYU Business';
     final customerName = dbMetrics?['customerName']?.toString() ?? cust?['name']?.toString() ?? 'Customer';
     final balance = (dbMetrics?['outstandingBalance'] as num?)?.toDouble() ?? portal.currentBalance;
     final totalBills = (dbMetrics?['totalBills'] as num?)?.toInt() ?? _recentBills.length;
@@ -94,22 +95,30 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     final unread = portal.unreadNotifications;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.navy900, AppColors.navy700],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               customerName,
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontSize: 16.5, fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
               shopName,
-              style: const TextStyle(color: Color(0xFFDBEAFE), fontSize: 11, fontWeight: FontWeight.w500),
+              style: const TextStyle(color: AppColors.blue100, fontSize: 11.5, fontWeight: FontWeight.w500),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -120,7 +129,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
             icon: Badge(
               isLabelVisible: unread > 0,
               label: Text('$unread'),
-              backgroundColor: const Color(0xFFF59E0B),
+              backgroundColor: AppColors.warning,
               child: const Icon(Icons.notifications_outlined, color: Colors.white),
             ),
             tooltip: 'Notifications',
@@ -139,14 +148,14 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
             tooltip: 'Logout',
             onPressed: _handleLogout,
           ),
         ],
       ),
       body: RefreshIndicator(
-        color: const Color(0xFF1D4ED8),
+        color: AppColors.blue600,
         onRefresh: () async {
           await portal.refreshAll();
           await _loadDashboardData();
@@ -157,44 +166,76 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Summary Cards (2x2 Grid) ──
+              // ── Hero Outstanding Balance Card ──
+              AppCard(
+                padding: const EdgeInsets.all(18),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PortalLedgerScreen()),
+                  );
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Outstanding Balance',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        StatusChip(
+                          label: balance > 0
+                              ? 'Payment Due'
+                              : (balance < 0 ? 'Advance' : 'All Cleared'),
+                          variant: balance > 0
+                              ? StatusChipVariant.danger
+                              : (balance < 0 ? StatusChipVariant.warning : StatusChipVariant.success),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    AmountText(
+                      amount: balance.abs(),
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      color: balance > 0
+                          ? AppColors.danger
+                          : (balance < 0 ? AppColors.warning : AppColors.success),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      balance > 0
+                          ? 'Please clear pending dues at the shop'
+                          : (balance < 0
+                              ? 'You have advance deposit credit'
+                              : 'No pending payments on your account'),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // ── Summary Cards (3 Metric Badges) ──
               Row(
                 children: [
                   Expanded(
                     child: _buildMetricCard(
-                      title: 'OUTSTANDING BALANCE',
-                      value: '₹${balance.abs().toStringAsFixed(2)}',
-                      subtitle: balance > 0
-                          ? 'Payment Due'
-                          : balance < 0
-                              ? 'Advance Deposit'
-                              : 'All Cleared',
-                      valueColor: balance > 0
-                          ? const Color(0xFFDC2626)
-                          : balance < 0
-                              ? const Color(0xFF16A34A)
-                              : const Color(0xFF0F172A),
-                      icon: Icons.account_balance_wallet,
-                      iconBg: balance > 0 ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
-                      iconColor: balance > 0 ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const PortalLedgerScreen()),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildMetricCard(
-                      title: 'TOTAL BILLS',
+                      title: 'Total Bills',
                       value: '$totalBills',
-                      subtitle: 'Issued Invoices',
-                      valueColor: const Color(0xFF1D4ED8),
-                      icon: Icons.receipt_long,
-                      iconBg: const Color(0xFFDBEAFE),
-                      iconColor: const Color(0xFF1D4ED8),
+                      subtitle: 'Invoices',
+                      icon: Icons.receipt_long_rounded,
+                      color: AppColors.navy900,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -203,55 +244,36 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                       },
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildMetricCard(
-                      title: 'TOTAL ORDERS',
+                      title: 'Total Orders',
                       value: '$totalOrders',
-                      subtitle: 'Lifetime Placed',
-                      valueColor: const Color(0xFF0F172A),
+                      subtitle: 'Placed',
                       icon: Icons.shopping_bag_outlined,
-                      iconBg: const Color(0xFFF1F5F9),
-                      iconColor: const Color(0xFF475569),
-                      onTap: () {
-                        portal.switchTab(3); // Switch to Orders tab
-                      },
+                      color: AppColors.blue600,
+                      onTap: () => portal.switchTab(3),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: _buildMetricCard(
-                      title: 'PENDING ORDERS',
+                      title: 'Pending',
                       value: '$pendingOrders',
-                      subtitle: pendingOrders > 0 ? 'In Fulfillment' : 'No Pending',
-                      valueColor: pendingOrders > 0 ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                      subtitle: 'Active',
                       icon: Icons.hourglass_top_rounded,
-                      iconBg: const Color(0xFFFEF3C7),
-                      iconColor: const Color(0xFFD97706),
-                      onTap: () {
-                        portal.switchTab(3); // Switch to Orders tab
-                      },
+                      color: pendingOrders > 0 ? AppColors.warning : AppColors.textSecondary,
+                      onTap: () => portal.switchTab(3),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
-              // ── Quick Actions (4 Grid Items) ──
-              const Text(
-                'Quick Actions',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 12),
+              // ── Quick Actions ──
+              const SectionHeader(title: 'Quick Actions'),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
@@ -259,7 +281,6 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'My Ledger',
                       subtitle: 'Statement & Balance',
-                      color: const Color(0xFF1D4ED8),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -273,8 +294,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                     child: _buildQuickActionTile(
                       icon: Icons.receipt_long_outlined,
                       title: 'My Bills',
-                      subtitle: 'Download PDFs',
-                      color: const Color(0xFF2563EB),
+                      subtitle: 'Download Invoices',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -293,10 +313,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                       icon: Icons.storefront_outlined,
                       title: 'Shop Catalog',
                       subtitle: 'Explore Products',
-                      color: const Color(0xFF059669),
-                      onTap: () {
-                        portal.switchTab(1); // Catalog
-                      },
+                      onTap: () => portal.switchTab(1),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -304,17 +321,14 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                     child: _buildQuickActionTile(
                       icon: Icons.local_shipping_outlined,
                       title: 'My Orders',
-                      subtitle: 'Track Status',
-                      color: const Color(0xFF7C3AED),
-                      onTap: () {
-                        portal.switchTab(3); // Orders
-                      },
+                      subtitle: 'Track Deliveries',
+                      onTap: () => portal.switchTab(3),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // ── Recent Activity ──
               Row(
@@ -323,18 +337,19 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                   const Text(
                     'Recent Activity',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.navy900,
                     ),
                   ),
                   // Segmented Filter
                   Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.border),
                     ),
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(3),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -349,12 +364,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
               const SizedBox(height: 12),
 
               if (_loading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: CircularProgressIndicator(color: Color(0xFF1D4ED8)),
-                  ),
-                )
+                const SkeletonLoader(width: double.infinity, height: 160)
               else if (_recentTab == 0)
                 _buildRecentOrdersView(context)
               else if (_recentTab == 1)
@@ -374,21 +384,19 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     final active = _recentTab == index;
     return GestureDetector(
       onTap: () => setState(() => _recentTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: active ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
-          boxShadow: active
-              ? [const BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(0, 1))]
-              : null,
+          color: active ? AppColors.blue50 : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 11,
+            fontSize: 11.5,
             fontWeight: active ? FontWeight.bold : FontWeight.w500,
-            color: active ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+            color: active ? AppColors.navy900 : AppColors.textSecondary,
           ),
         ),
       ),
@@ -399,78 +407,50 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     required String title,
     required String value,
     required String subtitle,
-    required Color valueColor,
     required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
+    required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: const [
-            BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF64748B),
-                      letterSpacing: 0.3,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
                 ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, size: 16, color: iconColor),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: valueColor,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              Icon(icon, size: 16, color: color),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: color,
             ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF94A3B8),
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 10.5,
+              color: AppColors.textSecondary,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -479,67 +459,59 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
-    required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return AppCard(
+      padding: const EdgeInsets.all(12),
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: const [
-            BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.blue50,
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: Color(0xFF0F172A),
-                    ),
+            child: Icon(icon, color: AppColors.navy900, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppColors.navy900,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 10.5,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10.5,
                   ),
-                ],
-              ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildRecentOrdersView(BuildContext context) {
     if (_recentOrders.isEmpty) {
-      return _buildEmptyActivityCard('No orders placed yet. Explore the catalog to order!');
+      return const EmptyState(
+        icon: Icons.shopping_bag_outlined,
+        title: 'No Orders Yet',
+        subtitle: 'Explore the catalog to place your first order!',
+      );
     }
     return Column(
       children: _recentOrders.map((ord) {
@@ -547,17 +519,12 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
         final status = ord['status']?.toString() ?? 'pending';
         final total = ((ord['total_amount'] ?? 0) as num).toDouble();
         final dt = ord['createdAt']?.toString();
-        final dateStr = dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt)) : '';
+        final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             onTap: () {
               Navigator.push(
                 context,
@@ -566,29 +533,38 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                 ),
               );
             },
-            title: Row(
+            child: Row(
               children: [
-                Text(
-                  orderNum,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            orderNum,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppColors.navy900),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildStatusPill(status),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        dateStr,
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _buildStatusPill(status),
-              ],
-            ),
-            subtitle: Text(
-              dateStr,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '₹${total.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: Color(0xFF0F172A)),
+                AmountText(
+                  amount: total,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.navy900,
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+                const Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary),
               ],
             ),
           ),
@@ -599,7 +575,11 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
 
   Widget _buildRecentBillsView(BuildContext context) {
     if (_recentBills.isEmpty) {
-      return _buildEmptyActivityCard('No bills or invoices issued yet.');
+      return const EmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No Bills Yet',
+        subtitle: 'No bills or invoices have been issued yet.',
+      );
     }
     return Column(
       children: _recentBills.map((b) {
@@ -611,15 +591,10 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
         final dt = b['date']?.toString() ?? b['createdAt']?.toString();
         final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             onTap: () {
               Navigator.push(
                 context,
@@ -628,29 +603,38 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                 ),
               );
             },
-            title: Row(
+            child: Row(
               children: [
-                Text(
-                  invNum,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            invNum,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppColors.navy900),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBillStatusPill(payStatus),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '$dateStr · Due: ₹${due > 0 ? due.toStringAsFixed(2) : "0.00"}',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _buildBillStatusPill(payStatus),
-              ],
-            ),
-            subtitle: Text(
-              '$dateStr • Due: ₹${due > 0 ? due.toStringAsFixed(2) : "0.00"}',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '₹${total.toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5, color: Color(0xFF0F172A)),
+                AmountText(
+                  amount: total,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.navy900,
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, size: 18, color: Color(0xFF94A3B8)),
+                const Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary),
               ],
             ),
           ),
@@ -661,7 +645,11 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
 
   Widget _buildRecentPaymentsView(BuildContext context) {
     if (_recentPayments.isEmpty) {
-      return _buildEmptyActivityCard('No payments recorded yet.');
+      return const EmptyState(
+        icon: Icons.payments_outlined,
+        title: 'No Payments Yet',
+        subtitle: 'No payment receipts recorded yet.',
+      );
     }
     return Column(
       children: _recentPayments.map((p) {
@@ -671,34 +659,44 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
         final dt = p['payment_date']?.toString() ?? p['createdAt']?.toString();
         final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFDCFCE7),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.check_circle_outline, color: Color(0xFF16A34A), size: 18),
-            ),
-            title: Text(
-              pNum,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF0F172A)),
-            ),
-            subtitle: Text(
-              '$dateStr • $mode',
-              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-            ),
-            trailing: Text(
-              '₹${amt.toStringAsFixed(2)}',
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFF16A34A)),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.successBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pNum,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppColors.navy900),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$dateStr · $mode',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                AmountText(
+                  amount: amt,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.success,
+                ),
+              ],
             ),
           ),
         );
@@ -706,72 +704,27 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     );
   }
 
-  Widget _buildEmptyActivityCard(String message) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Center(
-        child: Text(
-          message,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatusPill(String status) {
-    Color bg = const Color(0xFFF1F5F9);
-    Color text = const Color(0xFF475569);
     final s = status.toLowerCase();
     if (s == 'pending') {
-      bg = const Color(0xFFFEF3C7);
-      text = const Color(0xFFB45309);
+      return const StatusChip(label: 'PENDING', variant: StatusChipVariant.warning);
     } else if (s == 'confirmed' || s == 'processing' || s == 'ready') {
-      bg = const Color(0xFFDBEAFE);
-      text = const Color(0xFF1D4ED8);
+      return const StatusChip(label: 'CONFIRMED', variant: StatusChipVariant.info);
     } else if (s == 'delivered' || s == 'completed' || s == 'billed') {
-      bg = const Color(0xFFDCFCE7);
-      text = const Color(0xFF16A34A);
+      return const StatusChip(label: 'DELIVERED', variant: StatusChipVariant.success);
     } else if (s == 'cancelled' || s == 'rejected') {
-      bg = const Color(0xFFFEE2E2);
-      text = const Color(0xFFDC2626);
+      return const StatusChip(label: 'CANCELLED', variant: StatusChipVariant.danger);
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(color: text, fontSize: 9.5, fontWeight: FontWeight.bold),
-      ),
-    );
+    return StatusChip(label: status.toUpperCase(), variant: StatusChipVariant.neutral);
   }
 
   Widget _buildBillStatusPill(String status) {
-    Color bg = const Color(0xFFFEE2E2);
-    Color text = const Color(0xFFDC2626);
     final s = status.toLowerCase();
     if (s == 'paid') {
-      bg = const Color(0xFFDCFCE7);
-      text = const Color(0xFF16A34A);
+      return const StatusChip(label: 'PAID', variant: StatusChipVariant.success);
     } else if (s == 'partial') {
-      bg = const Color(0xFFFEF3C7);
-      text = const Color(0xFFB45309);
+      return const StatusChip(label: 'PARTIAL', variant: StatusChipVariant.warning);
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(color: text, fontSize: 9.5, fontWeight: FontWeight.bold),
-      ),
-    );
+    return const StatusChip(label: 'UNPAID', variant: StatusChipVariant.danger);
   }
 }

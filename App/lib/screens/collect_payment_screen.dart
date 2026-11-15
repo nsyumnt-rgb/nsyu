@@ -555,7 +555,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                     child: ElevatedButton(
                       onPressed: _isSubmitting ? null : _confirmAndSavePayment,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: AppColors.navy900,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(

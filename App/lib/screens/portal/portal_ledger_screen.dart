@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/customer_portal_service.dart';
+import '../../theme/app_theme.dart';
 
 class PortalLedgerScreen extends StatefulWidget {
   const PortalLedgerScreen({super.key});
@@ -71,9 +72,9 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1D4ED8),
+              primary: AppColors.navy900,
               onPrimary: Colors.white,
-              onSurface: Color(0xFF0F172A),
+              onSurface: AppColors.textPrimary,
             ),
           ),
           child: child!,
@@ -119,67 +120,55 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
               children: [
                 const Text(
                   'Transaction Details',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.navy900),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
                   onPressed: () => Navigator.pop(ctx),
                 ),
               ],
             ),
-            const Divider(),
+            const Divider(color: AppColors.border),
             const SizedBox(height: 8),
             _buildDetailRow('Date & Time', dateStr),
             _buildDetailRow('Transaction Type', refType.toUpperCase()),
             _buildDetailRow('Reference / Bill #', refId),
             _buildDetailRow('Description', desc),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppColors.bg,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: AppColors.border),
               ),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Debit Amount', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      Text(
-                        '₹${debit.toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFDC2626)),
-                      ),
+                      const Text('Debit Amount', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      AmountText(amount: debit, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.danger),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Credit Amount', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      Text(
-                        '₹${credit.toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF16A34A)),
-                      ),
+                      const Text('Credit Amount', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      AmountText(amount: credit, fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.success),
                     ],
                   ),
-                  const Divider(height: 16),
+                  const Divider(height: 14, color: AppColors.border),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Running Balance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                      Text(
-                        '₹${runBal.abs().toStringAsFixed(2)} ${runBal > 0 ? "(Due)" : runBal < 0 ? "(Advance)" : ""}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                          color: runBal > 0
-                              ? const Color(0xFFDC2626)
-                              : runBal < 0
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFF0F172A),
-                        ),
+                      const Text('Running Balance', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.navy900)),
+                      AmountText(
+                        amount: runBal.abs(),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: runBal > 0 ? AppColors.danger : AppColors.success,
                       ),
                     ],
                   ),
@@ -198,11 +187,11 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.navy900),
               textAlign: TextAlign.right,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -221,34 +210,34 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
     final openingBal = ((_summary?['openingBalance'] ?? 0) as num).toDouble();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D4ED8),
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.navy900),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'My Ledger & Statement',
-          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppColors.navy900, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1D4ED8)))
+          ? Padding(
+              padding: const EdgeInsets.all(16),
+              child: SkeletonLoader.list(count: 6),
+            )
           : RefreshIndicator(
-              color: const Color(0xFF1D4ED8),
+              color: AppColors.blue600,
               onRefresh: _loadLedger,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // ── Balance Cards ──
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                      boxShadow: const [
-                        BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
-                      ],
-                    ),
+                  // ── Balance Summary Card ──
+                  AppCard(
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -259,58 +248,53 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'CURRENT OUTSTANDING',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                  'Current Outstanding',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  '₹${balance.abs().toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w900,
-                                    color: balance > 0
-                                        ? const Color(0xFFDC2626)
-                                        : balance < 0
-                                            ? const Color(0xFF16A34A)
-                                            : const Color(0xFF0F172A),
-                                  ),
+                                AmountText(
+                                  amount: balance.abs(),
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w900,
+                                  color: balance > 0
+                                      ? AppColors.danger
+                                      : (balance < 0 ? AppColors.warning : AppColors.success),
                                 ),
+                                const SizedBox(height: 2),
                                 Text(
                                   balance > 0
                                       ? 'Payment due to shop'
                                       : balance < 0
                                           ? 'Advance deposit with shop'
                                           : 'All settled (₹0.00 balance)',
-                                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
                                 ),
                               ],
                             ),
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDBEAFE),
+                                color: AppColors.blue50,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(Icons.account_balance_wallet, color: Color(0xFF1D4ED8), size: 24),
+                              child: const Icon(Icons.account_balance_wallet, color: AppColors.navy900, size: 24),
                             ),
                           ],
                         ),
-                        const Divider(height: 24),
+                        const Divider(height: 24, color: AppColors.border),
                         Row(
                           children: [
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('OPENING BALANCE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                                  const Text('OPENING', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    '₹${openingBal.abs().toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: openingBal > 0 ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
-                                    ),
+                                  AmountText(
+                                    amount: openingBal.abs(),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: openingBal > 0 ? AppColors.danger : AppColors.navy900,
                                   ),
                                 ],
                               ),
@@ -319,11 +303,13 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('TOTAL INVOICED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                                  const Text('INVOICED', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    '₹${debits.toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                  AmountText(
+                                    amount: debits,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.navy900,
                                   ),
                                 ],
                               ),
@@ -332,11 +318,13 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('TOTAL SETTLED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                                  const Text('SETTLED', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    '₹${credits.toStringAsFixed(2)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF16A34A)),
+                                  AmountText(
+                                    amount: credits,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.success,
                                   ),
                                 ],
                               ),
@@ -361,17 +349,17 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                         _buildFilterChip('Last 30 Days', 'last_30'),
                         const SizedBox(width: 8),
                         ActionChip(
-                          avatar: const Icon(Icons.date_range, size: 16, color: Color(0xFF1D4ED8)),
+                          avatar: const Icon(Icons.date_range_rounded, size: 16, color: AppColors.navy900),
                           label: Text(
                             _dateFilter == 'custom' && _startDate != null && _endDate != null
                                 ? '${DateFormat('dd MMM').format(_startDate!)} - ${DateFormat('dd MMM').format(_endDate!)}'
                                 : 'Custom Range',
                           ),
-                          backgroundColor: _dateFilter == 'custom' ? const Color(0xFFDBEAFE) : Colors.white,
+                          backgroundColor: _dateFilter == 'custom' ? AppColors.blue50 : Colors.white,
                           labelStyle: TextStyle(
-                            fontSize: 11,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.bold,
-                            color: _dateFilter == 'custom' ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
+                            color: _dateFilter == 'custom' ? AppColors.navy900 : AppColors.textSecondary,
                           ),
                           onPressed: _pickCustomRange,
                         ),
@@ -380,25 +368,15 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text(
-                    'Ledger Transactions (Read-Only)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  ),
+                  const SectionHeader(title: 'Statement Entries'),
                   const SizedBox(height: 8),
 
                   if (_entries.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(28),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'No statement transactions found in this period.',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                        ),
+                    const Center(
+                      child: EmptyState(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'No Statement Entries',
+                        subtitle: 'No statement transactions found in this period.',
                       ),
                     )
                   else
@@ -413,66 +391,85 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                       final dt = row['entry_date']?.toString() ?? row['createdAt']?.toString();
                       final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: AppCard(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           onTap: () => _showTransactionDetails(row),
-                          title: Row(
+                          child: Row(
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: isDebit ? const Color(0xFFFEE2E2) : const Color(0xFFDCFCE7),
+                                  color: isDebit ? AppColors.blue50 : AppColors.successBg,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
                                   isDebit ? 'DEBIT' : 'CREDIT',
                                   style: TextStyle(
-                                    color: isDebit ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+                                    color: isDebit ? AppColors.navy900 : AppColors.success,
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
-                              if (billNum != null && billNum.isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                Text(
-                                  '#$billNum',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF1D4ED8)),
-                                ),
-                              ],
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 10),
                               Expanded(
-                                child: Text(
-                                  desc,
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                                  overflow: TextOverflow.ellipsis,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        if (billNum != null && billNum.isNotEmpty) ...[
+                                          Text(
+                                            '#$billNum',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.navy900),
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Expanded(
+                                          child: Text(
+                                            desc,
+                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5, color: AppColors.textPrimary),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(dateStr, style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary)),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                          subtitle: Text(dateStr, style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '${isDebit ? "+" : "-"}₹${amt.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13.5,
-                                  color: isDebit ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
-                                ),
-                              ),
-                              Text(
-                                'Bal: ₹${runBal.abs().toStringAsFixed(2)}',
-                                style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        isDebit ? '+' : '-',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13,
+                                          color: isDebit ? AppColors.danger : AppColors.success,
+                                        ),
+                                      ),
+                                      AmountText(
+                                        amount: amt,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: isDebit ? AppColors.danger : AppColors.success,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    'Bal: ₹${runBal.abs().toStringAsFixed(2)}',
+                                    style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -487,26 +484,36 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
 
   Widget _buildFilterChip(String label, String id) {
     final isSel = _dateFilter == id;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSel,
-      selectedColor: const Color(0xFF1D4ED8),
-      backgroundColor: Colors.white,
-      labelStyle: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.bold,
-        color: isSel ? Colors.white : const Color(0xFF475569),
-      ),
-      onSelected: (val) {
-        if (val) {
-          setState(() {
-            _dateFilter = id;
-            _startDate = null;
-            _endDate = null;
-          });
-          _loadLedger();
-        }
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _dateFilter = id;
+          _startDate = null;
+          _endDate = null;
+        });
+        _loadLedger();
       },
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSel ? AppColors.blue50 : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: isSel ? AppColors.blue600 : AppColors.border,
+            width: isSel ? 1.4 : 1.0,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+            color: isSel ? AppColors.navy900 : AppColors.textSecondary,
+          ),
+        ),
+      ),
     );
   }
 }

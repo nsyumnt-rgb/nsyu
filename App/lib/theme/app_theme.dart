@@ -1,44 +1,57 @@
 import 'package:flutter/material.dart';
 
+export '../widgets/app_ui_components.dart';
+
 /// ── NSYU Premium Design System — Foundation ─────────────────────────────────
 /// Palette: Modern Enterprise White, Navy Blue, and Subtle Blue Theme.
 /// Built for commercial trust, high readability, and effortless non-technical use.
 class AppColors {
-  // Primary Navy & Blue Spectrum
-  static const deepNavy = Color(0xFF0A1D3F); // Deepest authoritative navy
-  static const navy = Color(0xFF0F2756); // Deep rich royal navy (primary)
-  static const navy2 = Color(0xFF1E3A8A); // Classic navy blue
-  static const steelBlue = Color(0xFF2563EB); // Vibrant electric blue accent
-  static const skyBlue = Color(0xFF3B82F6); // Interactive light blue
-  static const surfaceBlue = Color(0xFFEFF6FF); // Soft blue tint for active chips/cards
+  // Official Design Tokens
+  static const navy900 = Color(0xFF0B1F4B); // headers, primary text on light, primary buttons
+  static const navy700 = Color(0xFF12337A);
+  static const blue600 = Color(0xFF2563EB); // accent, links, active states
+  static const blue100 = Color(0xFFDBEAFE); // soft surfaces, chips
+  static const blue50 = Color(0xFFEFF6FF);  // soft surfaces, active pills
+  static const bg = Color(0xFFF6F8FC);      // screen canvas
+  static const surface = Color(0xFFFFFFFF); // card surface
+  static const border = Color(0xFFE5EAF3);  // soft 1px border
+  static const textPrimary = Color(0xFF0F172A);
+  static const textSecondary = Color(0xFF64748B);
+  static const success = Color(0xFF16A34A);
+  static const successBg = Color(0xFFDCFCE7);
+  static const warning = Color(0xFFD97706);
+  static const warningBg = Color(0xFFFEF3C7);
+  static const danger = Color(0xFFDC2626);
+  static const dangerBg = Color(0xFFFEE2E2);
+
+  // Backward-compatible aliases
+  static const deepNavy = navy900;
+  static const navy = navy700;
+  static const navy2 = Color(0xFF1E3A8A);
+  static const steelBlue = blue600;
+  static const skyBlue = Color(0xFF3B82F6);
+  static const surfaceBlue = blue50;
   static const surfaceBlueLight = Color(0xFFF0F5FF);
-  static const badgeBlue = Color(0xFFDBEAFE);
+  static const badgeBlue = blue100;
 
-  // Secondary & Silver Scale
   static const silver = Color(0xFFCBD5E1);
-  static const silverDark = Color(0xFF94A3B8);
+  static const silverDark = textSecondary;
 
-  // Status & Financial Accents
-  static const billGreen = Color(0xFF059669); // Emerald success green
-  static const billGreenLight = Color(0xFFECFDF5);
+  static const billGreen = success;
+  static const billGreenLight = successBg;
   static const billGreenBorder = Color(0xFFA7F3D0);
 
-  static const red = Color(0xFFDC2626); // Clean due/danger red
-  static const redLight = Color(0xFFFEF2F2);
+  static const red = danger;
+  static const redLight = dangerBg;
   static const redBorder = Color(0xFFFECACA);
 
-  static const warning = Color(0xFFD97706); // Warm amber
-  static const warningLight = Color(0xFFFFFBEB);
+  static const warningLight = warningBg;
   static const warningBorder = Color(0xFFFDE68A);
 
-  // Neutrals & Surfaces
-  static const bg = Color(0xFFF8FAFC); // Clean slate background
-  static const card = Color(0xFFFFFFFF); // Pure white card surface
-  static const border = Color(0xFFE2E8F0); // Subtle, crisp card border
+  static const card = surface;
   static const borderLight = Color(0xFFF1F5F9);
-  static const text = Color(0xFF0F172A); // Dark navy/slate primary text
-  static const textSecondary = Color(0xFF334155);
-  static const muted = Color(0xFF64748B); // Slate muted secondary text
+  static const text = textPrimary;
+  static const muted = textSecondary;
 }
 
 /// Reusable gradients for headers, primary buttons, and highlight hero cards.

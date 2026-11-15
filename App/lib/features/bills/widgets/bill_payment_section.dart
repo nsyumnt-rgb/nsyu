@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../providers/catalog_provider.dart';
+import '../../../theme/app_theme.dart';
 
 class BillPaymentSection extends StatelessWidget {
   final CatalogProvider provider;
@@ -14,17 +14,12 @@ class BillPaymentSection extends StatelessWidget {
     required this.onClearPayment,
   });
 
-  static final NumberFormat _money = NumberFormat('#,##0.00');
-
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final isSettled = provider.remainingOutstanding <= 0;
+
+    return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
       child: Column(
         children: [
           Row(
@@ -33,41 +28,46 @@ class BillPaymentSection extends StatelessWidget {
               const Text(
                 'Payment Received',
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF0F172A),
+                  color: AppColors.navy900,
                 ),
               ),
               InkWell(
                 onTap: onOpenPaymentDialog,
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF0FDF4),
+                    color: AppColors.successBg,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFF86EFAC)),
+                    border: Border.all(color: const Color(0xFFBBF7D0)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        '₹ ${_money.format(provider.paymentReceived)}',
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF16A34A),
-                        ),
+                      AmountText(
+                        amount: provider.paymentReceived,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.success,
                       ),
                       const SizedBox(width: 6),
-                      InkWell(
-                        onTap: onClearPayment,
-                        child: const Icon(
-                          Icons.cancel,
+                      if (provider.paymentReceived > 0)
+                        InkWell(
+                          onTap: onClearPayment,
+                          child: const Icon(
+                            Icons.cancel,
+                            size: 16,
+                            color: AppColors.success,
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.add_circle_outline,
                           size: 16,
-                          color: Color(0xFF16A34A),
+                          color: AppColors.success,
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -75,28 +75,36 @@ class BillPaymentSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+          const Divider(height: 1, color: AppColors.border),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Balance',
+                'Remaining Due',
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
+                  color: AppColors.textSecondary,
                 ),
               ),
-              Text(
-                '₹ ${_money.format(provider.remainingOutstanding)}',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: provider.remainingOutstanding > 0
-                      ? const Color(0xFFDC2626)
-                      : const Color(0xFF16A34A),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AmountText(
+                    amount: provider.remainingOutstanding.abs(),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: isSettled ? AppColors.success : AppColors.danger,
+                  ),
+                  const SizedBox(width: 6),
+                  StatusChip(
+                    label: isSettled ? 'Paid' : 'Due',
+                    variant: isSettled
+                        ? StatusChipVariant.success
+                        : StatusChipVariant.danger,
+                  ),
+                ],
               ),
             ],
           ),
@@ -105,4 +113,3 @@ class BillPaymentSection extends StatelessWidget {
     );
   }
 }
-

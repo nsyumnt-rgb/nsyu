@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'more_menu_sheet.dart';
 
 enum BottomNavMode {
@@ -167,11 +168,11 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeBlue = Color(0xFF1D4ED8);
-    const activePillBg = Color(0xFFEFF6FF);
-    const inactiveSlate = Color(0xFF64748B);
+    const activeNavy = AppColors.navy900;
+    const activePillBg = AppColors.blue50;
+    const inactiveSlate = AppColors.textSecondary;
 
-    final itemColor = active ? activeBlue : inactiveSlate;
+    final itemColor = active ? activeNavy : inactiveSlate;
 
     return InkWell(
       onTap: onTap,

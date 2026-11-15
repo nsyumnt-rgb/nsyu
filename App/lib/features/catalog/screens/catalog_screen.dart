@@ -232,7 +232,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1)),
+                border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
               ),
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
@@ -250,10 +250,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 14),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                        color: isSelected ? AppColors.blue50 : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                          color: isSelected ? AppColors.blue600 : AppColors.border,
                           width: isSelected ? 1.4 : 1,
                         ),
                       ),
@@ -262,7 +262,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
+                          color: isSelected ? AppColors.navy900 : AppColors.textSecondary,
                         ),
                       ),
                     ),
@@ -326,105 +326,36 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Widget _buildEmptyState(CatalogProvider provider, bool isTotalEmpty) {
     if (provider.status == LoadStatus.loading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Color(0xFF2563EB)),
-            SizedBox(height: 14),
-            Text(
-              'Loading products from catalog...',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF64748B),
-              ),
-            ),
-          ],
-        ),
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: SkeletonLoader.list(count: 6),
       );
     }
 
     if (isTotalEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.inventory_2_outlined, size: 54, color: Color(0xFF94A3B8)),
-              const SizedBox(height: 12),
-              const Text(
-                'No products loaded yet',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Tap below to reload products from the database',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF006837),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Reload Products',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () => provider.loadProducts(),
-              ),
-            ],
-          ),
-        ),
+      return EmptyState(
+        icon: Icons.inventory_2_outlined,
+        title: 'No products loaded yet',
+        subtitle: 'Tap below to reload products from the database',
+        buttonLabel: 'Reload Products',
+        onButtonPressed: () => provider.loadProducts(),
       );
     }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.search_off, size: 48, color: Color(0xFF94A3B8)),
-            const SizedBox(height: 12),
-            const Text(
-              'No products match your search/filter.',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF334155),
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () {
-                _searchCtrl.clear();
-                _onCategorySelected('All');
-                setState(() {
-                  _searchQuery = '';
-                  _stockFilter = CatalogStockFilter.all;
-                  _sortOrder = CatalogSortOrder.none;
-                });
-              },
-              child: const Text(
-                'Reset Filters',
-                style: TextStyle(
-                  color: Color(0xFF006837),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return EmptyState(
+      icon: Icons.search_off_rounded,
+      title: 'No products found',
+      subtitle: 'No products match your search or filter criteria.',
+      buttonLabel: 'Reset Filters',
+      onButtonPressed: () {
+        _searchCtrl.clear();
+        _onCategorySelected('All');
+        setState(() {
+          _searchQuery = '';
+          _stockFilter = CatalogStockFilter.all;
+          _sortOrder = CatalogSortOrder.none;
+        });
+      },
     );
   }
 }
