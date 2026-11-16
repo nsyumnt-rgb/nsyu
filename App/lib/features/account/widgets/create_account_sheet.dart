@@ -134,12 +134,12 @@ class _CustomerRegisterSheetState extends State<_CustomerRegisterSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF),
+                    color: const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
                     Icons.person_add_alt_1_outlined,
-                    color: Color(0xFF1D4ED8),
+                    color: Color(0xFF047857),
                     size: 22,
                   ),
                 ),
@@ -198,7 +198,7 @@ class _CustomerRegisterSheetState extends State<_CustomerRegisterSheet> {
             FilledButton(
               onPressed: _registering ? null : _submit,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1D4ED8),
+                backgroundColor: const Color(0xFF047857),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),

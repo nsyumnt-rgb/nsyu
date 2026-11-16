@@ -144,12 +144,12 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: const Color(0xFFECFDF5),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.mark_email_read_outlined,
-              color: Color(0xFF1D4ED8),
+              color: Color(0xFF047857),
               size: 22,
             ),
           ),
@@ -249,7 +249,7 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1D4ED8),
+                            color: Color(0xFF047857),
                           ),
                         ),
                 ),
@@ -269,9 +269,14 @@ class _CustomerOtpDialogState extends State<CustomerOtpDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
           child: const Text('Cancel'),
         ),
         FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFF047857),
+            foregroundColor: Colors.white,
+          ),
           onPressed: _verifying ? null : _verifyOtp,
           child: _verifying
               ? const SizedBox(

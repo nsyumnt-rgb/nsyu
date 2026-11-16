@@ -8,40 +8,46 @@ class LoginHeaderWidget extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Official NSYU App Logo in White Rounded Box
+        // Official NSYU App Logo in White Rounded Box with Premium Elevation & Glow
         Container(
-          width: 84,
-          height: 84,
+          width: 76,
+          height: 76,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 2),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.16),
-                blurRadius: 18,
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 20,
                 offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: const Color(0xFF10B981).withValues(alpha: 0.22),
+                blurRadius: 14,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           padding: const EdgeInsets.all(7),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(14),
             child: Image.asset(
               'assets/nsyu_logo.png',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.storefront_rounded, size: 44, color: Color(0xFF1D4ED8)),
+                child: Icon(Icons.storefront_rounded, size: 40, color: Color(0xFF059669)),
               ),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
         // App Title
         const Text(
           'NSYU Business',
           style: TextStyle(
-            fontSize: 27,
+            fontSize: 25,
             fontWeight: FontWeight.w800,
             color: Colors.white,
             letterSpacing: -0.5,
@@ -49,38 +55,45 @@ class LoginHeaderWidget extends StatelessWidget {
         ),
         const SizedBox(height: 4),
 
-        // Tagline with Dotted / Solid Horizontal Dashes
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(width: 24, height: 1.2, color: Colors.white70),
-            const SizedBox(width: 8),
-            const Text(
-              'Manage Your Business Easily',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
+        // Tagline Pill Badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.16),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.verified_outlined, size: 13, color: Color(0xFF6EE7B7)),
+              SizedBox(width: 5),
+              Text(
+                'Smart Business & Billing Suite',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  letterSpacing: 0.2,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(width: 24, height: 1.2, color: Colors.white70),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
 
-        // 3 Feature Indicators Row (Sales & Billing | Inventory | Customers)
+        // 3 Feature Indicators Row (Fast Billing | Inventory | Customer Khata)
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildFeatureIndicator(
-              icon: Icons.bar_chart_rounded,
-              label: 'Sales & Billing',
+              icon: Icons.receipt_long_rounded,
+              label: 'Fast Billing',
             ),
             Container(
-              height: 28,
+              height: 22,
               width: 1,
-              margin: const EdgeInsets.symmetric(horizontal: 14),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
               color: Colors.white.withValues(alpha: 0.25),
             ),
             _buildFeatureIndicator(
@@ -88,14 +101,14 @@ class LoginHeaderWidget extends StatelessWidget {
               label: 'Inventory',
             ),
             Container(
-              height: 28,
+              height: 22,
               width: 1,
-              margin: const EdgeInsets.symmetric(horizontal: 14),
+              margin: const EdgeInsets.symmetric(horizontal: 12),
               color: Colors.white.withValues(alpha: 0.25),
             ),
             _buildFeatureIndicator(
-              icon: Icons.groups_outlined,
-              label: 'Customers',
+              icon: Icons.menu_book_rounded,
+              label: 'Customer Khata',
             ),
           ],
         ),
@@ -108,13 +121,14 @@ class LoginHeaderWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 36,
-          height: 36,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.22),
+            color: Colors.white.withValues(alpha: 0.18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
-          child: Icon(icon, color: Colors.white, size: 20),
+          child: Icon(icon, color: Colors.white, size: 18),
         ),
         const SizedBox(height: 4),
         Text(
