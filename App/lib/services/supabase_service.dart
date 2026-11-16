@@ -795,6 +795,7 @@ class SupabaseService {
       'remarks': order.remarks,
       'status': order.status.name,
       'items': order.items.map((i) => {
+            'productId': i.productId,
             'productName': i.desc,
             'sku': i.sku,
             'availableStock': i.availableStock,
@@ -839,13 +840,13 @@ class SupabaseService {
 
   /// Atomically converts an order into a bill on Supabase PostgreSQL (strictly one-time).
   Future<Map<String, dynamic>> convertOrderToBill(
-    int orderId, {
+    dynamic orderIdOrNumber, {
     double? paidAmount,
     String paymentMethod = 'cash',
     String? notes,
   }) async {
     await ensureAuth();
-    final url = Uri.parse('${SupabaseConfig.apiUrl}/orders/$orderId/convert');
+    final url = Uri.parse('${SupabaseConfig.apiUrl}/orders/$orderIdOrNumber/convert');
     final payload = <String, dynamic>{
       if (paidAmount != null) 'paidAmount': paidAmount,
       'paymentMethod': paymentMethod,

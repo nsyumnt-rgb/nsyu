@@ -93,7 +93,10 @@ class OrdersProvider extends ChangeNotifier {
     await _store.saveOrders(orders);
     notifyListeners();
     try {
-      await _supabaseService.updateOrderStatus(target.id ?? orderNumber, status);
+      final identifier = (target.id != null && target.id! < 1000000000)
+          ? target.id
+          : target.orderNumber;
+      await _supabaseService.updateOrderStatus(identifier, status);
     } catch (e) {
       target.status = prevStatus;
       await _store.saveOrders(orders);
@@ -116,29 +119,12 @@ class OrdersProvider extends ChangeNotifier {
     if (order.status != OrderStatus.delivered) {
       throw Exception('Order #${order.orderNumber} must be in Delivered status to convert to a bill (current status: ${order.status.label}).');
     }
-    int? orderId = order.id;
-    if (orderId == null) {
-      await syncFromSupabase();
-      final refreshed = orders.cast<SavedOrder?>().firstWhere(
-            (o) => o != null && o.orderNumber == order.orderNumber,
-            orElse: () => null,
-          );
-      if (refreshed != null) {
-        if (refreshed.isBilled) {
-          throw Exception('Order #${order.orderNumber} has already been converted to a bill.');
-        }
-        if (refreshed.status != OrderStatus.delivered) {
-          throw Exception('Order #${order.orderNumber} must be in Delivered status to convert to a bill (current status: ${refreshed.status.label}).');
-        }
-        orderId = refreshed.id;
-      }
-    }
-    if (orderId == null) {
-      throw Exception('Order #${order.orderNumber} is not yet synced with the server.');
-    }
+    dynamic identifier = (order.id != null && order.id! < 1000000000)
+        ? order.id
+        : order.orderNumber;
 
     final result = await _supabaseService.convertOrderToBill(
-      orderId,
+      identifier,
       paidAmount: paidAmount,
       paymentMethod: paymentMethod,
       notes: notes,
@@ -148,7 +134,7 @@ class OrdersProvider extends ChangeNotifier {
     final createdBill = result['bill'] as SavedBill?;
 
     final idx = orders.indexWhere(
-      (o) => o.id == orderId || o.orderNumber == order.orderNumber,
+      (o) => (order.id != null && o.id == order.id) || o.orderNumber == order.orderNumber,
     );
     if (idx != -1) {
       orders[idx] = updatedOrder ??

@@ -100,6 +100,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
         setState(() => _saving = true);
         final orderItemsList = items
             .map((e) => SavedOrderItem(
+                  productId: e.productId,
                   sku: e.code,
                   desc: e.desc,
                   qty: e.qty,
@@ -131,7 +132,11 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
         provider.billItems.clear();
         setState(() => _saving = false);
         showAppSnackBar(context, 'Order #${order.orderNumber} created successfully!');
-        AppNavigation.openOrderDetails(context, order: order);
+        final finalOrder = ordersProvider.orders.cast<SavedOrder?>().firstWhere(
+              (o) => o != null && o.orderNumber == order.orderNumber,
+              orElse: () => order,
+            ) ?? order;
+        AppNavigation.openOrderDetails(context, order: finalOrder);
         return;
       }
 

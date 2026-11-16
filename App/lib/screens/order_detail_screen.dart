@@ -278,6 +278,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       await ordersProvider.updateOrderStatus(order.orderNumber, newStatus);
       setState(() {
         order.status = newStatus;
+        _order?.status = newStatus;
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

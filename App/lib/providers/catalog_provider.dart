@@ -597,7 +597,13 @@ class CatalogProvider extends ChangeNotifier {
         date: orderDate,
         customerName: orderCustomerName,
         items: orderItems
-            .map((i) => SavedOrderItem(desc: i.desc, qty: i.qty, price: i.price))
+            .map((i) => SavedOrderItem(
+                  productId: i.productId,
+                  sku: i.code,
+                  desc: i.desc,
+                  qty: i.qty,
+                  price: i.price,
+                ))
             .toList(),
         status: OrderStatus.pending,
       );

@@ -255,8 +255,24 @@ export async function createOrder(req: Request, res: Response) {
         totalItemDiscount = round2(totalItemDiscount + lineDiscAmount);
         totalCalculatedTax = round2(totalCalculatedTax + lineTax);
 
+        let resolvedProdId = item.productId || item.product_id || null;
+        if (!resolvedProdId && (item.sku || item.code || item.productName || item.desc)) {
+          const skuVal = String(item.sku || item.code || "").trim();
+          const nameVal = String(item.productName || item.desc || "").trim();
+          const orConditions: any[] = [];
+          if (skuVal) orConditions.push({ sku: skuVal });
+          if (nameVal) orConditions.push({ name: nameVal });
+          if (orConditions.length > 0) {
+            const foundP = await Product.findOne({
+              where: { owner_id: ownerId, [Op.or]: orConditions },
+              transaction: t,
+            });
+            if (foundP) resolvedProdId = foundP.id;
+          }
+        }
+
         preparedItems.push({
-          product_id: item.productId || null,
+          product_id: resolvedProdId,
           product_name: item.productName || item.desc || "Item",
           sku: item.sku || item.code || "ITEM",
           available_stock: Number(item.availableStock || item.stock || 25),
@@ -378,10 +394,18 @@ export async function updateOrderStatus(req: Request, res: Response) {
   const idStr = String(id).trim();
   const isNumeric = /^\d+$/.test(idStr);
   const orderWhere: any = { owner_id: ownerId };
-  if (isNumeric) {
+  const bodyOrderNum = req.body?.orderNumber || req.body?.order_number;
+  if (isNumeric && Number(idStr) < 1000000000) {
     orderWhere[Op.or] = [{ id: Number(idStr) }, { order_number: idStr }];
+    if (bodyOrderNum) {
+      orderWhere[Op.or].push({ order_number: String(bodyOrderNum).trim() });
+    }
   } else {
-    orderWhere.order_number = idStr;
+    if (bodyOrderNum) {
+      orderWhere[Op.or] = [{ order_number: idStr }, { order_number: String(bodyOrderNum).trim() }];
+    } else {
+      orderWhere.order_number = idStr;
+    }
   }
 
   try {
@@ -533,10 +557,18 @@ export async function convertOrderToBill(req: Request, res: Response) {
   const idStr = String(id || "").trim();
   const isNumeric = /^\d+$/.test(idStr);
   const orderWhere: any = { owner_id: ownerId };
-  if (isNumeric) {
+  const bodyOrderNum = req.body?.orderNumber || req.body?.order_number;
+  if (isNumeric && Number(idStr) < 1000000000) {
     orderWhere[Op.or] = [{ id: Number(idStr) }, { order_number: idStr }];
+    if (bodyOrderNum) {
+      orderWhere[Op.or].push({ order_number: String(bodyOrderNum).trim() });
+    }
   } else {
-    orderWhere.order_number = idStr;
+    if (bodyOrderNum) {
+      orderWhere[Op.or] = [{ order_number: idStr }, { order_number: String(bodyOrderNum).trim() }];
+    } else {
+      orderWhere.order_number = idStr;
+    }
   }
 
   const actorType = (req.auth!.isOwner ? "owner" : "employee") as "owner" | "employee";
@@ -708,10 +740,55 @@ export async function convertOrderToBill(req: Request, res: Response) {
 
       // Create SaleItems + deduct stock
       for (const item of items) {
+        let resolvedProductId = item.product_id;
+        if (!resolvedProductId) {
+          const skuVal = String(item.sku || "").trim();
+          const nameVal = String(item.product_name || "").trim();
+          const orConditions: any[] = [];
+          if (skuVal) orConditions.push({ sku: skuVal });
+          if (nameVal) orConditions.push({ name: nameVal });
+          if (orConditions.length > 0) {
+            const foundP = await Product.findOne({
+              where: { owner_id: ownerId, [Op.or]: orConditions },
+              transaction: t,
+            });
+            if (foundP) {
+              resolvedProductId = foundP.id;
+              item.product_id = foundP.id;
+              await item.save({ transaction: t });
+            }
+          }
+        }
+
+        // If still no product_id found, create/find a product so SaleItem NOT NULL constraint is satisfied
+        if (!resolvedProductId) {
+          let fallbackProduct = await Product.findOne({
+            where: { owner_id: ownerId, name: item.product_name || "Custom Item" },
+            transaction: t,
+          });
+          if (!fallbackProduct) {
+            fallbackProduct = await Product.create(
+              {
+                owner_id: ownerId,
+                name: item.product_name || "Custom Item",
+                sku: item.sku || `SKU-${Date.now()}`,
+                selling_price: Number(item.rate || 0),
+                purchase_price: Number(item.rate || 0),
+                mrp: Number(item.rate || 0),
+                status: "active",
+              },
+              { transaction: t }
+            );
+          }
+          resolvedProductId = fallbackProduct.id;
+          item.product_id = fallbackProduct.id;
+          await item.save({ transaction: t });
+        }
+
         await SaleItem.create(
           {
             sale_id: sale.id,
-            product_id: item.product_id,
+            product_id: resolvedProductId,
             product_name: item.product_name,
             sku: item.sku,
             quantity: item.quantity,
@@ -725,11 +802,11 @@ export async function convertOrderToBill(req: Request, res: Response) {
           { transaction: t }
         );
 
-        if (item.product_id) {
+        if (resolvedProductId) {
           await recordStockMovement({
             ownerId,
             shopId,
-            productId: item.product_id,
+            productId: resolvedProductId,
             type: "sale",
             quantity: item.quantity,
             actorType,

@@ -42,7 +42,23 @@ extension OrderStatusLabel on OrderStatus {
   }
 }
 
+double _toDouble(dynamic val) {
+  if (val == null) return 0.0;
+  if (val is num) return val.toDouble();
+  if (val is String) return double.tryParse(val) ?? 0.0;
+  return 0.0;
+}
+
+int _toInt(dynamic val, {int defaultValue = 0}) {
+  if (val == null) return defaultValue;
+  if (val is int) return val;
+  if (val is num) return val.toInt();
+  if (val is String) return int.tryParse(val) ?? defaultValue;
+  return defaultValue;
+}
+
 class SavedOrderItem {
+  final int? productId;
   final String desc;
   final String sku;
   final int availableStock;
@@ -52,6 +68,7 @@ class SavedOrderItem {
   final double amount;
 
   SavedOrderItem({
+    this.productId,
     required this.desc,
     this.sku = '',
     this.availableStock = 0,
@@ -62,6 +79,8 @@ class SavedOrderItem {
   }) : amount = amount ?? (price * qty * (1 - (discountPercent / 100)));
 
   Map<String, dynamic> toJson() => {
+        'productId': productId,
+        'product_id': productId,
         'desc': desc,
         'sku': sku,
         'availableStock': availableStock,
@@ -72,13 +91,14 @@ class SavedOrderItem {
       };
 
   factory SavedOrderItem.fromJson(Map<String, dynamic> j) => SavedOrderItem(
+        productId: _toInt(j['productId'] ?? j['product_id']),
         desc: j['desc'] ?? j['product_name'] ?? '',
         sku: j['sku'] ?? j['code'] ?? '',
-        availableStock: (j['availableStock'] ?? j['available_stock'] ?? 0) as int,
-        qty: ((j['qty'] ?? j['quantity']) ?? 1) as int,
-        price: ((j['price'] ?? j['rate']) ?? 0.0).toDouble(),
-        discountPercent: ((j['discountPercent'] ?? j['discount_percent']) ?? 0.0).toDouble(),
-        amount: (j['amount'] != null) ? (j['amount'] as num).toDouble() : null,
+        availableStock: _toInt(j['availableStock'] ?? j['available_stock']),
+        qty: _toInt(j['qty'] ?? j['quantity'], defaultValue: 1),
+        price: _toDouble(j['price'] ?? j['rate']),
+        discountPercent: _toDouble(j['discountPercent'] ?? j['discount_percent']),
+        amount: j['amount'] != null ? _toDouble(j['amount']) : null,
       );
 }
 
@@ -172,7 +192,7 @@ class SavedOrder {
       };
 
   factory SavedOrder.fromJson(Map<String, dynamic> j) => SavedOrder(
-        id: j['id'] is int ? j['id'] : int.tryParse(j['id']?.toString() ?? ''),
+        id: j['id'] is int ? j['id'] as int : int.tryParse(j['id']?.toString() ?? ''),
         orderNumber: j['orderNumber'] ?? j['order_number'] ?? '',
         date: DateTime.tryParse(j['date'] ?? j['order_date'] ?? '') ?? DateTime.now(),
         expectedDeliveryDate: DateTime.tryParse(j['expectedDeliveryDate'] ?? j['expected_delivery_date'] ?? ''),
@@ -183,10 +203,10 @@ class SavedOrder {
         items: ((j['items'] ?? []) as List)
             .map((e) => SavedOrderItem.fromJson(e as Map<String, dynamic>))
             .toList(),
-        subtotal: (j['subtotal'] != null) ? (j['subtotal'] as num).toDouble() : null,
-        discountAmount: (j['discountAmount'] ?? j['discount_amount'] ?? 0.0).toDouble(),
-        taxAmount: (j['taxAmount'] ?? j['tax_amount'] ?? 0.0).toDouble(),
-        totalAmount: (j['totalAmount'] ?? j['total_amount'] ?? 0.0).toDouble(),
+        subtotal: j['subtotal'] != null ? _toDouble(j['subtotal']) : null,
+        discountAmount: _toDouble(j['discountAmount'] ?? j['discount_amount']),
+        taxAmount: _toDouble(j['taxAmount'] ?? j['tax_amount']),
+        totalAmount: _toDouble(j['totalAmount'] ?? j['total_amount']),
         remarks: j['remarks'] ?? '',
         convertedSaleId: int.tryParse((j['convertedSaleId'] ?? j['converted_sale_id'])?.toString() ?? ''),
         billedBillId: int.tryParse((j['billedBillId'] ?? j['billed_bill_id'])?.toString() ?? ''),
