@@ -332,6 +332,8 @@ class _CreateAccountSheetState extends State<_CreateAccountSheet> {
                           color: Color(0xFF0F172A),
                           letterSpacing: -0.3,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -339,6 +341,8 @@ class _CreateAccountSheetState extends State<_CreateAccountSheet> {
                             ? 'Connect to your store to view bills, orders & ledger'
                             : 'Set up your shop for fast billing, inventory & khata',
                         style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

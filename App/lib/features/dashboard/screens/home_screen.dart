@@ -13,6 +13,7 @@ import '../../../screens/collect_payment_screen.dart';
 import '../../../screens/customer_picker_screen.dart';
 import '../../../screens/notifications_screen.dart';
 import '../../../screens/profile_screen.dart';
+import '../../../screens/shop_management_screen.dart';
 import '../../../theme/app_theme.dart';
 import '../../bills/screens/bill_screen.dart';
 import '../widgets/dashboard_drawer.dart';
@@ -238,19 +239,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                     letterSpacing: -0.2,
                                   ),
                                 ),
-                                Row(
-                                  children: [
-                                    Text(
-                                      shopName,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.white.withValues(alpha: 0.8),
-                                        fontWeight: FontWeight.w500,
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const ShopManagementScreen()),
+                                    );
+                                  },
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        shopName,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.white.withValues(alpha: 0.8),
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Icon(Icons.check_circle, size: 12, color: Colors.white.withValues(alpha: 0.85)),
-                                  ],
+                                      const SizedBox(width: 3),
+                                      Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: Colors.white.withValues(alpha: 0.85)),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),

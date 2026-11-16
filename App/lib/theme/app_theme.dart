@@ -19,6 +19,8 @@ class AppColors {
   static const textSecondary = Color(0xFF64748B);
   static const success = Color(0xFF16A34A);
   static const successBg = Color(0xFFDCFCE7);
+  static const emerald = Color(0xFF047857);
+  static const emeraldLight = Color(0xFFECFDF5);
   static const warning = Color(0xFFD97706);
   static const warningBg = Color(0xFFFEF3C7);
   static const danger = Color(0xFFDC2626);

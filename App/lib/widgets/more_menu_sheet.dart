@@ -10,6 +10,7 @@ import '../screens/help_support_screen.dart';
 import '../screens/inventory_screen.dart';
 import '../screens/portal/customer_portal_shell.dart';
 import '../screens/profile_screen.dart';
+import '../screens/shop_management_screen.dart';
 import '../screens/visibility_settings_screen.dart';
 import '../theme/app_theme.dart';
 import 'app_bottom_nav.dart';
@@ -290,6 +291,21 @@ class MoreMenuSheet extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
+                        _buildListTile(
+                          icon: Icons.store_mall_directory_rounded,
+                          title: 'Shops & Branches',
+                          subtitle: 'Register new shop, switch active branch',
+                          iconColor: const Color(0xFF047857),
+                          bgColor: const Color(0xFFECFDF5),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const ShopManagementScreen()),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
                         _buildListTile(
                           icon: Icons.storefront_outlined,
                           title: 'Business Profile',

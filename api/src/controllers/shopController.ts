@@ -12,34 +12,68 @@ import {
 import { signAccessToken } from "../utils/jwt";
 import { logAudit } from "../utils/audit";
 
-/** Owner-only: create a new shop under their account. */
+/** Owner-only: create / register a new shop under their account. */
 export async function createShop(req: Request, res: Response) {
-  const { name, code, address, phone, email, logo } = req.body;
-  if (!name || !code) {
-    return res.status(400).json({ success: false, message: "name and code are required" });
+  const { name, code, address, phone, email, logo, settings } = req.body;
+  if (!name || String(name).trim().length === 0) {
+    return res.status(400).json({ success: false, message: "Shop name is required" });
   }
 
-  const existingCode = await Shop.findOne({
-    where: { owner_id: req.auth!.ownerId, code: String(code).trim().toUpperCase() },
-  });
-  if (existingCode) {
-    return res.status(409).json({ success: false, message: "A shop with this code already exists under your account" });
+  const cleanName = String(name).trim();
+  let shopCode = code ? String(code).trim().toUpperCase() : null;
+
+  if (shopCode) {
+    const existingCode = await Shop.findOne({
+      where: { owner_id: req.auth!.ownerId, code: shopCode },
+    });
+    if (existingCode) {
+      return res.status(409).json({ success: false, message: "A shop with this code already exists under your account" });
+    }
+  } else {
+    // Generate unique shop code from shop name + random digits (e.g. NSYU-1024)
+    const base = cleanName.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase() || "SHOP";
+    let attempts = 0;
+    while (!shopCode && attempts < 10) {
+      const candidate = `${base}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const exists = await Shop.findOne({ where: { owner_id: req.auth!.ownerId, code: candidate } });
+      if (!exists) shopCode = candidate;
+      attempts++;
+    }
+    if (!shopCode) shopCode = `${base}-${Date.now().toString().slice(-4)}`;
   }
 
   const shop = await Shop.create({
     owner_id: req.auth!.ownerId,
-    name: String(name).trim(),
-    code: String(code).trim().toUpperCase(),
-    address,
-    phone,
-    email,
-    logo,
+    name: cleanName,
+    code: shopCode,
+    address: address ? String(address).trim() : undefined,
+    phone: phone ? String(phone).trim() : undefined,
+    email: email ? String(email).trim() : undefined,
+    logo: logo ? String(logo).trim() : undefined,
     status: "active",
+    settings: settings && typeof settings === "object" ? settings : {},
   });
+
+  // Automatically provision default portal settings for the new shop so customers can register & order
+  try {
+    await ShopPortalSettings.findOrCreate({
+      where: { shop_id: shop.id },
+      defaults: {
+        shop_id: shop.id,
+        allow_orders: true,
+        allow_self_registration: true,
+        show_stock_qty: false,
+        min_order_value: 0,
+        allow_customer_cancel: true,
+      },
+    });
+  } catch (portalErr) {
+    console.error("[createShop] Failed to provision default portal settings:", portalErr);
+  }
 
   await logAudit({ req, module: "shops", action: "create", entityType: "Shop", entityId: shop.id });
 
-  return res.status(201).json({ success: true, data: shop });
+  return res.status(201).json({ success: true, data: shop, message: "Shop registered successfully" });
 }
 
 /**

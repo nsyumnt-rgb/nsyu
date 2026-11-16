@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
+import 'shop_management_screen.dart';
 
 class BusinessInfoScreen extends StatefulWidget {
   const BusinessInfoScreen({super.key});
@@ -88,10 +89,22 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Business Information', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1565C0),
+        title: const Text('Business Information', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        backgroundColor: AppColors.navy900,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ShopManagementScreen()),
+              );
+            },
+            icon: const Icon(Icons.store_mall_directory_rounded, color: Colors.white, size: 18),
+            label: const Text('All Shops', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -237,7 +250,7 @@ class _BusinessInfoScreenState extends State<BusinessInfoScreen> {
                   child: FilledButton.icon(
                     onPressed: _isSaving ? null : _saveChanges,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1565C0),
+                      backgroundColor: AppColors.navy900,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                     icon: _isSaving

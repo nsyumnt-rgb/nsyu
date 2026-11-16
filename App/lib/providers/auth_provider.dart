@@ -40,6 +40,8 @@ class AuthProvider extends ChangeNotifier {
   Map<String, bool> _fieldPermissions = {};
   bool _loadingProfile = false;
   String? _lastError;
+  List<Map<String, dynamic>> _shops = [];
+  bool _loadingShops = false;
 
   String? get registeredMobile => _registeredMobile;
   bool get isLoggedIn => _isLoggedIn;
@@ -60,6 +62,8 @@ class AuthProvider extends ChangeNotifier {
   bool get isOwner => _accountType == 'owner' || _roleName.toLowerCase() == 'owner';
   bool get canViewPurchasePrice => isOwner || (_fieldPermissions['purchase_price'] ?? false);
   bool get loadingProfile => _loadingProfile;
+  List<Map<String, dynamic>> get shops => _shops;
+  bool get loadingShops => _loadingShops;
 
   BusinessProfile get currentProfile => BusinessProfile(
         businessName: _shopName.isNotEmpty ? _shopName : 'NSYU Traders',
@@ -203,6 +207,92 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setString(_shopLogoKey, _shopLogo);
 
       notifyListeners();
+      return null;
+    } catch (e) {
+      return e.toString().replaceAll('Exception: ', '');
+    }
+  }
+
+  /// Loads all shops associated with this business/owner
+  Future<void> loadShops() async {
+    if (!_isLoggedIn || _isCustomer) return;
+    _loadingShops = true;
+    notifyListeners();
+    try {
+      _shops = await SupabaseService().fetchShops();
+    } catch (e) {
+      debugPrint('[loadShops] Error: $e');
+    }
+    _loadingShops = false;
+    notifyListeners();
+  }
+
+  /// Registers a brand new shop / branch under this Owner account
+  Future<String?> registerNewShop({
+    required String name,
+    String? code,
+    String? address,
+    String? phone,
+    String? email,
+    String? logo,
+  }) async {
+    if (!isOwner) {
+      return 'Only the business Owner can register a new shop or branch.';
+    }
+    try {
+      await SupabaseService().registerShop(
+        name: name,
+        code: code,
+        address: address,
+        phone: phone,
+        email: email,
+        logo: logo,
+      );
+      await loadShops();
+      return null; // success
+    } catch (e) {
+      return e.toString().replaceAll('Exception: ', '');
+    }
+  }
+
+  /// Switches active shop context and updates local credentials and token
+  Future<String?> switchActiveShop(int targetShopId) async {
+    try {
+      final res = await SupabaseService().switchShop(targetShopId);
+      final shop = res['shop'] as Map<String, dynamic>?;
+      if (shop != null) {
+        _shopId = targetShopId;
+        _shopName = shop['name']?.toString() ?? _shopName;
+        _shopCode = shop['code']?.toString() ?? _shopCode;
+        _shopAddress = shop['address']?.toString() ?? _shopAddress;
+        _shopPhone = shop['phone']?.toString() ?? _shopPhone;
+        _shopEmail = shop['email']?.toString() ?? _shopEmail;
+        _shopLogo = shop['logo']?.toString() ?? _shopLogo;
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_shopNameKey, _shopName);
+        await prefs.setString(_shopCodeKey, _shopCode);
+        await prefs.setString(_shopAddressKey, _shopAddress);
+        await prefs.setString(_shopPhoneKey, _shopPhone);
+        await prefs.setString(_shopEmailKey, _shopEmail);
+        await prefs.setString(_shopLogoKey, _shopLogo);
+      }
+      await loadShops();
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return e.toString().replaceAll('Exception: ', '');
+    }
+  }
+
+  /// Toggles shop active/inactive status
+  Future<String?> toggleShopActiveStatus(int targetShopId) async {
+    if (!isOwner) {
+      return 'Only the business Owner can change shop active status.';
+    }
+    try {
+      await SupabaseService().toggleShopStatus(targetShopId);
+      await loadShops();
       return null;
     } catch (e) {
       return e.toString().replaceAll('Exception: ', '');

@@ -145,6 +145,26 @@ class SupabaseService {
     return res;
   }
 
+  Future<http.Response> _patchWithRetry(Uri url, [Map<String, dynamic>? body]) async {
+    await ensureAuth();
+    var res = await http.patch(url, headers: _headers, body: body != null ? jsonEncode(body) : null);
+    if (res.statusCode == 401) {
+      await ensureAuth(force: true);
+      res = await http.patch(url, headers: _headers, body: body != null ? jsonEncode(body) : null);
+    }
+    return res;
+  }
+
+  Future<http.Response> _deleteWithRetry(Uri url) async {
+    await ensureAuth();
+    var res = await http.delete(url, headers: _headers);
+    if (res.statusCode == 401) {
+      await ensureAuth(force: true);
+      res = await http.delete(url, headers: _headers);
+    }
+    return res;
+  }
+
   // =========================================================================
   // PRODUCTS & INVENTORY CRUD (Replaces SheetService & ProductWriteService)
   // =========================================================================
@@ -985,6 +1005,97 @@ class SupabaseService {
     }
     final body = jsonDecode(res.body);
     return body['data'] as Map<String, dynamic>;
+  }
+
+  /// Lists all registered shops under the Owner's business
+  Future<List<Map<String, dynamic>>> fetchShops() async {
+    await ensureAuth();
+    try {
+      final url = Uri.parse('${SupabaseConfig.apiUrl}/shops');
+      final res = await _getWithRetry(url);
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        final list = body['data'] as List<dynamic>? ?? [];
+        return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+    } catch (e) {
+      debugPrint('[fetchShops] Error: $e');
+    }
+    return [];
+  }
+
+  /// Registers a brand new Shop / Branch in PostgreSQL
+  Future<Map<String, dynamic>> registerShop({
+    required String name,
+    String? code,
+    String? address,
+    String? phone,
+    String? email,
+    String? logo,
+    Map<String, dynamic>? settings,
+  }) async {
+    await ensureAuth();
+    final url = Uri.parse('${SupabaseConfig.apiUrl}/shops');
+    final payload = <String, dynamic>{
+      'name': name.trim(),
+      if (code != null && code.trim().isNotEmpty) 'code': code.trim().toUpperCase(),
+      if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
+      if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+      if (email != null && email.trim().isNotEmpty) 'email': email.trim(),
+      if (logo != null && logo.trim().isNotEmpty) 'logo': logo.trim(),
+      if (settings != null) 'settings': settings,
+    };
+    final res = await _postWithRetry(url, payload);
+    if (res.statusCode >= 300) {
+      final err = jsonDecode(res.body);
+      throw Exception(err['message'] ?? 'Failed to register shop (HTTP ${res.statusCode})');
+    }
+    final body = jsonDecode(res.body);
+    return body['data'] as Map<String, dynamic>;
+  }
+
+  /// Switches active shop context and updates JWT access token
+  Future<Map<String, dynamic>> switchShop(int targetShopId) async {
+    await ensureAuth();
+    final url = Uri.parse('${SupabaseConfig.apiUrl}/shops/switch');
+    final res = await _postWithRetry(url, {'shopId': targetShopId});
+    if (res.statusCode >= 300) {
+      final err = jsonDecode(res.body);
+      throw Exception(err['message'] ?? 'Failed to switch shop context (HTTP ${res.statusCode})');
+    }
+    final body = jsonDecode(res.body);
+    final data = body['data'] as Map<String, dynamic>;
+    if (data['accessToken'] != null) {
+      await SupabaseConfig.updateConfig(
+        authToken: data['accessToken'],
+        shopId: targetShopId,
+      );
+    }
+    return data;
+  }
+
+  /// Toggles shop status between active and inactive
+  Future<Map<String, dynamic>> toggleShopStatus(int shopId) async {
+    await ensureAuth();
+    final url = Uri.parse('${SupabaseConfig.apiUrl}/shops/$shopId/status');
+    final res = await _patchWithRetry(url);
+    if (res.statusCode >= 300) {
+      final err = jsonDecode(res.body);
+      throw Exception(err['message'] ?? 'Failed to toggle shop status (HTTP ${res.statusCode})');
+    }
+    final body = jsonDecode(res.body);
+    return body['data'] as Map<String, dynamic>;
+  }
+
+  /// Deletes a shop if it has zero historical sales or ledger records
+  Future<void> deleteShop(int shopId) async {
+    await ensureAuth();
+    final url = Uri.parse('${SupabaseConfig.apiUrl}/shops/$shopId');
+    final res = await _deleteWithRetry(url);
+    if (res.statusCode >= 300) {
+      final err = jsonDecode(res.body);
+      throw Exception(err['message'] ?? 'Failed to delete shop (HTTP ${res.statusCode})');
+    }
   }
 
   /// Retrieves real persisted audit/activity logs
