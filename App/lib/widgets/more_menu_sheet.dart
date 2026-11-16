@@ -195,8 +195,8 @@ class MoreMenuSheet extends StatelessWidget {
                         context,
                         icon: Icons.dashboard_rounded,
                         label: 'Dashboard',
-                        iconColor: const Color(0xFF2563EB),
-                        bgColor: const Color(0xFFEFF6FF),
+                        iconColor: const Color(0xFF047857),
+                        bgColor: const Color(0xFFECFDF5),
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.push(
@@ -325,8 +325,8 @@ class MoreMenuSheet extends StatelessWidget {
                           icon: Icons.person_outline_rounded,
                           title: 'My Profile',
                           subtitle: 'Personal details & credentials',
-                          iconColor: const Color(0xFF2563EB),
-                          bgColor: const Color(0xFFEFF6FF),
+                          iconColor: const Color(0xFF047857),
+                          bgColor: const Color(0xFFECFDF5),
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(

@@ -89,13 +89,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               child: Row(
                 children: [
-                  // Navy-to-SteelBlue Monogram
+                  // Emerald Monogram
                   Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                        colors: [Color(0xFF064E3B), Color(0xFF047857)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -535,7 +535,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             ...['Today', 'This Week', 'This Month', 'Last 3 Months', 'All Time'].map(
               (p) => ListTile(
                 title: Text(p),
-                trailing: _selectedPeriodFilter == p ? const Icon(Icons.check, color: Color(0xFF2563EB)) : null,
+                trailing: _selectedPeriodFilter == p ? const Icon(Icons.check, color: Color(0xFF047857)) : null,
                 onTap: () {
                   setState(() => _selectedPeriodFilter = p);
                   Navigator.pop(ctx);

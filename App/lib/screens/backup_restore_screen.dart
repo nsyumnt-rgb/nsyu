@@ -202,7 +202,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Backup & Restore', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -220,7 +220,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.cloud_upload_outlined, color: Color(0xFF1565C0), size: 24),
+                      Icon(Icons.cloud_upload_outlined, color: Color(0xFF047857), size: 24),
                       SizedBox(width: 10),
                       Text(
                         'Create Cloud & Local Backup',
@@ -238,19 +238,19 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: const Color(0xFFECFDF5),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.verified, color: Color(0xFF2563EB), size: 18),
+                              Icon(Icons.verified, color: Color(0xFF047857), size: 18),
                               SizedBox(width: 6),
                               Text('Verified Backup Ready',
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E40AF))),
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF064E3B))),
                             ],
                           ),
                           const SizedBox(height: 6),
@@ -288,7 +288,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                           icon: const Icon(Icons.share, size: 18),
                           label: const Text('Share File'),
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF1565C0),
+                            backgroundColor: const Color(0xFF047857),
                             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),

@@ -227,61 +227,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   void _openBarcodeDialog() {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.qr_code_scanner, color: Color(0xFF2563EB)),
-            SizedBox(width: 8),
-            Text('Scan / Search SKU',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Product SKU or Barcode',
-            hintText: 'e.g. TC001',
-            border: OutlineInputBorder(),
-          ),
-          onSubmitted: (val) {
-            Navigator.pop(ctx);
-            if (val.trim().isNotEmpty) {
-              _searchCtrl.text = val.trim();
-              setState(() {
-                _searchQuery = val.trim().toLowerCase();
-              });
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (ctrl.text.trim().isNotEmpty) {
-                _searchCtrl.text = ctrl.text.trim();
-                setState(() {
-                  _searchQuery = ctrl.text.trim().toLowerCase();
-                });
-              }
-            },
-            child: const Text('Search'),
-          ),
-        ],
-      ),
-    );
+    _searchCtrl.clear();
+    setState(() => _searchQuery = '');
   }
 
   void _openFullscreenImage(CatalogItem item) {

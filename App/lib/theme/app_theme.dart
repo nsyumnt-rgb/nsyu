@@ -6,12 +6,12 @@ export '../widgets/app_ui_components.dart';
 /// Palette: Modern Enterprise White, Navy Blue, and Subtle Blue Theme.
 /// Built for commercial trust, high readability, and effortless non-technical use.
 class AppColors {
-  // Official Design Tokens
-  static const navy900 = Color(0xFF0B1F4B); // headers, primary text on light, primary buttons
-  static const navy700 = Color(0xFF12337A);
-  static const blue600 = Color(0xFF2563EB); // accent, links, active states
-  static const blue100 = Color(0xFFDBEAFE); // soft surfaces, chips
-  static const blue50 = Color(0xFFEFF6FF);  // soft surfaces, active pills
+  // Official Design Tokens — Emerald & Forest Green Palette
+  static const navy900 = Color(0xFF064E3B); // headers, primary text on light, primary buttons
+  static const navy700 = Color(0xFF047857);
+  static const blue600 = Color(0xFF047857); // accent, links, active states (unified emerald)
+  static const blue100 = Color(0xFFD1FAE5); // soft surfaces, chips (light green)
+  static const blue50 = Color(0xFFECFDF5);  // soft surfaces, active pills (lightest green)
   static const bg = Color(0xFFF6F8FC);      // screen canvas
   static const surface = Color(0xFFFFFFFF); // card surface
   static const border = Color(0xFFE5EAF3);  // soft 1px border
@@ -29,18 +29,18 @@ class AppColors {
   // Backward-compatible aliases
   static const deepNavy = navy900;
   static const navy = navy700;
-  static const navy2 = Color(0xFF1E3A8A);
-  static const steelBlue = blue600;
-  static const skyBlue = Color(0xFF3B82F6);
+  static const navy2 = Color(0xFF065F46);
+  static const steelBlue = emerald;
+  static const skyBlue = Color(0xFF10B981);
   static const surfaceBlue = blue50;
-  static const surfaceBlueLight = Color(0xFFF0F5FF);
+  static const surfaceBlueLight = Color(0xFFF0FDF4);
   static const badgeBlue = blue100;
 
   static const silver = Color(0xFFCBD5E1);
   static const silverDark = textSecondary;
 
-  static const billGreen = success;
-  static const billGreenLight = successBg;
+  static const billGreen = emerald;
+  static const billGreenLight = emeraldLight;
   static const billGreenBorder = Color(0xFFA7F3D0);
 
   static const red = danger;
@@ -61,19 +61,19 @@ class AppGradients {
   static const primary = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [AppColors.navy, AppColors.steelBlue],
+    colors: [Color(0xFF064E3B), Color(0xFF047857)],
   );
 
   static const deepNavy = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [AppColors.deepNavy, AppColors.navy2],
+    colors: [Color(0xFF064E3B), Color(0xFF047857)],
   );
 
   static const subtleBlue = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+    colors: [Color(0xFFECFDF5), Color(0xFFD1FAE5)],
   );
 
   static const success = LinearGradient(
@@ -198,8 +198,8 @@ ThemeData _buildTheme(Brightness brightness) {
   final border = isDark ? const Color(0xFF283248) : AppColors.border;
   final text = isDark ? const Color(0xFFE2E8F0) : AppColors.text;
   final muted = isDark ? const Color(0xFF94A3B8) : AppColors.muted;
-  final primary = isDark ? const Color(0xFF60A5FA) : AppColors.steelBlue;
-  final onPrimary = isDark ? const Color(0xFF06111F) : Colors.white;
+  final primary = isDark ? const Color(0xFF34D399) : AppColors.emerald;
+  const onPrimary = Colors.white;
 
   final base = ThemeData(
     useMaterial3: true,
@@ -215,7 +215,7 @@ ThemeData _buildTheme(Brightness brightness) {
       brightness: brightness,
       primary: primary,
       onPrimary: onPrimary,
-      secondary: AppColors.steelBlue,
+      secondary: AppColors.emerald,
       tertiary: AppColors.red,
       onTertiary: Colors.white,
       surface: card,
@@ -319,7 +319,7 @@ ThemeData _buildTheme(Brightness brightness) {
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: AppColors.steelBlue,
+      backgroundColor: AppColors.emerald,
       foregroundColor: Colors.white,
       elevation: 3,
       highlightElevation: 6,
@@ -328,7 +328,7 @@ ThemeData _buildTheme(Brightness brightness) {
       backgroundColor: isDark ? const Color(0xFF1C2436) : const Color(0xFFF1F5F9),
       selectedColor: AppColors.surfaceBlue,
       labelStyle: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: text),
-      secondaryLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.steelBlue),
+      secondaryLabelStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.emerald),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: border),
@@ -353,7 +353,7 @@ ThemeData _buildTheme(Brightness brightness) {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.steelBlue, width: 1.8),
+        borderSide: const BorderSide(color: AppColors.emerald, width: 1.8),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),

@@ -68,7 +68,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
 
   Future<void> _selectCustomer(BuildContext context, CatalogProvider provider) async {
     final picked = await Navigator.of(context).push<Customer>(
-      MaterialPageRoute(builder: (_) => const CustomerPickerScreen()),
+      MaterialPageRoute(builder: (_) => const CustomerPickerScreen(selectMode: true)),
     );
     if (picked != null) {
       provider.selectCustomer(picked);
@@ -110,8 +110,10 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
         final order = SavedOrder(
           id: DateTime.now().millisecondsSinceEpoch,
           orderNumber: 'ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+          customerId: cust?.id != null ? cust!.id.toString() : '',
           customerName: custName,
           customerPhone: custPhone,
+          customerAddress: cust?.address ?? '',
           date: DateTime.now(),
           items: orderItemsList,
           subtotal: subtotal,
@@ -136,7 +138,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       // If creating a Bill, prompt for Customer selection if none is chosen so ledger can be updated!
       if (cust == null) {
         final picked = await Navigator.of(context).push<Customer>(
-          MaterialPageRoute(builder: (_) => const CustomerPickerScreen()),
+          MaterialPageRoute(builder: (_) => const CustomerPickerScreen(selectMode: true)),
         );
         if (picked != null) {
           provider.selectCustomer(picked);
@@ -273,10 +275,10 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
+                              color: const Color(0xFFECFDF5),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.receipt_long, color: Color(0xFF2563EB), size: 20),
+                            child: const Icon(Icons.receipt_long, color: Color(0xFF047857), size: 20),
                           ),
                           const SizedBox(width: 10),
                           Column(
@@ -359,7 +361,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                     title: 'Partial Payment',
                     subtitle: 'Pay part now, remainder added to Customer Ledger',
                     icon: Icons.pie_chart_outline,
-                    iconColor: const Color(0xFF2563EB),
+                    iconColor: const Color(0xFF047857),
                     isSelected: selectedMode == 'partial',
                     onTap: () {
                       setModalState(() {
@@ -397,7 +399,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF2563EB)),
+                              border: Border.all(color: const Color(0xFF047857)),
                             ),
                             child: TextField(
                               controller: paidCtrl,
@@ -459,7 +461,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                     height: 46,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
+                        backgroundColor: const Color(0xFF047857),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         elevation: 0,
@@ -540,7 +542,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
+          color: isSelected ? const Color(0xFF047857) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
@@ -636,7 +638,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(66),
         child: Container(
-          color: const Color(0xFF0F2756),
+          color: const Color(0xFF064E3B),
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -734,7 +736,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                             const Spacer(),
                             if (_documentMode == 'Bill')
                               const Icon(Icons.check,
-                                  size: 18, color: Color(0xFF2563EB)),
+                                  size: 18, color: Color(0xFF047857)),
                           ],
                         ),
                       ),
@@ -756,7 +758,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                             const Spacer(),
                             if (_documentMode == 'Order')
                               const Icon(Icons.check,
-                                  size: 18, color: Color(0xFF2563EB)),
+                                  size: 18, color: Color(0xFF047857)),
                           ],
                         ),
                       ),
@@ -795,16 +797,6 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                   ),
                   const SizedBox(width: 8),
 
-                  // Header Trash Can Icon
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline,
-                        color: Colors.white, size: 22),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                    onPressed: () => _clearCart(provider),
-                  ),
-                  const SizedBox(width: 2),
-
                   // Clear Cart Outline Pill Button
                   InkWell(
                     onTap: () => _clearCart(provider),
@@ -813,19 +805,24 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
                       height: 30,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
-                        color: Colors.transparent,
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white, width: 1.2),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.0),
                       ),
-                      child: const Center(
-                        child: Text(
-                          'Clear Cart',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.delete_outline, color: Colors.white, size: 15),
+                          SizedBox(width: 4),
+                          Text(
+                            'Clear',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),

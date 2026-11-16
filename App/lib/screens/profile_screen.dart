@@ -87,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'Profile',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
@@ -156,12 +156,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
               child: Row(
                 children: [
-                  // Blue circle avatar with white "NSYU"
+                  // Emerald circle avatar with white "NSYU"
                   Container(
                     width: 68,
                     height: 68,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF1565C0),
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF064E3B), Color(0xFF047857)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
@@ -195,7 +199,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Text(
                           profile.role,
                           style: const TextStyle(
-                            color: Color(0xFF1976D2),
+                            color: Color(0xFF047857),
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                           ),
@@ -353,11 +357,11 @@ class _HeaderWavePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint1 = Paint()
-      ..color = const Color(0xFFE2EDFB).withValues(alpha: 0.6)
+      ..color = const Color(0xFFECFDF5).withValues(alpha: 0.8)
       ..style = PaintingStyle.fill;
 
     final paint2 = Paint()
-      ..color = const Color(0xFFD4E6FA).withValues(alpha: 0.4)
+      ..color = const Color(0xFFD1FAE5).withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     final path1 = Path();

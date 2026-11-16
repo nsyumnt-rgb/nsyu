@@ -11,7 +11,7 @@ class AboutAppScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('About App', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -25,11 +25,11 @@ class AboutAppScreen extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1565C0),
+                    color: const Color(0xFF047857),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF1565C0).withValues(alpha: 0.3),
+                        color: const Color(0xFF047857).withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),

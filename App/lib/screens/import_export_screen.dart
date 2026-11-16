@@ -178,7 +178,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF047857)),
             child: const Text('Confirm & Save'),
           ),
         ],
@@ -232,7 +232,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Import / Export', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(
@@ -312,10 +312,10 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEBF3FE),
+                    color: const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: const Color(0xFF1976D2), size: 24),
+                  child: Icon(icon, color: const Color(0xFF047857), size: 24),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -336,7 +336,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                 icon: const Icon(Icons.file_download_outlined, size: 18),
                 label: Text(buttonLabel),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1565C0),
+                  foregroundColor: const Color(0xFF047857),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
@@ -362,7 +362,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.table_view_outlined, color: Color(0xFF1565C0), size: 24),
+                    Icon(Icons.table_view_outlined, color: Color(0xFF047857), size: 24),
                     SizedBox(width: 10),
                     Text(
                       'Import Products from Excel / CSV',
@@ -380,12 +380,12 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.description, color: Color(0xFF2563EB)),
+                        const Icon(Icons.description, color: Color(0xFF047857)),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(_importFileName!,
@@ -462,7 +462,7 @@ class _ImportExportScreenState extends State<ImportExportScreen>
                             : const Icon(Icons.check, size: 18),
                         label: Text(_applyingImport ? 'Saving...' : 'Confirm Import'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF1565C0),
+                          backgroundColor: const Color(0xFF047857),
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),

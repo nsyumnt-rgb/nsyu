@@ -79,7 +79,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Activity Log', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -125,7 +125,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                     _loadLogs();
                   }
                 },
-                selectedColor: const Color(0xFF1565C0),
+                selectedColor: const Color(0xFF047857),
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : const Color(0xFF475569),
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -282,11 +282,11 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.link, size: 15, color: Color(0xFF2563EB)),
+                  const Icon(Icons.link, size: 15, color: Color(0xFF047857)),
                   const SizedBox(width: 6),
                   Text(
                     'Reference: $entityType${entityId != null ? ' #$entityId' : ''}',
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF2563EB), fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF047857), fontWeight: FontWeight.w500),
                   ),
                 ],
               ),

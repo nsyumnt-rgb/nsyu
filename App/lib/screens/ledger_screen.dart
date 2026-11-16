@@ -127,7 +127,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Row(
                 children: [
-                  // Navy Monogram Avatar
+                  // Emerald Monogram Avatar
                   Container(
                     width: 42,
                     height: 42,
@@ -135,12 +135,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                        colors: [Color(0xFF064E3B), Color(0xFF047857)],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                          color: const Color(0xFF047857).withValues(alpha: 0.25),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -307,10 +307,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? const Color(0xFFEFF6FF) : const Color(0xFFF8FAFC),
+                                  color: isSelected ? const Color(0xFFECFDF5) : const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: isSelected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                                    color: isSelected ? const Color(0xFF047857) : const Color(0xFFE2E8F0),
                                     width: 1.2,
                                   ),
                                 ),
@@ -319,7 +319,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                    color: isSelected ? const Color(0xFF1D4ED8) : const Color(0xFF64748B),
+                                    color: isSelected ? const Color(0xFF047857) : const Color(0xFF64748B),
                                   ),
                                 ),
                               ),
@@ -544,10 +544,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     width: 36,
                     height: 36,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFEFF6FF),
+                      color: Color(0xFFECFDF5),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.tune_rounded, size: 18, color: Color(0xFF2563EB)),
+                    child: const Icon(Icons.tune_rounded, size: 18, color: Color(0xFF047857)),
                   ),
                   if (_activeChip != 'Customer')
                     Positioned(

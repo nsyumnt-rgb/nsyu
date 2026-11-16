@@ -30,13 +30,13 @@ class ProfileTile extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEBF3FE),
+                    color: const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Icon(
                       icon,
-                      color: const Color(0xFF1976D2),
+                      color: const Color(0xFF047857),
                       size: 24,
                     ),
                   ),

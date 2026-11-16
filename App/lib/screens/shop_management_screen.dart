@@ -615,14 +615,14 @@ class _ShopManagementScreenState extends State<ShopManagementScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
+        color: const Color(0xFFECFDF5),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
+        border: Border.all(color: const Color(0xFFA7F3D0)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF2563EB), size: 24),
+          const Icon(Icons.lightbulb_outline_rounded, color: Color(0xFF047857), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -633,13 +633,13 @@ class _ShopManagementScreenState extends State<ShopManagementScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1E3A8A),
+                    color: Color(0xFF064E3B),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Every shop has a unique Shop Code (${auth.shopCode}). Customers enter this code when registering their account or browsing your digital catalog to view your prices and place orders.',
-                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF1E40AF), height: 1.35),
+                  style: const TextStyle(fontSize: 12.5, color: Color(0xFF047857), height: 1.35),
                 ),
               ],
             ),

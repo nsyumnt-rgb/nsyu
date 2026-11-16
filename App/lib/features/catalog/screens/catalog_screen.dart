@@ -64,63 +64,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 
   void _openBarcodeDialog() {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.qr_code_scanner, color: Color(0xFF2563EB)),
-            SizedBox(width: 8),
-            Text(
-              'Scan / Search SKU',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Product SKU or Barcode',
-            hintText: 'e.g. TC001',
-            border: OutlineInputBorder(),
-          ),
-          onSubmitted: (val) {
-            Navigator.pop(ctx);
-            if (val.trim().isNotEmpty) {
-              setState(() {
-                _searchCtrl.text = val.trim();
-                _searchQuery = val.trim().toLowerCase();
-              });
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              if (ctrl.text.trim().isNotEmpty) {
-                setState(() {
-                  _searchCtrl.text = ctrl.text.trim();
-                  _searchQuery = ctrl.text.trim().toLowerCase();
-                });
-              }
-            },
-            child: const Text('Search'),
-          ),
-        ],
-      ),
-    );
+    // Direct search without popup dialog
+    _searchCtrl.clear();
+    setState(() => _searchQuery = '');
   }
 
   void _openFilterSheet() {
@@ -163,17 +109,24 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
     // Filter by search & category
     final query = _searchQuery;
+    final cleanQuery = query.replaceAll(RegExp(r'[\s\-_]'), '');
     final filtered = allProducts.where((p) {
       if (query.isNotEmpty) {
+        final codeClean = p.code.toLowerCase().replaceAll(RegExp(r'[\s\-_]'), '');
+        final descClean = p.desc.toLowerCase().replaceAll(RegExp(r'[\s\-_]'), '');
+        final barcodeClean = (p.barcode ?? '').toLowerCase().replaceAll(RegExp(r'[\s\-_]'), '');
+
         final matches = p.desc.toLowerCase().contains(query) ||
             p.code.toLowerCase().contains(query) ||
             p.spec.toLowerCase().contains(query) ||
             p.category.toLowerCase().contains(query) ||
-            (p.brand != null && p.brand!.toLowerCase().contains(query));
+            (p.brand != null && p.brand!.toLowerCase().contains(query)) ||
+            (cleanQuery.isNotEmpty && (codeClean.contains(cleanQuery) || descClean.contains(cleanQuery) || barcodeClean.contains(cleanQuery)));
         if (!matches) return false;
-      }
-      if (!_selectedCategory.startsWith('All') && _selectedCategory.isNotEmpty) {
-        if (p.category.toLowerCase() != _selectedCategory.toLowerCase()) return false;
+      } else {
+        if (!_selectedCategory.startsWith('All') && _selectedCategory.isNotEmpty) {
+          if (p.category.toLowerCase() != _selectedCategory.toLowerCase()) return false;
+        }
       }
       if (_stockFilter == CatalogStockFilter.inStock && p.stock <= 0) return false;
       if (_stockFilter == CatalogStockFilter.outOfStock && p.stock > 0) return false;

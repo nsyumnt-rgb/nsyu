@@ -92,7 +92,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
               child: Row(
                 children: [
-                  // Navy Monogram Avatar
+                  // Emerald Monogram Avatar
                   Container(
                     width: 42,
                     height: 42,
@@ -100,12 +100,12 @@ class _BillsListScreenState extends State<BillsListScreen> {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                        colors: [Color(0xFF064E3B), Color(0xFF047857)],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                          color: const Color(0xFF047857).withValues(alpha: 0.25),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),

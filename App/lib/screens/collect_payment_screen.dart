@@ -134,7 +134,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: const Color(0xFF047857),
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -248,7 +248,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.print_outlined, color: Color(0xFF2563EB)),
+                  leading: const Icon(Icons.print_outlined, color: Color(0xFF047857)),
                   title: const Text('Print Payment Receipt', style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () async {
                     await Printing.layoutPdf(onLayout: (_) => pdfFile.readAsBytes());
@@ -277,7 +277,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFF047857),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -333,7 +333,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                    colors: [Color(0xFF064E3B), Color(0xFF047857)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -407,7 +407,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                     height: 40,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                        colors: [Color(0xFF064E3B), Color(0xFF047857)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -477,13 +477,13 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Thick Royal Blue Underline Accent
+                  // Emerald Underline Accent
                   Center(
                     child: Container(
                       width: 130,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB),
+                        color: const Color(0xFF047857),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -503,14 +503,14 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                           style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? const Color(0xFF1D4ED8) : const Color(0xFF334155),
+                            color: selected ? const Color(0xFF047857) : const Color(0xFF334155),
                           ),
                         ),
                         selected: selected,
-                        selectedColor: const Color(0xFFEFF6FF),
+                        selectedColor: const Color(0xFFECFDF5),
                         backgroundColor: const Color(0xFFF1F5F9),
                         side: BorderSide(
-                          color: selected ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                          color: selected ? const Color(0xFF047857) : const Color(0xFFE2E8F0),
                         ),
                         onSelected: (_) => setState(() => _method = m),
                       );
@@ -522,7 +522,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   _buildActionCard(
                     leadingIcon: Icons.description_outlined,
                     title: _notes.isNotEmpty ? _notes : 'Add Notes',
-                    trailing: const Icon(Icons.mic_none, color: Color(0xFF2563EB), size: 22),
+                    trailing: const Icon(Icons.mic_none, color: Color(0xFF047857), size: 22),
                     onTap: _showAddNotesDialog,
                   ),
                   const SizedBox(height: 14),
@@ -541,7 +541,7 @@ class _CollectPaymentScreenState extends State<CollectPaymentScreen> {
                   _buildActionCard(
                     leadingIcon: Icons.camera_alt_outlined,
                     title: 'Add Bills',
-                    trailing: const Icon(Icons.add, color: Color(0xFF2563EB), size: 22),
+                    trailing: const Icon(Icons.add, color: Color(0xFF047857), size: 22),
                     onTap: () {
                       showAppSnackBar(context, 'Invoice/Bill attachment ready');
                     },

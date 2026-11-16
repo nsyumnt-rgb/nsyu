@@ -168,8 +168,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const activeNavy = AppColors.navy900;
-    const activePillBg = AppColors.blue50;
+    const activeNavy = AppColors.emerald;
+    const activePillBg = AppColors.emeraldLight;
     const inactiveSlate = AppColors.textSecondary;
 
     final itemColor = active ? activeNavy : inactiveSlate;

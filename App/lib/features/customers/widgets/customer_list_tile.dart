@@ -101,11 +101,15 @@ class CustomerListTile extends StatelessWidget {
                       ),
                       if (customer.mobile.isNotEmpty) ...[
                         const SizedBox(width: 6),
-                        Text(
-                          customer.mobile,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            color: AppColors.textSecondary,
+                        Flexible(
+                          child: Text(
+                            customer.mobile,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
                       ],

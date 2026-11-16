@@ -80,7 +80,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Help & Support', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1565C0),
+        backgroundColor: const Color(0xFF047857),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -110,7 +110,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     icon: Icons.phone_in_talk_rounded,
                     title: 'Call Support',
                     subtitle: '+91 $supportPhone',
-                    color: const Color(0xFF1565C0),
+                    color: const Color(0xFF047857),
                     onTap: () => _launchCall(supportPhone),
                   ),
                   const SizedBox(height: 10),

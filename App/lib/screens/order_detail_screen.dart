@@ -568,7 +568,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0F2756),
+        backgroundColor: const Color(0xFF064E3B),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -582,7 +582,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               height: 36,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                  colors: [Color(0xFF064E3B), Color(0xFF047857)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -656,7 +656,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     value: 'status',
                     child: Row(
                       children: [
-                        Icon(Icons.edit_note_outlined, size: 18, color: Color(0xFF2563EB)),
+                        Icon(Icons.edit_note_outlined, size: 18, color: Color(0xFF047857)),
                         SizedBox(width: 8),
                         Text('Update Status'),
                       ],
@@ -687,7 +687,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     value: 'convert',
                     child: Row(
                       children: [
-                        Icon(Icons.receipt_long_outlined, size: 18, color: Color(0xFF2563EB)),
+                        Icon(Icons.receipt_long_outlined, size: 18, color: Color(0xFF047857)),
                         SizedBox(width: 8),
                         Text('Convert to Bill'),
                       ],
@@ -710,7 +710,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF047857)))
           : _error != null || o == null
               ? _buildErrorView()
               : _buildOrderContent(context, o),
@@ -736,7 +736,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: const Color(0xFF047857),
                 foregroundColor: Colors.white,
               ),
               child: const Text('Back to Orders'),
@@ -908,7 +908,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: const Color(0xFF047857),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -988,7 +988,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   height: 44,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF0F2756), Color(0xFF2563EB)],
+                      colors: [Color(0xFF064E3B), Color(0xFF047857)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -1037,25 +1037,25 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.menu_book_rounded, color: Color(0xFF1D4ED8), size: 16),
+                        Icon(Icons.menu_book_rounded, color: Color(0xFF047857), size: 16),
                         SizedBox(width: 5),
                         Text(
                           'Ledger',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1D4ED8),
+                            color: Color(0xFF047857),
                           ),
                         ),
                         SizedBox(width: 2),
-                        Icon(Icons.chevron_right, size: 14, color: Color(0xFF1D4ED8)),
+                        Icon(Icons.chevron_right, size: 14, color: Color(0xFF047857)),
                       ],
                     ),
                   ),
@@ -1323,7 +1323,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   // =========================================================================
   Widget _buildBottomActionsBar(BuildContext context, SavedOrder o) {
     return Container(
-      color: Colors.white,
       padding: EdgeInsets.fromLTRB(14, 10, 14, MediaQuery.of(context).padding.bottom + 10),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1348,7 +1347,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                 style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: const Color(0xFF047857),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

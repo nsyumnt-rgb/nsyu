@@ -130,10 +130,10 @@ class PaymentDetailScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.person, color: Color(0xFF1D4ED8), size: 20),
+                    child: const Icon(Icons.person, color: Color(0xFF047857), size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -173,16 +173,16 @@ class PaymentDetailScreen extends StatelessWidget {
                       );
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF93C5FD)),
+                      side: const BorderSide(color: Color(0xFFA7F3D0)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('Ledger', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1D4ED8))),
+                        Text('Ledger', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF047857))),
                         SizedBox(width: 4),
-                        Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFF1D4ED8)),
+                        Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFF047857)),
                       ],
                     ),
                   ),
@@ -227,12 +227,12 @@ class PaymentDetailScreen extends StatelessWidget {
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1D4ED8),
+                                    color: Color(0xFF047857),
                                     decoration: TextDecoration.underline,
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                const Icon(Icons.open_in_new, size: 12, color: Color(0xFF1D4ED8)),
+                                const Icon(Icons.open_in_new, size: 12, color: Color(0xFF047857)),
                               ],
                             ),
                           ),

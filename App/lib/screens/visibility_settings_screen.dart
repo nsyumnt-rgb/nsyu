@@ -74,7 +74,7 @@ class _VisibilitySettingsScreenState extends State<VisibilitySettingsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.restore, color: Color(0xFF1565C0)),
+            Icon(Icons.restore, color: Color(0xFF047857)),
             SizedBox(width: 8),
             Text('Reset to Default?'),
           ],
@@ -89,7 +89,7 @@ class _VisibilitySettingsScreenState extends State<VisibilitySettingsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1565C0)),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF047857)),
             child: const Text('Reset to Default'),
           ),
         ],
@@ -527,7 +527,7 @@ class _VisibilitySettingsScreenState extends State<VisibilitySettingsScreen> {
                         child: FilledButton(
                           onPressed: (visibility.saving || !_hasChanges) ? null : _save,
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF1565C0),
+                            backgroundColor: const Color(0xFF047857),
                             padding: const EdgeInsets.symmetric(vertical: 13),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),

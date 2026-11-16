@@ -28,7 +28,7 @@ class CatalogHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF0F2756),
+      color: const Color(0xFF064E3B),
       child: SafeArea(
         bottom: false,
         child: Padding(
@@ -57,7 +57,7 @@ class CatalogHeader extends StatelessWidget {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E3A8A),
+                      color: const Color(0xFF047857),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 19),
@@ -124,12 +124,12 @@ class CatalogHeader extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add_rounded, size: 16, color: Color(0xFF2563EB)),
+                          Icon(Icons.add_rounded, size: 16, color: Color(0xFF047857)),
                           SizedBox(width: 4),
                           Text(
                             'Add Product',
                             style: TextStyle(
-                              color: Color(0xFF2563EB),
+                              color: Color(0xFF047857),
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
@@ -219,12 +219,26 @@ class CatalogHeader extends StatelessWidget {
                               ),
                             ),
                           ),
-                          InkWell(
-                            onTap: onScanBarcode,
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 10),
-                              child: Icon(Icons.qr_code_scanner, size: 18, color: Color(0xFF2563EB)),
-                            ),
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: searchCtrl,
+                            builder: (context, value, _) {
+                              if (value.text.isNotEmpty) {
+                                return InkWell(
+                                  onTap: () {
+                                    searchCtrl.clear();
+                                    onSearchChanged('');
+                                  },
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 10),
+                                    child: Icon(Icons.clear, size: 18, color: Color(0xFF64748B)),
+                                  ),
+                                );
+                              }
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 10),
+                                child: Icon(Icons.search, size: 18, color: Color(0xFF047857)),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -244,12 +258,12 @@ class CatalogHeader extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.tune_rounded, size: 17, color: Color(0xFF2563EB)),
+                          Icon(Icons.tune_rounded, size: 17, color: Color(0xFF047857)),
                           SizedBox(width: 4),
                           Text(
                             'Filter',
                             style: TextStyle(
-                              color: Color(0xFF2563EB),
+                              color: Color(0xFF047857),
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),

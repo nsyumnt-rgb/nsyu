@@ -35,13 +35,13 @@ class ReferenceLink extends StatelessWidget {
   Color _getColor() {
     switch (type) {
       case ReferenceType.bill:
-        return const Color(0xFF1D4ED8);
+        return const Color(0xFF047857);
       case ReferenceType.order:
         return const Color(0xFF0D9488);
       case ReferenceType.customer:
         return const Color(0xFF0F172A);
       case ReferenceType.product:
-        return const Color(0xFF2563EB);
+        return const Color(0xFF047857);
       case ReferenceType.payment:
         return const Color(0xFF16A34A);
       case ReferenceType.stock:

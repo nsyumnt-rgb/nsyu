@@ -9,10 +9,8 @@ import '../../../models/customer_ledger_entry.dart';
 import '../../../providers/bills_provider.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/payments_provider.dart';
-import '../../../providers/catalog_provider.dart';
 import '../../../services/supabase_service.dart';
 import '../../../screens/collect_payment_screen.dart';
-import '../../../screens/order_cart_screen.dart';
 import '../../../theme/app_theme.dart';
 
 import '../widgets/ledger_timeline_card.dart';
@@ -435,53 +433,6 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                 )
               else
                 const Text('No transactions yet', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 44,
-                      child: ElevatedButton.icon(
-                        onPressed: _openCollectPayment,
-                        icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-                        label: const Text('Add Payment', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.navy900,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 44,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          final cust = _customer ?? widget.customer;
-                          if (cust != null) {
-                            context.read<CatalogProvider>().selectCustomer(cust);
-                          }
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const OrderCartScreen()),
-                          );
-                        },
-                        icon: const Icon(Icons.receipt_long_outlined, size: 16, color: AppColors.navy900),
-                        label: const Text('New Bill', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navy900)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.blue50,
-                          foregroundColor: AppColors.navy900,
-                          elevation: 0,
-                          side: const BorderSide(color: AppColors.blue100, width: 1.2),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),

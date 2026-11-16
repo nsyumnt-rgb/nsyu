@@ -258,9 +258,9 @@ class PrimaryButton extends StatelessWidget {
       height: height,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.navy900,
+          backgroundColor: backgroundColor ?? AppColors.emerald,
           foregroundColor: foregroundColor ?? Colors.white,
-          disabledBackgroundColor: (backgroundColor ?? AppColors.navy900).withValues(alpha: 0.45),
+          disabledBackgroundColor: (backgroundColor ?? AppColors.emerald).withValues(alpha: 0.45),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
@@ -300,7 +300,7 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-/// 5. SecondaryButton — Soft blue surface button with 14pt radius
+/// 5. SecondaryButton — Soft light green surface button with emerald text and border
 class SecondaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -323,9 +323,9 @@ class SecondaryButton extends StatelessWidget {
       height: height,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.blue50,
-          foregroundColor: AppColors.blue600,
-          side: const BorderSide(color: AppColors.blue100, width: 1.2),
+          backgroundColor: AppColors.emeraldLight,
+          foregroundColor: AppColors.emerald,
+          side: const BorderSide(color: Color(0xFFA7F3D0), width: 1.2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius),
           ),
@@ -337,7 +337,7 @@ class SecondaryButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 19, color: AppColors.blue600),
+              Icon(icon, size: 19, color: AppColors.emerald),
               const SizedBox(width: 8),
             ],
             Text(
@@ -345,7 +345,7 @@ class SecondaryButton extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
-                color: AppColors.blue600,
+                color: AppColors.emerald,
               ),
             ),
           ],
@@ -392,16 +392,16 @@ class SectionHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.blue50,
+                  color: AppColors.emeraldLight,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: AppColors.blue100),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
                 ),
                 child: Text(
                   '$count',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.blue600,
+                    color: AppColors.emerald,
                   ),
                 ),
               ),
@@ -424,11 +424,11 @@ class SectionHeader extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.blue600,
+                    color: AppColors.emerald,
                   ),
                 ),
                 const SizedBox(width: 2),
-                const Icon(Icons.chevron_right, size: 16, color: AppColors.blue600),
+                const Icon(Icons.chevron_right, size: 16, color: AppColors.emerald),
               ],
             ),
           ),
@@ -468,11 +468,11 @@ class EmptyState extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: const BoxDecoration(
-                color: AppColors.blue50,
+                color: AppColors.emeraldLight,
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Icon(icon, size: iconSize, color: AppColors.blue600),
+                child: Icon(icon, size: iconSize, color: AppColors.emerald),
               ),
             ),
             const SizedBox(height: 18),
@@ -632,7 +632,7 @@ class AppScaffold extends StatelessWidget {
     final scaffoldBody = onRefresh != null
         ? RefreshIndicator(
             onRefresh: onRefresh!,
-            color: AppColors.blue600,
+            color: AppColors.emerald,
             child: body,
           )
         : body;

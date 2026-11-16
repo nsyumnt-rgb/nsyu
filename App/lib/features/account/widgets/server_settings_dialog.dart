@@ -107,7 +107,7 @@ class _ServerSettingsDialogState extends State<ServerSettingsDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Row(
         children: [
-          Icon(Icons.dns_rounded, color: Color(0xFF1D4ED8)),
+          Icon(Icons.dns_rounded, color: Color(0xFF047857)),
           SizedBox(width: 8),
           Text(
             'Server & Supabase',

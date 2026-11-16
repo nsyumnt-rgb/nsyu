@@ -204,7 +204,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1D4ED8),
+                backgroundColor: const Color(0xFF047857),
                 foregroundColor: Colors.white,
               ),
               child: const Text('Back to Catalog'),
@@ -472,11 +472,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.history_rounded, size: 16, color: Color(0xFF1D4ED8)),
+                  icon: const Icon(Icons.history_rounded, size: 16, color: Color(0xFF047857)),
                   label: const Text('View Stock Movements in Inventory',
-                      style: TextStyle(color: Color(0xFF1D4ED8), fontWeight: FontWeight.w600, fontSize: 12.5)),
+                      style: TextStyle(color: Color(0xFF047857), fontWeight: FontWeight.w600, fontSize: 12.5)),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF93C5FD)),
+                    side: const BorderSide(color: Color(0xFFA7F3D0)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                   ),
@@ -508,7 +508,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   icon: const Icon(Icons.receipt_long, size: 18),
                   label: const Text('+ Add to Bill', style: TextStyle(fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1D4ED8),
+                    backgroundColor: const Color(0xFF047857),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

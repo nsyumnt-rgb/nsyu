@@ -328,9 +328,9 @@ class _AnimatedFeedbackDialogState extends State<AnimatedFeedbackDialog>
       case FeedbackType.warning:
         return const Color(0xFFF59E0B); // Amber
       case FeedbackType.info:
-        return const Color(0xFF2563EB); // Royal Blue
+        return const Color(0xFF047857);
       case FeedbackType.saving:
-        return const Color(0xFF1D4ED8); // Blue
+        return const Color(0xFF064E3B);
     }
   }
 
@@ -499,7 +499,7 @@ class _AnimatedFeedbackDialogState extends State<AnimatedFeedbackDialog>
               height: 78 + (_pulseCtrl.value * 8),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.15 * (1 - _pulseCtrl.value)),
+                color: const Color(0xFF047857).withValues(alpha: 0.15 * (1 - _pulseCtrl.value)),
               ),
             );
           },
@@ -512,13 +512,13 @@ class _AnimatedFeedbackDialogState extends State<AnimatedFeedbackDialog>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: const LinearGradient(
-                colors: [Color(0xFF60A5FA), Color(0xFF2563EB)],
+                colors: [Color(0xFF064E3B), Color(0xFF047857)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                  color: const Color(0xFF047857).withValues(alpha: 0.35),
                   blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
@@ -724,7 +724,7 @@ class _AnimatedFeedbackDialogState extends State<AnimatedFeedbackDialog>
                       style: const TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF2563EB),
+                        color: Color(0xFF047857),
                       ),
                     ),
                   ),
@@ -846,9 +846,9 @@ class _SavingBillProgressDialogState extends State<SavingBillProgressDialog> {
                     value: progress,
                     strokeWidth: 4.5,
                     backgroundColor: const Color(0xFFE2E8F0),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF047857)),
                   ),
-                  const Icon(Icons.receipt_long, color: Color(0xFF2563EB), size: 30),
+                  const Icon(Icons.receipt_long, color: Color(0xFF047857), size: 30),
                 ],
               ),
             ),
@@ -893,7 +893,7 @@ class _SavingBillProgressDialogState extends State<SavingBillProgressDialog> {
                           const SizedBox(
                             width: 14,
                             height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2563EB)),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF047857)),
                           )
                         else
                           const Icon(Icons.radio_button_unchecked, size: 14, color: Color(0xFFCBD5E1)),
@@ -930,14 +930,14 @@ class _SavingBillProgressDialogState extends State<SavingBillProgressDialog> {
                       value: progress,
                       minHeight: 6,
                       backgroundColor: const Color(0xFFE2E8F0),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2563EB)),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF047857)),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Text(
                   '${(progress * 100).toInt()}%',
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF047857)),
                 ),
               ],
             ),
@@ -965,7 +965,7 @@ class AppToast {
   }
 
   static void showInfo(BuildContext context, {required String title, required String subtitle}) {
-    _showToast(context, title: title, subtitle: subtitle, color: const Color(0xFF2563EB), icon: Icons.info_rounded);
+    _showToast(context, title: title, subtitle: subtitle, color: const Color(0xFF047857), icon: Icons.info_rounded);
   }
 
   /// Specialized Toast matching reference: "Added [Product] to Bill - View Bill"
@@ -1044,7 +1044,7 @@ class AppToast {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
+                    color: const Color(0xFF047857),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Row(

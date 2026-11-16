@@ -62,10 +62,10 @@ class CatalogFilterSheet extends StatelessWidget {
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.all_inclusive, color: Color(0xFF2563EB)),
+              leading: const Icon(Icons.all_inclusive, color: Color(0xFF047857)),
               title: const Text('All Products'),
               trailing: currentStockFilter == CatalogStockFilter.all
-                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  ? const Icon(Icons.check, color: Color(0xFF047857))
                   : null,
               onTap: () {
                 Navigator.pop(context);
@@ -76,7 +76,7 @@ class CatalogFilterSheet extends StatelessWidget {
               leading: const Icon(Icons.check_circle_outline, color: Color(0xFF059669)),
               title: const Text('In Stock Only'),
               trailing: currentStockFilter == CatalogStockFilter.inStock
-                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  ? const Icon(Icons.check, color: Color(0xFF047857))
                   : null,
               onTap: () {
                 Navigator.pop(context);
@@ -87,7 +87,7 @@ class CatalogFilterSheet extends StatelessWidget {
               leading: const Icon(Icons.highlight_off, color: Color(0xFFDC2626)),
               title: const Text('Out of Stock Only'),
               trailing: currentStockFilter == CatalogStockFilter.outOfStock
-                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  ? const Icon(Icons.check, color: Color(0xFF047857))
                   : null,
               onTap: () {
                 Navigator.pop(context);
@@ -98,7 +98,7 @@ class CatalogFilterSheet extends StatelessWidget {
               leading: const Icon(Icons.sort_by_alpha, color: Color(0xFF1E293B)),
               title: const Text('Sort by Name (A-Z)'),
               trailing: currentSortOrder == CatalogSortOrder.nameAsc
-                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  ? const Icon(Icons.check, color: Color(0xFF047857))
                   : null,
               onTap: () {
                 Navigator.pop(context);
@@ -109,7 +109,7 @@ class CatalogFilterSheet extends StatelessWidget {
               leading: const Icon(Icons.currency_rupee, color: Color(0xFF1E293B)),
               title: const Text('Sort by SL-Price (Low to High)'),
               trailing: currentSortOrder == CatalogSortOrder.priceAsc
-                  ? const Icon(Icons.check, color: Color(0xFF2563EB))
+                  ? const Icon(Icons.check, color: Color(0xFF047857))
                   : null,
               onTap: () {
                 Navigator.pop(context);

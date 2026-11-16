@@ -120,7 +120,7 @@ class ProductCard extends StatelessWidget {
               const SizedBox(height: 18),
               // Option 1: Add to Bill
               Material(
-                color: const Color(0xFFEFF6FF),
+                color: const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(12),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(12),
@@ -146,7 +146,7 @@ class ProductCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1D4ED8),
+                            color: const Color(0xFF047857),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(Icons.receipt_long, color: Colors.white, size: 22),
@@ -159,21 +159,20 @@ class ProductCard extends StatelessWidget {
                               const Text(
                                 'Bill',
                                 style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E3A8A),
-                                ),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF064E3B)),
                               ),
                               Text(
                                 provider.billItems.isNotEmpty
                                     ? 'Add to current bill (${provider.billCount} items)'
                                     : 'Start a new customer sales bill',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF3B82F6)),
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF047857)),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF1D4ED8)),
+                        const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF047857)),
                       ],
                     ),
                   ),
@@ -346,12 +345,12 @@ class ProductCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF),
+                                color: const Color(0xFFECFDF5),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 product.brand!,
-                                style: const TextStyle(fontSize: 8.5, color: Color(0xFF1D4ED8), fontWeight: FontWeight.w600),
+                                style: const TextStyle(fontSize: 8.5, color: Color(0xFF047857), fontWeight: FontWeight.w600),
                               ),
                             ),
                           ],
@@ -452,15 +451,16 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              // Single + Add Button matching screenshot
+              // Single + Add Button in light green & emerald green
               SizedBox(
                 width: double.infinity,
                 height: 34,
                 child: ElevatedButton(
                   onPressed: () => _handleAddToCart(context, provider),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEFF6FF),
-                    foregroundColor: const Color(0xFF1D4ED8),
+                    backgroundColor: const Color(0xFFECFDF5),
+                    foregroundColor: const Color(0xFF047857),
+                    side: const BorderSide(color: Color(0xFFA7F3D0), width: 1.0),
                     elevation: 0,
                     shadowColor: Colors.transparent,
                     padding: EdgeInsets.zero,
@@ -471,12 +471,12 @@ class ProductCard extends StatelessWidget {
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add, size: 16, color: Color(0xFF1D4ED8)),
+                      Icon(Icons.add, size: 16, color: Color(0xFF047857)),
                       SizedBox(width: 4),
                       Text(
                         'Add',
                         style: TextStyle(
-                          color: Color(0xFF1D4ED8),
+                          color: Color(0xFF047857),
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
