@@ -208,20 +208,26 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final portal = Provider.of<CustomerPortalProvider>(context, listen: false);
-    final rawOutstanding = _summary?['currentOutstanding'] ??
-        _summary?['currentBalance'] ??
-        _summary?['balance'];
+    final portal = context.watch<CustomerPortalProvider>();
+    final summaryData = _summary ?? portal.ledgerSummary;
+    final entriesData = _dateFilter == 'all' && _entries.isEmpty && portal.ledgerEntries.isNotEmpty
+        ? portal.ledgerEntries
+        : _entries;
+    final isLoading = (_loading || portal.loading) && entriesData.isEmpty;
+
+    final rawOutstanding = summaryData?['currentOutstanding'] ??
+        summaryData?['currentBalance'] ??
+        summaryData?['balance'];
     final balance = rawOutstanding != null && parseDouble(rawOutstanding) != 0
         ? parseDouble(rawOutstanding)
         : (portal.currentBalance != 0
             ? portal.currentBalance
             : parseDouble(rawOutstanding));
-    final openingBal = parseDouble(_summary?['openingBalance'] ?? _summary?['opening_balance']);
+    final openingBal = parseDouble(summaryData?['openingBalance'] ?? summaryData?['opening_balance']);
 
     double debits = 0;
     double credits = 0;
-    for (final e in _entries) {
+    for (final e in entriesData) {
       final entryType = e['entry_type']?.toString().toLowerCase() ?? '';
       final isDeb = entryType == 'debit' || parseDouble(e['debit_amount']) > 0;
       final a = parseDouble(e['amount'] ?? (isDeb ? e['debit_amount'] : e['credit_amount']));
@@ -249,14 +255,17 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
           style: TextStyle(color: AppColors.navy900, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
-      body: _loading
+      body: isLoading
           ? Padding(
               padding: const EdgeInsets.all(16),
               child: SkeletonLoader.list(count: 6),
             )
           : RefreshIndicator(
               color: AppColors.blue600,
-              onRefresh: _loadLedger,
+              onRefresh: () async {
+                await portal.refreshLedger();
+                await _loadLedger();
+              },
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -396,7 +405,7 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                   const SectionHeader(title: 'Statement Entries'),
                   const SizedBox(height: 8),
 
-                  if (_entries.isEmpty)
+                  if (entriesData.isEmpty)
                     const Center(
                       child: EmptyState(
                         icon: Icons.receipt_long_outlined,
@@ -405,7 +414,7 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                       ),
                     )
                   else
-                    ..._entries.map((row) {
+                    ...entriesData.map((row) {
                       final entryType = row['entry_type']?.toString().toLowerCase() ?? '';
                       final isDebit = entryType == 'debit' || parseDouble(row['debit_amount']) > 0;
                       final amt = parseDouble(row['amount'] ?? (isDebit ? row['debit_amount'] : row['credit_amount']));

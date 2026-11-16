@@ -265,8 +265,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.success, size: 21),
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.success, size: 20),
                     tooltip: 'WhatsApp',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     onPressed: () {
                       final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
                       if (digits.isNotEmpty && digits != '-') {
@@ -275,8 +277,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.phone_outlined, color: AppColors.navy900, size: 21),
+                    icon: const Icon(Icons.phone_outlined, color: AppColors.navy900, size: 20),
                     tooltip: 'Call Customer',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     onPressed: () async {
                       if (phone.isNotEmpty && phone != '-') {
                         launchUrl(Uri(scheme: 'tel', path: phone));
@@ -284,8 +288,10 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.description_outlined, color: AppColors.navy900, size: 21),
+                    icon: const Icon(Icons.description_outlined, color: AppColors.navy900, size: 20),
                     tooltip: 'Statement',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                     onPressed: () => _printStatement(timeline, currentOutstanding),
                   ),
                 ],

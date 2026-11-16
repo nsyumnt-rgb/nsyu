@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
@@ -50,35 +49,6 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
-  Future<void> _handleLogout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.navy900)),
-        content: const Text('Are you sure you want to log out of your customer portal?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Log Out'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && mounted) {
-      await context.read<AuthProvider>().logout();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final portal = context.watch<CustomerPortalProvider>();
@@ -87,10 +57,15 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     final shop = (cust?['shop'] as Map<String, dynamic>?) ?? {};
     final shopName = dbMetrics?['shopName']?.toString() ?? shop['name']?.toString() ?? 'NSYU Business';
     final customerName = dbMetrics?['customerName']?.toString() ?? cust?['name']?.toString() ?? 'Customer';
+
+    final ordersList = portal.orders.isNotEmpty ? portal.orders : _recentOrders;
+    final billsList = portal.bills.isNotEmpty ? portal.bills : _recentBills;
+    final paymentsList = portal.payments.isNotEmpty ? portal.payments : _recentPayments;
+
     final balance = parseDouble(dbMetrics?['outstandingBalance'] ?? portal.currentBalance);
-    final totalBills = parseInt(dbMetrics?['totalBills'] ?? _recentBills.length);
-    final totalOrders = parseInt(dbMetrics?['totalOrders'] ?? _recentOrders.length);
-    final pendingOrders = parseInt(dbMetrics?['pendingOrders'] ?? 0);
+    final totalBills = parseInt(dbMetrics?['totalBills'] ?? billsList.length);
+    final totalOrders = parseInt(dbMetrics?['totalOrders'] ?? ordersList.length);
+    final pendingOrders = parseInt(dbMetrics?['pendingOrders'] ?? ordersList.where((o) => (o['status']?.toString() ?? '').toLowerCase() == 'pending').length);
     final unread = portal.unreadNotifications;
     final cartCount = portal.cartItemCount;
 
@@ -107,18 +82,19 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
           ),
         ),
         elevation: 0,
+        titleSpacing: 16,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               customerName,
-              style: const TextStyle(color: Colors.white, fontSize: 16.5, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
               shopName,
-              style: const TextStyle(color: AppColors.blue100, fontSize: 11.5, fontWeight: FontWeight.w500),
+              style: const TextStyle(color: AppColors.blue100, fontSize: 12, fontWeight: FontWeight.w500),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -155,18 +131,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
               ).then((_) => portal.refreshAll());
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: Colors.white),
-            tooltip: 'Profile',
-            onPressed: () {
-              portal.switchTab(4); // Switch to Profile tab
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            tooltip: 'Logout',
-            onPressed: _handleLogout,
-          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: RefreshIndicator(
@@ -368,14 +333,14 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
               ),
               const SizedBox(height: 12),
 
-              if (_loading)
+              if ((_loading || portal.loading) && ordersList.isEmpty && billsList.isEmpty && paymentsList.isEmpty)
                 const SkeletonLoader(width: double.infinity, height: 160)
               else if (_recentTab == 0)
-                _buildRecentOrdersView(context)
+                _buildRecentOrdersView(context, ordersList)
               else if (_recentTab == 1)
-                _buildRecentBillsView(context)
+                _buildRecentBillsView(context, billsList)
               else
-                _buildRecentPaymentsView(context),
+                _buildRecentPaymentsView(context, paymentsList),
 
               const SizedBox(height: 24),
             ],
@@ -513,8 +478,9 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     );
   }
 
-  Widget _buildRecentOrdersView(BuildContext context) {
-    if (_recentOrders.isEmpty) {
+  Widget _buildRecentOrdersView(BuildContext context, List<Map<String, dynamic>> ordersList) {
+    final items = ordersList.take(5).toList();
+    if (items.isEmpty) {
       return const EmptyState(
         icon: Icons.shopping_bag_outlined,
         title: 'No Orders Yet',
@@ -522,7 +488,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
       );
     }
     return Column(
-      children: _recentOrders.map((ord) {
+      children: items.map((ord) {
         final orderNum = ord['order_number']?.toString() ?? 'Order #${ord['id']}';
         final status = ord['status']?.toString() ?? 'pending';
         final total = parseDouble(ord['total_amount']);
@@ -582,8 +548,9 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     );
   }
 
-  Widget _buildRecentBillsView(BuildContext context) {
-    if (_recentBills.isEmpty) {
+  Widget _buildRecentBillsView(BuildContext context, List<Map<String, dynamic>> billsList) {
+    final items = billsList.take(5).toList();
+    if (items.isEmpty) {
       return const EmptyState(
         icon: Icons.receipt_long_outlined,
         title: 'No Bills Yet',
@@ -591,7 +558,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
       );
     }
     return Column(
-      children: _recentBills.map((b) {
+      children: items.map((b) {
         final invNum = b['invoice_number']?.toString() ?? 'INV-${b['id']}';
         final total = parseDouble(b['total_amount']);
         final paid = parseDouble(b['paid_amount']);
@@ -653,8 +620,9 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     );
   }
 
-  Widget _buildRecentPaymentsView(BuildContext context) {
-    if (_recentPayments.isEmpty) {
+  Widget _buildRecentPaymentsView(BuildContext context, List<Map<String, dynamic>> paymentsList) {
+    final items = paymentsList.take(5).toList();
+    if (items.isEmpty) {
       return const EmptyState(
         icon: Icons.payments_outlined,
         title: 'No Payments Yet',
@@ -662,7 +630,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
       );
     }
     return Column(
-      children: _recentPayments.map((p) {
+      children: items.map((p) {
         final pNum = p['payment_number']?.toString() ?? 'PAY-${p['id']}';
         final amt = parseDouble(p['amount']);
         final mode = (p['payment_mode'] ?? p['payment_method'] ?? 'CASH').toString().toUpperCase();

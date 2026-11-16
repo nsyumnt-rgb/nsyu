@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../theme/app_theme.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/customer_portal_provider.dart';
 import '../../../services/supabase_service.dart';
 import '../../../services/customer_portal_service.dart';
 import '../widgets/login_header_widget.dart';
@@ -121,6 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
 
+        if (success && mounted) {
+          context.read<CustomerPortalProvider>().init();
+        }
+
         if (!mounted) return;
         setState(() {
           _loading = false;
@@ -139,6 +144,9 @@ class _LoginScreenState extends State<LoginScreen> {
             password: password,
           );
           if (custSuccess) {
+            if (mounted) {
+              context.read<CustomerPortalProvider>().init();
+            }
             if (!mounted) return;
             setState(() {
               _isCustomerMode = true;

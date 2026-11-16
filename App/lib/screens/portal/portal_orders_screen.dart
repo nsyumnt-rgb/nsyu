@@ -36,9 +36,9 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
     }
   }
 
-  List<Map<String, dynamic>> get _filteredOrders {
-    if (_statusFilter == 'all') return _orders;
-    return _orders.where((ord) {
+  List<Map<String, dynamic>> _getFilteredOrders(List<Map<String, dynamic>> orders) {
+    if (_statusFilter == 'all') return orders;
+    return orders.where((ord) {
       final s = (ord['status']?.toString() ?? '').toLowerCase();
       if (_statusFilter == 'pending') {
         return s == 'pending';
@@ -78,7 +78,10 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final portal = context.read<CustomerPortalProvider>();
+    final portal = context.watch<CustomerPortalProvider>();
+    final allOrders = portal.orders.isNotEmpty ? portal.orders : _orders;
+    final filteredOrders = _getFilteredOrders(allOrders);
+    final isLoading = (_loading || portal.loading) && allOrders.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -101,7 +104,10 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             tooltip: 'Refresh',
-            onPressed: _loadOrders,
+            onPressed: () async {
+              await portal.refreshOrders();
+              await _loadOrders();
+            },
           ),
         ],
       ),
@@ -153,12 +159,12 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
 
           // Orders List
           Expanded(
-            child: _loading
+            child: isLoading
                 ? Padding(
                     padding: const EdgeInsets.all(16),
                     child: SkeletonLoader.list(count: 4),
                   )
-                : _filteredOrders.isEmpty
+                : filteredOrders.isEmpty
                     ? Center(
                         child: EmptyState(
                           icon: Icons.receipt_long_outlined,
@@ -174,13 +180,16 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                       )
                     : RefreshIndicator(
                         color: AppColors.blue600,
-                        onRefresh: _loadOrders,
+                        onRefresh: () async {
+                          await portal.refreshOrders();
+                          await _loadOrders();
+                        },
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: _filteredOrders.length,
+                          itemCount: filteredOrders.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, idx) {
-                            final ord = _filteredOrders[idx];
+                            final ord = filteredOrders[idx];
                             final id = parseInt(ord['id']);
                             final orderNum = ord['order_number']?.toString() ?? 'ORD-$id';
                             final status = ord['status']?.toString() ?? 'pending';
