@@ -35,31 +35,34 @@ class CatalogHeader extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
           child: Column(
             children: [
-              // Top Row: Back, Box Icon, Title, Actions (+ Add Product & Cart)
+              // Top Row: Title & Actions (+ Add Product & Cart)
               Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                    onPressed: () {
-                      if (onNavigate != null) {
-                        onNavigate!(0); // Navigate to Ledger
-                      } else if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                  ),
+                  if (Navigator.of(context).canPop()) ...[
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        } else if (onNavigate != null) {
+                          onNavigate!(0);
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: const Color(0xFF1E3A8A),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 19),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -68,7 +71,7 @@ class CatalogHeader extends StatelessWidget {
                         const Text(
                           'Product Catalog',
                           style: TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
                             letterSpacing: -0.2,
@@ -78,13 +81,13 @@ class CatalogHeader extends StatelessWidget {
                         ),
                         Text(
                           totalItems > 0
-                              ? 'All Products ($totalItems)'
+                              ? '$totalItems products available'
                               : (allProductsCount > 0
-                                  ? 'All Products ($allProductsCount)'
+                                  ? '$allProductsCount products available'
                                   : 'All Products'),
                           style: const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
                             color: Colors.white70,
                           ),
                           maxLines: 1,
@@ -92,15 +95,6 @@ class CatalogHeader extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-
-                  // Barcode Scanner Icon in Header
-                  IconButton(
-                    icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 21),
-                    tooltip: 'Scan Barcode',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 30, minHeight: 32),
-                    onPressed: onScanBarcode,
                   ),
 
                   // + Add Product Pill Button
@@ -114,23 +108,30 @@ class CatalogHeader extends StatelessWidget {
                     },
                     borderRadius: BorderRadius.circular(18),
                     child: Container(
-                      height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      height: 32,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A000000),
+                            blurRadius: 4,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add, size: 16, color: Color(0xFF2563EB)),
+                          Icon(Icons.add_rounded, size: 16, color: Color(0xFF2563EB)),
                           SizedBox(width: 4),
                           Text(
                             'Add Product',
                             style: TextStyle(
                               color: Color(0xFF2563EB),
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -138,7 +139,7 @@ class CatalogHeader extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
 
                   // Cart Icon with Dynamic Badge Count
                   InkWell(
