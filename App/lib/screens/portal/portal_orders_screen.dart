@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
@@ -28,26 +27,30 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
   Future<void> _loadOrders() async {
     setState(() => _loading = true);
     try {
-      String? backendFilter;
-      if (_statusFilter == 'pending') {
-        backendFilter = 'pending';
-      } else if (_statusFilter == 'processing') {
-        backendFilter = 'processing';
-      } else if (_statusFilter == 'completed') {
-        backendFilter = 'delivered';
-      } else if (_statusFilter == 'cancelled') {
-        backendFilter = 'cancelled';
-      }
-
-      final orders = await _service.listOrders(
-        status: backendFilter,
-      );
+      final orders = await _service.listOrders();
       if (mounted) setState(() => _orders = orders);
     } catch (_) {
       if (mounted) setState(() => _orders = []);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  List<Map<String, dynamic>> get _filteredOrders {
+    if (_statusFilter == 'all') return _orders;
+    return _orders.where((ord) {
+      final s = (ord['status']?.toString() ?? '').toLowerCase();
+      if (_statusFilter == 'pending') {
+        return s == 'pending';
+      } else if (_statusFilter == 'processing') {
+        return s == 'processing' || s == 'confirmed' || s == 'ready' || s == 'shipped';
+      } else if (_statusFilter == 'completed') {
+        return s == 'completed' || s == 'delivered' || s == 'billed' || s == 'converted_to_bill' || ord['converted_sale_id'] != null;
+      } else if (_statusFilter == 'cancelled') {
+        return s == 'cancelled' || s == 'rejected';
+      }
+      return true;
+    }).toList();
   }
 
   static const _tabs = [
@@ -106,7 +109,6 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
         children: [
           // Filter Tabs Bar
           Container(
-            color: Colors.white,
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: const BoxDecoration(
@@ -126,7 +128,6 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                       onSelected: (selected) {
                         if (selected) {
                           setState(() => _statusFilter = tab['id']!);
-                          _loadOrders();
                         }
                       },
                       selectedColor: AppColors.navy900,
@@ -157,7 +158,7 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                     padding: const EdgeInsets.all(16),
                     child: SkeletonLoader.list(count: 4),
                   )
-                : _orders.isEmpty
+                : _filteredOrders.isEmpty
                     ? Center(
                         child: EmptyState(
                           icon: Icons.receipt_long_outlined,
@@ -176,22 +177,20 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                         onRefresh: _loadOrders,
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: _orders.length,
+                          itemCount: _filteredOrders.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, idx) {
-                            final ord = _orders[idx];
-                            final id = (ord['id'] as num).toInt();
+                            final ord = _filteredOrders[idx];
+                            final id = parseInt(ord['id']);
                             final orderNum = ord['order_number']?.toString() ?? 'ORD-$id';
                             final status = ord['status']?.toString() ?? 'pending';
-                            final total = ((ord['total_amount'] ?? 0) as num).toDouble();
-                            final dt = ord['createdAt']?.toString();
-                            final dateStr = dt != null
-                                ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt))
-                                : '';
+                            final total = parseDouble(ord['total_amount']);
+                            final dt = ord['createdAt']?.toString() ?? ord['order_date']?.toString();
+                            final dateStr = formatDateSafe(dt, 'dd MMM yyyy, hh:mm a');
                             final items = (ord['items'] as List<dynamic>?) ?? [];
                             final itemsCount = items.fold<int>(
                               0,
-                              (sum, it) => sum + (((it['quantity'] ?? 1) as num).toInt()),
+                              (sum, it) => sum + parseInt(it['quantity'], 1),
                             );
                             final isBilled = ord['converted_sale_id'] != null;
 

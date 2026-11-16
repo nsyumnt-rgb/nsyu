@@ -663,3 +663,36 @@ class AppScaffold extends StatelessWidget {
     );
   }
 }
+
+/// ─────────────────────────────────────────────────────────────────────────────
+/// SAFE NUMBER & DATE PARSING HELPERS
+/// Prevents runtime "type 'String' is not a subtype of type 'num'" exceptions
+/// from Sequelize / Postgres JSON decimal strings.
+/// ─────────────────────────────────────────────────────────────────────────────
+
+double parseDouble(dynamic v, [double defaultValue = 0.0]) {
+  if (v == null) return defaultValue;
+  if (v is double) return v;
+  if (v is int) return v.toDouble();
+  if (v is num) return v.toDouble();
+  return double.tryParse(v.toString().replaceAll(',', '').trim()) ?? defaultValue;
+}
+
+int parseInt(dynamic v, [int defaultValue = 0]) {
+  if (v == null) return defaultValue;
+  if (v is int) return v;
+  if (v is double) return v.toInt();
+  if (v is num) return v.toInt();
+  return int.tryParse(v.toString().replaceAll(',', '').trim()) ?? defaultValue;
+}
+
+String formatDateSafe(dynamic dt, [String pattern = 'dd MMM yyyy']) {
+  if (dt == null) return '';
+  try {
+    final parsed = DateTime.parse(dt.toString());
+    return DateFormat(pattern).format(parsed.toLocal());
+  } catch (_) {
+    return dt.toString();
+  }
+}
+

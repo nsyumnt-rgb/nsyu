@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../models/bill_pdf_data.dart';
 import '../../services/bill_pdf_service.dart';
 import '../../services/customer_portal_service.dart';
@@ -42,9 +41,9 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
     final invNum = _bill!['invoice_number']?.toString() ?? 'INV-${widget.billId}';
     final cust = (_bill!['customer'] as Map<String, dynamic>?) ?? {};
     final items = (_bill!['items'] as List<dynamic>?) ?? [];
-    final paid = ((_bill!['paid_amount'] ?? 0) as num).toDouble();
-    final discount = ((_bill!['discount_amount'] ?? _bill!['discount'] ?? 0) as num).toDouble();
-    final tax = ((_bill!['tax_amount'] ?? _bill!['tax'] ?? 0) as num).toDouble();
+    final paid = parseDouble(_bill!['paid_amount']);
+    final discount = parseDouble(_bill!['discount_amount'] ?? _bill!['discount']);
+    final tax = parseDouble(_bill!['tax_amount'] ?? _bill!['tax']);
     final dt = _bill!['createdAt']?.toString() ?? _bill!['date']?.toString();
 
     return BillPdfData(
@@ -55,8 +54,8 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
       items: items.map((it) {
         return BillPdfLineData(
           desc: it['product_name']?.toString() ?? 'Item',
-          qty: ((it['quantity'] ?? 1) as num).toInt(),
-          price: ((it['unit_price'] ?? 0) as num).toDouble(),
+          qty: parseInt(it['quantity'], 1),
+          price: parseDouble(it['unit_price']),
         );
       }).toList(),
       discount: discount,
@@ -173,15 +172,15 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
     final cust = (_bill!['customer'] as Map<String, dynamic>?) ?? {};
     final items = (_bill!['items'] as List<dynamic>?) ?? [];
     final payments = (_bill!['payments'] as List<dynamic>?) ?? [];
-    final total = ((_bill!['total_amount'] ?? 0) as num).toDouble();
-    final subtotal = ((_bill!['subtotal'] ?? total) as num).toDouble();
-    final discount = ((_bill!['discount_amount'] ?? _bill!['discount'] ?? 0) as num).toDouble();
-    final tax = ((_bill!['tax_amount'] ?? _bill!['tax'] ?? 0) as num).toDouble();
-    final paid = ((_bill!['paid_amount'] ?? 0) as num).toDouble();
+    final total = parseDouble(_bill!['total_amount']);
+    final subtotal = parseDouble(_bill!['subtotal'] ?? total);
+    final discount = parseDouble(_bill!['discount_amount'] ?? _bill!['discount']);
+    final tax = parseDouble(_bill!['tax_amount'] ?? _bill!['tax']);
+    final paid = parseDouble(_bill!['paid_amount']);
     final balanceDue = total - paid;
     final payStatus = (_bill!['payment_status']?.toString() ?? 'unpaid').toUpperCase();
-    final dt = _bill!['createdAt']?.toString() ?? _bill!['date']?.toString();
-    final dateStr = dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt)) : 'N/A';
+    final dt = _bill!['createdAt']?.toString() ?? _bill!['date']?.toString() ?? _bill!['invoice_date']?.toString();
+    final dateStr = formatDateSafe(dt, 'dd MMM yyyy, hh:mm a');
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -298,11 +297,11 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
                   const Divider(height: 1, color: AppColors.border),
                   ...items.map((it) {
                     final pName = it['product_name']?.toString() ?? 'Item';
-                    final q = ((it['quantity'] ?? 1) as num).toInt();
-                    final rate = ((it['unit_price'] ?? 0) as num).toDouble();
-                    final lineSub = ((it['subtotal'] ?? q * rate) as num).toDouble();
-                    final lineGst = ((it['tax_amount'] ?? 0) as num).toDouble();
-                    final lineTot = ((it['line_total'] ?? it['total'] ?? q * rate) as num).toDouble();
+                    final q = parseInt(it['quantity'], 1);
+                    final rate = parseDouble(it['unit_price']);
+                    final lineSub = parseDouble(it['subtotal'] ?? (q * rate));
+                    final lineGst = parseDouble(it['tax_amount']);
+                    final lineTot = parseDouble(it['line_total'] ?? it['total'] ?? (q * rate));
 
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -383,10 +382,10 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
                     ),
                     const Divider(height: 20, color: AppColors.border),
                     ...payments.map((pm) {
-                      final pAmt = ((pm['amount'] ?? 0) as num).toDouble();
+                      final pAmt = parseDouble(pm['amount']);
                       final pMode = (pm['payment_mode'] ?? pm['payment_method'] ?? 'CASH').toString().toUpperCase();
                       final pDt = pm['payment_date']?.toString() ?? pm['createdAt']?.toString();
-                      final pDateStr = pDt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(pDt)) : '';
+                      final pDateStr = formatDateSafe(pDt, 'dd MMM yyyy');
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 10),

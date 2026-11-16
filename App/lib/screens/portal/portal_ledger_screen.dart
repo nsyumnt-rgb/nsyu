@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -93,13 +95,15 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
   }
 
   void _showTransactionDetails(Map<String, dynamic> row) {
-    final isDebit = ((row['debit_amount'] ?? 0) as num) > 0;
-    final debit = ((row['debit_amount'] ?? 0) as num).toDouble();
-    final credit = ((row['credit_amount'] ?? 0) as num).toDouble();
-    final runBal = ((row['running_balance'] ?? 0) as num).toDouble();
+    final entryType = row['entry_type']?.toString().toLowerCase() ?? '';
+    final isDebit = entryType == 'debit' || parseDouble(row['debit_amount']) > 0;
+    final amt = parseDouble(row['amount'] ?? (isDebit ? row['debit_amount'] : row['credit_amount']));
+    final debit = isDebit ? amt : 0.0;
+    final credit = !isDebit ? amt : 0.0;
+    final runBal = parseDouble(row['running_balance']);
     final desc = row['description']?.toString() ?? (isDebit ? 'Invoice Debit' : 'Payment Credit');
     final dt = row['entry_date']?.toString() ?? row['createdAt']?.toString();
-    final dateStr = dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt)) : 'N/A';
+    final dateStr = formatDateSafe(dt, 'dd MMM yyyy, hh:mm a');
     final refType = row['reference_type']?.toString() ?? row['entry_type']?.toString() ?? (isDebit ? 'BILL' : 'PAYMENT');
     final refId = row['reference_id']?.toString() ?? row['bill_number']?.toString() ?? row['payment_number']?.toString() ?? 'N/A';
 
@@ -204,10 +208,29 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final balance = ((_summary?['currentBalance'] ?? 0) as num).toDouble();
-    final debits = ((_summary?['totalDebits'] ?? 0) as num).toDouble();
-    final credits = ((_summary?['totalCredits'] ?? 0) as num).toDouble();
-    final openingBal = ((_summary?['openingBalance'] ?? 0) as num).toDouble();
+    final portal = Provider.of<CustomerPortalProvider>(context, listen: false);
+    final rawOutstanding = _summary?['currentOutstanding'] ??
+        _summary?['currentBalance'] ??
+        _summary?['balance'];
+    final balance = rawOutstanding != null && parseDouble(rawOutstanding) != 0
+        ? parseDouble(rawOutstanding)
+        : (portal.currentBalance != 0
+            ? portal.currentBalance
+            : parseDouble(rawOutstanding));
+    final openingBal = parseDouble(_summary?['openingBalance'] ?? _summary?['opening_balance']);
+
+    double debits = 0;
+    double credits = 0;
+    for (final e in _entries) {
+      final entryType = e['entry_type']?.toString().toLowerCase() ?? '';
+      final isDeb = entryType == 'debit' || parseDouble(e['debit_amount']) > 0;
+      final a = parseDouble(e['amount'] ?? (isDeb ? e['debit_amount'] : e['credit_amount']));
+      if (isDeb) {
+        debits += a;
+      } else {
+        credits += a;
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -215,10 +238,12 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.navy900),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: AppColors.navy900),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         title: const Text(
           'My Ledger & Statement',
           style: TextStyle(color: AppColors.navy900, fontSize: 18, fontWeight: FontWeight.bold),
@@ -381,15 +406,14 @@ class _PortalLedgerScreenState extends State<PortalLedgerScreen> {
                     )
                   else
                     ..._entries.map((row) {
-                      final isDebit = ((row['debit_amount'] ?? 0) as num) > 0;
-                      final amt = isDebit
-                          ? ((row['debit_amount'] ?? 0) as num).toDouble()
-                          : ((row['credit_amount'] ?? 0) as num).toDouble();
-                      final runBal = ((row['running_balance'] ?? 0) as num).toDouble();
+                      final entryType = row['entry_type']?.toString().toLowerCase() ?? '';
+                      final isDebit = entryType == 'debit' || parseDouble(row['debit_amount']) > 0;
+                      final amt = parseDouble(row['amount'] ?? (isDebit ? row['debit_amount'] : row['credit_amount']));
+                      final runBal = parseDouble(row['running_balance']);
                       final desc = row['description']?.toString() ?? (isDebit ? 'Invoice Debit' : 'Payment Credit');
-                      final billNum = row['bill_number']?.toString() ?? row['reference_id']?.toString();
+                      final billNum = row['bill_number']?.toString() ?? row['reference_id']?.toString() ?? row['reference_code']?.toString();
                       final dt = row['entry_date']?.toString() ?? row['createdAt']?.toString();
-                      final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
+                      final dateStr = formatDateSafe(dt, 'dd MMM yyyy');
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),

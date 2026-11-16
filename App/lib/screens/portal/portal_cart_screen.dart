@@ -73,9 +73,9 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
       if (!mounted) return;
       setState(() => _submitting = false);
 
-      final orderId = (res['id'] as num?)?.toInt();
+      final orderId = parseInt(res['id']);
       final orderNumber = res['order_number']?.toString() ?? 'ORD-$orderId';
-      final total = ((res['total_amount'] ?? 0) as num).toDouble();
+      final total = parseDouble(res['total_amount']);
 
       // Show professional order confirmation dialog
       await showDialog(
@@ -128,7 +128,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                 label: 'View Order Details',
                 onPressed: () {
                   Navigator.pop(ctx);
-                  if (orderId != null) {
+                  if (orderId > 0) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -173,9 +173,9 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
     final portal = context.watch<CustomerPortalProvider>();
     final cart = portal.cart;
     final items = (cart?['items'] as List<dynamic>?) ?? [];
-    final subtotal = ((cart?['subtotal'] ?? cart?['estimatedTotal'] ?? 0) as num).toDouble();
-    final taxTotal = ((cart?['taxTotal'] ?? cart?['tax_total'] ?? 0) as num).toDouble();
-    final grandTotal = ((cart?['grandTotal'] ?? cart?['estimatedTotal'] ?? (subtotal + taxTotal)) as num).toDouble();
+    final subtotal = parseDouble(cart?['subtotal'] ?? cart?['estimatedTotal']);
+    final taxTotal = parseDouble(cart?['taxTotal'] ?? cart?['tax_total']);
+    final grandTotal = parseDouble(cart?['grandTotal'] ?? cart?['estimatedTotal'] ?? (subtotal + taxTotal));
     final cust = portal.customer;
 
     return Scaffold(
@@ -319,14 +319,14 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (ctx, i) {
                       final item = items[i] as Map<String, dynamic>;
-                      final prodId = (item['productId'] ?? item['product_id'] as num).toInt();
+                      final prodId = parseInt(item['productId'] ?? item['product_id']);
                       final name = item['name']?.toString() ?? 'Product';
-                      final qty = (item['quantity'] as num?)?.toInt() ?? 1;
-                      final unitPrice = ((item['unitPrice'] ?? item['price'] ?? 0) as num).toDouble();
-                      final lineTotal = ((item['lineTotal'] ?? qty * unitPrice) as num).toDouble();
+                      final qty = parseInt(item['quantity'], 1);
+                      final unitPrice = parseDouble(item['unitPrice'] ?? item['price']);
+                      final lineTotal = parseDouble(item['lineTotal'] ?? (qty * unitPrice));
                       final img = item['imageUrl']?.toString();
                       final exceedsStock = item['exceedsStock'] == true;
-                      final availableStock = (item['availableStock'] as num?)?.toInt() ?? 0;
+                      final availableStock = parseInt(item['availableStock']);
 
                       return AppCard(
                         padding: const EdgeInsets.all(12),

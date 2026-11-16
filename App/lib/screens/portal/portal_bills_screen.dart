@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
 import 'portal_bill_detail_screen.dart';
@@ -101,14 +100,14 @@ class _PortalBillsScreenState extends State<PortalBillsScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, idx) {
                             final b = _bills[idx];
-                            final id = (b['id'] as num).toInt();
+                            final id = parseInt(b['id']);
                             final invNum = b['invoice_number']?.toString() ?? 'INV-$id';
-                            final total = ((b['total_amount'] ?? 0) as num).toDouble();
-                            final paid = ((b['paid_amount'] ?? 0) as num).toDouble();
+                            final total = parseDouble(b['total_amount']);
+                            final paid = parseDouble(b['paid_amount']);
                             final balanceDue = total - paid;
                             final payStatus = (b['payment_status']?.toString() ?? 'unpaid').toUpperCase();
-                            final dt = b['date']?.toString() ?? b['createdAt']?.toString();
-                            final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
+                            final dt = b['date']?.toString() ?? b['createdAt']?.toString() ?? b['invoice_date']?.toString();
+                            final dateStr = formatDateSafe(dt, 'dd MMM yyyy');
 
                             return AppCard(
                               padding: const EdgeInsets.all(14),

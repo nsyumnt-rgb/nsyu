@@ -33,6 +33,13 @@ class CustomerPortalService {
     return map;
   }
 
+  bool _initialized = false;
+
+  Future<void> ensureInitialized() async {
+    if (_initialized && _accessToken != null && _accessToken!.isNotEmpty) return;
+    await init();
+  }
+
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _accessToken = prefs.getString(_prefCustomerTokenKey);
@@ -43,12 +50,14 @@ class CustomerPortalService {
         _customerData = jsonDecode(rawCust) as Map<String, dynamic>;
       } catch (_) {}
     }
+    _initialized = true;
   }
 
   Future<void> _persistSession(String access, String refresh, Map<String, dynamic> customer) async {
     _accessToken = access;
     _refreshToken = refresh;
     _customerData = customer;
+    _initialized = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefCustomerTokenKey, access);
     await prefs.setString(_prefCustomerRefreshKey, refresh);
@@ -59,6 +68,7 @@ class CustomerPortalService {
     _accessToken = null;
     _refreshToken = null;
     _customerData = null;
+    _initialized = false;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefCustomerTokenKey);
     await prefs.remove(_prefCustomerRefreshKey);
@@ -148,6 +158,7 @@ class CustomerPortalService {
   }
 
   Future<Map<String, dynamic>> getDashboard() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/dashboard');
     final res = await http.get(url, headers: _headers);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
@@ -255,6 +266,7 @@ class CustomerPortalService {
 
   /* ---------------- Catalog ---------------- */
   Future<List<Map<String, dynamic>>> getCategories() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/catalog/categories');
     final res = await http.get(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -270,6 +282,7 @@ class CustomerPortalService {
     int page = 1,
     int limit = 20,
   }) async {
+    await ensureInitialized();
     final qParams = <String, String>{
       'page': page.toString(),
       'limit': limit.toString(),
@@ -286,6 +299,7 @@ class CustomerPortalService {
 
   /* ---------------- Cart ---------------- */
   Future<Map<String, dynamic>> getCart() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/cart');
     final res = await http.get(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -296,6 +310,7 @@ class CustomerPortalService {
   }
 
   Future<Map<String, dynamic>> setCartItem(int productId, int quantity) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/cart/items/$productId');
     final res = await http.put(
       url,
@@ -311,6 +326,7 @@ class CustomerPortalService {
   }
 
   Future<Map<String, dynamic>> removeCartItem(int productId) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/cart/items/$productId');
     final res = await http.delete(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -322,6 +338,7 @@ class CustomerPortalService {
   }
 
   Future<void> clearCart() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/cart');
     await http.delete(url, headers: _headers);
   }
@@ -333,6 +350,7 @@ class CustomerPortalService {
     String? deliveryType,
     String? shippingAddress,
   }) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/orders');
     final res = await http.post(
       url,
@@ -352,6 +370,7 @@ class CustomerPortalService {
   }
 
   Future<List<Map<String, dynamic>>> listOrders({String? status, int page = 1, int limit = 20}) async {
+    await ensureInitialized();
     final qParams = <String, String>{
       'page': page.toString(),
       'limit': limit.toString(),
@@ -368,6 +387,7 @@ class CustomerPortalService {
   }
 
   Future<Map<String, dynamic>> getOrder(int id) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/orders/$id');
     final res = await http.get(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -378,6 +398,7 @@ class CustomerPortalService {
   }
 
   Future<void> cancelOrder(int id) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/orders/$id/cancel');
     final res = await http.post(url, headers: _headers);
     if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -388,6 +409,7 @@ class CustomerPortalService {
 
   /* ---------------- Bills ---------------- */
   Future<List<Map<String, dynamic>>> listBills({String? status, int page = 1, int limit = 20}) async {
+    await ensureInitialized();
     final qParams = <String, String>{
       'page': page.toString(),
       'limit': limit.toString(),
@@ -404,6 +426,7 @@ class CustomerPortalService {
   }
 
   Future<Map<String, dynamic>> getBill(int id) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/bills/$id');
     final res = await http.get(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -415,6 +438,7 @@ class CustomerPortalService {
 
   /* ---------------- Ledger ---------------- */
   Future<Map<String, dynamic>> getLedgerSummary() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/ledger/summary');
     final res = await http.get(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -425,6 +449,7 @@ class CustomerPortalService {
   }
 
   Future<List<Map<String, dynamic>>> listLedger({String? from, String? to, int page = 1, int limit = 20}) async {
+    await ensureInitialized();
     final qParams = <String, String>{
       'page': page.toString(),
       'limit': limit.toString(),
@@ -442,6 +467,7 @@ class CustomerPortalService {
   }
 
   Future<List<Map<String, dynamic>>> listPayments() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/payments');
     final res = await http.get(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -455,6 +481,7 @@ class CustomerPortalService {
   /* ---------------- Notifications ---------------- */
   Future<int> getUnreadNotificationCount() async {
     try {
+      await ensureInitialized();
       final url = Uri.parse('$_portalBaseUrl/notifications/unread-count');
       final res = await http.get(url, headers: _headers);
       if (res.statusCode == 200) {
@@ -466,6 +493,7 @@ class CustomerPortalService {
   }
 
   Future<List<Map<String, dynamic>>> listNotifications({bool unreadOnly = false}) async {
+    await ensureInitialized();
     final qParams = <String, String>{
       if (unreadOnly) 'unread': 'true',
     };
@@ -480,17 +508,20 @@ class CustomerPortalService {
   }
 
   Future<void> markNotificationRead(int id) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/notifications/$id/read');
     await http.patch(url, headers: _headers);
   }
 
   Future<void> markAllNotificationsRead() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/notifications/read-all');
     await http.post(url, headers: _headers);
   }
 
   /* ---------------- Profile ---------------- */
   Future<Map<String, dynamic>> getProfile() async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/me');
     final res = await http.get(url, headers: _headers);
     if (res.statusCode == 200) {
@@ -503,6 +534,7 @@ class CustomerPortalService {
   }
 
   Future<void> updateProfile({String? email, String? address}) async {
+    await ensureInitialized();
     final url = Uri.parse('$_portalBaseUrl/me');
     final res = await http.patch(
       url,

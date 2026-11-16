@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
 import 'portal_bill_detail_screen.dart';
@@ -167,14 +166,14 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
 
     final orderNum = _order!['order_number']?.toString() ?? '${widget.orderId}';
     final status = _order!['status']?.toString() ?? 'pending';
-    final total = ((_order!['total_amount'] ?? 0) as num).toDouble();
-    final subtotal = ((_order!['subtotal'] ?? total) as num).toDouble();
-    final discount = ((_order!['discount_amount'] ?? _order!['discount'] ?? 0) as num).toDouble();
-    final tax = ((_order!['tax_amount'] ?? _order!['tax'] ?? 0) as num).toDouble();
+    final total = parseDouble(_order!['total_amount']);
+    final subtotal = parseDouble(_order!['subtotal'] ?? total);
+    final discount = parseDouble(_order!['discount_amount'] ?? _order!['discount']);
+    final tax = parseDouble(_order!['tax_amount'] ?? _order!['tax']);
     final items = (_order!['items'] as List<dynamic>?) ?? [];
-    final dt = _order!['createdAt']?.toString();
-    final dateStr = dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.parse(dt)) : '';
-    final convertedSaleId = (_order!['converted_sale_id'] as num?)?.toInt();
+    final dt = _order!['createdAt']?.toString() ?? _order!['order_date']?.toString();
+    final dateStr = formatDateSafe(dt, 'dd MMM yyyy, hh:mm a');
+    final convertedSaleId = parseInt(_order!['converted_sale_id']);
     final shippingAddress = _order!['shipping_address']?.toString() ?? _order!['customer']?['address']?.toString();
     final cancelReason = _order!['rejection_reason']?.toString() ?? _order!['notes']?.toString();
 
@@ -348,7 +347,7 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
             ),
 
             // ── 2. Converted Invoice Banner (if fulfilled) ──
-            if (convertedSaleId != null) ...[
+            if (convertedSaleId > 0) ...[
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -475,9 +474,9 @@ class _PortalOrderDetailScreenState extends State<PortalOrderDetailScreen> {
                   const Divider(height: 1, color: AppColors.border),
                   ...items.map((it) {
                     final pName = it['product_name']?.toString() ?? 'Product';
-                    final q = ((it['quantity'] ?? 1) as num).toInt();
-                    final rate = ((it['unit_price'] ?? 0) as num).toDouble();
-                    final lineTot = ((it['line_total'] ?? q * rate) as num).toDouble();
+                    final q = parseInt(it['quantity'], 1);
+                    final rate = parseDouble(it['unit_price']);
+                    final lineTot = parseDouble(it['line_total'] ?? (q * rate));
 
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

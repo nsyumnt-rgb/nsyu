@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../services/customer_portal_service.dart';
+import '../theme/app_theme.dart';
 
 class CustomerPortalProvider extends ChangeNotifier {
   final CustomerPortalService _service = CustomerPortalService();
@@ -31,17 +32,17 @@ class CustomerPortalProvider extends ChangeNotifier {
     if (_cart == null) return 0;
     final items = _cart!['items'] as List<dynamic>?;
     if (items == null) return 0;
-    return items.fold<int>(0, (sum, it) => sum + ((it['quantity'] as num?)?.toInt() ?? 0));
+    return items.fold<int>(0, (sum, it) => sum + parseInt(it['quantity']));
   }
 
   double get cartEstimatedTotal {
     if (_cart == null) return 0.0;
-    return ((_cart!['estimatedTotal'] ?? _cart!['total']) as num?)?.toDouble() ?? 0.0;
+    return parseDouble(_cart!['estimatedTotal'] ?? _cart!['total']);
   }
 
   double get currentBalance {
     if (_customer == null) return 0.0;
-    return ((_customer!['currentBalance'] ?? _customer!['balance']) as num?)?.toDouble() ?? 0.0;
+    return parseDouble(_customer!['current_balance'] ?? _customer!['currentBalance'] ?? _customer!['balance']);
   }
 
   Future<void> init() async {
@@ -130,8 +131,9 @@ class CustomerPortalProvider extends ChangeNotifier {
     final items = _cart!['items'] as List<dynamic>?;
     if (items == null) return 0;
     for (final it in items) {
-      if (it['productId'] == productId || it['product_id'] == productId) {
-        return (it['quantity'] as num?)?.toInt() ?? 0;
+      final pId = parseInt(it['productId'] ?? it['product_id']);
+      if (pId == productId) {
+        return parseInt(it['quantity']);
       }
     }
     return 0;

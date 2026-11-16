@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/customer_portal_provider.dart';
@@ -88,10 +87,10 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     final shop = (cust?['shop'] as Map<String, dynamic>?) ?? {};
     final shopName = dbMetrics?['shopName']?.toString() ?? shop['name']?.toString() ?? 'NSYU Business';
     final customerName = dbMetrics?['customerName']?.toString() ?? cust?['name']?.toString() ?? 'Customer';
-    final balance = (dbMetrics?['outstandingBalance'] as num?)?.toDouble() ?? portal.currentBalance;
-    final totalBills = (dbMetrics?['totalBills'] as num?)?.toInt() ?? _recentBills.length;
-    final totalOrders = (dbMetrics?['totalOrders'] as num?)?.toInt() ?? _recentOrders.length;
-    final pendingOrders = (dbMetrics?['pendingOrders'] as num?)?.toInt() ?? 0;
+    final balance = parseDouble(dbMetrics?['outstandingBalance'] ?? portal.currentBalance);
+    final totalBills = parseInt(dbMetrics?['totalBills'] ?? _recentBills.length);
+    final totalOrders = parseInt(dbMetrics?['totalOrders'] ?? _recentOrders.length);
+    final pendingOrders = parseInt(dbMetrics?['pendingOrders'] ?? 0);
     final unread = portal.unreadNotifications;
     final cartCount = portal.cartItemCount;
 
@@ -242,7 +241,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                 children: [
                   Expanded(
                     child: _buildMetricCard(
-                      title: 'Total Bills',
+                      title: 'Bills',
                       value: '$totalBills',
                       subtitle: 'Invoices',
                       icon: Icons.receipt_long_rounded,
@@ -258,7 +257,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _buildMetricCard(
-                      title: 'Total Orders',
+                      title: 'Orders',
                       value: '$totalOrders',
                       subtitle: 'Placed',
                       icon: Icons.shopping_bag_outlined,
@@ -291,7 +290,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                     child: _buildQuickActionTile(
                       icon: Icons.account_balance_wallet_outlined,
                       title: 'My Ledger',
-                      subtitle: 'Statement & Balance',
+                      subtitle: 'Statement',
                       onTap: () => portal.switchTab(3),
                     ),
                   ),
@@ -300,7 +299,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                     child: _buildQuickActionTile(
                       icon: Icons.receipt_long_outlined,
                       title: 'My Bills',
-                      subtitle: 'Download Invoices',
+                      subtitle: 'Invoices & PDF',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -317,8 +316,8 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                   Expanded(
                     child: _buildQuickActionTile(
                       icon: Icons.storefront_outlined,
-                      title: 'Shop Catalog',
-                      subtitle: 'Explore Products',
+                      title: 'Catalog',
+                      subtitle: 'Browse Items',
                       onTap: () => portal.switchTab(1),
                     ),
                   ),
@@ -426,16 +425,19 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
+              const SizedBox(width: 4),
               Icon(icon, size: 16, color: color),
             ],
           ),
@@ -498,7 +500,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
                   subtitle,
                   style: const TextStyle(
                     color: AppColors.textSecondary,
-                    fontSize: 10.5,
+                    fontSize: 11,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -523,9 +525,10 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
       children: _recentOrders.map((ord) {
         final orderNum = ord['order_number']?.toString() ?? 'Order #${ord['id']}';
         final status = ord['status']?.toString() ?? 'pending';
-        final total = ((ord['total_amount'] ?? 0) as num).toDouble();
-        final dt = ord['createdAt']?.toString();
-        final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
+        final total = parseDouble(ord['total_amount']);
+        final dt = ord['createdAt']?.toString() ?? ord['order_date']?.toString();
+        final dateStr = formatDateSafe(dt, 'dd MMM yyyy');
+        final orderId = parseInt(ord['id']);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -535,7 +538,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => PortalOrderDetailScreen(orderId: (ord['id'] as num).toInt()),
+                  builder: (_) => PortalOrderDetailScreen(orderId: orderId),
                 ),
               );
             },
@@ -590,12 +593,13 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     return Column(
       children: _recentBills.map((b) {
         final invNum = b['invoice_number']?.toString() ?? 'INV-${b['id']}';
-        final total = ((b['total_amount'] ?? 0) as num).toDouble();
-        final paid = ((b['paid_amount'] ?? 0) as num).toDouble();
+        final total = parseDouble(b['total_amount']);
+        final paid = parseDouble(b['paid_amount']);
         final due = total - paid;
         final payStatus = (b['payment_status']?.toString() ?? 'unpaid').toUpperCase();
-        final dt = b['date']?.toString() ?? b['createdAt']?.toString();
-        final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
+        final dt = b['date']?.toString() ?? b['createdAt']?.toString() ?? b['invoice_date']?.toString();
+        final dateStr = formatDateSafe(dt, 'dd MMM yyyy');
+        final billId = parseInt(b['id']);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -605,7 +609,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => PortalBillDetailScreen(billId: (b['id'] as num).toInt()),
+                  builder: (_) => PortalBillDetailScreen(billId: billId),
                 ),
               );
             },
@@ -660,10 +664,10 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     return Column(
       children: _recentPayments.map((p) {
         final pNum = p['payment_number']?.toString() ?? 'PAY-${p['id']}';
-        final amt = ((p['amount'] ?? 0) as num).toDouble();
+        final amt = parseDouble(p['amount']);
         final mode = (p['payment_mode'] ?? p['payment_method'] ?? 'CASH').toString().toUpperCase();
         final dt = p['payment_date']?.toString() ?? p['createdAt']?.toString();
-        final dateStr = dt != null ? DateFormat('dd MMM yyyy').format(DateTime.parse(dt)) : '';
+        final dateStr = formatDateSafe(dt, 'dd MMM yyyy');
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),

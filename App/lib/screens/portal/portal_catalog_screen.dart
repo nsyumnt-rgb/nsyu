@@ -57,7 +57,7 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
         final pagination = (res['pagination'] ?? res['meta']) as Map<String, dynamic>?;
         setState(() {
           _products = list;
-          _totalPages = (pagination?['pages'] ?? pagination?['totalPages'] as num?)?.toInt() ?? 1;
+          _totalPages = parseInt(pagination?['pages'] ?? pagination?['totalPages'], 1);
         });
       }
     } catch (_) {
@@ -69,26 +69,22 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
 
   void _showProductDetails(Map<String, dynamic> prod) {
     final portal = context.read<CustomerPortalProvider>();
-    final prodId = (prod['id'] as num).toInt();
+    final prodId = parseInt(prod['id']);
     final name = prod['name']?.toString() ?? prod['desc']?.toString() ?? 'Product';
     final sku = prod['sku']?.toString() ?? prod['code']?.toString() ?? 'N/A';
     final desc = prod['description']?.toString() ?? prod['spec']?.toString() ?? 'No description available.';
     final pricing = prod['pricing'] as Map<String, dynamic>?;
-    final price = ((prod['sellingPrice'] ??
-            prod['selling_price'] ??
-            prod['price'] ??
-            pricing?['sellingPriceInclTax'] ??
-            pricing?['unitPrice'] ??
-            0) as num)
-        .toDouble();
-    final gst = ((prod['gstPercent'] ?? pricing?['gstPercent'] ?? 0) as num).toDouble();
+    final price = parseDouble(prod['sellingPrice'] ??
+        prod['selling_price'] ??
+        prod['price'] ??
+        pricing?['sellingPriceInclTax'] ??
+        pricing?['unitPrice']);
+    final gst = parseDouble(prod['gstPercent'] ?? pricing?['gstPercent']);
     final inv = prod['inventory'] as Map<String, dynamic>?;
-    final stock = ((prod['stock'] ??
-            prod['stockQuantity'] ??
-            prod['availableStock'] ??
-            inv?['availableStock'] ??
-            1) as num)
-        .toInt();
+    final stock = parseInt(prod['stock'] ??
+        prod['stockQuantity'] ??
+        prod['availableStock'] ??
+        inv?['availableStock'], 1);
 
     String? imageUrl = prod['imageUrl']?.toString();
     if (imageUrl == null || imageUrl.isEmpty) {
@@ -382,7 +378,7 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
                         ),
                       ),
                       ..._categories.map((cat) {
-                        final id = (cat['id'] as num).toInt();
+                        final id = parseInt(cat['id']);
                         final name = cat['name']?.toString() ?? '';
                         final isSel = _selectedCategoryId == id;
                         return Padding(
@@ -439,26 +435,22 @@ class _PortalCatalogScreenState extends State<PortalCatalogScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, idx) {
                             final prod = _products[idx];
-                            final prodId = (prod['id'] as num).toInt();
+                            final prodId = parseInt(prod['id']);
                             final name = prod['name']?.toString() ?? prod['desc']?.toString() ?? 'Product';
                             final sku = prod['sku']?.toString() ?? prod['code']?.toString() ?? '';
                             final brand = prod['brand']?.toString() ?? (prod['category'] is Map ? prod['category']['name']?.toString() : null) ?? prod['categoryName']?.toString();
                             final pricing = prod['pricing'] as Map<String, dynamic>?;
-                            final price = ((prod['sellingPrice'] ??
-                                    prod['selling_price'] ??
-                                    prod['price'] ??
-                                    pricing?['sellingPriceInclTax'] ??
-                                    pricing?['unitPrice'] ??
-                                    0) as num)
-                                .toDouble();
-                            final gst = ((prod['gstPercent'] ?? pricing?['gstPercent'] ?? 0) as num).toDouble();
+                            final price = parseDouble(prod['sellingPrice'] ??
+                                prod['selling_price'] ??
+                                prod['price'] ??
+                                pricing?['sellingPriceInclTax'] ??
+                                pricing?['unitPrice']);
+                            final gst = parseDouble(prod['gstPercent'] ?? pricing?['gstPercent']);
                             final inv = prod['inventory'] as Map<String, dynamic>?;
-                            final stock = ((prod['stock'] ??
-                                    prod['stockQuantity'] ??
-                                    prod['availableStock'] ??
-                                    inv?['availableStock'] ??
-                                    1) as num)
-                                .toInt();
+                            final stock = parseInt(prod['stock'] ??
+                                prod['stockQuantity'] ??
+                                prod['availableStock'] ??
+                                inv?['availableStock'], 1);
 
                             String? imageUrl = prod['imageUrl']?.toString();
                             if (imageUrl == null || imageUrl.isEmpty) {

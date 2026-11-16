@@ -310,8 +310,8 @@ class _PortalMoreScreenState extends State<PortalMoreScreen> {
     final shopName = dbMetrics?['shopName']?.toString() ?? shop['name']?.toString() ?? 'NSYU Shop';
     final customerName = dbMetrics?['customerName']?.toString() ?? cust?['name']?.toString() ?? 'Customer';
     final mobileNumber = dbMetrics?['mobileNumber']?.toString() ?? cust?['phone']?.toString() ?? '';
-    final balance = (dbMetrics?['outstandingBalance'] as num?)?.toDouble() ?? portal.currentBalance;
-    final openingBal = ((cust?['opening_balance'] ?? 0) as num).toDouble();
+    final balance = parseDouble(dbMetrics?['outstandingBalance'] ?? portal.currentBalance);
+    final openingBal = parseDouble(cust?['opening_balance'] ?? cust?['openingBalance']);
     final initials = customerName.isNotEmpty ? customerName.substring(0, 1).toUpperCase() : 'C';
 
     return Scaffold(
