@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { Owner, Role, RolePermission, RoleFieldPermission, RefreshToken, Shop, ShopModule } from "../models";
+import { Owner, Role, RolePermission, RoleFieldPermission, RefreshToken, Shop, ShopModule, ShopPortalSettings } from "../models";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, refreshExpiryDate } from "../utils/jwt";
 import { seedOwnerDefaults } from "../utils/seed";
 import { MODULES, SENSITIVE_FIELDS, toCanonicalModule } from "../config/permissions";
@@ -12,31 +12,75 @@ import { MODULES, SENSITIVE_FIELDS, toCanonicalModule } from "../config/permissi
  * visible to any other owner.
  */
 export async function registerOwner(req: Request, res: Response) {
-  const { name, email, password, phone } = req.body;
+  const { name, email, password, phone, shopName, shopCode, address } = req.body;
   if (!name || !email || !password) {
     return res.status(400).json({ success: false, message: "name, email and password are required" });
   }
 
-  const existing = await Owner.findOne({ where: { email } });
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const existing = await Owner.findOne({ where: { email: normalizedEmail } });
   if (existing) {
     return res.status(409).json({ success: false, message: "Email already registered" });
   }
 
   const hashed = await bcrypt.hash(password, 10);
-  const owner = await Owner.create({ name, email, password: hashed, phone });
+  const owner = await Owner.create({
+    name: String(name).trim(),
+    email: normalizedEmail,
+    password: hashed,
+    phone: phone ? String(phone).trim() : null,
+  });
 
   // Every new owner automatically gets the standard system roles
   // (Owner, Manager, Sales Staff, ...) with sensible default permissions.
   await seedOwnerDefaults(owner.id);
 
-  const accessToken = signAccessToken({ ownerId: owner.id, isOwner: true, shopId: null, roleId: null });
+  // Automatically provision the owner's initial store/shop
+  const cleanShopName = shopName && String(shopName).trim().length > 0
+    ? String(shopName).trim()
+    : `${String(name).trim()}'s Business`;
+
+  let cleanShopCode = shopCode && String(shopCode).trim().length > 0
+    ? String(shopCode).trim().toUpperCase()
+    : "";
+  if (!cleanShopCode) {
+    const rawPrefix = cleanShopName.replace(/[^A-Za-z0-9]/g, "").substring(0, 4).toUpperCase();
+    const prefix = rawPrefix.length > 0 ? rawPrefix : "NSYU";
+    cleanShopCode = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  const shop = await Shop.create({
+    owner_id: owner.id,
+    name: cleanShopName,
+    code: cleanShopCode,
+    phone: phone ? String(phone).trim() : null,
+    email: normalizedEmail,
+    address: address ? String(address).trim() : null,
+    status: "active",
+  });
+
+  // Initialize Customer Portal settings for this shop
+  try {
+    await ShopPortalSettings.create({
+      shop_id: shop.id,
+      allow_self_registration: true,
+      allow_orders: true,
+      show_stock_qty: false,
+      min_order_value: 0,
+      allow_customer_cancel: true,
+    });
+  } catch (_) {}
+
+  const accessToken = signAccessToken({ ownerId: owner.id, isOwner: true, shopId: shop.id, roleId: null });
   const refreshToken = signRefreshToken({ ownerId: owner.id });
   await RefreshToken.create({ token: refreshToken, owner_id: owner.id, expires_at: refreshExpiryDate() });
 
   return res.status(201).json({
     success: true,
+    message: "Business account registered successfully",
     data: {
-      owner: { id: owner.id, name: owner.name, email: owner.email },
+      owner: { id: owner.id, name: owner.name, email: owner.email, phone: owner.phone },
+      shop: { id: shop.id, name: shop.name, code: shop.code },
       accessToken,
       refreshToken,
     },

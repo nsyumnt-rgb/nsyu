@@ -32,8 +32,11 @@ export function validate(rules: ValidationChain[]) {
 export const registerOwnerRules = [
   body("name").trim().notEmpty().withMessage("name is required").isLength({ max: 150 }),
   body("email").trim().isEmail().withMessage("a valid email is required").normalizeEmail(),
-  body("password").isLength({ min: 8 }).withMessage("password must be at least 8 characters"),
+  body("password").isLength({ min: 6 }).withMessage("password must be at least 6 characters"),
   body("phone").optional({ nullable: true }).isString().isLength({ max: 20 }),
+  body("shopName").optional({ nullable: true }).isString().isLength({ max: 150 }),
+  body("shopCode").optional({ nullable: true }).isString().isLength({ max: 30 }),
+  body("address").optional({ nullable: true }).isString().isLength({ max: 255 }),
 ];
 
 export const loginRules = [

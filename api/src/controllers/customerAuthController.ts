@@ -550,7 +550,7 @@ export async function logoutCustomer(req: Request, res: Response) {
  */
 export async function selfRegisterCustomer(req: Request, res: Response) {
   try {
-    const { name, phone: rawPhone, shopCode, shopId: inputShopId, email, address } = req.body;
+    const { name, phone: rawPhone, shopCode, shopId: inputShopId, email, address, password } = req.body;
     if (!name || !rawPhone) {
       return res.status(400).json({ success: false, message: "Name and phone number are required" });
     }
@@ -560,22 +560,30 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
     // Resolve shop
     let shop: Shop | null = null;
     if (shopCode) {
-      shop = await Shop.findOne({ where: { code: String(shopCode).trim(), status: "active" } });
+      shop = await Shop.findOne({ where: { code: String(shopCode).trim().toUpperCase(), status: "active" } });
     } else if (inputShopId) {
       shop = await Shop.findOne({ where: { id: Number(inputShopId), status: "active" } });
+    } else {
+      shop = await Shop.findOne({ where: { status: "active" }, order: [["id", "ASC"]] });
     }
 
     if (!shop) {
-      return res.status(404).json({ success: false, message: "Shop not found" });
+      return res.status(404).json({ success: false, message: "Shop not found. Please verify the Shop Code." });
     }
 
-    // Check S2 setting
-    const portalSettings = await ShopPortalSettings.findOne({ where: { shop_id: shop.id } });
-    if (!portalSettings || !portalSettings.allow_self_registration) {
-      return res.status(403).json({
-        success: false,
-        message: "Self-registration is not enabled for this shop. Please ask the shop for an invite.",
-      });
+    // Check or provision S2 portal setting
+    let portalSettings = await ShopPortalSettings.findOne({ where: { shop_id: shop.id } });
+    if (!portalSettings) {
+      try {
+        portalSettings = await ShopPortalSettings.create({
+          shop_id: shop.id,
+          allow_self_registration: true,
+          allow_orders: true,
+          show_stock_qty: false,
+          min_order_value: 0,
+          allow_customer_cancel: true,
+        });
+      } catch (_) {}
     }
 
     // Find or create customer
@@ -583,17 +591,22 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
       where: { phone, owner_id: shop.owner_id },
     });
 
+    const cleanEmail = email && String(email).trim().length > 0 ? String(email).trim().toLowerCase() : null;
+
     if (!customer) {
       customer = await Customer.create({
         owner_id: shop.owner_id,
         name: String(name).trim(),
         phone,
-        email: email ? String(email).trim() : null,
+        email: cleanEmail,
         address: address ? String(address).trim() : null,
         opening_balance: 0,
         current_balance: 0,
         status: "active",
       });
+    } else if (cleanEmail && !customer.email) {
+      customer.email = cleanEmail;
+      await customer.save();
     }
 
     // Check if account already exists
@@ -601,16 +614,38 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
       where: { customer_id: customer.id, shop_id: shop.id },
     });
 
+    const hashedPassword = password && String(password).trim().length >= 6
+      ? await bcrypt.hash(String(password).trim(), 10)
+      : null;
+
     if (existingAccount) {
       if (existingAccount.status === "active") {
+        if (hashedPassword) {
+          existingAccount.password_hash = hashedPassword;
+          if (cleanEmail) existingAccount.email = cleanEmail;
+          await existingAccount.save();
+          return res.status(200).json({
+            success: true,
+            message: "Account updated with new password. You can now log in.",
+            data: { accountId: existingAccount.id, status: "active" },
+          });
+        }
         return res.status(400).json({
           success: false,
           message: "An active portal account already exists for this phone. Please log in directly.",
         });
       }
-      return res.status(400).json({
-        success: false,
-        message: "A registration request is already submitted and awaiting approval.",
+
+      // If pending approval or inactive, activate with password
+      existingAccount.status = "active";
+      if (hashedPassword) existingAccount.password_hash = hashedPassword;
+      if (cleanEmail) existingAccount.email = cleanEmail;
+      await existingAccount.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Customer account activated successfully! You can now log in.",
+        data: { accountId: existingAccount.id, status: "active" },
       });
     }
 
@@ -619,7 +654,9 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
       shop_id: shop.id,
       owner_id: shop.owner_id,
       phone,
-      status: "pending_approval",
+      email: cleanEmail,
+      password_hash: hashedPassword,
+      status: "active",
     });
 
     // Notify shop owner
@@ -629,9 +666,9 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
         shop_id: shop.id,
         recipient_type: "owner",
         recipient_id: shop.owner_id,
-        type: "approval_needed",
-        title: "Portal Self-Registration Request",
-        message: `Customer ${customer.name} (${phone}) requested portal access for ${shop.name}.`,
+        type: "customer_registered",
+        title: "New Customer Registration",
+        message: `Customer ${customer.name} (${phone}) registered for ${shop.name}.`,
         reference_type: "customer_account",
         reference_id: newAccount.id,
       });
@@ -639,7 +676,7 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
 
     return res.status(201).json({
       success: true,
-      message: "Registration submitted successfully. The shop will review and approve your account shortly.",
+      message: "Customer account created successfully! You can now log in.",
       data: {
         accountId: newAccount.id,
         status: newAccount.status,

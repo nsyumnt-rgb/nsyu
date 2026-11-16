@@ -176,16 +176,24 @@ class _LoginScreenState extends State<LoginScreen> {
     CreateAccountSheetHelper.show(
       context,
       isCustomerMode: _isCustomerMode,
-      onAccountCreated: (phone) {
+      onAccountCreated: (identifier, {String? password, bool isOwner = false}) {
+        setState(() {
+          _identifierCtrl.text = identifier;
+          if (password != null && password.isNotEmpty) {
+            _passwordCtrl.text = password;
+          }
+          if (isOwner) {
+            _isCustomerMode = false;
+          }
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created! A 4-digit OTP will be sent to your email on login.'),
-            backgroundColor: Color(0xFF16A34A),
+          SnackBar(
+            content: Text(isOwner
+                ? 'Business registered successfully! Tap Login to continue.'
+                : 'Account created! Tap Login to access your portal.'),
+            backgroundColor: const Color(0xFF047857),
           ),
         );
-        setState(() {
-          _identifierCtrl.text = phone;
-        });
       },
     );
   }

@@ -80,6 +80,41 @@ class SupabaseService {
     return SupabaseConfig.authToken;
   }
 
+  /// Registers a brand-new Business Owner account and provisions the initial store
+  Future<Map<String, dynamic>> registerOwner({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    String? shopName,
+    String? shopCode,
+    String? address,
+  }) async {
+    final url = Uri.parse('${SupabaseConfig.apiUrl}/auth/register');
+    final res = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': name.trim(),
+        'email': email.trim().toLowerCase(),
+        'password': password.trim(),
+        if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
+        if (shopName != null && shopName.trim().isNotEmpty) 'shopName': shopName.trim(),
+        if (shopCode != null && shopCode.trim().isNotEmpty) 'shopCode': shopCode.trim().toUpperCase(),
+        if (address != null && address.trim().isNotEmpty) 'address': address.trim(),
+      }),
+    );
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final token = data['data']?['accessToken'];
+      if (token != null) {
+        await SupabaseConfig.updateConfig(authToken: token.toString());
+      }
+      return data;
+    }
+    throw Exception(data['message'] ?? 'Business registration failed (HTTP ${res.statusCode})');
+  }
+
   Future<http.Response> _getWithRetry(Uri url) async {
     await ensureAuth();
     var res = await http.get(url, headers: _headers);

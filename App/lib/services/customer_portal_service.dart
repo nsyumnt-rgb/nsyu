@@ -397,6 +397,7 @@ class CustomerPortalService {
     required String name,
     required String phone,
     String? email,
+    String? password,
     String? address,
   }) async {
     final url = Uri.parse('$_portalBaseUrl/auth/register');
@@ -408,6 +409,7 @@ class CustomerPortalService {
         'name': name.trim(),
         'phone': phone.trim(),
         if (email != null && email.isNotEmpty) 'email': email.trim(),
+        if (password != null && password.isNotEmpty) 'password': password.trim(),
         if (address != null && address.isNotEmpty) 'address': address.trim(),
       }),
     );

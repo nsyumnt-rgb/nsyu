@@ -222,6 +222,55 @@ class AuthProvider extends ChangeNotifier {
     return expectedPassword;
   }
 
+  /// Full-fledged Business Owner self-registration
+  Future<bool> registerBusiness({
+    required String name,
+    required String email,
+    required String password,
+    String? phone,
+    String? shopName,
+    String? shopCode,
+    String? address,
+  }) async {
+    _lastError = null;
+    try {
+      final res = await SupabaseService().registerOwner(
+        name: name,
+        email: email,
+        password: password,
+        phone: phone,
+        shopName: shopName,
+        shopCode: shopCode,
+        address: address,
+      );
+
+      final token = res['data']?['accessToken'];
+      if (token != null) {
+        final prefs = await SharedPreferences.getInstance();
+        _isLoggedIn = true;
+        _isCustomer = false;
+        _userEmail = email.trim();
+        _userName = name.trim();
+        if (phone != null && phone.trim().isNotEmpty) {
+          _registeredMobile = phone.trim();
+          await prefs.setString(_mobileKey, _registeredMobile!);
+        }
+        await prefs.setString(_userEmailKey, _userEmail);
+        await prefs.setString(_userNameKey, _userName);
+        await prefs.setBool(_loggedInKey, true);
+        await prefs.setBool(_isCustomerKey, false);
+        await refreshProfile();
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _lastError = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Returns true and logs in if mobile/email + password match database.
   Future<bool> login(String input, String password) async {
     final trimmed = input.trim();
