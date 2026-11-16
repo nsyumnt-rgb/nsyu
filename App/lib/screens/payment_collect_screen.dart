@@ -71,7 +71,7 @@ class _PaymentCollectScreenState extends State<PaymentCollectScreen> {
                               : widget.bill.customerName,
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        Text('Bill #${widget.bill.billNumber}',
+                        Text('Bill #${widget.bill.displayBillNumber}',
                             style: const TextStyle(color: AppColors.muted, fontSize: 12)),
                       ],
                     ),

@@ -530,21 +530,20 @@ class CatalogProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Unique-ish bill number: INV-YYMMDD-HHmm-counter, so bills saved across
-  /// app sessions don't collide.
+  /// Unique-ish bill number: INV<timestamp><counter>, e.g. INV261116174501
   String _generateBillNumber() {
     final now = DateTime.now();
-    final stamp = '${now.year % 100}${_pad2(now.month)}${_pad2(now.day)}-'
+    final stamp = '${now.year % 100}${_pad2(now.month)}${_pad2(now.day)}'
         '${_pad2(now.hour)}${_pad2(now.minute)}';
-    return 'INV-$stamp-$_billCounter';
+    return 'INV$stamp$_billCounter';
   }
 
-  /// Same idea as [_generateBillNumber] but prefixed ORD- for orders.
+  /// Same idea as [_generateBillNumber] but prefixed ORD for orders, e.g. ORD261116174501
   String _generateOrderNumber() {
     final now = DateTime.now();
-    final stamp = '${now.year % 100}${_pad2(now.month)}${_pad2(now.day)}-'
+    final stamp = '${now.year % 100}${_pad2(now.month)}${_pad2(now.day)}'
         '${_pad2(now.hour)}${_pad2(now.minute)}';
-    return 'ORD-$stamp-$_orderCounter';
+    return 'ORD$stamp$_orderCounter';
   }
 
   String _pad2(int n) => n.toString().padLeft(2, '0');

@@ -110,7 +110,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
 
         final order = SavedOrder(
           id: DateTime.now().millisecondsSinceEpoch,
-          orderNumber: 'ORD-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+          orderNumber: 'ORD${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
           customerId: cust?.id != null ? cust!.id.toString() : '',
           customerName: custName,
           customerPhone: custPhone,
@@ -131,7 +131,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
         provider.orderItems.clear();
         provider.billItems.clear();
         setState(() => _saving = false);
-        showAppSnackBar(context, 'Order #${order.orderNumber} created successfully!');
+        showAppSnackBar(context, 'Order #${order.displayOrderNumber} created successfully!');
         final finalOrder = ordersProvider.orders.cast<SavedOrder?>().firstWhere(
               (o) => o != null && o.orderNumber == order.orderNumber,
               orElse: () => order,
@@ -196,7 +196,7 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
 
       final bill = SavedBill(
         id: DateTime.now().millisecondsSinceEpoch,
-        billNumber: 'B-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+        billNumber: 'INV${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
         customerName: custName,
         customerPhone: custPhone,
         date: DateTime.now(),
@@ -227,10 +227,10 @@ class _OrderCartScreenState extends State<OrderCartScreen> {
       if (backendBill.due > 0) {
         showAppSnackBar(
           context,
-          'Bill #${backendBill.billNumber} saved (Payment Pending)! ₹${backendBill.due.toStringAsFixed(0)} added to ${cust.name}\'s Ledger.',
+          'Bill #${backendBill.displayBillNumber} saved (Payment Pending)! ₹${backendBill.due.toStringAsFixed(0)} added to ${cust.name}\'s Ledger.',
         );
       } else {
-        showAppSnackBar(context, 'Bill #${backendBill.billNumber} saved and marked Paid!');
+        showAppSnackBar(context, 'Bill #${backendBill.displayBillNumber} saved and marked Paid!');
       }
       AppNavigation.openBillDetails(context, bill: backendBill);
     } catch (e) {

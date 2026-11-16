@@ -61,12 +61,20 @@ class _BillsListScreenState extends State<BillsListScreen> {
     final allBillsList = List<SavedBill>.from(realBills);
     allBillsList.sort((a, b) => b.date.compareTo(a.date));
 
-    // Filter bills
+    // Filter bills: support searching with or without '#', '-', e.g. INV000017, #INV000017, ORD...
     final query = _searchCtrl.text.trim().toLowerCase();
+    final cleanQuery = query.replaceAll('#', '').replaceAll('-', '').trim();
     final filteredBills = allBillsList.where((b) {
       if (query.isNotEmpty) {
+        final rawNum = b.billNumber.toLowerCase();
+        final dispNum = b.displayBillNumber.toLowerCase();
+        final rawClean = rawNum.replaceAll('#', '').replaceAll('-', '');
+        final dispClean = dispNum.replaceAll('#', '').replaceAll('-', '');
+
         final matchesQuery = b.customerName.toLowerCase().contains(query) ||
-            b.billNumber.toLowerCase().contains(query);
+            rawNum.contains(query) ||
+            dispNum.contains(query) ||
+            (cleanQuery.isNotEmpty && (rawClean.contains(cleanQuery) || dispClean.contains(cleanQuery)));
         if (!matchesQuery) return false;
       }
       final isPaid = b.isPaid || b.due <= 0;
@@ -475,7 +483,7 @@ class _BillsListScreenState extends State<BillsListScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Bill #${b.billNumber} • ${_dateFormat.format(b.date)}',
+                          'Bill #${b.displayBillNumber} • ${_dateFormat.format(b.date)}',
                           style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

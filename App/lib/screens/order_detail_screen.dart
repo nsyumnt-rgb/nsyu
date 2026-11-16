@@ -61,11 +61,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ordersProvider = context.read<OrdersProvider>();
+      final cleanOrd = widget.orderNo!.replaceAll('#', '').replaceAll('-', '').toLowerCase().trim();
       final match = ordersProvider.orders.cast<SavedOrder?>().firstWhere(
-            (o) =>
-                o != null &&
-                (o.orderNumber.toLowerCase() == widget.orderNo!.toLowerCase() ||
-                    'ord-${o.orderNumber.toLowerCase()}' == widget.orderNo!.toLowerCase()),
+            (o) {
+              if (o == null) return false;
+              final oNum = o.orderNumber.toLowerCase();
+              final oDisp = o.displayOrderNumber.toLowerCase();
+              final oClean = oNum.replaceAll('#', '').replaceAll('-', '');
+              final oDispClean = oDisp.replaceAll('#', '').replaceAll('-', '');
+              return oNum == widget.orderNo!.toLowerCase() ||
+                  oDisp == widget.orderNo!.toLowerCase() ||
+                  oClean == cleanOrd ||
+                  oDispClean == cleanOrd ||
+                  'ord-${o.orderNumber.toLowerCase()}' == widget.orderNo!.toLowerCase();
+            },
             orElse: () => null,
           );
 
@@ -80,10 +89,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ordersProvider.load().then((_) {
           if (!mounted) return;
           final retryMatch = ordersProvider.orders.cast<SavedOrder?>().firstWhere(
-                (o) =>
-                    o != null &&
-                    (o.orderNumber.toLowerCase() == widget.orderNo!.toLowerCase() ||
-                        'ord-${o.orderNumber.toLowerCase()}' == widget.orderNo!.toLowerCase()),
+                (o) {
+                  if (o == null) return false;
+                  final oNum = o.orderNumber.toLowerCase();
+                  final oDisp = o.displayOrderNumber.toLowerCase();
+                  final oClean = oNum.replaceAll('#', '').replaceAll('-', '');
+                  final oDispClean = oDisp.replaceAll('#', '').replaceAll('-', '');
+                  return oNum == widget.orderNo!.toLowerCase() ||
+                      oDisp == widget.orderNo!.toLowerCase() ||
+                      oClean == cleanOrd ||
+                      oDispClean == cleanOrd ||
+                      'ord-${o.orderNumber.toLowerCase()}' == widget.orderNo!.toLowerCase();
+                },
                 orElse: () => null,
               );
 
@@ -144,7 +161,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       return;
     }
     final msg = Uri.encodeComponent(
-      'Hello ${order.customerName},\n\nHere is your Order #${order.orderNumber} from NSYU.\n'
+      'Hello ${order.customerName},\n\nHere is your Order #${order.displayOrderNumber} from NSYU.\n'
       'Status: ${order.status.label}\n'
       'Total Amount: ₹${_money.format(order.total)}\n'
       'Items: ${order.items.length}\n\n'
@@ -282,7 +299,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Order #${order.orderNumber} status changed to ${newStatus.label}')),
+          SnackBar(content: Text('Order #${order.displayOrderNumber} status changed to ${newStatus.label}')),
         );
       }
     } catch (e) {
@@ -322,7 +339,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Order #${order.orderNumber}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                          Text('Order #${order.displayOrderNumber}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
                           const SizedBox(height: 2),
                           Text('Customer: ${order.customerName.isEmpty ? "Walk-in" : order.customerName}', style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
                           const SizedBox(height: 4),
@@ -814,7 +831,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Order #${o.orderNumber}',
+                        'Order #${o.displayOrderNumber}',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -951,7 +968,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               icon: const Icon(Icons.receipt_long, size: 18, color: Color(0xFF0D9488)),
               label: Text(
                 o.convertedSaleId != null
-                    ? 'Billed (#${o.convertedSaleId}) • View Bill'
+                    ? 'Billed (#INV${o.convertedSaleId!.toString().padLeft(6, '0')}) • View Bill'
                     : 'Billed • View Bill',
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0D9488)),
               ),

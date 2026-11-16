@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/bill_pdf_data.dart';
+import '../../models/saved_bill.dart';
 import '../../services/bill_pdf_service.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
@@ -38,7 +39,7 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
   }
 
   BillPdfData _buildPdfData() {
-    final invNum = _bill!['invoice_number']?.toString() ?? 'INV-${widget.billId}';
+    final invNum = formatInvoiceNumber(_bill!['invoice_number']?.toString() ?? widget.billId);
     final cust = (_bill!['customer'] as Map<String, dynamic>?) ?? {};
     final items = (_bill!['items'] as List<dynamic>?) ?? [];
     final paid = parseDouble(_bill!['paid_amount']);
@@ -167,7 +168,7 @@ class _PortalBillDetailScreenState extends State<PortalBillDetailScreen> {
       );
     }
 
-    final invNum = _bill!['invoice_number']?.toString() ?? 'INV-${widget.billId}';
+    final invNum = formatInvoiceNumber(_bill!['invoice_number']?.toString() ?? widget.billId);
     final shop = (_bill!['shop'] as Map<String, dynamic>?) ?? {};
     final cust = (_bill!['customer'] as Map<String, dynamic>?) ?? {};
     final items = (_bill!['items'] as List<dynamic>?) ?? [];

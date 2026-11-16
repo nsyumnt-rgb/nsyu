@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
+import '../../models/saved_bill.dart';
 import 'portal_bill_detail_screen.dart';
 
 class PortalBillsScreen extends StatefulWidget {
@@ -101,7 +102,7 @@ class _PortalBillsScreenState extends State<PortalBillsScreen> {
                           itemBuilder: (context, idx) {
                             final b = _bills[idx];
                             final id = parseInt(b['id']);
-                            final invNum = b['invoice_number']?.toString() ?? 'INV-$id';
+                            final invNum = formatInvoiceNumber(b['invoice_number']?.toString() ?? id);
                             final total = parseDouble(b['total_amount']);
                             final paid = parseDouble(b['paid_amount']);
                             final balanceDue = total - paid;

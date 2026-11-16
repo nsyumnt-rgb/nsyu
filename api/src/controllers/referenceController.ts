@@ -2,16 +2,19 @@ import { Request, Response } from "express";
 import { Op } from "sequelize";
 import {
   Sale,
+  Order,
   CustomerLedger,
   Product,
   Customer,
   InventoryTransaction,
 } from "../models";
+import { buildOrderLookupConditions } from "./orderController";
+import { buildSaleLookupConditions } from "./saleController";
 
 /**
  * Universal Reference Resolver:
  * Resolves any record identifier (invoice_number,
- * SKU, transaction_id, customer, payment) to its canonical
+ * SKU, transaction_id, customer, payment, order_number) to its canonical
  * route, record type, and database ID.
  */
 export async function resolveReference(req: Request, res: Response) {
@@ -21,12 +24,13 @@ export async function resolveReference(req: Request, res: Response) {
   }
 
   const ownerId = req.auth!.ownerId;
-  const upper = ref.toUpperCase();
+  const cleanRef = ref.replace(/^[#\s]+/, "").trim();
+  const upper = cleanRef.toUpperCase();
 
-  // 1. Sales Invoice: starts with "INV" or matches invoice_number
+  // 1. Sales Invoice: starts with "INV" or has invoice-like structure
   if (upper.startsWith("INV") || upper.includes("INV-")) {
     const sale = await Sale.findOne({
-      where: { owner_id: ownerId, invoice_number: { [Op.iLike]: ref } },
+      where: { owner_id: ownerId, [Op.or]: buildSaleLookupConditions(cleanRef) },
       attributes: ["id", "invoice_number", "total_amount", "customer_id", "status"],
     });
     if (sale) {
@@ -39,6 +43,27 @@ export async function resolveReference(req: Request, res: Response) {
           route: `/app/sales/${sale.id}`,
           title: `Invoice #${sale.invoice_number}`,
           record: sale,
+        },
+      });
+    }
+  }
+
+  // 1b. Customer Order: starts with "ORD"
+  if (upper.startsWith("ORD") || upper.includes("ORD-")) {
+    const order = await Order.findOne({
+      where: { owner_id: ownerId, [Op.or]: buildOrderLookupConditions(cleanRef) },
+      attributes: ["id", "order_number", "total_amount", "customer_id", "status"],
+    });
+    if (order) {
+      return res.json({
+        success: true,
+        data: {
+          type: "order",
+          id: order.id,
+          reference: order.order_number,
+          route: `/app/orders/${order.id}`,
+          title: `Order #${order.order_number}`,
+          record: order,
         },
       });
     }

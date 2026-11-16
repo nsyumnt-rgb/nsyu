@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/saved_order.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
@@ -191,7 +192,7 @@ class _PortalOrdersScreenState extends State<PortalOrdersScreen> {
                           itemBuilder: (context, idx) {
                             final ord = filteredOrders[idx];
                             final id = parseInt(ord['id']);
-                            final orderNum = ord['order_number']?.toString() ?? 'ORD-$id';
+                            final orderNum = formatOrderNumber(ord['order_number']?.toString() ?? id);
                             final status = ord['status']?.toString() ?? 'pending';
                             final total = parseDouble(ord['total_amount']);
                             final dt = ord['createdAt']?.toString() ?? ord['order_date']?.toString();

@@ -122,7 +122,7 @@ export default function PortalBillDetail() {
 
           <div className="sm:text-right space-y-1">
             <div className="flex items-center sm:justify-end gap-2">
-              <span className="text-lg font-black text-gray-900">{bill.invoice_number || `INV-${bill.id}`}</span>
+              <span className="text-lg font-black text-gray-900">{bill.invoice_number || `INV${String(bill.id).padStart(6, '0')}`}</span>
               <BillStatusBadge status={bill.payment_status} />
             </div>
             <div className="text-xs text-gray-600">

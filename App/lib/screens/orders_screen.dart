@@ -60,12 +60,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
     final allOrdersList = List<SavedOrder>.from(realOrders);
     allOrdersList.sort((a, b) => b.date.compareTo(a.date));
 
-    // Filter orders
+    // Filter orders: support searching with or without '#', '-', e.g. ORD265436, #ORD265436, ORD-265436
     final query = _searchCtrl.text.trim().toLowerCase();
+    final cleanQuery = query.replaceAll('#', '').replaceAll('-', '').trim();
     final filteredOrders = allOrdersList.where((o) {
       if (query.isNotEmpty) {
+        final rawNum = o.orderNumber.toLowerCase();
+        final dispNum = o.displayOrderNumber.toLowerCase();
+        final rawClean = rawNum.replaceAll('#', '').replaceAll('-', '');
+        final dispClean = dispNum.replaceAll('#', '').replaceAll('-', '');
+
         final matchesQuery = o.customerName.toLowerCase().contains(query) ||
-            o.orderNumber.toLowerCase().contains(query);
+            rawNum.contains(query) ||
+            dispNum.contains(query) ||
+            (cleanQuery.isNotEmpty && (rawClean.contains(cleanQuery) || dispClean.contains(cleanQuery)));
         if (!matchesQuery) return false;
       }
 
@@ -482,7 +490,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          'Order #${o.orderNumber} • ${_dateFormat.format(o.date)}',
+                          'Order #${o.displayOrderNumber} • ${_dateFormat.format(o.date)}',
                           style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

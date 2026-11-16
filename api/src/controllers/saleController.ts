@@ -574,15 +574,38 @@ export async function listSales(req: Request, res: Response) {
   return res.json({ success: true, data: sales });
 }
 
+export function buildSaleLookupConditions(param: string | number): any[] {
+  const rawParam = String(param || "").trim();
+  const cleanParam = rawParam.replace(/^[#\s]+/, "").trim();
+  const isNumeric = /^\d+$/.test(cleanParam);
+  const numPart = cleanParam.replace(/[^0-9]/g, "");
+
+  const variants = new Set<string>();
+  if (rawParam) variants.add(rawParam);
+  if (cleanParam) variants.add(cleanParam);
+  if (cleanParam.startsWith("INV-")) variants.add(cleanParam.replace("INV-", "INV"));
+  if (cleanParam.startsWith("INV")) variants.add(cleanParam.replace("INV", "INV-"));
+  if (numPart) {
+    variants.add(`INV${numPart}`);
+    variants.add(`INV-${numPart}`);
+    variants.add(`INV${numPart.padStart(6, "0")}`);
+    variants.add(`INV-${numPart.padStart(6, "0")}`);
+  }
+
+  const orList: any[] = Array.from(variants).map((v) => ({ invoice_number: { [Op.iLike]: v } }));
+  if (numPart) {
+    orList.push({ invoice_number: { [Op.iLike]: `%${numPart}%` } });
+  }
+  if (isNumeric && Number(cleanParam) < 1000000000) {
+    orList.push({ id: Number(cleanParam) });
+  }
+  return orList;
+}
+
 export async function getSale(req: Request, res: Response) {
   const param = String(req.params.saleId).trim();
-  const isNumeric = /^\d+$/.test(param);
-  const where: any = { owner_id: req.auth!.ownerId };
-  if (isNumeric) {
-    where.id = Number(param);
-  } else {
-    where.invoice_number = param;
-  }
+  const orList = buildSaleLookupConditions(param);
+  const where: any = { owner_id: req.auth!.ownerId, [Op.or]: orList };
 
   if (!req.auth!.isOwner) {
     where.shop_id = req.auth!.shopId;
@@ -1000,14 +1023,10 @@ export async function updateSale(req: Request, res: Response) {
   const ownerId = req.auth!.ownerId;
 
   try {
-    const cleanSaleId = String(saleId || "").trim();
-    const isNum = !isNaN(Number(cleanSaleId)) && /^\d+$/.test(cleanSaleId);
     const sale = await Sale.findOne({
       where: {
         owner_id: ownerId,
-        ...(isNum
-          ? { [Op.or]: [{ id: Number(cleanSaleId) }, { invoice_number: cleanSaleId }] }
-          : { [Op.or]: [{ invoice_number: cleanSaleId }, { invoice_number: { [Op.iLike]: cleanSaleId } }] }),
+        [Op.or]: buildSaleLookupConditions(saleId),
       },
       include: saleIncludes,
     });

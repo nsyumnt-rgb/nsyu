@@ -1361,12 +1361,12 @@ class _BillScreenState extends State<BillScreen> {
         AppToast.showSuccess(
           context,
           title: 'Bill saved successfully!',
-          subtitle: 'Invoice #${savedBill.billNumber}',
+          subtitle: 'Invoice #${savedBill.displayBillNumber}',
         );
 
         AnimatedFeedbackDialog.showSuccess(
           context: context,
-          invoiceNumber: savedBill.billNumber,
+          invoiceNumber: savedBill.displayBillNumber,
           customerName: savedBill.customerName.isNotEmpty
               ? savedBill.customerName
               : 'Walk-in Customer',

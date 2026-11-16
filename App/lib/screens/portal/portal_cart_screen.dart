@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import '../../models/saved_order.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../theme/app_theme.dart';
 import 'portal_order_detail_screen.dart';
@@ -74,7 +75,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
       setState(() => _submitting = false);
 
       final orderId = parseInt(res['id']);
-      final orderNumber = res['order_number']?.toString() ?? 'ORD-$orderId';
+      final orderNumber = formatOrderNumber(res['order_number']?.toString() ?? orderId);
       final total = parseDouble(res['total_amount']);
 
       // Show professional order confirmation dialog

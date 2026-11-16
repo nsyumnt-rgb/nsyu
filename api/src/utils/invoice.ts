@@ -26,13 +26,13 @@ export async function nextInvoiceNumber(params: {
   }))!;
 
   const shop = await Shop.findByPk(shopId, { transaction: t });
-  const rawPrefix = (shop?.settings?.invoicePrefix || "INV-").toUpperCase().replace(/[^A-Z0-9-]/g, "");
-  const codePrefix = (shop?.code || "SHOP").toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const cleanPrefix = rawPrefix.endsWith("-") ? rawPrefix : `${rawPrefix}-`;
+  // Clean prefix: strip hyphens/spaces so it produces format like INV000017
+  let cleanPrefix = (shop?.settings?.invoicePrefix || "INV").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!cleanPrefix) cleanPrefix = "INV";
 
   let candidateNum = counter.last_number + 1;
   while (true) {
-    const candidateStr = `${cleanPrefix}${codePrefix}-${String(candidateNum).padStart(6, "0")}`;
+    const candidateStr = `${cleanPrefix}${String(candidateNum).padStart(6, "0")}`;
     const exists = await Sale.findOne({
       where: { owner_id: ownerId, shop_id: shopId, invoice_number: candidateStr },
       transaction: t,

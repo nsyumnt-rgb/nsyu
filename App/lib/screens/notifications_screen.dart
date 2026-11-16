@@ -107,10 +107,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // 1. Bill Navigation
     if (type == 'bill_created' || refType == 'sale' || refType == 'bill') {
       final billsProvider = context.read<BillsProvider>();
-      final invMatch = RegExp(r'(INV-[A-Z0-9-]+|B-[0-9]+)').firstMatch('$title $msg');
+      final invMatch = RegExp(r'#?(INV-?[A-Z0-9]+|B-[0-9]+)', caseSensitive: false).firstMatch('$title $msg');
       final invNo = invMatch?.group(1);
+      final cleanInv = invNo?.replaceAll('#', '').replaceAll('-', '').toLowerCase();
       final SavedBill? bill = billsProvider.bills.where(
-        (b) => (invNo != null && b.billNumber == invNo) || b.id.toString() == refId,
+        (b) {
+          if (b.id.toString() == refId) return true;
+          if (invNo == null) return false;
+          final bClean = b.billNumber.replaceAll('#', '').replaceAll('-', '').toLowerCase();
+          final bDispClean = b.displayBillNumber.replaceAll('#', '').replaceAll('-', '').toLowerCase();
+          return b.billNumber.toLowerCase() == invNo.toLowerCase() ||
+              b.displayBillNumber.toLowerCase() == invNo.toLowerCase() ||
+              bClean == cleanInv ||
+              bDispClean == cleanInv;
+        },
       ).firstOrNull ?? (billsProvider.bills.isNotEmpty ? billsProvider.bills.first : null);
       if (bill != null) {
         AppNavigation.openBillDetails(context, bill: bill, invoiceNo: invNo);
@@ -121,10 +131,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // 2. Order Navigation
     if (type.contains('order') || refType == 'order') {
       final ordersProvider = context.read<OrdersProvider>();
-      final ordMatch = RegExp(r'(ORD-[0-9]+)').firstMatch('$title $msg');
+      final ordMatch = RegExp(r'#?(ORD-?[0-9]+)', caseSensitive: false).firstMatch('$title $msg');
       final ordNo = ordMatch?.group(1);
+      final cleanOrd = ordNo?.replaceAll('#', '').replaceAll('-', '').toLowerCase();
       final SavedOrder? order = ordersProvider.orders.where(
-        (o) => (ordNo != null && o.orderNumber == ordNo) || o.id.toString() == refId,
+        (o) {
+          if (o.id.toString() == refId) return true;
+          if (ordNo == null) return false;
+          final oClean = o.orderNumber.replaceAll('#', '').replaceAll('-', '').toLowerCase();
+          final oDispClean = o.displayOrderNumber.replaceAll('#', '').replaceAll('-', '').toLowerCase();
+          return o.orderNumber.toLowerCase() == ordNo.toLowerCase() ||
+              o.displayOrderNumber.toLowerCase() == ordNo.toLowerCase() ||
+              oClean == cleanOrd ||
+              oDispClean == cleanOrd;
+        },
       ).firstOrNull ?? (ordersProvider.orders.isNotEmpty ? ordersProvider.orders.first : null);
       if (order != null) {
         AppNavigation.openOrderDetails(context, order: order, orderNo: ordNo);

@@ -164,7 +164,7 @@ export async function placeOrder(req: Request, res: Response) {
         { replacements: { ownerId }, transaction: t }
       );
       const nextNum = Number((maxRow as any)?.[0]?.max_id || 0) + 1;
-      const orderNumber = `ORD-${String(nextNum).padStart(6, "0")}`;
+      const orderNumber = `ORD${String(nextNum).padStart(6, "0")}`;
 
       // Save order header
       const newOrder = await Order.create(

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../models/customer.dart';
 import '../../../models/customer_ledger_entry.dart';
+import '../../../models/saved_bill.dart';
 import '../../../providers/bills_provider.dart';
 import '../../../providers/customer_provider.dart';
 import '../../../providers/payments_provider.dart';
@@ -120,7 +121,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           runningBalance: running,
           referenceType: 'Sale',
           referenceId: i + 1,
-          description: b.billNumber.isNotEmpty ? b.billNumber : 'Bill #${i + 1}',
+          description: b.displayBillNumber.isNotEmpty ? b.displayBillNumber : 'Bill #${i + 1}',
           entryDate: b.date,
         ),
       );
@@ -136,7 +137,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
             runningBalance: running,
             referenceType: 'Payment',
             referenceId: (i + 1) * 1000,
-            description: 'Payment for ${b.billNumber}',
+            description: 'Payment for ${b.displayBillNumber}',
             entryDate: b.date.add(const Duration(minutes: 5)),
           ),
         );
@@ -488,7 +489,7 @@ class _CustomerLedgerDetailScreenState extends State<CustomerLedgerDetailScreen>
           widgets.add(Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: LedgerBillCard(
-              billNo: ref.isNotEmpty ? ref : 'INV-${e.referenceId ?? "001"}',
+              billNo: ref.isNotEmpty ? formatInvoiceNumber(ref) : 'INV${(e.referenceId ?? 1).toString().padLeft(6, '0')}',
               time: timeStr,
               amount: e.amount,
               runningBalance: e.runningBalance,

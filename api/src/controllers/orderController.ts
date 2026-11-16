@@ -25,6 +25,42 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+export function buildOrderLookupConditions(idOrNumber: string | number, bodyOrderNum?: string | null): any[] {
+  const rawId = String(idOrNumber || bodyOrderNum || "").trim();
+  const cleanId = rawId.replace(/^[#\s]+/, "").trim();
+  const isNumeric = /^\d+$/.test(cleanId);
+  const numPart = cleanId.replace(/[^0-9]/g, "");
+
+  const variants = new Set<string>();
+  if (rawId) variants.add(rawId);
+  if (cleanId) variants.add(cleanId);
+  if (cleanId.startsWith("ORD-")) variants.add(cleanId.replace("ORD-", "ORD"));
+  if (cleanId.startsWith("ORD")) variants.add(cleanId.replace("ORD", "ORD-"));
+  if (numPart) {
+    variants.add(`ORD${numPart}`);
+    variants.add(`ORD-${numPart}`);
+    variants.add(`ORD${numPart.padStart(6, "0")}`);
+    variants.add(`ORD-${numPart.padStart(6, "0")}`);
+  }
+  if (bodyOrderNum) {
+    const cleanBody = String(bodyOrderNum).replace(/^[#\s]+/, "").trim();
+    variants.add(cleanBody);
+    const bodyNum = cleanBody.replace(/[^0-9]/g, "");
+    if (bodyNum) {
+      variants.add(`ORD${bodyNum}`);
+      variants.add(`ORD-${bodyNum}`);
+      variants.add(`ORD${bodyNum.padStart(6, "0")}`);
+      variants.add(`ORD-${bodyNum.padStart(6, "0")}`);
+    }
+  }
+
+  const orList: any[] = Array.from(variants).map((v) => ({ order_number: v }));
+  if (isNumeric && Number(cleanId) < 1000000000) {
+    orList.push({ id: Number(cleanId) });
+  }
+  return orList;
+}
+
 const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
   pending: ["confirmed", "processing", "shipped", "delivered", "cancelled"],
   confirmed: ["pending", "processing", "shipped", "delivered", "completed", "cancelled"],
@@ -147,10 +183,11 @@ export async function getOrders(req: Request, res: Response) {
 export async function getOrderById(req: Request, res: Response) {
   const ownerId = req.auth!.ownerId;
   const { id } = req.params;
+  const orList = buildOrderLookupConditions(id);
 
   try {
     const order = await Order.findOne({
-      where: { id, owner_id: ownerId },
+      where: { owner_id: ownerId, [Op.or]: orList },
       include: [
         { model: OrderItem, as: "items" },
         { model: Customer, as: "customer" },
@@ -289,15 +326,23 @@ export async function createOrder(req: Request, res: Response) {
       const totalDiscount = round2(totalItemDiscount + overallDiscount);
       const finalOrderTotal = round2(subtotal - totalDiscount + totalCalculatedTax);
 
-      // 3. Generate Order Number
+      // 3. Generate Order Number: clean ORD265436 format without hyphen
       let orderNumber = customOrderNumber;
-      if (!orderNumber) {
+      if (orderNumber) {
+        const clean = String(orderNumber).replace(/^[#\s]+/, "").trim();
+        const numPart = clean.replace(/[^0-9]/g, "");
+        if (numPart) {
+          orderNumber = `ORD${numPart}`;
+        } else {
+          orderNumber = clean.replace(/^ORD-?/, "ORD");
+        }
+      } else {
         const [counterRow] = await sequelize.query(
           "SELECT COALESCE(MAX(id), 0) as max_id FROM orders WHERE owner_id = :owner_id",
           { replacements: { owner_id: ownerId }, transaction: t }
         );
         const nextNum = Number((counterRow as any)?.[0]?.max_id || 0) + 1;
-        orderNumber = `ORD-${String(nextNum).padStart(6, "0")}`;
+        orderNumber = `ORD${String(nextNum).padStart(6, "0")}`;
       }
 
       // 4. Save Order Header
@@ -391,22 +436,8 @@ export async function updateOrderStatus(req: Request, res: Response) {
     return res.status(400).json({ success: false, message: "status, payment_status or remarks is required" });
   }
 
-  const idStr = String(id).trim();
-  const isNumeric = /^\d+$/.test(idStr);
-  const orderWhere: any = { owner_id: ownerId };
-  const bodyOrderNum = req.body?.orderNumber || req.body?.order_number;
-  if (isNumeric && Number(idStr) < 1000000000) {
-    orderWhere[Op.or] = [{ id: Number(idStr) }, { order_number: idStr }];
-    if (bodyOrderNum) {
-      orderWhere[Op.or].push({ order_number: String(bodyOrderNum).trim() });
-    }
-  } else {
-    if (bodyOrderNum) {
-      orderWhere[Op.or] = [{ order_number: idStr }, { order_number: String(bodyOrderNum).trim() }];
-    } else {
-      orderWhere.order_number = idStr;
-    }
-  }
+  const orList = buildOrderLookupConditions(id, req.body?.orderNumber || req.body?.order_number);
+  const orderWhere: any = { owner_id: ownerId, [Op.or]: orList };
 
   try {
     const order = await Order.findOne({
@@ -554,22 +585,8 @@ export async function convertOrderToBill(req: Request, res: Response) {
   const { id } = req.params;
   const { saleId, paidAmount = 0, paymentMethod = "cash", notes } = req.body;
 
-  const idStr = String(id || "").trim();
-  const isNumeric = /^\d+$/.test(idStr);
-  const orderWhere: any = { owner_id: ownerId };
-  const bodyOrderNum = req.body?.orderNumber || req.body?.order_number;
-  if (isNumeric && Number(idStr) < 1000000000) {
-    orderWhere[Op.or] = [{ id: Number(idStr) }, { order_number: idStr }];
-    if (bodyOrderNum) {
-      orderWhere[Op.or].push({ order_number: String(bodyOrderNum).trim() });
-    }
-  } else {
-    if (bodyOrderNum) {
-      orderWhere[Op.or] = [{ order_number: idStr }, { order_number: String(bodyOrderNum).trim() }];
-    } else {
-      orderWhere.order_number = idStr;
-    }
-  }
+  const orList = buildOrderLookupConditions(id, req.body?.orderNumber || req.body?.order_number);
+  const orderWhere: any = { owner_id: ownerId, [Op.or]: orList };
 
   const actorType = (req.auth!.isOwner ? "owner" : "employee") as "owner" | "employee";
   const actorId = req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || req.auth!.ownerId);

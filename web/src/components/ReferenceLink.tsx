@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 export type ReferenceType =
   | "sale"
   | "invoice"
+  | "order"
   | "purchase"
   | "payment"
   | "transfer"
@@ -50,12 +51,14 @@ export default function ReferenceLink({
 
   // Determine effective type if "auto"
   let effectiveType: ReferenceType = type;
-  const rawRef = String(refNumber || id || "").trim();
+  const rawRef = String(refNumber || id || "").replace(/^[#\s]+/, "").trim();
   const upper = rawRef.toUpperCase();
 
   if (effectiveType === "auto" || effectiveType === "invoice") {
     if (upper.startsWith("INV") || upper.includes("INV-")) {
       effectiveType = "sale";
+    } else if (upper.startsWith("ORD") || upper.includes("ORD-")) {
+      effectiveType = "order" as any;
     } else if (upper.startsWith("PUR") || upper.includes("PUR-")) {
       effectiveType = "purchase";
     } else if (upper.startsWith("TRF") || upper.includes("TRF-")) {
@@ -84,6 +87,9 @@ export default function ReferenceLink({
   switch (effectiveType) {
     case "sale":
       route = `/app/sales/${targetId}`;
+      break;
+    case "order":
+      route = `/app/orders/${targetId}`;
       break;
     case "purchase":
       route = `/app/purchase/${targetId}`;

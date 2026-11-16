@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/saved_bill.dart';
+import '../../models/saved_order.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
@@ -489,7 +491,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     }
     return Column(
       children: items.map((ord) {
-        final orderNum = ord['order_number']?.toString() ?? 'Order #${ord['id']}';
+        final orderNum = formatOrderNumber(ord['order_number']?.toString() ?? ord['id']);
         final status = ord['status']?.toString() ?? 'pending';
         final total = parseDouble(ord['total_amount']);
         final dt = ord['createdAt']?.toString() ?? ord['order_date']?.toString();
@@ -559,7 +561,7 @@ class _PortalHomeScreenState extends State<PortalHomeScreen> {
     }
     return Column(
       children: items.map((b) {
-        final invNum = b['invoice_number']?.toString() ?? 'INV-${b['id']}';
+        final invNum = formatInvoiceNumber(b['invoice_number']?.toString() ?? b['id']);
         final total = parseDouble(b['total_amount']);
         final paid = parseDouble(b['paid_amount']);
         final due = total - paid;

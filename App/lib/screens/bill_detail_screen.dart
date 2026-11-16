@@ -58,12 +58,21 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final billsProvider = context.read<BillsProvider>();
+      final cleanInv = widget.invoiceNo!.replaceAll('#', '').replaceAll('-', '').toLowerCase().trim();
       final match = billsProvider.bills.cast<SavedBill?>().firstWhere(
-            (b) =>
-                b != null &&
-                (b.billNumber.toLowerCase() == widget.invoiceNo!.toLowerCase() ||
-                    b.customerBillLabel.toLowerCase() == widget.invoiceNo!.toLowerCase() ||
-                    'inv-${b.billNumber.toLowerCase()}' == widget.invoiceNo!.toLowerCase()),
+            (b) {
+              if (b == null) return false;
+              final bNum = b.billNumber.toLowerCase();
+              final bDisp = b.displayBillNumber.toLowerCase();
+              final bClean = bNum.replaceAll('#', '').replaceAll('-', '');
+              final bDispClean = bDisp.replaceAll('#', '').replaceAll('-', '');
+              return bNum == widget.invoiceNo!.toLowerCase() ||
+                  bDisp == widget.invoiceNo!.toLowerCase() ||
+                  bClean == cleanInv ||
+                  bDispClean == cleanInv ||
+                  b.customerBillLabel.toLowerCase() == widget.invoiceNo!.toLowerCase() ||
+                  'inv-${b.billNumber.toLowerCase()}' == widget.invoiceNo!.toLowerCase();
+            },
             orElse: () => null,
           );
 
@@ -78,11 +87,19 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
         billsProvider.load().then((_) {
           if (!mounted) return;
           final retryMatch = billsProvider.bills.cast<SavedBill?>().firstWhere(
-                (b) =>
-                    b != null &&
-                    (b.billNumber.toLowerCase() == widget.invoiceNo!.toLowerCase() ||
-                        b.customerBillLabel.toLowerCase() == widget.invoiceNo!.toLowerCase() ||
-                        'inv-${b.billNumber.toLowerCase()}' == widget.invoiceNo!.toLowerCase()),
+                (b) {
+                  if (b == null) return false;
+                  final bNum = b.billNumber.toLowerCase();
+                  final bDisp = b.displayBillNumber.toLowerCase();
+                  final bClean = bNum.replaceAll('#', '').replaceAll('-', '');
+                  final bDispClean = bDisp.replaceAll('#', '').replaceAll('-', '');
+                  return bNum == widget.invoiceNo!.toLowerCase() ||
+                      bDisp == widget.invoiceNo!.toLowerCase() ||
+                      bClean == cleanInv ||
+                      bDispClean == cleanInv ||
+                      b.customerBillLabel.toLowerCase() == widget.invoiceNo!.toLowerCase() ||
+                      'inv-${b.billNumber.toLowerCase()}' == widget.invoiceNo!.toLowerCase();
+                },
                 orElse: () => null,
               );
           setState(() {
@@ -142,7 +159,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
       return;
     }
     final msg = Uri.encodeComponent(
-      'Hello ${bill.customerName},\n\nHere is your invoice Bill #${bill.billNumber} from NSYU.\n'
+      'Hello ${bill.customerName},\n\nHere is your invoice Bill #${bill.displayBillNumber} from NSYU.\n'
       'Total Bill Amount: ₹${_money.format(bill.total)}\n'
       'Paid Amount: ₹${_money.format(bill.paidAmount)}\n'
       'Remaining Due: ₹${_money.format(bill.due)}\n\n'
@@ -569,7 +586,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Bill #${b.billNumber}',
+                        'Bill #${b.displayBillNumber}',
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,

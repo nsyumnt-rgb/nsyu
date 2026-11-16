@@ -57,6 +57,21 @@ int _toInt(dynamic val, {int defaultValue = 0}) {
   return defaultValue;
 }
 
+String formatOrderNumber(dynamic val) {
+  if (val == null) return '';
+  final raw = val.toString().trim();
+  if (raw.isEmpty) return '';
+  final clean = raw.replaceAll('#', '').trim();
+  final match = RegExp(r'ORD.*?(\d+)', caseSensitive: false).firstMatch(clean);
+  if (match != null) {
+    return 'ORD${match.group(1)!}';
+  }
+  final stripped = clean.replaceAll('-', '').toUpperCase();
+  if (stripped.startsWith('ORD')) return stripped;
+  if (RegExp(r'^\d+$').hasMatch(stripped)) return 'ORD$stripped';
+  return clean;
+}
+
 class SavedOrderItem {
   final int? productId;
   final String desc;
@@ -128,6 +143,9 @@ class SavedOrder {
       status == OrderStatus.convertedToBill ||
       convertedSaleId != null ||
       billedBillId != null;
+
+  /// Formatted canonical display: e.g. ORD265436
+  String get displayOrderNumber => formatOrderNumber(orderNumber.isNotEmpty ? orderNumber : id);
 
   SavedOrder({
     this.id,

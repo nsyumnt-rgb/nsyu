@@ -31,6 +31,21 @@ extension BillStatusLabel on BillStatus {
   }
 }
 
+String formatInvoiceNumber(dynamic val) {
+  if (val == null) return '';
+  final raw = val.toString().trim();
+  if (raw.isEmpty) return '';
+  final clean = raw.replaceAll('#', '').trim();
+  final match = RegExp(r'INV.*?(\d+)', caseSensitive: false).firstMatch(clean);
+  if (match != null) {
+    return 'INV${match.group(1)!.padLeft(6, '0')}';
+  }
+  final stripped = clean.replaceAll('-', '').toUpperCase();
+  if (stripped.startsWith('INV')) return stripped;
+  if (RegExp(r'^\d+$').hasMatch(stripped)) return 'INV${stripped.padLeft(6, '0')}';
+  return clean;
+}
+
 class SavedBillItem {
   final int? productId;
   final String? sku;
@@ -124,6 +139,9 @@ class SavedBill {
 
   /// Final Bill Total = Subtotal - Discount + Taxes
   double get finalBillTotal => (subtotal - discount + tax) < 0 ? 0 : (subtotal - discount + tax);
+
+  /// Formatted canonical invoice ID: e.g. INV000017
+  String get displayBillNumber => formatInvoiceNumber(billNumber.isNotEmpty ? billNumber : id);
 
   /// Current bill total
   double get total => finalBillTotal;
