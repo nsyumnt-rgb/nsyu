@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { login as loginApi } from "../api/auth";
 import { apiErrorMessage, getApiBaseUrl, setApiBaseUrl, DEFAULT_CLOUD_API_URL, DEFAULT_LOCAL_API_URL } from "../api/client";
 import { requestOtpApi, verifyOtpApi, portalApi } from "../api/portal";
@@ -285,28 +285,40 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white text-[#142B4D] flex flex-col justify-between font-sans relative overflow-x-hidden select-none">
       
-      {/* ── Soft Ambient Background Shapes (Pure White Theme with Subtle Light Blue Accents) ── */}
+      {/* ── Soft Ambient Background Shapes (Pure White Theme with Subtle Light Green Accents) ── */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         {/* Top-Left Soft Radial Wave */}
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-[#E2EFFF] to-[#F5F9FF] opacity-80 blur-2xl" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-[#ECFDF5] to-[#F0FDF4] opacity-80 blur-2xl" />
         {/* Top-Right Soft Radial Wave */}
-        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-gradient-to-bl from-[#EBF3FE] to-[#F8FAFC] opacity-70 blur-2xl" />
+        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-gradient-to-bl from-[#ECFDF5] to-[#F8FAFC] opacity-70 blur-2xl" />
         {/* Bottom-Left Wave Accent */}
-        <div className="absolute -bottom-36 -left-20 w-[420px] h-[360px] rounded-full bg-[#EDF5FF]/80 blur-3xl" />
+        <div className="absolute -bottom-36 -left-20 w-[420px] h-[360px] rounded-full bg-[#ECFDF5]/80 blur-3xl" />
         {/* Bottom-Right Soft Wave Accent */}
-        <div className="absolute -bottom-40 -right-20 w-[480px] h-[400px] rounded-full bg-[#EBF3FF]/90 blur-3xl" />
+        <div className="absolute -bottom-40 -right-20 w-[480px] h-[400px] rounded-full bg-[#F0FDF4]/90 blur-3xl" />
       </div>
 
       {/* ── Main Scrollable Container ── */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-10">
         
+        {/* Marketplace Navigation Link */}
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 text-xs font-semibold border border-emerald-200/70 mb-4 transition-all shadow-2xs group"
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Browse Public Marketplace</span>
+          <svg className="w-3.5 h-3.5 text-emerald-600 group-hover:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+
         {/* ══════════════════════════════════════════════════════════════════ */}
-        {/* HEADER BRANDING & LOGO (Exact matching Reference Design)          */}
+        {/* HEADER BRANDING & LOGO                                             */}
         {/* ══════════════════════════════════════════════════════════════════ */}
         <div className="flex flex-col items-center text-center mb-6">
           
           {/* Logo in Clean Rounded White Card with Soft Subtle Shadow */}
-          <div className="w-[82px] h-[82px] rounded-[22px] bg-white p-2.5 shadow-[0_10px_25px_-5px_rgba(40,120,232,0.14),0_2px_6px_rgba(40,120,232,0.06)] border border-[#EBF2FA] flex items-center justify-center transition-transform hover:scale-105 duration-200">
+          <div className="w-[82px] h-[82px] rounded-[22px] bg-white p-2.5 shadow-[0_10px_25px_-5px_rgba(5,150,105,0.14),0_2px_6px_rgba(5,150,105,0.06)] border border-emerald-100/70 flex items-center justify-center transition-transform hover:scale-105 duration-200">
             <img
               src="./nsyu_logo.png"
               alt="NSYU Logo"
@@ -331,7 +343,7 @@ export default function Login() {
             
             {/* 1: Sales & Billing */}
             <div className="flex flex-col items-center group">
-              <div className="w-[52px] h-[52px] rounded-2xl bg-[#DCEBFF] flex items-center justify-center text-[#2878E8] shadow-xs transition-transform group-hover:scale-105">
+              <div className="w-[52px] h-[52px] rounded-2xl bg-[#ECFDF5] flex items-center justify-center text-[#059669] shadow-xs transition-transform group-hover:scale-105">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="20" x2="18" y2="10" />
                   <line x1="12" y1="20" x2="12" y2="4" />
@@ -346,7 +358,7 @@ export default function Login() {
 
             {/* 2: Inventory */}
             <div className="flex flex-col items-center group">
-              <div className="w-[52px] h-[52px] rounded-2xl bg-[#DCEBFF] flex items-center justify-center text-[#2878E8] shadow-xs transition-transform group-hover:scale-105">
+              <div className="w-[52px] h-[52px] rounded-2xl bg-[#ECFDF5] flex items-center justify-center text-[#059669] shadow-xs transition-transform group-hover:scale-105">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                   <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
@@ -361,7 +373,7 @@ export default function Login() {
 
             {/* 3: Customers */}
             <div className="flex flex-col items-center group">
-              <div className="w-[52px] h-[52px] rounded-2xl bg-[#DCEBFF] flex items-center justify-center text-[#2878E8] shadow-xs transition-transform group-hover:scale-105">
+              <div className="w-[52px] h-[52px] rounded-2xl bg-[#ECFDF5] flex items-center justify-center text-[#059669] shadow-xs transition-transform group-hover:scale-105">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="9" cy="7" r="4" />
@@ -396,7 +408,7 @@ export default function Login() {
 
           {/* ── Center Column: Premium White Authentication Card ── */}
           <div className="w-full max-w-[430px]">
-            <div className="bg-white rounded-[28px] shadow-[0_20px_50px_-15px_rgba(20,43,77,0.08),0_4px_15px_-4px_rgba(40,120,232,0.05)] p-6 sm:p-7 border border-[#E8EFF8] relative">
+            <div className="bg-white rounded-[28px] shadow-[0_20px_50px_-15px_rgba(20,43,77,0.08),0_4px_15px_-4px_rgba(5,150,105,0.05)] p-6 sm:p-7 border border-[#E8EFF8] relative">
               
               {/* ── Segmented Pill Tabs ── */}
               <div className="bg-[#F1F5F9] p-1 rounded-2xl flex items-center gap-1">
@@ -408,7 +420,7 @@ export default function Login() {
                   onClick={() => handleTabChange("staff")}
                   className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     activeTab === "staff"
-                      ? "bg-[#2878E8] text-white shadow-md shadow-blue-500/25"
+                      ? "bg-[#059669] text-white shadow-md shadow-emerald-600/25"
                       : "text-[#64748B] hover:text-[#142B4D]"
                   }`}
                 >
@@ -426,7 +438,7 @@ export default function Login() {
                   onClick={() => handleTabChange("customer")}
                   className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     activeTab === "customer"
-                      ? "bg-[#2878E8] text-white shadow-md shadow-blue-500/25"
+                      ? "bg-[#059669] text-white shadow-md shadow-emerald-600/25"
                       : "text-[#64748B] hover:text-[#142B4D]"
                   }`}
                 >
@@ -442,8 +454,8 @@ export default function Login() {
 
               {/* ── Customer Portal Informational Banner (Shown in Customer mode) ── */}
               {activeTab === "customer" && (
-                <div className="mt-4 p-3 rounded-2xl bg-[#F0F6FE] border border-[#BFDBFE]/70 flex items-start gap-3 animate-fadeIn">
-                  <div className="w-8 h-8 rounded-xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center shrink-0 mt-0.5">
+                <div className="mt-4 p-3 rounded-2xl bg-[#ECFDF5] border border-[#A7F3D0]/80 flex items-start gap-3 animate-fadeIn">
+                  <div className="w-8 h-8 rounded-xl bg-[#D1FAE5] text-[#059669] flex items-center justify-center shrink-0 mt-0.5">
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                       <circle cx="9" cy="7" r="4" />
@@ -489,7 +501,7 @@ export default function Login() {
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder={activeTab === "customer" ? "Email / Mobile Number" : "Email / Username"}
-                    className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-[#E2E8F0] bg-white font-medium text-[#142B4D] text-[13.5px] placeholder-[#94A3B8] focus:border-[#2878E8] focus:outline-none focus:ring-4 focus:ring-[#2878E8]/10 transition-all"
+                    className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-[#E2E8F0] bg-white font-medium text-[#142B4D] text-[13.5px] placeholder-[#94A3B8] focus:border-[#059669] focus:outline-none focus:ring-4 focus:ring-[#059669]/15 transition-all"
                   />
                 </div>
 
@@ -508,7 +520,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Password"
-                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-[#E2E8F0] bg-white font-medium text-[#142B4D] text-[13.5px] placeholder-[#94A3B8] focus:border-[#2878E8] focus:outline-none focus:ring-4 focus:ring-[#2878E8]/10 transition-all"
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-[#E2E8F0] bg-white font-medium text-[#142B4D] text-[13.5px] placeholder-[#94A3B8] focus:border-[#059669] focus:outline-none focus:ring-4 focus:ring-[#059669]/15 transition-all"
                   />
                   <button
                     type="button"
@@ -536,25 +548,25 @@ export default function Login() {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-300 text-[#2878E8] focus:ring-[#2878E8] h-3.5 w-3.5"
+                      className="rounded border-slate-300 text-[#059669] focus:ring-[#059669] h-3.5 w-3.5"
                     />
                     <span className="text-[#142B4D] font-semibold text-[12.5px]">Remember me</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowForgotModal(true)}
-                    className="text-[#2878E8] hover:underline font-bold text-[12.5px] cursor-pointer"
+                    className="text-[#059669] hover:underline font-bold text-[12.5px] cursor-pointer"
                   >
                     Forgot Password?
                   </button>
                 </div>
 
-                {/* Solid Professional Blue Login Button */}
+                {/* Solid Professional Green Login Button */}
                 <button
                   type="submit"
                   id="login-submit-btn"
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-[#2878E8] hover:bg-[#1E6CE0] active:scale-[0.99] disabled:opacity-60 text-white font-bold text-[14.5px] shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-1"
+                  className="w-full py-3 rounded-xl bg-[#059669] hover:bg-[#047857] active:scale-[0.99] disabled:opacity-60 text-white font-bold text-[14.5px] shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-1"
                 >
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -575,12 +587,12 @@ export default function Login() {
                   <div className="flex-1 h-px bg-[#E2E8F0]" />
                 </div>
 
-                {/* Outlined Blue Create Account Button */}
+                {/* Outlined Green Create Account Button */}
                 <button
                   type="button"
                   id="create-account-btn"
                   onClick={() => setShowRegisterModal(true)}
-                  className="w-full py-2.5 rounded-xl border-2 border-[#2878E8] hover:bg-[#F5F9FF] text-[#2878E8] font-bold text-[14px] flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
+                  className="w-full py-2.5 rounded-xl border-2 border-[#059669] hover:bg-[#ECFDF5] text-[#059669] font-bold text-[14px] flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -617,15 +629,15 @@ export default function Login() {
             </div>
 
             {/* ══════════════════════════════════════════════════════════════════ */}
-            {/* APK DOWNLOAD BUTTON (Matching Reference UI)                      */}
+            {/* APK DOWNLOAD BUTTON                                              */}
             {/* ══════════════════════════════════════════════════════════════════ */}
             <div className="mt-5 flex items-center justify-center">
               <button
                 type="button"
                 onClick={handleDownloadApk}
-                className="px-5 py-2 rounded-full bg-[#EBF3FF] hover:bg-[#DCEBFF] text-[#2878E8] text-[12px] font-bold flex items-center gap-2 border border-[#BFDBFE]/80 transition-all cursor-pointer shadow-2xs active:scale-95"
+                className="px-5 py-2 rounded-full bg-[#ECFDF5] hover:bg-[#D1FAE5] text-[#059669] text-[12px] font-bold flex items-center gap-2 border border-[#A7F3D0]/80 transition-all cursor-pointer shadow-2xs active:scale-95"
               >
-                <svg className="w-3.5 h-3.5 text-[#2878E8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+                <svg className="w-3.5 h-3.5 text-[#059669]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
@@ -674,7 +686,7 @@ export default function Login() {
             </button>
 
             <div className="text-center pt-1">
-              <div className="w-12 h-12 rounded-2xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center mx-auto mb-2.5 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] text-[#059669] flex items-center justify-center mx-auto mb-2.5 shadow-xs">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   <polyline points="22,6 12,13 2,6" />
@@ -702,14 +714,14 @@ export default function Login() {
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="••••"
-                  className="w-full py-3 text-center text-2xl font-mono tracking-widest rounded-xl border border-slate-300 focus:border-[#2878E8] focus:ring-2 focus:ring-blue-100 focus:outline-none"
+                  className="w-full py-3 text-center text-2xl font-mono tracking-widest rounded-xl border border-slate-300 focus:border-[#059669] focus:ring-2 focus:ring-emerald-100 focus:outline-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={otpLoading || otpCode.length !== 4}
-                className="w-full py-2.5 bg-[#2878E8] hover:bg-[#1E6CE0] disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer"
+                className="w-full py-2.5 bg-[#059669] hover:bg-[#047857] disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer"
               >
                 {otpLoading ? "Verifying…" : "Verify & Login"}
               </button>
@@ -719,7 +731,7 @@ export default function Login() {
                   type="button"
                   disabled={otpCooldown > 0}
                   onClick={() => handleSubmit(new Event("submit") as any)}
-                  className="text-xs text-[#2878E8] hover:underline font-semibold disabled:text-slate-400 cursor-pointer"
+                  className="text-xs text-[#059669] hover:underline font-semibold disabled:text-slate-400 cursor-pointer"
                 >
                   {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : "Didn't receive code? Resend"}
                 </button>
@@ -748,7 +760,7 @@ export default function Login() {
             </button>
 
             <div className="text-center pt-1">
-              <div className="w-12 h-12 rounded-2xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center mx-auto mb-2 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] text-[#059669] flex items-center justify-center mx-auto mb-2 shadow-xs">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                   <circle cx="8.5" cy="7" r="4" />
@@ -781,7 +793,7 @@ export default function Login() {
                   value={regShopCode}
                   onChange={(e) => setRegShopCode(e.target.value.toUpperCase())}
                   placeholder="NSYU-01"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs uppercase focus:border-[#2878E8] focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono text-xs uppercase focus:border-[#059669] focus:outline-none"
                 />
               </div>
 
@@ -793,7 +805,7 @@ export default function Login() {
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#059669] focus:outline-none"
                 />
               </div>
 
@@ -805,7 +817,7 @@ export default function Login() {
                   value={regPhone}
                   onChange={(e) => setRegPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#059669] focus:outline-none"
                 />
               </div>
 
@@ -817,7 +829,7 @@ export default function Login() {
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="e.g. ramesh@example.com"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#059669] focus:outline-none"
                 />
               </div>
 
@@ -828,14 +840,14 @@ export default function Login() {
                   value={regAddress}
                   onChange={(e) => setRegAddress(e.target.value)}
                   placeholder="City, State"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#2878E8] focus:outline-none"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:border-[#059669] focus:outline-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={regLoading}
-                className="w-full py-2.5 bg-[#2878E8] hover:bg-[#1E6CE0] disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer mt-2"
+                className="w-full py-2.5 bg-[#059669] hover:bg-[#047857] disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition-all cursor-pointer mt-2"
               >
                 {regLoading ? "Registering…" : "Register & Send OTP"}
               </button>
@@ -899,7 +911,7 @@ export default function Login() {
                   onClick={() => handleSaveApiUrl(DEFAULT_CLOUD_API_URL)}
                   className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-semibold border transition-all ${
                     apiUrl === DEFAULT_CLOUD_API_URL
-                      ? "bg-[#2878E8] text-white border-[#2878E8] shadow-xs"
+                      ? "bg-[#059669] text-white border-[#059669] shadow-xs"
                       : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
                   }`}
                 >
@@ -923,12 +935,12 @@ export default function Login() {
                   type="text"
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono focus:border-[#2878E8] focus:outline-none"
+                  className="flex-1 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-mono focus:border-[#059669] focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleSaveApiUrl(apiUrl)}
-                  className="px-3 py-1.5 bg-[#2878E8] text-white rounded-xl font-bold hover:bg-[#1E6CE0] text-xs shrink-0 cursor-pointer"
+                  className="px-3 py-1.5 bg-[#059669] text-white rounded-xl font-bold hover:bg-[#047857] text-xs shrink-0 cursor-pointer"
                 >
                   Save
                 </button>
@@ -946,7 +958,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setShowApiModal(false)}
-                className="flex-1 py-2 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                className="flex-1 py-2 bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
               >
                 Done
               </button>
@@ -976,7 +988,7 @@ export default function Login() {
             </button>
 
             <div className="text-center pt-1">
-              <div className="w-12 h-12 rounded-2xl bg-[#DCEBFF] text-[#2878E8] flex items-center justify-center mx-auto mb-2 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] text-[#059669] flex items-center justify-center mx-auto mb-2 shadow-xs">
                 <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -998,7 +1010,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setForgotMsg(`Password assistance instruction sent to ${identifier || "nsyu.mnt@gmail.com"}.`)}
-                  className="w-full py-2.5 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer"
+                  className="w-full py-2.5 bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer"
                 >
                   Send Reset Link
                 </button>
@@ -1056,7 +1068,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setApkSuccessModal(null)}
-              className="w-full py-2 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              className="w-full py-2 bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Done
             </button>
@@ -1138,7 +1150,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowIosModal(false)}
-              className="w-full py-2 bg-[#2878E8] hover:bg-[#1E6CE0] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+              className="w-full py-2 bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
             >
               Continue
             </button>
