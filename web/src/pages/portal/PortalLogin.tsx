@@ -13,6 +13,9 @@ import { usePortalStore } from "../../store/portalStore";
 export default function PortalLogin() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  // Return to the marketplace page the customer came from (internal /market paths only — no open redirects).
+  const nextParam = searchParams.get("next") || "";
+  const afterLogin = /^\/market(\/|$)/.test(nextParam) && !nextParam.startsWith("//") ? nextParam : "/portal/home";
   const setCustomerSession = usePortalStore((s) => s.setCustomerSession);
 
   // Read prefilled shop from query if present (?shop=SHOP01)
@@ -73,7 +76,7 @@ export default function PortalLogin() {
       const res = await loginCustomerWithPasswordApi(cleanId, password, shopCode.trim() || undefined);
       const { accessToken, refreshToken, customer } = res.data;
       setCustomerSession(accessToken, refreshToken, customer);
-      navigate("/portal/home", { replace: true });
+      navigate(afterLogin, { replace: true });
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Invalid credentials. Please try again.";
       setError(msg);
@@ -131,7 +134,7 @@ export default function PortalLogin() {
       const res = await verifyOtpApi(identifier.trim(), otp.trim(), shopCode.trim() || undefined);
       const { accessToken, refreshToken, customer } = res.data;
       setCustomerSession(accessToken, refreshToken, customer);
-      navigate("/portal/home", { replace: true });
+      navigate(afterLogin, { replace: true });
     } catch (err: any) {
       const msg = err.response?.data?.message || "Invalid or expired OTP. Please try again.";
       setError(msg);

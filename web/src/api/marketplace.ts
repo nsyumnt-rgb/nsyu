@@ -1,5 +1,7 @@
 import axios from "axios";
 import { getApiBaseUrl } from "./client";
+import { portalApi } from "./portal";
+import type { CartData } from "../store/portalStore";
 
 /** Public, no-login marketplace API (MultiShop phase 1). */
 const marketApi = axios.create({ baseURL: getApiBaseUrl() });
@@ -89,5 +91,29 @@ export async function getMarketShop(code: string): Promise<MarketShopDetail> {
 
 export async function getMarketListing(shopId: number, productId: number): Promise<MarketListingDetail> {
   const res = await marketApi.get(`/marketplace/shops/${shopId}/products/${productId}`);
+  return res.data?.data;
+}
+
+/* ── Cart grouped by shop (signed-in customers; uses the portal session) ── */
+
+export interface MarketCartGroup {
+  shop: { id: number; name: string; code: string };
+  status: "active" | "pending_approval";
+  cart: CartData | null;
+}
+export interface MarketCart {
+  groups: MarketCartGroup[];
+  itemCount: number;
+  total: number;
+}
+
+export async function getMarketCart(): Promise<MarketCart> {
+  const res = await portalApi.get("/customer-portal/market/cart");
+  return res.data?.data;
+}
+
+/** Sets the quantity of one product from one shop (0 removes it). */
+export async function setMarketCartItem(shopId: number, productId: number, quantity: number): Promise<MarketCart> {
+  const res = await portalApi.put(`/customer-portal/market/cart/${shopId}/items/${productId}`, { quantity });
   return res.data?.data;
 }

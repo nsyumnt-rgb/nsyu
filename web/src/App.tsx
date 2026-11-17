@@ -9,6 +9,7 @@ import MarketSearch from "./pages/market/MarketSearch";
 import MarketShops from "./pages/market/MarketShops";
 import MarketShop from "./pages/market/MarketShop";
 import MarketProduct from "./pages/market/MarketProduct";
+import MarketCart from "./pages/market/MarketCart";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -72,6 +73,7 @@ export default function App() {
           <Route path="/market/shops" element={<MarketShops />} />
           <Route path="/market/shop/:code" element={<MarketShop />} />
           <Route path="/market/p/:shopId/:productId" element={<MarketProduct />} />
+          <Route path="/market/cart" element={<MarketCart />} />
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

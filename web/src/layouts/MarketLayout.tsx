@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { usePortalStore } from "../store/portalStore";
+import { getMarketCart } from "../api/marketplace";
 
 /** Public marketplace shell (MultiShop): header with search, footer. No login required. */
 export default function MarketLayout() {
@@ -8,9 +9,18 @@ export default function MarketLayout() {
   const location = useLocation();
   const [params] = useSearchParams();
   const customer = usePortalStore((s) => s.customer);
-  const cart = usePortalStore((s) => s.cart);
   const [q, setQ] = useState(params.get("q") || "");
   const [menu, setMenu] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Cart badge = items across all shops; refreshed on navigation and when a page changes the cart.
+  useEffect(() => {
+    if (!customer) return setCartCount(0);
+    const refresh = () => getMarketCart().then((c) => setCartCount(c?.itemCount || 0)).catch(() => {});
+    refresh();
+    window.addEventListener("market-cart-changed", refresh);
+    return () => window.removeEventListener("market-cart-changed", refresh);
+  }, [customer, location.pathname]);
 
   useEffect(() => {
     setMenu(false);
@@ -22,7 +32,6 @@ export default function MarketLayout() {
     navigate(`/market/search${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`);
   };
 
-  const cartCount = cart?.itemCount ?? 0;
   const links = [
     { to: "/market/search", label: "Products" },
     { to: "/market/shops", label: "Shops" },
@@ -66,7 +75,7 @@ export default function MarketLayout() {
             )}
           </nav>
 
-          <Link to={customer ? "/portal/cart" : "/portal/login"} className="btn-primary h-11 shrink-0" aria-label="Cart">
+          <Link to="/market/cart" className="btn-primary h-11 shrink-0" aria-label="Cart">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             <span className="hidden sm:inline">Cart{cartCount ? ` (${cartCount})` : ""}</span>
           </Link>

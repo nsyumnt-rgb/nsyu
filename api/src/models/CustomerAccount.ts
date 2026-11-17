@@ -19,6 +19,8 @@ export interface CustomerAccountAttributes {
   last_login_at?: Date | null;
   created_by?: number | null;
   approved_by?: number | null;
+  /** Shared by the accounts of one person across shops (see migration 05). */
+  identity_group?: string | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -26,7 +28,7 @@ export interface CustomerAccountAttributes {
 export interface CustomerAccountCreationAttributes
   extends Optional<
     CustomerAccountAttributes,
-    "id" | "email" | "password_hash" | "supabase_uid" | "last_login_at" | "created_by" | "approved_by" | "created_at" | "updated_at"
+    "id" | "email" | "password_hash" | "supabase_uid" | "last_login_at" | "created_by" | "approved_by" | "identity_group" | "created_at" | "updated_at"
   > {}
 
 export class CustomerAccount
@@ -45,6 +47,7 @@ export class CustomerAccount
   public last_login_at?: Date | null;
   public created_by?: number | null;
   public approved_by?: number | null;
+  public identity_group?: string | null;
   public customer?: Customer;
   public shop?: Shop;
   public readonly created_at!: Date;
@@ -69,6 +72,7 @@ CustomerAccount.init(
     last_login_at: { type: DataTypes.DATE, allowNull: true },
     created_by: { type: DataTypes.INTEGER, allowNull: true },
     approved_by: { type: DataTypes.INTEGER, allowNull: true },
+    identity_group: { type: DataTypes.STRING(64), allowNull: true },
   },
   {
     sequelize,

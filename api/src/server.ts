@@ -82,20 +82,27 @@ async function ensureSingleLedgerSchema() {
  * Phase A schema (suppliers, purchases, purchase_items, supplier_ledger).
  * Additive + idempotent — mirrors migrations/04_suppliers_purchases_supplier_ledger.sql.
  */
-async function ensurePurchaseSchema() {
+async function runSqlMigration(file: string, okMessage: string) {
   try {
     if (sequelize.getDialect() !== "postgres") return;
     // tsc doesn't copy .sql into dist/, so look next to this file first, then in src/.
-    const file = "04_suppliers_purchases_supplier_ledger.sql";
     const candidates = [path.join(__dirname, "migrations", file), path.join(__dirname, "..", "src", "migrations", file)];
     const found = candidates.find((p) => fs.existsSync(p));
     if (!found) throw new Error(`Migration file not found: ${file}`);
-    const sql = fs.readFileSync(found, "utf8");
-    await sequelize.query(sql);
-    console.log("✅ Supplier & purchase schema verified");
+    await sequelize.query(fs.readFileSync(found, "utf8"));
+    console.log(`✅ ${okMessage}`);
   } catch (err) {
-    console.warn("⚠️ Supplier & purchase schema check warning:", err);
+    console.warn(`⚠️ ${okMessage} — check warning:`, err);
   }
+}
+
+async function ensurePurchaseSchema() {
+  await runSqlMigration("04_suppliers_purchases_supplier_ledger.sql", "Supplier & purchase schema verified");
+}
+
+/** MultiShop: customer identity groups (additive, idempotent). */
+async function ensureIdentitySchema() {
+  await runSqlMigration("05_customer_identity_groups.sql", "Customer identity schema verified");
 }
 
 async function start() {
@@ -104,6 +111,7 @@ async function start() {
     console.log("✅ Database connected");
     await ensureSingleLedgerSchema();
     await ensurePurchaseSchema();
+    await ensureIdentitySchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);

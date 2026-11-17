@@ -27,6 +27,7 @@ import supplierRoutes from "./routes/supplierRoutes";
 import purchaseRoutes from "./routes/purchaseRoutes";
 import supplierLedgerRoutes from "./routes/supplierLedgerRoutes";
 import marketplaceRoutes from "./routes/marketplaceRoutes";
+import marketCartRoutes from "./routes/marketCartRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import { sequelize } from "./models";
 
@@ -105,6 +106,7 @@ app.use("/api/suppliers", supplierRoutes);
 app.use("/api/purchases", purchaseRoutes);
 app.use("/api/supplier-ledger", supplierLedgerRoutes);
 app.use("/api/marketplace", marketplaceRoutes);
+app.use("/api/customer-portal/market", marketCartRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: "Route not found" }));
 app.use(errorHandler);

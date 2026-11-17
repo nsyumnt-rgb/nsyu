@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getMarketListing, searchMarket, type MarketListing, type MarketListingDetail } from "../../api/marketplace";
-import { resolveAssetUrl } from "../../api/client";
-import { setCartItemApi } from "../../api/portal";
+import { getMarketCart, getMarketListing, searchMarket, setMarketCartItem, type MarketCart, type MarketListing, type MarketListingDetail } from "../../api/marketplace";
+import { resolveAssetUrl, apiErrorMessage } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
 import MarketCard, { listingHref, rupees } from "../../components/MarketCard";
 
@@ -11,8 +10,7 @@ export default function MarketProduct() {
   const { shopId = "", productId = "" } = useParams();
   const navigate = useNavigate();
   const customer = usePortalStore((s) => s.customer);
-  const cart = usePortalStore((s) => s.cart);
-  const setCart = usePortalStore((s) => s.setCart);
+  const [cart, setCart] = useState<MarketCart | null>(null);
 
   const [item, setItem] = useState<MarketListingDetail | null>(null);
   const [related, setRelated] = useState<MarketListing[]>([]);
@@ -41,6 +39,7 @@ export default function MarketProduct() {
         }
       })
       .catch(() => alive && setMissing(true));
+    if (customer) getMarketCart().then((c) => alive && setCart(c)).catch(() => {});
     window.scrollTo({ top: 0 });
     return () => {
       alive = false;
@@ -66,25 +65,27 @@ export default function MarketProduct() {
   }
 
   const gallery = (item.images.length ? item.images.map((i) => i.url) : item.imageUrl ? [item.imageUrl] : []).map((u) => resolveAssetUrl(u)).filter(Boolean) as string[];
-  const canOrderHere = Boolean(customer && customer.shop?.id === item.shop.id);
-  const inCart = cart?.items?.find((c) => c.productId === item.productId)?.quantity ?? 0;
-  const maxQty = Math.max(0, item.stock - (canOrderHere ? inCart : 0));
+  const signedIn = Boolean(customer);
+  const inCart =
+    cart?.groups.find((g) => g.shop.id === item.shop.id)?.cart?.items.find((c) => c.productId === item.productId)?.quantity ?? 0;
+  const maxQty = Math.max(0, item.stock - inCart);
   const cheapest = [item, ...item.otherOffers].filter((o) => o.inStock).sort((a, b) => a.price - b.price)[0];
 
   async function add(buyNow: boolean) {
     if (!item) return;
-    if (!canOrderHere) {
-      navigate(`/portal/login?shop=${encodeURIComponent(item.shop.code)}`);
+    if (!signedIn) {
+      navigate(`/portal/login?next=${encodeURIComponent(`/market/p/${item.shop.id}/${item.productId}`)}`);
       return;
     }
     setBusy(true);
     setMsg(null);
     try {
-      setCart(await setCartItemApi(item.productId, inCart + qty));
-      if (buyNow) navigate("/portal/cart");
+      setCart(await setMarketCartItem(item.shop.id, item.productId, inCart + qty));
+      window.dispatchEvent(new Event("market-cart-changed"));
+      if (buyNow) navigate("/market/cart");
       else setMsg({ ok: true, text: `Added ${qty} to your cart` });
-    } catch (err: any) {
-      setMsg({ ok: false, text: err?.response?.data?.message || "Could not add to cart" });
+    } catch (err) {
+      setMsg({ ok: false, text: apiErrorMessage(err, "Could not add to cart") });
     } finally {
       setBusy(false);
     }
@@ -152,19 +153,17 @@ export default function MarketProduct() {
               <span className="w-10 text-center font-bold tabular" aria-live="polite">{qty}</span>
               <button type="button" disabled={qty >= maxQty} onClick={() => setQty((q) => q + 1)} className="w-12 h-full text-[18px] font-bold disabled:opacity-40" aria-label="Increase quantity">+</button>
             </div>
-            <button type="button" disabled={!item.inStock || busy || (canOrderHere && maxQty <= 0)} onClick={() => add(false)} className="btn-primary h-12 flex-1 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none">
-              {busy ? "Adding…" : canOrderHere ? "Add to cart" : `Log in to order from ${item.shop.name}`}
+            <button type="button" disabled={!item.inStock || busy || (signedIn && maxQty <= 0)} onClick={() => add(false)} className="btn-primary h-12 flex-1 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none">
+              {busy ? "Adding…" : signedIn ? "Add to cart" : "Log in to add to cart"}
             </button>
-            {canOrderHere && (
+            {signedIn && (
               <button type="button" disabled={!item.inStock || busy || maxQty <= 0} onClick={() => add(true)} className="btn-secondary h-12 flex-1">Buy now</button>
             )}
           </div>
-          {!canOrderHere && customer && (
-            <p className="mt-2 text-[12px] text-slate-500">You're signed in with {customer.shop?.name}. Ordering across shops with one cart is coming next.</p>
-          )}
+          {signedIn && inCart > 0 && <p className="mt-2 text-[12px] text-slate-500">{inCart} already in your cart from {item.shop.name}.</p>}
           {msg && (
             <div className={`mt-3 rounded-lg px-3 py-2 text-[13px] ${msg.ok ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
-              {msg.text} {msg.ok && <Link to="/portal/cart" className="font-semibold underline ml-1">View cart</Link>}
+              {msg.text} {msg.ok && <Link to="/market/cart" className="font-semibold underline ml-1">View cart</Link>}
             </div>
           )}
           <div className="mt-6 rounded-2xl border border-border p-4 text-[13px] text-slate-600">
