@@ -21,8 +21,10 @@ export function requirePermission(module: ModuleName | string, action: ActionNam
 
     const canonicalModule = toCanonicalModule(module);
 
-    // 1. Super Admin has unrestricted access to all modules and shops
-    if (auth.isSuperAdmin || auth.roleCode === "super_admin" || auth.roleName === "Super Admin") {
+    // 1. Super Admin has unrestricted access to all modules and shops.
+    // Only the server-verified isSuperAdmin flag counts — never a role *name*, which a shop
+    // owner could give to any custom staff role.
+    if (auth.isSuperAdmin) {
       return next();
     }
 
@@ -120,7 +122,7 @@ export function requireSelfOrPermission(
     const auth = req.auth;
     if (!auth) return res.status(401).json({ success: false, message: "Authentication required" });
 
-    if (auth.isSuperAdmin || auth.roleCode === "super_admin") return next();
+    if (auth.isSuperAdmin) return next();
     if (auth.isOwner) return next();
 
     const targetEmployeeId = resolveTargetEmployeeId(req);
@@ -141,7 +143,7 @@ export async function getAllowedFields(
   const result = {} as Record<SensitiveField, boolean>;
 
   // Super Admin & Owner see everything
-  if (req.auth?.isSuperAdmin || req.auth?.roleCode === "super_admin" || req.auth?.isOwner) {
+  if (req.auth?.isSuperAdmin || req.auth?.isOwner) {
     fields.forEach((f) => (result[f] = true));
     return result;
   }

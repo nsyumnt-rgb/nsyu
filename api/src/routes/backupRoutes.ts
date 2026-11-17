@@ -5,7 +5,8 @@ import { exportBackup, validateBackup, restoreBackup } from "../controllers/back
 const router = Router();
 router.use(authenticate);
 
-router.get("/", exportBackup);
+// Full data export (customers, ledger, sales) is owner-only, like restore.
+router.get("/", requireOwner, exportBackup);
 router.post("/validate", validateBackup);
 router.post("/restore", requireOwner, restoreBackup);
 

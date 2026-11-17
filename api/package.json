@@ -14,7 +14,10 @@
     "test:isolation": "ts-node-dev --transpile-only --exit-child scripts/test_tenant_isolation.ts",
     "test:marketplace": "ts-node-dev --transpile-only --exit-child scripts/test_marketplace.ts",
     "test:market-cart": "ts-node-dev --transpile-only --exit-child scripts/test_market_cart.ts",
-    "test:shop-approval": "ts-node-dev --transpile-only --exit-child scripts/test_shop_approval.ts"
+    "test:shop-approval": "ts-node-dev --transpile-only --exit-child scripts/test_shop_approval.ts",
+    "test:roles": "ts-node-dev --transpile-only --exit-child scripts/test_role_matrix.ts",
+    "test:workflows": "ts-node-dev --transpile-only --exit-child scripts/test_workflows.ts",
+    "test:all": "npm run -s test:roles && npm run -s test:workflows && npm run -s test:isolation && npm run -s test:phase-a && npm run -s test:marketplace && npm run -s test:market-cart && npm run -s test:shop-approval"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
