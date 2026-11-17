@@ -77,7 +77,7 @@ export default function SupplierDetail() {
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold text-slate-900">{supplier.name}</h1>
+              <h1 className="page-title">{supplier.name}</h1>
               <span className="text-xs font-mono font-medium text-slate-400">ID: {supplier.id}</span>
               <span
                 className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${
@@ -217,9 +217,9 @@ export default function SupplierDetail() {
                   <th className="py-2.5 px-4">Date</th>
                   <th className="py-2.5 px-4">Description</th>
                   <th className="py-2.5 px-4">Reference</th>
-                  <th className="py-2.5 px-4 text-right">Debit (₹)</th>
-                  <th className="py-2.5 px-4 text-right">Credit (₹)</th>
-                  <th className="py-2.5 px-4 text-right">Balance</th>
+                  <th className="py-2.5 px-4 text-right">Billed (₹)</th>
+                  <th className="py-2.5 px-4 text-right">Paid / Returned (₹)</th>
+                  <th className="py-2.5 px-4 text-right">You owe</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -237,11 +237,12 @@ export default function SupplierDetail() {
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right font-medium text-rose-600">
-                        {le.entry_type === "debit" ? `₹${Number(le.amount).toLocaleString("en-IN")}` : "—"}
+                      {/* Supplier ledger: credit raises what we owe (bill), debit lowers it (payment/return). */}
+                      <td className="py-3 px-4 text-right font-medium text-amber-600">
+                        {le.entry_type === "credit" ? `₹${Number(le.amount).toLocaleString("en-IN")}` : "—"}
                       </td>
                       <td className="py-3 px-4 text-right font-medium text-emerald-600">
-                        {le.entry_type === "credit" ? `₹${Number(le.amount).toLocaleString("en-IN")}` : "—"}
+                        {le.entry_type === "debit" ? `₹${Number(le.amount).toLocaleString("en-IN")}` : "—"}
                       </td>
                       <td className="py-3 px-4 text-right font-bold text-slate-900">
                         ₹{Number(le.balance_after || 0).toLocaleString("en-IN")}

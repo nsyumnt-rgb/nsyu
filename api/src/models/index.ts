@@ -36,6 +36,9 @@ import { ShopPortalSettings } from "./ShopPortalSettings";
 import { PlatformAuditLog } from "./PlatformAuditLog";
 import { StatusHistory } from "./StatusHistory";
 import { EmailNotification } from "./EmailNotification";
+import { Supplier } from "./Supplier";
+import { Purchase, PurchaseItem } from "./Purchase";
+import { SupplierLedger } from "./SupplierLedger";
 
 /* ---------------- Owner ---------------- */
 Owner.hasMany(Shop, { foreignKey: "owner_id", as: "shops" });
@@ -186,6 +189,19 @@ EmailNotification.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
 Customer.hasMany(EmailNotification, { foreignKey: "customer_id", as: "emailNotifications" });
 EmailNotification.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
 
+/* ---------------- Suppliers, Purchases & Supplier Ledger (Phase A) ---------------- */
+Supplier.hasMany(Purchase, { foreignKey: "supplier_id", as: "purchases" });
+Purchase.belongsTo(Supplier, { foreignKey: "supplier_id", as: "supplier" });
+Purchase.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+Purchase.hasMany(PurchaseItem, { foreignKey: "purchase_id", as: "items" });
+PurchaseItem.belongsTo(Purchase, { foreignKey: "purchase_id", as: "purchase" });
+PurchaseItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+Purchase.hasMany(SupplierLedger, { foreignKey: "purchase_id", as: "ledgerEntries" });
+Supplier.hasMany(SupplierLedger, { foreignKey: "supplier_id", as: "ledgerEntries" });
+SupplierLedger.belongsTo(Supplier, { foreignKey: "supplier_id", as: "supplier" });
+SupplierLedger.belongsTo(Purchase, { foreignKey: "purchase_id", as: "purchase" });
+SupplierLedger.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+
 export {
   sequelize,
   Owner,
@@ -227,4 +243,8 @@ export {
   PlatformAuditLog,
   StatusHistory,
   EmailNotification,
+  Supplier,
+  Purchase,
+  PurchaseItem,
+  SupplierLedger,
 };

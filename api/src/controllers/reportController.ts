@@ -9,6 +9,7 @@ import {
   ProductStock,
   InventoryTransaction,
   Shop,
+  Supplier,
 } from "../models";
 import { getAllowedFields } from "../middleware/permission";
 
@@ -276,8 +277,21 @@ export async function customerOutstandingReport(req: Request, res: Response) {
  * `outstanding_amount` once a SupplierPayment model exists.
  */
 /** SUPPLIER OUTSTANDING REPORT — real payable balances from Supplier.current_balance / SupplierLedger now that the Purchase module exists. */
+/** SUPPLIER OUTSTANDING — what we owe each supplier, from the supplier ledger cache (Supplier.current_balance). */
 export async function supplierOutstandingReport(req: Request, res: Response) {
-  return res.json({ success: true, data: { summary: { totalPayable: 0, supplierCount: 0 }, suppliers: [] } });
+  const suppliers = await Supplier.findAll({
+    where: { owner_id: req.auth!.ownerId, current_balance: { [Op.ne]: 0 } },
+    order: [["current_balance", "DESC"]],
+  });
+  const totalPayable = round2(suppliers.filter((s) => Number(s.current_balance) > 0).reduce((sum, s) => sum + Number(s.current_balance), 0));
+  const totalAdvance = round2(suppliers.filter((s) => Number(s.current_balance) < 0).reduce((sum, s) => sum + Number(s.current_balance), 0));
+  return res.json({
+    success: true,
+    data: {
+      summary: { totalPayable, totalAdvance, supplierCount: suppliers.length },
+      suppliers: suppliers.map((s) => ({ id: s.id, name: s.name, phone: s.phone, balance: Number(s.current_balance) })),
+    },
+  });
 }
 
 export async function emiReport(req: Request, res: Response) {

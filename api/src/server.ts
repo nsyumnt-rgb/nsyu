@@ -1,4 +1,6 @@
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 dotenv.config();
 
 import app from "./app";
@@ -76,11 +78,32 @@ async function ensureSingleLedgerSchema() {
   }
 }
 
+/**
+ * Phase A schema (suppliers, purchases, purchase_items, supplier_ledger).
+ * Additive + idempotent — mirrors migrations/04_suppliers_purchases_supplier_ledger.sql.
+ */
+async function ensurePurchaseSchema() {
+  try {
+    if (sequelize.getDialect() !== "postgres") return;
+    // tsc doesn't copy .sql into dist/, so look next to this file first, then in src/.
+    const file = "04_suppliers_purchases_supplier_ledger.sql";
+    const candidates = [path.join(__dirname, "migrations", file), path.join(__dirname, "..", "src", "migrations", file)];
+    const found = candidates.find((p) => fs.existsSync(p));
+    if (!found) throw new Error(`Migration file not found: ${file}`);
+    const sql = fs.readFileSync(found, "utf8");
+    await sequelize.query(sql);
+    console.log("✅ Supplier & purchase schema verified");
+  } catch (err) {
+    console.warn("⚠️ Supplier & purchase schema check warning:", err);
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
     console.log("✅ Database connected");
     await ensureSingleLedgerSchema();
+    await ensurePurchaseSchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);

@@ -177,6 +177,10 @@ export interface Supplier {
   address?: string;
   gstin?: string;
   status: "active" | "inactive";
+  /** Payable to this supplier (positive = we owe them, negative = advance paid). */
+  current_balance?: number | string;
+  opening_balance?: number | string;
+  reference_code?: string | null;
 }
 
 export interface ProductStockEntry {
