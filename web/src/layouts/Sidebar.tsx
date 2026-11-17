@@ -5,7 +5,7 @@ import { usePermission } from "../hooks/usePermission";
 import { useAuthStore } from "../store/authStore";
 import type { ModuleName } from "../types";
 
-export type NavGroup = "MAIN" | "BUSINESS MANAGEMENT" | "ADMIN";
+export type NavGroup = "BUSINESS" | "ADMIN";
 
 export interface NavItem {
   to: string;
@@ -15,214 +15,44 @@ export interface NavItem {
   icon: (active: boolean) => ReactNode;
 }
 
+/** Stroke icon from one or more SVG path strings. */
+const ico = (...paths: string[]) => (active: boolean) => (
+  <svg
+    className={clsx("w-[18px] h-[18px] shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    {paths.map((d) => (
+      <path key={d} d={d} />
+    ))}
+  </svg>
+);
+
+/**
+ * Owner panel modules in the order of the Marketplace wireframe (board 7):
+ * Dashboard, Products, Inventory, Sales, Purchases, Customers, Reports, Storefront settings.
+ * Suppliers and Ledger sit next to the module they belong to.
+ */
 const NAV_ITEMS: NavItem[] = [
-  // =========================================================================
-  // 1. MAIN (Follows Mobile App Navigation: Home, Bills, Ledger, Catalog, Orders)
-  // =========================================================================
-  {
-    to: "/app",
-    label: "Dashboard",
-    module: "dashboard",
-    group: "MAIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/billing",
-    label: "Billing",
-    module: "billing",
-    group: "MAIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="4" y="2" width="16" height="20" rx="2" />
-        <line x1="8" y1="6" x2="16" y2="6" />
-        <line x1="8" y1="10" x2="16" y2="10" />
-        <line x1="8" y1="14" x2="12" y2="14" />
-        <line x1="8" y1="18" x2="10" y2="18" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/ledger",
-    label: "Ledger",
-    module: "ledger",
-    group: "MAIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-        <line x1="9" y1="7" x2="15" y2="7" />
-        <line x1="9" y1="11" x2="13" y2="11" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/products",
-    label: "Catalog",
-    module: "products",
-    group: "MAIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-        <line x1="7" y1="7" x2="7.01" y2="7" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/orders",
-    label: "Orders",
-    module: "orders",
-    group: "MAIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 0 1-8 0" />
-      </svg>
-    ),
-  },
-
-  // =========================================================================
-  // 2. BUSINESS MANAGEMENT
-  // =========================================================================
-  {
-    to: "/app/inventory",
-    label: "Inventory",
-    module: "inventory",
-    group: "BUSINESS MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polygon points="12 2 2 7 12 12 22 7 12 2" />
-        <polyline points="2 17 12 22 22 17" />
-        <polyline points="2 12 12 17 22 12" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/customers",
-    label: "Customers",
-    module: "customers",
-    group: "BUSINESS MANAGEMENT",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-  },
-  // =========================================================================
-  // 3. ADMIN
-  // =========================================================================
-  {
-    to: "/app/roles",
-    label: "Roles & Permissions",
-    module: "role_permissions",
-    group: "ADMIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      </svg>
-    ),
-  },
-  {
-    to: "/app/settings",
-    label: "Settings",
-    module: "settings",
-    group: "ADMIN",
-    icon: (active) => (
-      <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0 .33-1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-      </svg>
-    ),
-  },
+  { to: "/app", label: "Dashboard", module: "dashboard", group: "BUSINESS", icon: ico("M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z") },
+  { to: "/app/products", label: "Products", module: "products", group: "BUSINESS", icon: ico("M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z", "M7 7h.01") },
+  { to: "/app/inventory", label: "Inventory", module: "inventory", group: "BUSINESS", icon: ico("M12 2L2 7l10 5 10-5-10-5z", "M2 17l10 5 10-5", "M2 12l10 5 10-5") },
+  { to: "/app/billing", label: "Sales & POS", module: "billing", group: "BUSINESS", icon: ico("M4 2h16v20l-3-2-3 2-3-2-3 2-4-2z", "M8 7h8", "M8 11h8", "M8 15h5") },
+  { to: "/app/orders", label: "Online orders", module: "orders", group: "BUSINESS", icon: ico("M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z", "M3 6h18", "M16 10a4 4 0 0 1-8 0") },
+  { to: "/app/purchase", label: "Purchases", module: "purchase", group: "BUSINESS", icon: ico("M1 3h15v13H1z", "M16 8h4l3 3v5h-7z", "M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
+  { to: "/app/suppliers", label: "Suppliers", module: "suppliers", group: "BUSINESS", icon: ico("M3 21h18", "M5 21V7l7-4 7 4v14", "M9 21v-6h6v6") },
+  { to: "/app/customers", label: "Customers", module: "customers", group: "BUSINESS", icon: ico("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M23 21v-2a4 4 0 0 0-3-3.87", "M16 3.13a4 4 0 0 1 0 7.75") },
+  { to: "/app/ledger", label: "Customer ledger", module: "ledger", group: "BUSINESS", icon: ico("M4 19.5A2.5 2.5 0 0 1 6.5 17H20", "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z", "M9 7h6", "M9 11h4") },
+  { to: "/app/reports", label: "Reports", module: "reports", group: "BUSINESS", icon: ico("M3 3v18h18", "M7 15l4-4 3 3 5-6") },
+  { to: "/app/settings", label: "Storefront & settings", module: "settings", group: "ADMIN", icon: ico("M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z") },
+  { to: "/app/roles", label: "Roles & permissions", module: "role_permissions", group: "ADMIN", icon: ico("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z") },
 ];
 
-const GROUPS: NavGroup[] = [
-  "MAIN",
-  "BUSINESS MANAGEMENT",
-  "ADMIN",
-];
+const GROUPS: NavGroup[] = ["BUSINESS", "ADMIN"];
 
 const STORAGE_KEY = "nsyu_sidebar_collapsed_groups";
 
