@@ -3,59 +3,12 @@ import { Link } from "react-router-dom";
 import {
   getPortalCategoriesApi,
   getPortalProductsApi,
-  getPortalProductApi,
   setCartItemApi,
   removeCartItemApi,
 } from "../../api/portal";
 import { resolveAssetUrl } from "../../api/client";
+import { ProductCard, CartIcon, inr, type Category, type Product } from "../../components/StoreProduct";
 import { usePortalStore } from "../../store/portalStore";
-
-interface Category {
-  id: number;
-  name: string;
-  imageUrl?: string | null;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  sku: string;
-  brand?: string | null;
-  unit: string;
-  description?: string | null;
-  mrp?: number;
-  category?: Category | null;
-  images?: Array<{ id: number; url: string; is_primary: boolean }>;
-  pricing: {
-    unitPrice: number;
-    gstPercent: number;
-    sellingPriceInclTax: number;
-    mrp?: number;
-  };
-  inventory: {
-    availableStock: number;
-    isAvailable: boolean;
-  };
-}
-
-/** Indian-grouped rupees; drops ".00" for whole amounts like a retail price tag. */
-const inr = (n: number) => {
-  const v = Number(n || 0);
-  const whole = Math.abs(v % 1) < 0.005;
-  return "₹" + v.toLocaleString("en-IN", { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
-};
-
-/** Real price/MRP comparison from the API — no invented discounts. */
-function priceInfo(p: Product) {
-  const price = Number(p.pricing?.sellingPriceInclTax || 0);
-  const mrp = Number(p.pricing?.mrp ?? p.mrp ?? 0);
-  const off = mrp > price && price > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  return { price, mrp, off };
-}
-
-function primaryImage(p: Product) {
-  return resolveAssetUrl(p.images?.find((img) => img.is_primary)?.url || p.images?.[0]?.url);
-}
 
 export default function PortalCatalog() {
   const cart = usePortalStore((s) => s.cart);
@@ -72,8 +25,14 @@ export default function PortalCatalog() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
-  const [quickView, setQuickView] = useState<Product | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  // Listing filters (wireframe p3): sort + price range, applied server-side
+  const [sort, setSort] = useState<"" | "newest" | "price_asc" | "price_desc">("");
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [appliedPrice, setAppliedPrice] = useState<{ min?: number; max?: number }>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Categories + newest products (for the New Arrivals rail)
   useEffect(() => {
@@ -92,6 +51,9 @@ export default function PortalCatalog() {
         categoryId: selectedCategory ?? undefined,
         page,
         limit: 12,
+        sort: sort || undefined,
+        minPrice: appliedPrice.min,
+        maxPrice: appliedPrice.max,
       });
       setProducts(res?.data || []);
       setTotalPages(res?.pagination?.pages || 1);
@@ -101,7 +63,7 @@ export default function PortalCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [search, selectedCategory, page]);
+  }, [search, selectedCategory, page, sort, appliedPrice]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -140,14 +102,30 @@ export default function PortalCatalog() {
 
   const activeCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
   const cartCount = cart?.itemCount ?? cart?.items?.length ?? 0;
-  const browsing = !search.trim() && selectedCategory === null;
+  const priceActive = appliedPrice.min !== undefined || appliedPrice.max !== undefined;
+  const browsing = !search.trim() && selectedCategory === null && !priceActive && !sort;
+
+  const applyPrice = () => {
+    const toNum = (v: string) => (v.trim() === "" || !Number.isFinite(Number(v)) ? undefined : Math.max(0, Number(v)));
+    setAppliedPrice({ min: toNum(priceMin), max: toNum(priceMax) });
+    setPage(1);
+    setFiltersOpen(false);
+  };
+  const clearAll = () => {
+    setSearch("");
+    setSelectedCategory(null);
+    setPriceMin("");
+    setPriceMax("");
+    setAppliedPrice({});
+    setSort("");
+    setPage(1);
+  };
 
   const cardProps = (prod: Product) => ({
     product: prod,
     qty: getCartQuantity(prod.id),
     updating: updatingId === prod.id,
     onQty: (q: number) => handleUpdateQuantity(prod.id, q),
-    onOpen: () => setQuickView(prod),
   });
 
   return (
@@ -219,18 +197,91 @@ export default function PortalCatalog() {
 
       {/* ── All products grid ─────────────────────────────────── */}
       <section ref={gridRef} className="scroll-mt-24 space-y-6">
-        <div className="text-center">
-          <h2 className="text-[26px] sm:text-[34px] font-semibold tracking-tight">
-            {activeCategoryName || (search.trim() ? "Search results" : "All Products")}
-          </h2>
-          <p className="text-[13px] text-slate-500 mt-1">
-            {loading ? "Loading…" : totalCount !== null ? `${totalCount} product${totalCount === 1 ? "" : "s"}` : `${products.length} shown`}
-            {search.trim() && !loading ? ` for “${search.trim()}”` : ""}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h2 className="text-[24px] sm:text-[30px] font-semibold tracking-tight">
+              {activeCategoryName || (search.trim() ? "Search results" : "All Products")}
+              {!loading && totalCount !== null && <span className="text-slate-400 font-normal text-[18px] sm:text-[20px]"> ({totalCount})</span>}
+            </h2>
+            {search.trim() && !loading && <p className="text-[13px] text-slate-500 mt-1">for “{search.trim()}”</p>}
+          </div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setFiltersOpen((v) => !v)} className="lg:hidden btn-secondary rounded-full">
+              Filters{priceActive || selectedCategory !== null ? " •" : ""}
+            </button>
+            <label className="flex items-center gap-2 text-[13px] text-slate-500">
+              <span className="hidden sm:inline">Sort:</span>
+              <select
+                value={sort}
+                onChange={(e) => { setSort(e.target.value as typeof sort); setPage(1); }}
+                className="input w-auto rounded-full py-2 pr-8 text-[13px] font-medium"
+                aria-label="Sort products"
+              >
+                <option value="">Relevance</option>
+                <option value="newest">Newest first</option>
+                <option value="price_asc">Price: low to high</option>
+                <option value="price_desc">Price: high to low</option>
+              </select>
+            </label>
+          </div>
         </div>
 
+        <div className="flex gap-8 items-start">
+          {/* Filter sidebar (bottom sheet on phones) */}
+          {filtersOpen && <div className="lg:hidden fixed inset-0 z-40 bg-navy-950/40" onClick={() => setFiltersOpen(false)} aria-hidden="true" />}
+          <aside
+            className={`${filtersOpen ? "fixed inset-x-0 bottom-0 z-50 block bg-white rounded-t-3xl shadow-2xl p-6 max-h-[80vh] overflow-y-auto" : "hidden"} lg:static lg:z-auto lg:block lg:w-56 lg:shrink-0 lg:sticky lg:top-24 lg:p-0 lg:shadow-none lg:rounded-none lg:bg-transparent lg:max-h-none space-y-6`}
+          >
+            <div className="flex items-center justify-between lg:hidden">
+              <span className="text-[16px] font-bold">Filters</span>
+              <button type="button" onClick={() => setFiltersOpen(false)} className="w-8 h-8 rounded-full hover:bg-slate-100" aria-label="Close filters">✕</button>
+            </div>
+            <div>
+              <div className="section-label mb-2">Category</div>
+              <ul className="space-y-0.5 max-h-72 overflow-y-auto pr-1">
+                {[{ id: null as number | null, name: "All products" }, ...categories].map((c) => (
+                  <li key={c.id ?? "all"}>
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedCategory(c.id); setPage(1); setFiltersOpen(false); }}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[13.5px] transition ${selectedCategory === c.id ? "bg-brand-50 text-brand-700 font-semibold" : "text-slate-700 hover:bg-slate-100"}`}
+                    >
+                      {c.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <div className="section-label mb-2">Price (₹)</div>
+              <div className="flex items-center gap-2">
+                <input type="number" min={0} inputMode="numeric" placeholder="Min" value={priceMin} onChange={(e) => setPriceMin(e.target.value)} className="input px-2.5" aria-label="Minimum price" />
+                <span className="text-slate-400">–</span>
+                <input type="number" min={0} inputMode="numeric" placeholder="Max" value={priceMax} onChange={(e) => setPriceMax(e.target.value)} className="input px-2.5" aria-label="Maximum price" />
+              </div>
+              <button type="button" onClick={applyPrice} className="btn-secondary btn-sm w-full mt-2">Apply price</button>
+            </div>
+            {(priceActive || selectedCategory !== null || sort || search) && (
+              <button type="button" onClick={clearAll} className="text-[13px] font-semibold text-rose-600 hover:text-rose-700">Clear all filters</button>
+            )}
+          </aside>
+
+          <div className="flex-1 min-w-0 space-y-6">
+            {(priceActive || selectedCategory !== null) && (
+              <div className="flex flex-wrap gap-2">
+                {selectedCategory !== null && (
+                  <button type="button" onClick={() => setSelectedCategory(null)} className="badge-brand hover:bg-brand-100">{activeCategoryName} ✕</button>
+                )}
+                {priceActive && (
+                  <button type="button" onClick={() => { setAppliedPrice({}); setPriceMin(""); setPriceMax(""); }} className="badge-brand hover:bg-brand-100">
+                    {appliedPrice.min !== undefined ? `₹${appliedPrice.min}` : "₹0"} – {appliedPrice.max !== undefined ? `₹${appliedPrice.max}` : "any"} ✕
+                  </button>
+                )}
+              </div>
+            )}
+
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8 sm:gap-x-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6">
             {Array.from({ length: 10 }).map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="aspect-square rounded-[22px] bg-[#EEEEEE]" />
@@ -246,14 +297,14 @@ export default function PortalCatalog() {
             </div>
             <h3 className="text-[16px] font-semibold text-navy-900">No products found</h3>
             <p className="text-[13px] text-slate-500 mt-1">Try a different search or choose another category.</p>
-            {(search || selectedCategory !== null) && (
-              <button type="button" onClick={() => { setSearch(""); setSelectedCategory(null); }} className="btn-secondary mt-5 rounded-full">
+            {(search || selectedCategory !== null || priceActive) && (
+              <button type="button" onClick={clearAll} className="btn-secondary mt-5 rounded-full">
                 Clear filters
               </button>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-10 sm:gap-x-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10 sm:gap-x-6">
             {products.map((prod) => (
               <ProductCard key={prod.id} {...cardProps(prod)} />
             ))}
@@ -273,6 +324,8 @@ export default function PortalCatalog() {
             </button>
           </div>
         )}
+          </div>
+        </div>
       </section>
 
       {/* ── Mobile floating cart bar ──────────────────────────── */}
@@ -293,15 +346,6 @@ export default function PortalCatalog() {
         </div>
       )}
 
-      {quickView && (
-        <QuickView
-          product={quickView}
-          qty={getCartQuantity(quickView.id)}
-          updating={updatingId === quickView.id}
-          onQty={(q) => handleUpdateQuantity(quickView.id, q)}
-          onClose={() => setQuickView(null)}
-        />
-      )}
     </div>
   );
 }
@@ -383,223 +427,6 @@ function ProductRail({ title, children }: { title: string; children: React.React
   );
 }
 
-/* ───────────────────────── Product card ───────────────────────── */
-
-function ProductCard({
-  product,
-  qty,
-  updating,
-  onQty,
-  onOpen,
-}: {
-  product: Product;
-  qty: number;
-  updating: boolean;
-  onQty: (q: number) => void;
-  onOpen: () => void;
-}) {
-  const img = primaryImage(product);
-  const [imgFailed, setImgFailed] = useState(false);
-  const { price, mrp, off } = priceInfo(product);
-  const stock = product.inventory.availableStock;
-  const out = stock <= 0;
-
-  return (
-    <div className="group flex flex-col">
-      <button type="button" onClick={onOpen} className="relative block aspect-square rounded-[22px] bg-[#EEEEEE] overflow-hidden" aria-label={`View ${product.name}`}>
-        {img && !imgFailed ? (
-          <img
-            src={img}
-            alt={product.name}
-            loading="lazy"
-            onError={() => setImgFailed(true)}
-            className={`absolute inset-0 w-full h-full object-contain p-[12%] mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.06] ${out ? "opacity-50 grayscale" : ""}`}
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-            <BoxIcon className="w-12 h-12" />
-            <span className="text-[11px] mt-1.5 font-medium">No image</span>
-          </div>
-        )}
-        {off > 0 && (
-          <span className="absolute left-3 bottom-3 px-3 py-1 rounded-full bg-white text-[12px] sm:text-[13px] font-bold text-rose-600 shadow-xs">
-            {off}% OFF
-          </span>
-        )}
-        {out ? (
-          <span className="absolute right-3 top-3 px-2.5 py-1 rounded-full bg-white/95 text-[11px] font-semibold text-slate-600">Out of stock</span>
-        ) : stock <= 5 ? (
-          <span className="absolute right-3 top-3 px-2.5 py-1 rounded-full bg-white/95 text-[11px] font-semibold text-amber-700">Only {stock} left</span>
-        ) : null}
-      </button>
-
-      <button type="button" onClick={onOpen} title={product.name} className="mt-4 text-center text-[13.5px] sm:text-[15.5px] text-slate-800 leading-snug line-clamp-2 min-h-[2.6em] hover:text-brand-700 tracking-[0.01em]">
-        {product.name}
-      </button>
-      <div className="mt-1.5 flex items-baseline justify-center flex-wrap gap-x-2 gap-y-0.5">
-        <span className="text-[15px] sm:text-[17px] font-bold text-navy-900 tabular">{inr(price)}</span>
-        {off > 0 && <span className="text-[12.5px] sm:text-[13.5px] text-slate-400 line-through tabular">{inr(mrp)}</span>}
-      </div>
-
-      <div className="mt-3">
-        {qty > 0 ? (
-          <div className="mx-auto flex items-center justify-between max-w-[180px] rounded-full bg-brand-50 ring-1 ring-brand-200 p-1">
-            <button type="button" disabled={updating} onClick={() => onQty(qty - 1)} className="w-8 h-8 rounded-full bg-white text-brand-800 text-[17px] font-bold hover:bg-brand-100 shadow-xs disabled:opacity-50" aria-label="Decrease quantity">
-              −
-            </button>
-            <span className="text-[13px] font-bold text-brand-800 tabular">{updating ? "…" : `${qty} in cart`}</span>
-            <button type="button" disabled={updating || qty >= stock} onClick={() => onQty(qty + 1)} className="w-8 h-8 rounded-full bg-white text-brand-800 text-[17px] font-bold hover:bg-brand-100 shadow-xs disabled:opacity-50" aria-label="Increase quantity">
-              +
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            disabled={updating || out}
-            onClick={() => onQty(1)}
-            className="mx-auto flex w-full max-w-[180px] h-10 rounded-full border border-navy-900 text-navy-900 text-[13px] font-semibold items-center justify-center gap-2 transition hover:bg-navy-900 hover:text-white disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-transparent active:scale-[0.98]"
-          >
-            <CartIcon className="w-4 h-4" />
-            {out ? "Out of stock" : updating ? "Adding…" : "Add to cart"}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ───────────────────────── Quick view modal ───────────────────────── */
-
-function QuickView({
-  product,
-  qty,
-  updating,
-  onQty,
-  onClose,
-}: {
-  product: Product;
-  qty: number;
-  updating: boolean;
-  onQty: (q: number) => void;
-  onClose: () => void;
-}) {
-  const [detail, setDetail] = useState<Product>(product);
-  const [activeImg, setActiveImg] = useState(0);
-
-  useEffect(() => {
-    let alive = true;
-    getPortalProductApi(product.id)
-      .then((d) => alive && d && setDetail({ ...product, ...d }))
-      .catch(() => {});
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => {
-      alive = false;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [product, onClose]);
-
-  const images = (detail.images || []).map((i) => resolveAssetUrl(i.url)).filter(Boolean) as string[];
-  const { price, mrp, off } = priceInfo(detail);
-  const stock = detail.inventory?.availableStock ?? product.inventory.availableStock;
-  const out = stock <= 0;
-
-  return (
-    <div className="fixed inset-0 z-50 bg-navy-950/60 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-6 animate-fade-in" onClick={onClose}>
-      <div className="bg-white w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl shadow-2xl animate-scale-up" onClick={(e) => e.stopPropagation()}>
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          <div className="p-5 sm:p-8">
-            <div className="relative aspect-square rounded-[22px] bg-[#EEEEEE] flex items-center justify-center overflow-hidden">
-              {images.length > 0 ? (
-                <img src={images[activeImg]} alt={detail.name} className="w-full h-full object-contain p-[10%] mix-blend-multiply" />
-              ) : (
-                <div className="text-slate-400 flex flex-col items-center">
-                  <BoxIcon className="w-16 h-16" />
-                  <span className="text-[12px] mt-2">No image available</span>
-                </div>
-              )}
-              {off > 0 && (
-                <span className="absolute left-3 bottom-3 px-3 py-1 rounded-full bg-white text-[13px] font-bold text-rose-600">{off}% OFF</span>
-              )}
-            </div>
-            {images.length > 1 && (
-              <div className="mt-3 flex gap-2 overflow-x-auto">
-                {images.map((src, i) => (
-                  <button
-                    key={src + i}
-                    type="button"
-                    onClick={() => setActiveImg(i)}
-                    className={`w-16 h-16 shrink-0 rounded-xl bg-[#EEEEEE] overflow-hidden ring-2 transition ${i === activeImg ? "ring-brand-500" : "ring-transparent hover:ring-slate-300"}`}
-                  >
-                    <img src={src} alt="" className="w-full h-full object-contain p-1.5 mix-blend-multiply" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="p-5 sm:p-8 md:pl-2 flex flex-col">
-            <div className="flex items-start justify-between gap-3">
-              <div className="text-[12px] font-semibold uppercase tracking-wide text-brand-700">
-                {[detail.brand, detail.category?.name].filter(Boolean).join(" · ") || "General"}
-              </div>
-              <button type="button" onClick={onClose} className="-mt-1 -mr-1 w-9 h-9 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center shrink-0" aria-label="Close">
-                ✕
-              </button>
-            </div>
-            <h2 className="mt-1.5 text-[20px] sm:text-[24px] font-semibold leading-snug">{detail.name}</h2>
-            <div className="mt-1 text-[12px] text-slate-400 font-mono">SKU {detail.sku}</div>
-
-            <div className="mt-5 flex items-baseline flex-wrap gap-x-3 gap-y-1">
-              <span className="text-[28px] font-bold text-navy-900 tabular">{inr(price)}</span>
-              {off > 0 && (
-                <>
-                  <span className="text-[16px] text-slate-400 line-through tabular">{inr(mrp)}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-rose-50 text-[12.5px] font-bold text-rose-600">{off}% OFF</span>
-                </>
-              )}
-            </div>
-            <div className="text-[12px] text-slate-500 mt-1">
-              {off > 0 && <span className="text-emerald-700 font-semibold">You save {inr(mrp - price)} · </span>}
-              {detail.pricing?.gstPercent > 0 ? `Price includes ${detail.pricing.gstPercent}% GST` : "Inclusive of all taxes"}
-            </div>
-
-            <div className="mt-4 text-[13px] font-medium">
-              {out ? <span className="text-rose-600">Out of stock</span> : stock <= 5 ? <span className="text-amber-700">Only {stock} left in stock</span> : <span className="text-emerald-700">In stock</span>}
-            </div>
-
-            {detail.description && detail.description !== detail.name && (
-              <div className="mt-5">
-                <div className="section-label mb-1.5">About this product</div>
-                <p className="text-[13.5px] text-slate-600 leading-relaxed whitespace-pre-line">{detail.description}</p>
-              </div>
-            )}
-
-            <div className="mt-auto pt-6 flex flex-col sm:flex-row gap-2.5">
-              {qty > 0 ? (
-                <div className="flex items-center justify-between rounded-full bg-brand-50 ring-1 ring-brand-200 p-1 sm:w-44">
-                  <button type="button" disabled={updating} onClick={() => onQty(qty - 1)} className="w-10 h-10 rounded-full bg-white text-brand-800 text-[18px] font-bold shadow-xs disabled:opacity-50" aria-label="Decrease quantity">−</button>
-                  <span className="text-[14px] font-bold text-brand-800 tabular">{updating ? "…" : qty}</span>
-                  <button type="button" disabled={updating || qty >= stock} onClick={() => onQty(qty + 1)} className="w-10 h-10 rounded-full bg-white text-brand-800 text-[18px] font-bold shadow-xs disabled:opacity-50" aria-label="Increase quantity">+</button>
-                </div>
-              ) : (
-                <button type="button" disabled={updating || out} onClick={() => onQty(1)} className="btn-navy btn-lg flex-1 h-12 rounded-full disabled:bg-slate-200 disabled:text-slate-500">
-                  <CartIcon className="w-4 h-4" /> {out ? "Out of stock" : updating ? "Adding…" : "Add to cart"}
-                </button>
-              )}
-              {qty > 0 && (
-                <Link to="/portal/cart" className="btn-primary btn-lg flex-1 h-12 rounded-full">
-                  Go to cart & checkout →
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ───────────────────────── Icons ───────────────────────── */
 
 function SearchIcon({ className }: { className?: string }) {
@@ -617,22 +444,6 @@ function GridIcon({ className }: { className?: string }) {
       <rect x="14" y="3" width="7" height="7" rx="2" />
       <rect x="3" y="14" width="7" height="7" rx="2" />
       <rect x="14" y="14" width="7" height="7" rx="2" />
-    </svg>
-  );
-}
-
-function BoxIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth={1.4} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-    </svg>
-  );
-}
-
-function CartIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
   );
 }

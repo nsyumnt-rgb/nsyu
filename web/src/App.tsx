@@ -35,6 +35,7 @@ import MovementDetail from "./pages/details/MovementDetail";
 import PortalLogin from "./pages/portal/PortalLogin";
 import PortalHome from "./pages/portal/PortalHome";
 import PortalCatalog from "./pages/portal/PortalCatalog";
+import PortalProduct from "./pages/portal/PortalProduct";
 import PortalCart from "./pages/portal/PortalCart";
 import PortalOrders from "./pages/portal/PortalOrders";
 import PortalOrderDetail from "./pages/portal/PortalOrderDetail";
@@ -68,6 +69,7 @@ export default function App() {
             <Route index element={<Navigate to="/portal/home" replace />} />
             <Route path="home" element={<PortalHome />} />
             <Route path="catalog" element={<PortalCatalog />} />
+            <Route path="product/:id" element={<PortalProduct />} />
             <Route path="cart" element={<PortalCart />} />
             <Route path="orders" element={<PortalOrders />} />
             <Route path="orders/:id" element={<PortalOrderDetail />} />

@@ -1,215 +1,284 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { listPortalOrdersApi } from "../../api/portal";
-import { OrderStatusBadge } from "./PortalHome";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  listPortalOrdersApi,
+  cancelPortalOrderApi,
+  getPortalLedgerSummaryApi,
+  setCartItemApi,
+} from "../../api/portal";
+import { usePortalStore } from "../../store/portalStore";
+
+/* E-commerce wireframe p8 — My account › Orders (tabs, progress tracker, khata). */
+
+const inr = (n: number) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const STEPS = [
+  { key: "pending", label: "Placed" },
+  { key: "confirmed", label: "Accepted" },
+  { key: "processing", label: "Packed" },
+  { key: "shipped", label: "Out for delivery" },
+  { key: "delivered", label: "Delivered" },
+];
+const DONE = ["delivered", "completed", "converted_to_bill", "billed"];
+const isActive = (s: string) => ["pending", "confirmed", "processing", "shipped"].includes(String(s).toLowerCase());
+const stepIndex = (s: string) => {
+  const v = String(s).toLowerCase();
+  if (DONE.includes(v)) return STEPS.length - 1;
+  return Math.max(0, STEPS.findIndex((x) => x.key === v));
+};
+const statusLabel = (s: string) => {
+  const v = String(s).toLowerCase();
+  if (v === "cancelled") return "Cancelled";
+  if (v === "converted_to_bill" || v === "billed") return "Billed";
+  if (v === "completed") return "Completed";
+  return STEPS.find((x) => x.key === v)?.label || s;
+};
+
+type Tab = "active" | "past" | "khata";
 
 export default function PortalOrders() {
+  const navigate = useNavigate();
+  const cart = usePortalStore((s) => s.cart);
+  const setCart = usePortalStore((s) => s.setCart);
+  const customer = usePortalStore((s) => s.customer);
+
+  const [tab, setTab] = useState<Tab>("active");
   const [orders, setOrders] = useState<any[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [khata, setKhata] = useState<any | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function load() {
+    setLoading(true);
+    try {
+      // Most recent 100 orders; tabs filter client-side so counts stay consistent.
+      const res = await listPortalOrdersApi({ limit: 100, page: 1 });
+      setOrders(res?.data || []);
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function loadOrders() {
-      setLoading(true);
+    load();
+    getPortalLedgerSummaryApi().then(setKhata).catch(() => setKhata(null));
+  }, []);
+
+  const active = useMemo(() => orders.filter((o) => isActive(o.status)), [orders]);
+  const past = useMemo(() => orders.filter((o) => !isActive(o.status)), [orders]);
+  const list = tab === "active" ? active : past;
+  const balance = Number(khata?.currentOutstanding ?? customer?.currentBalance ?? 0);
+
+  async function cancel(o: any) {
+    if (!window.confirm(`Cancel order ${o.order_number}?`)) return;
+    setBusy(`cancel-${o.id}`);
+    setNotice(null);
+    try {
+      await cancelPortalOrderApi(o.id);
+      setNotice({ ok: true, text: `Order ${o.order_number} cancelled.` });
+      await load();
+    } catch (err: any) {
+      setNotice({ ok: false, text: err?.response?.data?.message || "Could not cancel this order." });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reorder(o: any) {
+    const items = (o.items || []).filter((i: any) => i.product_id);
+    if (!items.length) return setNotice({ ok: false, text: "These items are no longer available to reorder." });
+    setBusy(`reorder-${o.id}`);
+    setNotice(null);
+    let latest = cart;
+    const failed: string[] = [];
+    for (const it of items) {
+      const already = latest?.items?.find((c) => c.productId === it.product_id)?.quantity ?? 0;
       try {
-        const res = await listPortalOrdersApi({
-          status: statusFilter === "all" ? undefined : statusFilter,
-          page,
-          limit: 10,
-        });
-        setOrders(res?.data || []);
-        setTotalPages(res?.pagination?.pages || 1);
+        latest = await setCartItemApi(it.product_id, already + Number(it.quantity || 1));
       } catch {
-        setOrders([]);
-      } finally {
-        setLoading(false);
+        failed.push(it.product_name);
       }
     }
-    loadOrders();
-  }, [statusFilter, page]);
-
-  const filterTabs = [
-    { id: "all", label: "All Orders" },
-    { id: "pending", label: "Pending" },
-    { id: "confirmed", label: "Confirmed" },
-    { id: "processing", label: "Processing" },
-    { id: "shipped", label: "Shipped" },
-    { id: "delivered", label: "Delivered" },
-    { id: "cancelled", label: "Cancelled" },
-  ];
+    if (latest) setCart(latest);
+    setBusy(null);
+    if (failed.length === items.length) setNotice({ ok: false, text: "None of these items could be added (out of stock or unavailable)." });
+    else navigate("/portal/cart");
+  }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">My Orders</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Track your past and live shop order status in real time.</p>
-        </div>
+      <nav className="text-[13px] text-slate-500 flex items-center gap-1.5">
+        <Link to="/portal/home" className="hover:text-brand-700">Home</Link>
+        <span>/</span>
+        <span>My account</span>
+        <span>/</span>
+        <span className="text-navy-900 font-medium">Orders</span>
+      </nav>
 
-        <Link
-          to="/portal/catalog"
-          className="px-4 py-2 bg-[#047857] hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center gap-1.5 self-start md:self-auto"
-        >
-          <span>+ New Order</span>
-        </Link>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {filterTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => {
-              setStatusFilter(tab.id);
-              setPage(1);
-            }}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
-              statusFilter === tab.id
-                ? "bg-emerald-700 text-white shadow-sm"
-                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Orders List */}
-      {loading ? (
-        <div className="py-20 text-center">
-          <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-gray-500 mt-2 font-medium">Loading orders...</p>
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
-          <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
-            <OrdersIcon className="w-8 h-8" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-8 space-y-4">
+          <div className="flex items-end justify-between gap-3">
+            <h1 className="page-title">My orders</h1>
+            <Link to="/portal/catalog" className="btn-secondary btn-sm">Continue shopping</Link>
           </div>
-          <h3 className="text-base font-bold text-gray-800">No orders found</h3>
-          <p className="text-xs text-gray-500 mt-1">
-            {statusFilter !== "all"
-              ? `No ${statusFilter} orders at the moment.`
-              : "You haven't placed any orders yet."}
-          </p>
-          <Link
-            to="/portal/catalog"
-            className="mt-4 inline-block px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-bold hover:bg-emerald-100 transition"
-          >
-            Browse Catalog
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {orders.map((ord) => (
-            <div
-              key={ord.id}
-              className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-sm hover:border-emerald-200 transition"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="font-extrabold text-base text-gray-900">
-                    #{ord.order_number}
-                  </div>
-                  <OrderStatusBadge status={ord.status} />
-                  {ord.converted_sale_id && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                      Billed
-                    </span>
-                  )}
-                </div>
 
-                <div className="text-xs text-gray-500">
-                  Placed on {new Date(ord.createdAt).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-              </div>
+          {/* Tabs */}
+          <div className="inline-flex p-1 rounded-xl bg-slate-100">
+            {([
+              ["active", `Active (${active.length})`],
+              ["past", `Past (${past.length})`],
+              ["khata", "Khata"],
+            ] as [Tab, string][]).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setTab(k)}
+                className={`px-4 py-1.5 rounded-lg text-[13px] font-semibold transition ${tab === k ? "bg-white text-navy-900 shadow-sm" : "text-slate-500 hover:text-navy-900"}`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
 
-              {/* Items Summary */}
-              <div className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <div className="text-gray-600">
-                  <span className="font-bold text-gray-900">{ord.items?.length || 0}</span> item(s):{" "}
-                  <span className="text-gray-500">
-                    {ord.items?.map((i: any) => `${i.product_name} (x${i.quantity})`).join(", ")}
-                  </span>
-                </div>
+          {notice && (
+            <div className={`rounded-xl px-4 py-3 text-[13px] ${notice.ok ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>{notice.text}</div>
+          )}
 
-                <div className="text-right flex items-baseline justify-between sm:justify-end gap-2">
-                  <span className="text-gray-500 font-medium">Total:</span>
-                  <span className="text-base font-black text-gray-900">
-                    ₹{Number(ord.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
-                <div className="text-xs text-gray-400">
-                  {ord.delivery_type === "delivery" ? "🚚 Doorstep Delivery" : "🏬 Store Pickup"}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {ord.converted_sale_id && (
-                    <Link
-                      to={`/portal/bills/${ord.converted_sale_id}`}
-                      className="text-xs font-bold text-blue-600 hover:text-blue-800"
-                    >
-                      View Invoice &rarr;
-                    </Link>
-                  )}
-                  <Link
-                    to={`/portal/orders/${ord.id}`}
-                    className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg text-xs transition"
-                  >
-                    View Details &rarr;
-                  </Link>
-                </div>
-              </div>
+          {tab === "khata" ? (
+            <KhataPanel khata={khata} balance={balance} />
+          ) : loading ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => <div key={i} className="card h-36 animate-pulse" />)}
             </div>
-          ))}
-        </div>
-      )}
+          ) : list.length === 0 ? (
+            <div className="card p-10 text-center">
+              <div className="text-[15px] font-semibold text-navy-900">{tab === "active" ? "No active orders" : "No past orders yet"}</div>
+              <p className="text-[13px] text-slate-500 mt-1">{tab === "active" ? "Orders you place show up here until they're delivered." : "Delivered and cancelled orders appear here."}</p>
+              <Link to="/portal/catalog" className="btn-primary mt-5">Start shopping</Link>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {list.map((o) => {
+                const cancelled = String(o.status).toLowerCase() === "cancelled";
+                const idx = stepIndex(o.status);
+                const itemsCount = (o.items || []).reduce((a: number, i: any) => a + Number(i.quantity || 0), 0);
+                const billId = o.converted_sale_id || o.billed_bill_id;
+                return (
+                  <li key={o.id} className="card p-4 sm:p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <Link to={`/portal/orders/${o.id}`} className="text-[15px] font-semibold text-navy-900 hover:text-brand-700">
+                          Order #{String(o.order_number || o.id).replace(/^#/, "")}
+                        </Link>
+                        <div className="text-[12.5px] text-slate-500 mt-0.5">
+                          {customer?.shop?.name || "Shop"} · {new Date(o.order_date || o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </div>
+                      </div>
+                      <span className={cancelled ? "badge-danger" : DONE.includes(String(o.status).toLowerCase()) ? "badge-active" : "badge-brand"}>{statusLabel(o.status)}</span>
+                    </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-4">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-          >
-            &larr; Prev
-          </button>
-          <span className="text-xs font-semibold text-gray-600">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-          >
-            Next &rarr;
-          </button>
+                    {/* Progress tracker */}
+                    {cancelled ? (
+                      <div className="mt-4 text-[12.5px] text-rose-600 font-medium">This order was cancelled.</div>
+                    ) : (
+                      <ol className="mt-4 grid grid-cols-5 gap-1" aria-label="Order progress">
+                        {STEPS.map((st, i) => {
+                          const done = i <= idx;
+                          return (
+                            <li key={st.key} className="flex flex-col items-center text-center">
+                              <div className="flex items-center w-full">
+                                <span className={`h-[3px] flex-1 rounded ${i === 0 ? "invisible" : done ? "bg-brand-600" : "bg-slate-200"}`} />
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${done ? "bg-brand-600 text-white" : "bg-slate-200 text-slate-500"} ${i === idx ? "ring-4 ring-brand-100" : ""}`}>
+                                  {done ? "✓" : i + 1}
+                                </span>
+                                <span className={`h-[3px] flex-1 rounded ${i === STEPS.length - 1 ? "invisible" : i < idx ? "bg-brand-600" : "bg-slate-200"}`} />
+                              </div>
+                              <span className={`mt-1.5 text-[10.5px] sm:text-[11.5px] leading-tight ${done ? "text-navy-900 font-semibold" : "text-slate-400"}`}>{st.label}</span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    )}
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                      <div className="text-[13px] text-slate-600">
+                        {itemsCount} item{itemsCount === 1 ? "" : "s"} · <span className="font-bold text-navy-900 tabular">{inr(o.total_amount)}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {billId ? (
+                          <Link to={`/portal/bills/${billId}`} className="btn-secondary btn-sm">View / download bill</Link>
+                        ) : null}
+                        {String(o.status).toLowerCase() === "pending" && (
+                          <button type="button" disabled={busy !== null} onClick={() => cancel(o)} className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50">
+                            {busy === `cancel-${o.id}` ? "Cancelling…" : "Cancel"}
+                          </button>
+                        )}
+                        <button type="button" disabled={busy !== null} onClick={() => reorder(o)} className="btn-soft btn-sm">
+                          {busy === `reorder-${o.id}` ? "Adding…" : "Reorder"}
+                        </button>
+                        <Link to={`/portal/orders/${o.id}`} className="btn-ghost btn-sm">Details →</Link>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
-      )}
+
+        {/* Side panel: khata + account */}
+        <aside className="lg:col-span-4 space-y-4 lg:sticky lg:top-24">
+          <div className="hero-brand p-5">
+            <div className="relative">
+              <div className="text-[12px] text-brand-100/80">Khata balance with {customer?.shop?.name || "the shop"}</div>
+              <div className="mt-1.5 text-[28px] font-bold tabular">{inr(Math.abs(balance))}</div>
+              <div className="text-[12px] text-brand-100/70 mt-0.5">{balance > 0 ? "Due to the shop" : balance < 0 ? "Advance with the shop" : "All settled"}</div>
+              <Link to="/portal/ledger" className="mt-4 inline-flex px-4 py-2 rounded-xl bg-white text-navy-900 text-[13px] font-semibold hover:bg-brand-50">
+                View statement →
+              </Link>
+            </div>
+          </div>
+          <nav className="card divide-y divide-slate-100 overflow-hidden">
+            {[
+              ["My account", "/portal/profile"],
+              ["Bills & invoices", "/portal/bills"],
+              ["Notifications", "/portal/notifications"],
+            ].map(([l, to]) => (
+              <Link key={to} to={to} className="flex items-center justify-between px-4 py-3 text-[13.5px] text-slate-700 hover:bg-slate-50 hover:text-brand-700">
+                {l} <span className="text-slate-300">›</span>
+              </Link>
+            ))}
+          </nav>
+        </aside>
+      </div>
     </div>
   );
 }
 
-function OrdersIcon({ className }: { className?: string }) {
+function KhataPanel({ khata, balance }: { khata: any; balance: number }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-    </svg>
+    <div className="card p-5 space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl bg-slate-50 p-4">
+          <div className="text-[11.5px] text-slate-500">{balance < 0 ? "Advance" : "Outstanding"}</div>
+          <div className={`text-[20px] font-bold tabular mt-1 ${balance > 0 ? "text-rose-600" : "text-emerald-600"}`}>{inr(Math.abs(balance))}</div>
+        </div>
+        <div className="rounded-xl bg-slate-50 p-4">
+          <div className="text-[11.5px] text-slate-500">Last payment</div>
+          <div className="text-[16px] font-bold text-navy-900 tabular mt-1">{khata?.lastPaymentAmount ? inr(khata.lastPaymentAmount) : "—"}</div>
+          {khata?.lastPaymentDate && <div className="text-[11.5px] text-slate-400">{new Date(khata.lastPaymentDate).toLocaleDateString("en-IN")}</div>}
+        </div>
+        <div className="rounded-xl bg-slate-50 p-4">
+          <div className="text-[11.5px] text-slate-500">Last bill</div>
+          <div className="text-[16px] font-bold text-navy-900 tabular mt-1">{khata?.lastBillAmount ? inr(khata.lastBillAmount) : "—"}</div>
+          {khata?.lastBillNumber && <div className="text-[11.5px] text-slate-400 font-mono">{khata.lastBillNumber}</div>}
+        </div>
+      </div>
+      <p className="text-[12.5px] text-slate-500">Payments are recorded by the shop. Pay at the counter or by UPI to the shop, and it will show here.</p>
+      <Link to="/portal/ledger" className="btn-primary">Open full statement</Link>
+    </div>
   );
 }
-

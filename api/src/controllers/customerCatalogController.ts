@@ -60,7 +60,7 @@ export async function getPortalProducts(req: Request, res: Response) {
   try {
     const ownerId = req.customer!.ownerId;
     const shopId = req.customer!.shopId;
-    const { search, categoryId, page, limit, sort } = req.query;
+    const { search, categoryId, page, limit, sort, minPrice, maxPrice } = req.query;
 
     const pageNum = page ? Math.max(1, Number(page) || 1) : 1;
     const limitNum = limit ? Math.min(500, Math.max(1, Number(limit) || 20)) : 500;
@@ -83,6 +83,15 @@ export async function getPortalProducts(req: Request, res: Response) {
       where.category_id = Number(categoryId);
     }
 
+    // Optional storefront price range (selling price, inclusive).
+    const min = minPrice !== undefined && minPrice !== "" ? Number(minPrice) : NaN;
+    const max = maxPrice !== undefined && maxPrice !== "" ? Number(maxPrice) : NaN;
+    if (!Number.isNaN(min) || !Number.isNaN(max)) {
+      where.selling_price = {};
+      if (!Number.isNaN(min)) where.selling_price[Op.gte] = min;
+      if (!Number.isNaN(max)) where.selling_price[Op.lte] = max;
+    }
+
     if (search) {
       const q = `%${String(search).trim()}%`;
       where[Op.or] = [
@@ -98,7 +107,14 @@ export async function getPortalProducts(req: Request, res: Response) {
       limit: limitNum,
       offset,
       // Optional ?sort=newest powers the storefront "New Arrivals" rail; default stays alphabetical.
-      order: sort === "newest" ? [["created_at", "DESC"], ["id", "DESC"]] : [["name", "ASC"]],
+      order:
+        sort === "newest"
+          ? [["created_at", "DESC"], ["id", "DESC"]]
+          : sort === "price_asc"
+          ? [["selling_price", "ASC"], ["id", "ASC"]]
+          : sort === "price_desc"
+          ? [["selling_price", "DESC"], ["id", "DESC"]]
+          : [["name", "ASC"]],
       distinct: true, // count products, not product×image join rows
       include: [
         { model: Category, as: "category", attributes: ["id", "name"] },
