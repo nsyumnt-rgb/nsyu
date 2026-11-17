@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "test:phase-a": "ts-node-dev --transpile-only --exit-child scripts/test_phase_a_suppliers_purchases.ts",
-    "test:isolation": "ts-node-dev --transpile-only --exit-child scripts/test_tenant_isolation.ts"
+    "test:isolation": "ts-node-dev --transpile-only --exit-child scripts/test_tenant_isolation.ts",
+    "test:marketplace": "ts-node-dev --transpile-only --exit-child scripts/test_marketplace.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
