@@ -20,7 +20,13 @@ export async function recordMovement(req: Request, res: Response) {
   }
 
   const numQty = Number(quantity);
-  if (isNaN(numQty) || numQty <= 0) {
+  // "adjustment" is signed (count correction up or down); every other type is a positive magnitude
+  // whose direction comes from the type itself (see utils/inventory.ts).
+  if (type === "adjustment") {
+    if (!Number.isFinite(numQty) || numQty === 0 || !Number.isInteger(numQty)) {
+      return res.status(400).json({ success: false, message: "quantity must be a non-zero whole number for an adjustment" });
+    }
+  } else if (!Number.isFinite(numQty) || numQty <= 0) {
     return res.status(400).json({ success: false, message: "quantity must be a positive number" });
   }
 
@@ -38,18 +44,22 @@ export async function recordMovement(req: Request, res: Response) {
   const actorType = req.auth!.isOwner ? "owner" : "employee";
   const actorId = req.auth!.isOwner ? req.auth!.ownerId : (req.auth!.employeeId || 1);
 
-  const movement = await recordStockMovement({
-    ownerId: req.auth!.ownerId,
-    shopId,
-    productId,
-    type,
-    quantity: numQty,
-    notes,
-    actorType,
-    actorId,
-  });
-
-  return res.status(201).json({ success: true, data: movement });
+  try {
+    const movement = await recordStockMovement({
+      ownerId: req.auth!.ownerId,
+      shopId,
+      productId,
+      type,
+      quantity: numQty,
+      notes,
+      actorType,
+      actorId,
+    });
+    return res.status(201).json({ success: true, data: movement });
+  } catch (err: any) {
+    // e.g. "Insufficient stock" — previously unhandled, which left the request hanging
+    return res.status(err.status || 500).json({ success: false, message: err.message || "Stock movement failed" });
+  }
 }
 
 export async function listTransfers(req: Request, res: Response) {

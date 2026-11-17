@@ -12,6 +12,7 @@ import Shops from "./pages/Shops";
 import Roles from "./pages/Roles";
 import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
+import InventoryOverview from "./pages/InventoryOverview";
 import Purchase from "./pages/Purchase";
 import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
@@ -100,7 +101,8 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="products" element={<Products />} />
             <Route path="products/:id" element={<ProductDetail />} />
-            <Route path="inventory" element={<Inventory />} />
+            <Route path="inventory" element={<InventoryOverview />} />
+            <Route path="inventory/manage" element={<Inventory />} />
             <Route path="inventory/transfers/:id" element={<TransferDetail />} />
             <Route path="inventory/movements/:id" element={<MovementDetail />} />
             <Route path="purchase" element={<Purchase />} />
