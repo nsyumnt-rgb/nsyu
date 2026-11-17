@@ -339,7 +339,7 @@ class _PortalMoreScreenState extends State<PortalMoreScreen> {
         (auth.userName.isNotEmpty && auth.userName != 'NSYU' ? auth.userName : 'Mohd Zakir');
     final mobileNumber = cust?['phone']?.toString() ??
         dbMetrics?['mobileNumber']?.toString() ??
-        (auth.isCustomer && auth.registeredMobile?.isNotEmpty == true ? auth.registeredMobile! : '9045917913');
+        (auth.isCustomer && auth.registeredMobile?.isNotEmpty == true ? auth.registeredMobile! : '—');
     final balance = parseDouble(cust?['currentBalance'] ??
         cust?['current_balance'] ??
         dbMetrics?['outstandingBalance'] ??

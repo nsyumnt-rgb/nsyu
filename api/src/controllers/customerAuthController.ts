@@ -741,25 +741,12 @@ export async function loginWithPassword(req: Request, res: Response) {
       isMatch = await bcrypt.compare(cleanPassword, account.password_hash);
     }
 
-    // Fallback 1: If entered password matches customer's phone or last 5 digits of phone
-    if (!isMatch && account.phone) {
-      const phoneDigits = account.phone.replace(/[^0-9]/g, "");
-      const isPhoneMatch =
-        cleanPassword === phoneDigits ||
-        (phoneDigits.length >= 5 && cleanPassword === phoneDigits.slice(-5));
-      if (isPhoneMatch) {
-        isMatch = true;
-        // Upgrade password hash so future logins work directly
-        const newHash = await bcrypt.hash(cleanPassword, 10);
-        account.password_hash = newHash;
-        await account.save();
-        if (account.email) {
-          await updateSupabaseAuthPassword(account.email, newHash);
-        }
-      }
-    }
+    // NOTE: a former fallback accepted the customer's phone number (or its last 5
+    // digits) as the password and then overwrote the real password with it.
+    // A phone number is not a secret, so it was removed. Customers without a
+    // password sign in with OTP, or the shop owner sets one (Customers → Set password).
 
-    // Fallback 2: If entered password is a valid 4-to-6 digit OTP
+    // Fallback: If entered password is a valid 4-to-6 digit OTP
     if (!isMatch && cleanPassword.length >= 4 && cleanPassword.length <= 8 && /^\d+$/.test(cleanPassword)) {
       const otpRecord = await CustomerOtp.findOne({
         where: { account_id: account.id, used_at: null },

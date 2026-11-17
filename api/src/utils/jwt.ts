@@ -2,8 +2,22 @@ import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 
-const ACCESS_SECRET: Secret = (process.env.JWT_ACCESS_SECRET || "138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9") as string;
-const REFRESH_SECRET: Secret = (process.env.JWT_REFRESH_SECRET || "138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9") as string;
+/**
+ * Signing secrets MUST come from the environment. A hard-coded fallback would let
+ * anyone who can read this repository forge tokens for any account.
+ * Outside production a random per-process secret is used (tokens die on restart).
+ */
+function requireSecret(name: string): string {
+  const v = process.env[name];
+  if (v && v.trim().length >= 32) return v.trim();
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`${name} is missing or shorter than 32 characters — refusing to start with an insecure JWT secret`);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require("crypto").randomBytes(48).toString("hex");
+}
+const ACCESS_SECRET: Secret = requireSecret("JWT_ACCESS_SECRET");
+const REFRESH_SECRET: Secret = requireSecret("JWT_REFRESH_SECRET");
 const ACCESS_EXPIRES = (process.env.JWT_ACCESS_EXPIRES || "15m") as SignOptions["expiresIn"];
 const REFRESH_EXPIRES = (process.env.JWT_REFRESH_EXPIRES || "30d") as SignOptions["expiresIn"];
 

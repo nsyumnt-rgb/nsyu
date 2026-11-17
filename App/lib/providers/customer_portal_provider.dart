@@ -62,19 +62,7 @@ class CustomerPortalProvider extends ChangeNotifier {
     _customer = _service.customerData;
     notifyListeners();
 
-    // If no customer session is active (e.g. previewing from Owner app or first customer run),
-    // authenticate as the registered customer (9045917913) so real customer data ALWAYS displays!
-    if (_service.accessToken == null || _service.accessToken!.isEmpty) {
-      try {
-        await _service.loginWithPassword(
-          identifier: '9045917913',
-          password: '9045917913',
-        );
-        _customer = _service.customerData;
-        notifyListeners();
-      } catch (_) {}
-    }
-
+    // Only a customer who actually signed in sees portal data — never a built-in account.
     if (_service.accessToken != null && _service.accessToken!.isNotEmpty) {
       await refreshAll();
     }

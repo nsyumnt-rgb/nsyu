@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
-import { Role, RolePermission, RoleFieldPermission, Module, ShopModule, UserRole } from "../models";
+import { Role, RolePermission, RoleFieldPermission, Module, ShopModule, UserRole, Shop } from "../models";
 import { SENSITIVE_FIELDS, toCanonicalModule } from "../config/permissions";
 import { logAudit } from "../utils/audit";
 
@@ -215,9 +215,17 @@ export async function deleteRole(req: Request, res: Response) {
 }
 
 /** List shop-level module activations */
+/** True when the caller may act on this shop: super admin, or a shop owned by the caller's owner account. */
+async function callerOwnsShop(req: Request, shopId: number): Promise<boolean> {
+  if (req.auth?.isSuperAdmin) return true;
+  const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId }, attributes: ["id"] });
+  return Boolean(shop);
+}
+
 export async function listShopModules(req: Request, res: Response) {
   const shopId = Number(req.params.shopId || req.auth?.shopId);
   if (!shopId) return res.status(400).json({ success: false, message: "shopId is required" });
+  if (!(await callerOwnsShop(req, shopId))) return res.status(404).json({ success: false, message: "Shop not found" });
 
   try {
     const shopModules = await ShopModule.findAll({
@@ -238,6 +246,7 @@ export async function updateShopModule(req: Request, res: Response) {
   if (!shopId || !module_code) {
     return res.status(400).json({ success: false, message: "shopId and module_code are required" });
   }
+  if (!(await callerOwnsShop(req, shopId))) return res.status(404).json({ success: false, message: "Shop not found" });
 
   const mod = await Module.findOne({ where: { code: module_code } });
   if (!mod) return res.status(404).json({ success: false, message: "Module not found" });

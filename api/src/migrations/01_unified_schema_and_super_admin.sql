@@ -20,8 +20,10 @@ END $$;
 ALTER TABLE public.owners ADD COLUMN IF NOT EXISTS is_super_admin BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE public.owners ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'owner';
 
--- 3. Ensure Super Admin account exists in owners table (Password: SuperAdmin@123)
--- bcrypt hash of 'SuperAdmin@123' with cost 10: $2a$10$wK1W0n2f6iT0G7G7ZkQW5eqw5JgR8n2kFqC0e3kE0Pz2nB5k4eZ.m
+-- 3. Ensure a Super Admin account exists in owners table.
+--    The seeded password hash is for FIRST-TIME setup only: change the password
+--    immediately after the first login. Re-running this migration must NEVER
+--    reset an existing password, so the conflict branch below leaves it alone.
 INSERT INTO public.owners (name, email, password, phone, status, is_super_admin, role, created_at, updated_at)
 VALUES (
   'NSYU Super Admin',
@@ -35,7 +37,6 @@ VALUES (
   NOW()
 )
 ON CONFLICT (email) DO UPDATE SET
-  password = '$2a$10$kQc5Da8AaKKYlfkBqIFbWOSeK2acx6ErOO1U4mjwim3Ohv6FlRHrG',
   is_super_admin = TRUE,
   role = 'super_admin',
   status = 'active';

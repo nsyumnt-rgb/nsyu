@@ -21,10 +21,11 @@ services:
         value: postgres
       - key: DB_USER
         value: postgres.lggjtxzannywecuvwqbl
+      # Secrets are NOT stored in git. Set them in the Render dashboard
+      # (Service → Environment). `sync: false` keeps the dashboard value.
       - key: DB_PASS
-        value: Nsyu@8800503662
+        sync: false
       - key: JWT_ACCESS_SECRET
-        value: 138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9
+        sync: false
       - key: JWT_REFRESH_SECRET
-        value: 138a0da00c747c2e83f6231b91e8865de49643155fc0343a0c273f74cbdc79f9
-
+        sync: false

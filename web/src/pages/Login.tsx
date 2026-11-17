@@ -19,8 +19,9 @@ export default function Login() {
   const [activeTab, setActiveTab] = useState<"staff" | "customer">("staff");
 
   // Form Inputs
-  const [identifier, setIdentifier] = useState("nsyu.mnt@gmail.com");
-  const [password, setPassword] = useState("Password@123");
+  // Never pre-fill credentials: this page is public.
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,13 +75,8 @@ export default function Login() {
   const handleTabChange = (tab: "staff" | "customer") => {
     setActiveTab(tab);
     setError(null);
-    if (tab === "customer") {
-      setIdentifier("");
-      setPassword("");
-    } else {
-      setIdentifier("nsyu.mnt@gmail.com");
-      setPassword("Password@123");
-    }
+    setIdentifier("");
+    setPassword("");
   };
 
   const checkHealth = async (testUrl?: string) => {

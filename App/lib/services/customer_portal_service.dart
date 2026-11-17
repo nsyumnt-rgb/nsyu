@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/supabase_config.dart';
@@ -90,13 +91,10 @@ class CustomerPortalService {
       if (_refreshToken != null && _refreshToken!.isNotEmpty) {
         refreshed = await refreshTokens();
       }
+      // No silent sign-in with built-in credentials: if the session can't be
+      // renewed, requests return 401 and the customer must log in again.
       if (!refreshed) {
-        try {
-          await loginWithPassword(
-            identifier: '9045917913',
-            password: '9045917913',
-          );
-        } catch (_) {}
+        debugPrint('Customer session expired — login required');
       }
     }
   }
@@ -105,16 +103,7 @@ class CustomerPortalService {
     await ensureInitialized();
     var res = await http.get(url, headers: _headers);
     if (res.statusCode == 401) {
-      bool refreshed = await refreshTokens();
-      if (!refreshed) {
-        try {
-          await loginWithPassword(
-            identifier: '9045917913',
-            password: '9045917913',
-          );
-          refreshed = true;
-        } catch (_) {}
-      }
+      final refreshed = await refreshTokens();
       if (refreshed) {
         res = await http.get(url, headers: _headers);
       }
@@ -127,16 +116,7 @@ class CustomerPortalService {
     final bodyStr = body != null ? (body is String ? body : jsonEncode(body)) : null;
     var res = await http.post(url, headers: _headers, body: bodyStr);
     if (res.statusCode == 401) {
-      bool refreshed = await refreshTokens();
-      if (!refreshed) {
-        try {
-          await loginWithPassword(
-            identifier: '9045917913',
-            password: '9045917913',
-          );
-          refreshed = true;
-        } catch (_) {}
-      }
+      final refreshed = await refreshTokens();
       if (refreshed) {
         res = await http.post(url, headers: _headers, body: bodyStr);
       }
@@ -149,16 +129,7 @@ class CustomerPortalService {
     final bodyStr = body != null ? (body is String ? body : jsonEncode(body)) : null;
     var res = await http.patch(url, headers: _headers, body: bodyStr);
     if (res.statusCode == 401) {
-      bool refreshed = await refreshTokens();
-      if (!refreshed) {
-        try {
-          await loginWithPassword(
-            identifier: '9045917913',
-            password: '9045917913',
-          );
-          refreshed = true;
-        } catch (_) {}
-      }
+      final refreshed = await refreshTokens();
       if (refreshed) {
         res = await http.patch(url, headers: _headers, body: bodyStr);
       }
@@ -171,16 +142,7 @@ class CustomerPortalService {
     final bodyStr = body != null ? (body is String ? body : jsonEncode(body)) : null;
     var res = await http.put(url, headers: _headers, body: bodyStr);
     if (res.statusCode == 401) {
-      bool refreshed = await refreshTokens();
-      if (!refreshed) {
-        try {
-          await loginWithPassword(
-            identifier: '9045917913',
-            password: '9045917913',
-          );
-          refreshed = true;
-        } catch (_) {}
-      }
+      final refreshed = await refreshTokens();
       if (refreshed) {
         res = await http.put(url, headers: _headers, body: bodyStr);
       }
@@ -192,16 +154,7 @@ class CustomerPortalService {
     await ensureInitialized();
     var res = await http.delete(url, headers: _headers);
     if (res.statusCode == 401) {
-      bool refreshed = await refreshTokens();
-      if (!refreshed) {
-        try {
-          await loginWithPassword(
-            identifier: '9045917913',
-            password: '9045917913',
-          );
-          refreshed = true;
-        } catch (_) {}
-      }
+      final refreshed = await refreshTokens();
       if (refreshed) {
         res = await http.delete(url, headers: _headers);
       }

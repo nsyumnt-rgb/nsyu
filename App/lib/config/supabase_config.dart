@@ -32,11 +32,13 @@ class SupabaseConfig {
   static const String _prefTokenKey = 'nsyu_supabase_token';
   static const String _prefOwnerIdKey = 'nsyu_owner_id';
   static const String _prefShopIdKey = 'nsyu_shop_id';
+  static const String _prefRefreshTokenKey = 'nsyu_refresh_token';
 
   static String _apiUrl = defaultApiUrl;
   static String _supabaseUrl = defaultSupabaseUrl;
   static String _publishableKey = defaultPublishableKey;
   static String? _authToken;
+  static String? _refreshToken;
   static int _ownerId = 1;
   static int _shopId = 1;
   static bool _isClientInitialized = false;
@@ -46,6 +48,9 @@ class SupabaseConfig {
   static String get publishableKey => _publishableKey;
   static String get anonKey => _publishableKey;
   static String? get authToken => _authToken;
+
+  /// Long-lived token from /auth/login, used to renew the 15-minute access token.
+  static String? get refreshToken => _refreshToken;
   static int get ownerId => _ownerId;
   static int get shopId => _shopId;
   static bool get isClientInitialized => _isClientInitialized;
@@ -79,6 +84,7 @@ class SupabaseConfig {
     _supabaseUrl = prefs.getString(_prefSupabaseUrlKey) ?? defaultSupabaseUrl;
     _publishableKey = prefs.getString(_prefAnonKey) ?? defaultPublishableKey;
     _authToken = prefs.getString(_prefTokenKey);
+    _refreshToken = prefs.getString(_prefRefreshTokenKey);
     _ownerId = prefs.getInt(_prefOwnerIdKey) ?? 1;
     _shopId = prefs.getInt(_prefShopIdKey) ?? 1;
 
@@ -156,10 +162,22 @@ class SupabaseConfig {
   }
 
   /// Clears stored authentication token on logout
+  static Future<void> setRefreshToken(String? token) async {
+    _refreshToken = (token == null || token.isEmpty) ? null : token;
+    final prefs = await SharedPreferences.getInstance();
+    if (_refreshToken == null) {
+      await prefs.remove(_prefRefreshTokenKey);
+    } else {
+      await prefs.setString(_prefRefreshTokenKey, _refreshToken!);
+    }
+  }
+
   static Future<void> clearAuth() async {
     _authToken = null;
+    _refreshToken = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefTokenKey);
+    await prefs.remove(_prefRefreshTokenKey);
   }
 }
 

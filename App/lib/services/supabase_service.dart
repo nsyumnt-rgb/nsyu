@@ -51,21 +51,31 @@ class SupabaseService {
     }
   }
 
-  /// Ensures authentication with the Supabase database backend
+  /// Returns a usable access token for the signed-in staff/owner session.
+  ///
+  /// * With [mobile] + [password] (the login screen): signs in and stores both
+  ///   tokens. A wrong password returns null — it never falls back to an older
+  ///   session.
+  /// * Without credentials: returns the current token, or (when [force] is set,
+  ///   e.g. after a 401) renews it with the stored refresh token and re-selects
+  ///   the active shop. It NEVER signs in with built-in credentials; if the
+  ///   session can't be renewed it returns null and the user must log in again.
   Future<String?> ensureAuth({bool force = false, String? mobile, String? password}) async {
-    if (!force && SupabaseConfig.authToken != null && SupabaseConfig.authToken!.isNotEmpty) {
-      return SupabaseConfig.authToken;
-    }
+    final hasCredentials = (mobile?.trim().isNotEmpty ?? false) && (password?.trim().isNotEmpty ?? false);
 
-    final email = (mobile != null && mobile.trim().isNotEmpty) ? mobile.trim() : 'nsyu.mnt@gmail.com';
-    final pass = (password != null && password.trim().isNotEmpty) ? password.trim() : 'Password@123';
+    if (!hasCredentials) {
+      if (!force && SupabaseConfig.authToken != null && SupabaseConfig.authToken!.isNotEmpty) {
+        return SupabaseConfig.authToken;
+      }
+      return _renewSession();
+    }
 
     try {
       final url = Uri.parse('${SupabaseConfig.apiUrl}/auth/login');
       final res = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': pass}),
+        body: jsonEncode({'email': mobile!.trim(), 'password': password!.trim()}),
       );
 
       if (res.statusCode == 200) {
@@ -73,11 +83,52 @@ class SupabaseService {
         final token = data['data']?['accessToken'] ?? data['token'];
         if (token != null) {
           await SupabaseConfig.updateConfig(authToken: token.toString());
+          await SupabaseConfig.setRefreshToken(data['data']?['refreshToken']?.toString());
           return token.toString();
         }
       }
-    } catch (_) {}
-    return SupabaseConfig.authToken;
+    } catch (e) {
+      debugPrint('Login request failed: $e');
+    }
+    return null;
+  }
+
+  /// Renews the access token via /auth/refresh, then re-selects the saved shop
+  /// (the refreshed token intentionally carries no shop context).
+  Future<String?> _renewSession() async {
+    final refresh = SupabaseConfig.refreshToken;
+    if (refresh == null || refresh.isEmpty) return null;
+    try {
+      final res = await http.post(
+        Uri.parse('${SupabaseConfig.apiUrl}/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refreshToken': refresh}),
+      );
+      if (res.statusCode != 200) {
+        if (res.statusCode == 401) await SupabaseConfig.clearAuth();
+        return null;
+      }
+      final token = jsonDecode(res.body)['data']?['accessToken']?.toString();
+      if (token == null) return null;
+      await SupabaseConfig.updateConfig(authToken: token);
+
+      final switchRes = await http.post(
+        Uri.parse('${SupabaseConfig.apiUrl}/shops/switch'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode({'shopId': SupabaseConfig.shopId}),
+      );
+      if (switchRes.statusCode == 200) {
+        final shopToken = jsonDecode(switchRes.body)['data']?['accessToken']?.toString();
+        if (shopToken != null) {
+          await SupabaseConfig.updateConfig(authToken: shopToken);
+          return shopToken;
+        }
+      }
+      return token;
+    } catch (e) {
+      debugPrint('Session renewal failed: $e');
+      return null;
+    }
   }
 
   /// Registers a brand-new Business Owner account and provisions the initial store

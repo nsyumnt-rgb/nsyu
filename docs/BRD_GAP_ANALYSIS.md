@@ -37,6 +37,14 @@ _Phase 1 (architecture audit) of `REMAINING_WORK.md` §31. Audited 17 Nov 2026 a
 - Tests: `npm run test:phase-a` runs 51 isolated end-to-end checks, including owner isolation and legacy-row compatibility. Not yet run against a real PostgreSQL database.
 - Not in Phase A: mobile supplier screens (mobile still reads a non-existent `is_supplier` flag). This belongs to Phase I.
 
+**Phase B — security cleanup and tenant isolation: done in code. Credential rotation is still pending (owner action).**
+- Removed hard-coded secrets: the JWT signing-secret fallback (anyone could forge tokens), the DB password default, `render.yaml` secret values (now `sync: false`), and the pre-filled owner login on the public web login page.
+- Mobile: removed silent auto-login as the owner (`Password@123`) and as a real customer (phone number as password). Sessions now renew with a stored refresh token, and failed logins no longer fall back to an old session.
+- API: customers can no longer log in with their phone number as the password (that fallback also overwrote their real password). Shop-module read and update routes now verify shop ownership; before this, any owner could toggle another owner's modules.
+- Migration 01 no longer resets the super-admin password when re-run.
+- Tests: `npm run test:isolation` runs 57 checks. Owner B attacks about 40 ID-based routes on owner A's data, plus list leaks, data-unchanged checks and positive controls.
+- **Still required:** rotate the DB password, both JWT secrets, the super-admin password and the shop-owner password. Rotating the JWT secrets signs everyone out once.
+
 ---
 
 ## 2. Requirement-by-requirement status
