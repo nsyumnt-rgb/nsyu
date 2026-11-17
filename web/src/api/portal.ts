@@ -134,7 +134,7 @@ export async function getPortalCategoriesApi() {
   return res.data?.data || [];
 }
 
-export async function getPortalProductsApi(params?: { search?: string; categoryId?: number; page?: number; limit?: number }) {
+export async function getPortalProductsApi(params?: { search?: string; categoryId?: number; page?: number; limit?: number; sort?: "newest" }) {
   const res = await portalApi.get("/customer-portal/catalog/products", { params });
   return res.data;
 }

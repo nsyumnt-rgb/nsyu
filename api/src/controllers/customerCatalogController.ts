@@ -18,11 +18,32 @@ export async function getPortalCategories(req: Request, res: Response) {
       order: [["name", "ASC"]],
     });
 
+    // Storefront tile image: the photo of the newest active product in each category that has one.
+    // Real catalog data only — categories without any product photo return imageUrl: null.
+    const imageByCategory = new Map<number, string | null>();
+    await Promise.all(
+      categories.map(async (c) => {
+        try {
+          const p = await Product.findOne({
+            where: { owner_id: ownerId, category_id: c.id, status: "active" },
+            include: [{ model: ProductImage, as: "images", attributes: ["url", "is_primary"], required: true }],
+            order: [["created_at", "DESC"]],
+            subQuery: false,
+          });
+          const imgs: any[] = (p as any)?.images || [];
+          imageByCategory.set(c.id, (imgs.find((i) => i.is_primary) || imgs[0])?.url ?? null);
+        } catch {
+          imageByCategory.set(c.id, null);
+        }
+      })
+    );
+
     return res.json({
       success: true,
       data: categories.map((c) => ({
         id: c.id,
         name: c.name,
+        imageUrl: imageByCategory.get(c.id) ?? null,
       })),
     });
   } catch (err: any) {
@@ -39,7 +60,7 @@ export async function getPortalProducts(req: Request, res: Response) {
   try {
     const ownerId = req.customer!.ownerId;
     const shopId = req.customer!.shopId;
-    const { search, categoryId, page, limit } = req.query;
+    const { search, categoryId, page, limit, sort } = req.query;
 
     const pageNum = page ? Math.max(1, Number(page) || 1) : 1;
     const limitNum = limit ? Math.min(500, Math.max(1, Number(limit) || 20)) : 500;
@@ -76,7 +97,9 @@ export async function getPortalProducts(req: Request, res: Response) {
       where,
       limit: limitNum,
       offset,
-      order: [["name", "ASC"]],
+      // Optional ?sort=newest powers the storefront "New Arrivals" rail; default stays alphabetical.
+      order: sort === "newest" ? [["created_at", "DESC"], ["id", "DESC"]] : [["name", "ASC"]],
+      distinct: true, // count products, not product×image join rows
       include: [
         { model: Category, as: "category", attributes: ["id", "name"] },
         { model: ProductImage, as: "images", attributes: ["id", "url", "is_primary"] },
