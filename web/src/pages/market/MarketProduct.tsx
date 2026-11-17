@@ -4,6 +4,7 @@ import { getMarketCart, getMarketListing, searchMarket, setMarketCartItem, type 
 import { resolveAssetUrl, apiErrorMessage } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
 import MarketCard, { listingHref, rupees } from "../../components/MarketCard";
+import { ProductPlaceholder } from "../../components/ProductArt";
 
 /* MultiShop wireframe 9 — product page with price comparison across shops. */
 export default function MarketProduct() {
@@ -109,8 +110,8 @@ export default function MarketProduct() {
 
       <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
         <div>
-          <div className="relative aspect-square rounded-[22px] bg-[#EEEEEE] overflow-hidden flex items-center justify-center">
-            {gallery.length ? <img src={gallery[img]} alt={item.name} className="w-full h-full object-contain p-[10%] mix-blend-multiply" /> : <span className="text-[13px] text-slate-400">No image</span>}
+          <div className="relative aspect-square rounded-[22px] bg-[#F3F4F2] overflow-hidden flex items-center justify-center">
+            {gallery.length ? <img src={gallery[img]} alt={item.name} className="w-full h-full object-contain p-[10%] mix-blend-multiply" /> : <ProductPlaceholder name={item.name} category={item.category} brand={item.brand} />}
             {item.discountPercent > 0 && <span className="absolute left-4 bottom-4 px-3 py-1 rounded-full bg-white text-[13px] font-bold text-rose-600">{item.discountPercent}% OFF</span>}
           </div>
           {gallery.length > 1 && (

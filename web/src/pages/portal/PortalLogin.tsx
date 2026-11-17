@@ -9,6 +9,7 @@ import {
   portalApi,
 } from "../../api/portal";
 import { usePortalStore } from "../../store/portalStore";
+import AuthShell from "../../components/AuthShell";
 
 export default function PortalLogin() {
   const navigate = useNavigate();
@@ -206,7 +207,7 @@ export default function PortalLogin() {
     e.preventDefault();
     setError(null);
     if (!regName.trim() || !regPhone.trim() || !regEmail.trim() || !shopCode.trim()) {
-      setError("Name, Mobile, Email, and Shop Code are required for registration.");
+      setError("Name, Mobile, Email, and Shop code are required for registration.");
       return;
     }
 
@@ -231,22 +232,17 @@ export default function PortalLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#064E3B] via-[#047857] to-[#022C22] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-emerald-900/10">
-        {/* Header */}
-        <div className="bg-[#047857] p-6 text-white text-center relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 mb-3 shadow-inner">
-            <span className="text-2xl font-black tracking-wider text-white">N</span>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight !text-white">NSYU Customer Portal</h1>
-          <p className="text-emerald-100 text-xs mt-1">Shop orders, real-time catalog & statement portal</p>
-        </div>
-
+    <AuthShell variant="customer" headline="Everything you buy, in one place.">
+      <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight leading-tight">
+        {step === "register" ? "Create your account" : step === "forgot" || step === "reset" ? "Reset your password" : step === "otp" ? "Enter your code" : "Customer sign in"}
+      </h1>
+      <p className="mt-1.5 mb-5 text-[14px] text-slate-500">
+        {step === "register" ? "Register with your shop to order online and see your khata." : step === "forgot" || step === "reset" ? "We'll send a one-time code to your registered email." : "Sign in to order, track deliveries and check your khata."}
+      </p>
         {/* Content Body */}
-        <div className="p-6 md:p-8">
+        <div>
           {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2.5">
+            <div className="mb-5 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[13px] flex items-start gap-2.5">
               <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -255,7 +251,7 @@ export default function PortalLogin() {
           )}
 
           {successMsg && (
-            <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-start gap-2.5">
+            <div className="mb-5 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[13px] flex items-start gap-2.5">
               <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
@@ -265,20 +261,18 @@ export default function PortalLogin() {
 
           {/* Mode Switcher (Password vs OTP) */}
           {step === "login" && (
-            <div className="flex border-b border-gray-200 mb-5 text-sm">
+            <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 text-[13.5px]">
               <button
                 type="button"
                 onClick={() => {
                   setAuthMode("password");
                   setError(null);
                 }}
-                className={`flex-1 py-2 font-bold text-center border-b-2 transition ${
-                  authMode === "password"
-                    ? "border-emerald-600 text-emerald-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                className={`min-h-[42px] rounded-lg font-semibold transition ${
+                  authMode === "password" ? "bg-white text-navy-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-navy-900"
                 }`}
               >
-                Password Login
+                Password
               </button>
               <button
                 type="button"
@@ -286,13 +280,11 @@ export default function PortalLogin() {
                   setAuthMode("otp");
                   setError(null);
                 }}
-                className={`flex-1 py-2 font-bold text-center border-b-2 transition ${
-                  authMode === "otp"
-                    ? "border-emerald-600 text-emerald-700"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                className={`min-h-[42px] rounded-lg font-semibold transition ${
+                  authMode === "otp" ? "bg-white text-navy-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-navy-900"
                 }`}
               >
-                OTP Login
+                One-time code
               </button>
             </div>
           )}
@@ -301,28 +293,25 @@ export default function PortalLogin() {
           {step === "login" && authMode === "password" && (
             <form onSubmit={handlePasswordLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Email Address or Mobile <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Email or mobile number
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 font-semibold text-sm">
-                    {identifier.includes("@") ? "✉️" : "📱"}
-                  </span>
                   <input
                     type="text"
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="e.g. customer@example.com"
-                    className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    className="w-full px-3.5 h-12 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Password <span className="text-rose-500">*</span>
+                  <label className="block text-[13px] font-semibold text-slate-700">
+                    Password
                   </label>
                   <button
                     type="button"
@@ -332,7 +321,7 @@ export default function PortalLogin() {
                     }}
                     className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold"
                   >
-                    Forgot Password?
+                    Forgot password?
                   </button>
                 </div>
                 <div className="relative">
@@ -342,7 +331,7 @@ export default function PortalLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your customer password"
-                    className="w-full pl-4 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    className="w-full pl-3.5 pr-12 h-12 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   />
                   <button
                     type="button"
@@ -355,22 +344,22 @@ export default function PortalLogin() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Shop Code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Shop code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
                 </label>
                 <input
                   type="text"
                   value={shopCode}
                   onChange={(e) => setShopCode(e.target.value.toUpperCase())}
                   placeholder="e.g. SHOP01 or leave blank"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium uppercase tracking-wider focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full h-12 px-3.5 text-[15px] font-mono uppercase placeholder:font-sans bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading || !identifier.trim() || !password}
-                className="w-full mt-2 py-3 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2"
+                className="w-full mt-2 h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
                 {loading ? (
                   <>
@@ -381,7 +370,7 @@ export default function PortalLogin() {
                     <span>Logging in...</span>
                   </>
                 ) : (
-                  <span>Log In to Customer Portal &rarr;</span>
+                  <span>Sign in &rarr;</span>
                 )}
               </button>
 
@@ -394,10 +383,10 @@ export default function PortalLogin() {
                   }}
                   className="text-emerald-700 hover:text-emerald-800 font-semibold"
                 >
-                  New Customer? Register
+                  New customer? Register
                 </button>
                 <a href="#/login" className="text-gray-500 hover:text-gray-800">
-                  Staff / Admin Login &rarr;
+                  Owner / staff login &rarr;
                 </a>
               </div>
             </form>
@@ -407,42 +396,39 @@ export default function PortalLogin() {
           {step === "login" && authMode === "otp" && (
             <form onSubmit={handleRequestOtp} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Mobile Number or Email <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Mobile Number or Email
                 </label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 font-semibold text-sm">
-                    {identifier.includes("@") ? "✉️" : "📱"}
-                  </span>
                   <input
                     type="text"
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="Enter mobile number or email"
-                    className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    className="w-full px-3.5 h-12 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   />
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">A 4-digit code will be sent to your registered email.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Shop Code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Shop code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
                 </label>
                 <input
                   type="text"
                   value={shopCode}
                   onChange={(e) => setShopCode(e.target.value.toUpperCase())}
                   placeholder="e.g. SHOP01 or leave blank"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium uppercase tracking-wider focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full h-12 px-3.5 text-[15px] font-mono uppercase placeholder:font-sans bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading || identifier.trim().length < 3}
-                className="w-full mt-2 py-3 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2"
+                className="w-full mt-2 h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
                 {loading ? "Sending 4-Digit OTP..." : "Continue with 4-Digit OTP &rarr;"}
               </button>
@@ -460,7 +446,7 @@ export default function PortalLogin() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 text-center">
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5 text-center">
                   Enter 4-Digit OTP
                 </label>
                 <input
@@ -470,7 +456,7 @@ export default function PortalLogin() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   placeholder="••••"
-                  className="w-full text-center tracking-[0.8em] text-2xl font-bold py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full text-center tracking-[0.8em] text-2xl font-bold h-14 bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   autoFocus
                 />
               </div>
@@ -478,7 +464,7 @@ export default function PortalLogin() {
               <button
                 type="submit"
                 disabled={loading || otp.length !== 4}
-                className="w-full py-3 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2"
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition flex items-center justify-center gap-2"
               >
                 {loading ? "Verifying..." : "Verify & Enter Portal &rarr;"}
               </button>
@@ -521,8 +507,8 @@ export default function PortalLogin() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Email Address or Mobile Number <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Email or mobile number Number
                 </label>
                 <input
                   type="text"
@@ -530,7 +516,7 @@ export default function PortalLogin() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="e.g. customer@example.com"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3.5 h-12 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   autoFocus
                 />
               </div>
@@ -538,7 +524,7 @@ export default function PortalLogin() {
               <button
                 type="submit"
                 disabled={loading || !identifier.trim()}
-                className="w-full py-3 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition"
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
                 {loading ? "Sending Code..." : "Send Verification Code &rarr;"}
               </button>
@@ -569,8 +555,8 @@ export default function PortalLogin() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5 text-center">
-                  4-Digit Verification Code <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5 text-center">
+                  4-Digit Verification Code
                 </label>
                 <input
                   type="text"
@@ -579,13 +565,13 @@ export default function PortalLogin() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   placeholder="••••"
-                  className="w-full text-center tracking-[0.8em] text-2xl font-bold py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full text-center tracking-[0.8em] text-2xl font-bold h-14 bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                   New Password <span className="text-rose-500">* (Min 6 Characters)</span>
                 </label>
                 <input
@@ -595,14 +581,14 @@ export default function PortalLogin() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter new secure password"
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3.5 h-12 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading || otp.length !== 4 || newPassword.length < 6}
-                className="w-full py-3 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm shadow-md transition"
+                className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
                 {loading ? "Resetting..." : "Reset Password & Log In &rarr;"}
               </button>
@@ -637,12 +623,12 @@ export default function PortalLogin() {
             <form onSubmit={handleRegister} className="space-y-3">
               <div className="pb-1">
                 <h3 className="text-sm font-bold text-gray-800">Register as a New Customer</h3>
-                <p className="text-[11px] text-gray-500">Ask the shop owner for their Shop Code if you don't know it.</p>
+                <p className="text-[11px] text-gray-500">Ask the shop owner for their Shop code if you don't know it.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                  Shop Code <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Shop code
                 </label>
                 <input
                   type="text"
@@ -650,13 +636,13 @@ export default function PortalLogin() {
                   value={shopCode}
                   onChange={(e) => setShopCode(e.target.value.toUpperCase())}
                   placeholder="e.g. SHOP01"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium uppercase focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full h-11 px-3.5 text-[14px] font-mono uppercase placeholder:font-sans bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                  Full Name / Business Name <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Full Name / Business Name
                 </label>
                 <input
                   type="text"
@@ -664,13 +650,13 @@ export default function PortalLogin() {
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   placeholder="e.g. Sharma Ji Communication"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3.5 h-11 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                  Mobile Number <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Mobile Number
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 font-semibold text-sm">
@@ -683,14 +669,14 @@ export default function PortalLogin() {
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                     placeholder="10-digit mobile"
-                    className="w-full pl-11 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                    className="w-full h-11 pl-11 pr-3 text-[14px] bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
-                  Email Address <span className="text-rose-500">*</span>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                  Email Address
                 </label>
                 <input
                   type="email"
@@ -698,12 +684,12 @@ export default function PortalLogin() {
                   value={regEmail}
                   onChange={(e) => setRegEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3.5 h-11 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                   Address
                 </label>
                 <input
@@ -711,14 +697,14 @@ export default function PortalLogin() {
                   value={regAddress}
                   onChange={(e) => setRegAddress(e.target.value)}
                   placeholder="e.g. Shop No. 12, Main Market"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+                  className="w-full px-3.5 h-11 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading || !regName || regPhone.length < 10 || !regEmail || !shopCode}
-                className="w-full mt-2 py-2.5 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-lg text-sm shadow transition"
+                className="w-full mt-2 h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
                 {loading ? "Submitting Registration..." : "Submit Registration"}
               </button>
@@ -738,7 +724,6 @@ export default function PortalLogin() {
             </form>
           )}
         </div>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

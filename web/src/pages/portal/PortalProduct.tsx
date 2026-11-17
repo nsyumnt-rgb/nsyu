@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { getPortalProductApi, getPortalProductsApi, setCartItemApi } from "../../api/portal";
 import { resolveAssetUrl } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
-import { BoxIcon, CartIcon, ProductCard, inr, priceInfo, type Product } from "../../components/StoreProduct";
+import { CartIcon, ProductCard, inr, priceInfo, type Product } from "../../components/StoreProduct";
+import { ProductPlaceholder } from "../../components/ProductArt";
 import { removeCartItemApi } from "../../api/portal";
 
 /* E-commerce wireframe p4 — product page (single-shop: "other shops", variants,
@@ -135,14 +136,11 @@ export default function PortalProduct() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Gallery */}
         <div>
-          <div className="relative aspect-square rounded-[22px] bg-[#EEEEEE] overflow-hidden flex items-center justify-center">
+          <div className="relative aspect-square rounded-[22px] bg-[#F3F4F2] overflow-hidden flex items-center justify-center">
             {images.length > 0 ? (
               <img src={images[activeImg]} alt={product.name} className="w-full h-full object-contain p-[10%] mix-blend-multiply" />
             ) : (
-              <div className="text-slate-400 flex flex-col items-center">
-                <BoxIcon className="w-16 h-16" />
-                <span className="text-[12px] mt-2">No image available</span>
-              </div>
+              <ProductPlaceholder name={product.name} category={product.category?.name} brand={product.brand} />
             )}
             {off > 0 && (
               <span className="absolute left-4 bottom-4 px-3 py-1 rounded-full bg-white text-[13px] font-bold text-rose-600 shadow-xs">{off}% OFF</span>

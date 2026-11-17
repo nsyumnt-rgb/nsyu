@@ -4,6 +4,7 @@ import { getMarketCart, setMarketCartItem, type MarketCart as Cart } from "../..
 import { resolveAssetUrl, apiErrorMessage } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
 import { rupees } from "../../components/MarketCard";
+import { ProductPlaceholder } from "../../components/ProductArt";
 
 /* MultiShop wireframe 4 (cart part) — one cart, grouped by shop. Checkout per shop comes in step 4. */
 export default function MarketCart() {
@@ -84,8 +85,8 @@ export default function MarketCart() {
                       const key = `${g.shop.id}-${it.productId}`;
                       return (
                         <li key={key} className="px-5 py-4 flex gap-4">
-                          <Link to={`/market/p/${g.shop.id}/${it.productId}`} className="w-20 h-20 rounded-xl bg-[#EEEEEE] flex items-center justify-center shrink-0 overflow-hidden">
-                            {it.imageUrl ? <img src={resolveAssetUrl(it.imageUrl) ?? undefined} alt="" className="w-full h-full object-contain p-2 mix-blend-multiply" /> : <span className="text-[10px] text-slate-400">No image</span>}
+                          <Link to={`/market/p/${g.shop.id}/${it.productId}`} className="relative w-20 h-20 rounded-xl bg-[#F3F4F2] flex items-center justify-center shrink-0 overflow-hidden">
+                            {it.imageUrl ? <img src={resolveAssetUrl(it.imageUrl) ?? undefined} alt="" className="w-full h-full object-contain p-2 mix-blend-multiply" /> : <ProductPlaceholder name={it.name} compact />}
                           </Link>
                           <div className="min-w-0 flex-1">
                             <div className="flex justify-between gap-3">

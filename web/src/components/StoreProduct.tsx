@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { resolveAssetUrl } from "../api/client";
+import { ProductPlaceholder } from "./ProductArt";
 
 /* Shared storefront building blocks (customer portal): product types,
    price helpers and the product card used by Shop, Product and Related rails. */
@@ -74,7 +75,7 @@ export function ProductCard({
 
   return (
     <div className="group flex flex-col">
-      <Link to={href} className="relative block aspect-square rounded-[22px] bg-[#EEEEEE] overflow-hidden" aria-label={`View ${product.name}`}>
+      <Link to={href} className="relative block aspect-square rounded-[22px] bg-[#F3F4F2] overflow-hidden" aria-label={`View ${product.name}`}>
         {img && !imgFailed ? (
           <img
             src={img}
@@ -84,10 +85,7 @@ export function ProductCard({
             className={`absolute inset-0 w-full h-full object-contain p-[12%] mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.06] ${out ? "opacity-50 grayscale" : ""}`}
           />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-            <BoxIcon className="w-12 h-12" />
-            <span className="text-[11px] mt-1.5 font-medium">No image</span>
-          </div>
+          <ProductPlaceholder name={product.name} category={product.category?.name} brand={product.brand} />
         )}
         {off > 0 && (
           <span className="absolute left-3 bottom-3 px-3 py-1 rounded-full bg-white text-[12px] sm:text-[13px] font-bold text-rose-600 shadow-xs">
