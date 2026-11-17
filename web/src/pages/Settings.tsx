@@ -1900,19 +1900,7 @@ function SettingsInner() {
               </div>
             </div>
 
-            <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Supabase Cloud Database</h3>
-                  <p className="text-[11px] text-slate-500">Live PostgreSQL database connection for real-time transactions.</p>
-                </div>
-                <span className="badge bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2 py-0.5 rounded">Connected</span>
-              </div>
-              <div className="text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-200 font-mono text-[11px] space-y-1">
-                <div>Host: aws-0-ap-south-1.pooler.supabase.com:5432</div>
-                <div>Status: Online (200 OK) • Latency: 24ms</div>
-              </div>
-            </div>
+            <ServerStatusCard />
           </div>
         </div>
       )}
@@ -2085,5 +2073,46 @@ export default function Settings() {
     <RequireModule module="settings">
       <SettingsInner />
     </RequireModule>
+  );
+}
+
+/** Real server + database health (measured from this browser), replacing the old static "Connected" card. */
+function ServerStatusCard() {
+  const [state, setState] = useState<{ status: "checking" | "online" | "offline"; ms?: number; db?: string; at?: Date }>({ status: "checking" });
+  const check = async () => {
+    setState({ status: "checking" });
+    const t0 = performance.now();
+    try {
+      const res = await api.get("/health");
+      setState({ status: "online", ms: Math.round(performance.now() - t0), db: res.data?.status, at: new Date() });
+    } catch (e: any) {
+      setState({ status: "offline", db: e?.response?.data?.status, at: new Date() });
+    }
+  };
+  useEffect(() => {
+    check();
+  }, []);
+  const badge =
+    state.status === "online" ? "bg-emerald-100 text-emerald-800" : state.status === "offline" ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-600";
+  return (
+    <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Server & database</h3>
+          <p className="text-[11px] text-slate-500">Checked live from this device.</p>
+        </div>
+        <span className={`badge text-[11px] font-bold px-2 py-0.5 rounded ${badge}`}>
+          {state.status === "online" ? "Connected" : state.status === "offline" ? "Unreachable" : "Checking…"}
+        </span>
+      </div>
+      <div className="text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-200 font-mono text-[11px] space-y-1">
+        <div>Database: {state.db || (state.status === "checking" ? "…" : "unknown")}</div>
+        <div>Response time: {state.ms !== undefined ? `${state.ms} ms` : "—"}</div>
+        {state.at && <div>Last checked: {state.at.toLocaleTimeString()}</div>}
+      </div>
+      <button type="button" onClick={check} disabled={state.status === "checking"} className="btn-secondary btn-sm">
+        Check again
+      </button>
+    </div>
   );
 }

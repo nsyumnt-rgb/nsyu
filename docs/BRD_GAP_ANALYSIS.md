@@ -39,7 +39,7 @@ _Phase 1 (architecture audit) of `REMAINING_WORK.md` §31. Audited 17 Nov 2026 a
 
 **Phase B — security cleanup and tenant isolation: done in code. Credential rotation is still pending (owner action).**
 - Removed hard-coded secrets: the JWT signing-secret fallback (anyone could forge tokens), the DB password default, `render.yaml` secret values (now `sync: false`), and the pre-filled owner login on the public web login page.
-- Mobile: removed silent auto-login as the owner (`Password@123`) and as a real customer (phone number as password). Sessions now renew with a stored refresh token, and failed logins no longer fall back to an old session.
+- Mobile: removed silent auto-login as the owner (with a hard-coded password) and as a real customer (phone number as password). Sessions now renew with a stored refresh token, and failed logins no longer fall back to an old session.
 - API: customers can no longer log in with their phone number as the password (that fallback also overwrote their real password). Shop-module read and update routes now verify shop ownership; before this, any owner could toggle another owner's modules.
 - Migration 01 no longer resets the super-admin password when re-run.
 - Tests: `npm run test:isolation` runs 57 checks. Owner B attacks about 40 ID-based routes on owner A's data, plus list leaks, data-unchanged checks and positive controls.

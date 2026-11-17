@@ -75,7 +75,6 @@ class AboutAppScreen extends StatelessWidget {
                   _specRow('App Name', 'nsyu_catalog_app'),
                   _specRow('Framework', 'Flutter 3 (Dart 3.x)'),
                   _specRow('Database', 'Supabase PostgreSQL'),
-                  _specRow('Connection Pooler', 'aws-0-ap-south-1.pooler.supabase.com:5432'),
                   _specRow('API Backend', 'Node.js Express + Sequelize Pooler'),
                   _specRow('Local Storage', 'SharedPreferences & Offline Cache'),
                   _specRow('State Architecture', 'Provider ChangeNotifier Architecture'),

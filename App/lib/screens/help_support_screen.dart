@@ -191,7 +191,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('• Database: Supabase PostgreSQL (aws-0-ap-south-1.pooler.supabase.com:5432)',
+                  const Text('• Database: Supabase PostgreSQL (via the NSYU API)',
                       style: TextStyle(fontSize: 12, color: AppColors.muted)),
                   const SizedBox(height: 4),
                   Text('• API Endpoint: ${SupabaseConfig.apiUrl}',
