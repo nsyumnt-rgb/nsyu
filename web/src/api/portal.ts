@@ -139,7 +139,7 @@ export async function getPortalProductsApi(params?: {
   categoryId?: number;
   page?: number;
   limit?: number;
-  sort?: "newest" | "price_asc" | "price_desc";
+  sort?: "newest" | "price_asc" | "price_desc" | "popular" | "discount";
   minPrice?: number;
   maxPrice?: number;
 }) {

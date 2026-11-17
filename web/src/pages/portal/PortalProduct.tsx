@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getPortalProductApi, getPortalProductsApi, setCartItemApi } from "../../api/portal";
 import { resolveAssetUrl } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
 import { CartIcon, ProductCard, inr, priceInfo, type Product } from "../../components/StoreProduct";
 import { ProductPlaceholder } from "../../components/ProductArt";
+import { flyToCart, useStorefront } from "../../store/storefrontStore";
+import { HeartIcon } from "../../components/StoreProduct";
 import { removeCartItemApi } from "../../api/portal";
 
 /* E-commerce wireframe p4 — product page (single-shop: "other shops", variants,
@@ -27,6 +29,12 @@ export default function PortalProduct() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [zoom, setZoom] = useState<{ x: number; y: number } | null>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const wished = useStorefront((s) => (product ? s.wishlist.includes(product.id) : false));
+  const toggleWish = useStorefront((s) => s.toggleWishlist);
+  const openCart = useStorefront((s) => s.openCart);
+  const bumpCart = useStorefront((s) => s.bumpCart);
 
   useEffect(() => {
     let alive = true;
@@ -63,10 +71,15 @@ export default function PortalProduct() {
     setBusy(goToCart ? "buy" : "add");
     setMessage(null);
     try {
+      if (!goToCart) flyToCart(galleryRef.current);
       const updated = await setCartItemApi(product.id, inCart(product.id) + qty);
       setCart(updated);
       if (goToCart) navigate("/portal/cart");
-      else setMessage({ ok: true, text: `Added ${qty} to your cart` });
+      else {
+        bumpCart();
+        setMessage({ ok: true, text: `Added ${qty} to your cart` });
+        setTimeout(openCart, 450);
+      }
     } catch (err: any) {
       setMessage({ ok: false, text: err?.response?.data?.message || "Could not add to cart" });
     } finally {
@@ -136,15 +149,39 @@ export default function PortalProduct() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Gallery */}
         <div>
-          <div className="relative aspect-square rounded-[22px] bg-[#F3F4F2] overflow-hidden flex items-center justify-center">
+          <div
+            ref={galleryRef}
+            className={`relative aspect-square rounded-[22px] bg-[#F3F4F2] overflow-hidden flex items-center justify-center ${images.length ? "cursor-zoom-in" : ""}`}
+            onMouseMove={(e) => {
+              if (!images.length || window.matchMedia("(hover: none)").matches) return;
+              const r = e.currentTarget.getBoundingClientRect();
+              setZoom({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
+            }}
+            onMouseLeave={() => setZoom(null)}
+          >
             {images.length > 0 ? (
-              <img src={images[activeImg]} alt={product.name} className="w-full h-full object-contain p-[10%] mix-blend-multiply" />
+              <img
+                src={images[activeImg]}
+                alt={product.name}
+                className="w-full h-full object-contain p-[10%] mix-blend-multiply transition-transform duration-200 ease-out"
+                style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
+              />
             ) : (
               <ProductPlaceholder name={product.name} category={product.category?.name} brand={product.brand} />
             )}
             {off > 0 && (
-              <span className="absolute left-4 bottom-4 px-3 py-1 rounded-full bg-white text-[13px] font-bold text-rose-600 shadow-xs">{off}% OFF</span>
+              <span className="absolute left-4 bottom-4 px-3 py-1 rounded-md bg-rose-600 text-white text-[13px] font-bold shadow-sm">{off}% OFF</span>
             )}
+            <button
+              type="button"
+              onClick={() => toggleWish(product.id)}
+              aria-pressed={wished}
+              aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+              className={`absolute right-4 top-4 w-11 h-11 rounded-full bg-white shadow-md flex items-center justify-center transition active:scale-90 ${wished ? "text-rose-600" : "text-slate-400 hover:text-rose-500"}`}
+            >
+              <HeartIcon filled={wished} className="w-5 h-5" />
+            </button>
+            {images.length > 0 && !zoom && <span className="hidden lg:block absolute right-4 bottom-4 px-2.5 py-1 rounded-full bg-white/90 text-[11.5px] font-medium text-slate-500">Hover to zoom</span>}
           </div>
           {images.length > 1 && (
             <div className="mt-3 grid grid-cols-4 sm:grid-cols-5 gap-2.5">
@@ -167,6 +204,7 @@ export default function PortalProduct() {
         <div className="lg:pt-2">
           <h1 className="text-[24px] sm:text-[30px] font-bold leading-tight tracking-tight">{product.name}</h1>
           <p className="mt-2 text-[13px] text-slate-500">
+            {product.sku ? <span className="font-mono text-slate-400">SKU {product.sku} · </span> : null}
             {product.brand ? <>{product.brand} · </> : null}
             Sold by <span className="font-semibold text-navy-900">{customer?.shop?.name || "this shop"}</span>
           </p>

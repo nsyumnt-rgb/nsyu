@@ -43,6 +43,8 @@ import MovementDetail from "./pages/details/MovementDetail";
 /* Customer Portal Pages */
 import PortalLogin from "./pages/portal/PortalLogin";
 import PortalHome from "./pages/portal/PortalHome";
+import PortalStore from "./pages/portal/PortalStore";
+import PortalWishlist from "./pages/portal/PortalWishlist";
 import PortalCatalog from "./pages/portal/PortalCatalog";
 import PortalProduct from "./pages/portal/PortalProduct";
 import PortalCart from "./pages/portal/PortalCart";
@@ -85,7 +87,9 @@ export default function App() {
         <Route element={<RequireCustomerAuth />}>
           <Route path="/portal" element={<CustomerPortalLayout />}>
             <Route index element={<Navigate to="/portal/home" replace />} />
-            <Route path="home" element={<PortalHome />} />
+            <Route path="home" element={<PortalStore />} />
+            <Route path="account" element={<PortalHome />} />
+            <Route path="wishlist" element={<PortalWishlist />} />
             <Route path="catalog" element={<PortalCatalog />} />
             <Route path="product/:id" element={<PortalProduct />} />
             <Route path="cart" element={<PortalCart />} />

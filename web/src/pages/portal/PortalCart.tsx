@@ -328,7 +328,7 @@ export default function PortalCart() {
             <dl className="p-5 space-y-3 text-[13.5px]">
               <div className="flex justify-between text-slate-600">
                 <dt>Subtotal ({cart.itemCount} item{cart.itemCount === 1 ? "" : "s"})</dt>
-                <dd className="font-semibold text-navy-900 tabular">{money(cart.subtotal)}</dd>
+                <dd className="font-semibold text-navy-900 tabular">{money(Number(cart.subtotal) + Number(cart.discountAmount || 0))}</dd>
               </div>
               {Number(cart.discountAmount) > 0 && (
                 <div className="flex justify-between text-slate-600">

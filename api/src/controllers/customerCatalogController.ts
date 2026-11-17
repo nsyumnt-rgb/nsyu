@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Op, literal } from "sequelize";
 import { Product, ProductStock, Category, ProductImage, ShopPortalSettings, Shop } from "../models";
 
 function round2(n: number): number {
@@ -102,13 +102,28 @@ export async function getPortalProducts(req: Request, res: Response) {
       ];
     }
 
+    // Storefront rails: "popular" = units actually sold at this shop (net of returns, cancelled bills
+    // excluded); "discount" = biggest saving vs MRP. Both are read-only queries on existing tables.
+    const unitsSold = literal(
+      `(SELECT COALESCE(SUM(si.quantity - COALESCE(si.returned_quantity, 0)), 0) FROM sale_items si ` +
+        `JOIN sales s ON s.id = si.sale_id WHERE si.product_id = "Product"."id" AND s.shop_id = ${Number(shopId)} AND s.status <> 'cancelled')`
+    );
+    const discountRatio = literal(
+      `(CASE WHEN "Product"."mrp" > "Product"."selling_price" AND "Product"."mrp" > 0 ` +
+        `THEN ("Product"."mrp" - "Product"."selling_price") * 1.0 / "Product"."mrp" ELSE 0 END)`
+    );
+
     const { count, rows } = await Product.findAndCountAll({
       where,
       limit: limitNum,
       offset,
       // Optional ?sort=newest powers the storefront "New Arrivals" rail; default stays alphabetical.
       order:
-        sort === "newest"
+        sort === "popular"
+          ? [[unitsSold, "DESC"], ["id", "DESC"]]
+          : sort === "discount"
+          ? [[discountRatio, "DESC"], ["id", "DESC"]]
+          : sort === "newest"
           ? [["created_at", "DESC"], ["id", "DESC"]]
           : sort === "price_asc"
           ? [["selling_price", "ASC"], ["id", "ASC"]]
@@ -116,6 +131,7 @@ export async function getPortalProducts(req: Request, res: Response) {
           ? [["selling_price", "DESC"], ["id", "DESC"]]
           : [["name", "ASC"]],
       distinct: true, // count products, not product×image join rows
+      ...(sort === "popular" ? { attributes: { include: [[unitsSold, "units_sold"]] } } : {}),
       include: [
         { model: Category, as: "category", attributes: ["id", "name"] },
         { model: ProductImage, as: "images", attributes: ["id", "url", "is_primary"] },
@@ -167,6 +183,7 @@ export async function getPortalProducts(req: Request, res: Response) {
         imageUrl: primaryImg ? primaryImg.url : null,
         images: (p as any).images?.map((img: any) => ({ id: img.id, url: img.url, is_primary: img.is_primary })) || [],
         availability,
+        ...(sort === "popular" ? { unitsSold: Number((p as any).get("units_sold") || 0) } : {}),
         stock: currentStock,
         stockQuantity: currentStock,
         availableStock: currentStock,

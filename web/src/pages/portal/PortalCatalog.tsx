@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   getPortalCategoriesApi,
   getPortalProductsApi,
@@ -7,7 +7,7 @@ import {
   removeCartItemApi,
 } from "../../api/portal";
 import { resolveAssetUrl } from "../../api/client";
-import { ProductCard, CartIcon, inr, type Category, type Product } from "../../components/StoreProduct";
+import { ProductCard, type Category, type Product } from "../../components/StoreProduct";
 import { usePortalStore } from "../../store/portalStore";
 
 export default function PortalCatalog() {
@@ -28,7 +28,19 @@ export default function PortalCatalog() {
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Listing filters (wireframe p3): sort + price range, applied server-side
-  const [sort, setSort] = useState<"" | "newest" | "price_asc" | "price_desc">("");
+  const [sort, setSort] = useState<"" | "newest" | "price_asc" | "price_desc" | "popular" | "discount">("");
+
+  // Header search, category links and "View all" rails arrive as URL params (?q=, ?category=, ?sort=).
+  const [params] = useSearchParams();
+  useEffect(() => {
+    const q = params.get("q");
+    const cat = params.get("category");
+    const so = params.get("sort");
+    setSearch(q || "");
+    setSelectedCategory(cat && Number.isFinite(Number(cat)) ? Number(cat) : null);
+    setSort(so === "newest" || so === "price_asc" || so === "price_desc" || so === "popular" || so === "discount" ? so : "");
+    setPage(1);
+  }, [params]);
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [appliedPrice, setAppliedPrice] = useState<{ min?: number; max?: number }>({});
@@ -101,7 +113,6 @@ export default function PortalCatalog() {
   };
 
   const activeCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
-  const cartCount = cart?.itemCount ?? cart?.items?.length ?? 0;
   const priceActive = appliedPrice.min !== undefined || appliedPrice.max !== undefined;
   const browsing = !search.trim() && selectedCategory === null && !priceActive && !sort;
 
@@ -219,6 +230,8 @@ export default function PortalCatalog() {
               >
                 <option value="">Relevance</option>
                 <option value="newest">Newest first</option>
+                <option value="popular">Best selling</option>
+                <option value="discount">Biggest discount</option>
                 <option value="price_asc">Price: low to high</option>
                 <option value="price_desc">Price: high to low</option>
               </select>
@@ -327,24 +340,6 @@ export default function PortalCatalog() {
           </div>
         </div>
       </section>
-
-      {/* ── Mobile floating cart bar ──────────────────────────── */}
-      {cart && cartCount > 0 && (
-        <div className="md:hidden fixed bottom-[76px] left-3 right-3 z-30 animate-fade-in">
-          <Link to="/portal/cart" className="w-full bg-navy-900 text-white py-3 px-4 rounded-2xl shadow-lift flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-                <CartIcon className="w-5 h-5" />
-              </span>
-              <div className="leading-tight">
-                <div className="text-[11.5px] text-brand-100/80">{cart.itemCount} item{cart.itemCount === 1 ? "" : "s"}</div>
-                <div className="text-[15px] font-bold tabular">{inr(cart.estimatedTotal)}</div>
-              </div>
-            </div>
-            <span className="text-[13.5px] font-semibold">View cart →</span>
-          </Link>
-        </div>
-      )}
 
     </div>
   );

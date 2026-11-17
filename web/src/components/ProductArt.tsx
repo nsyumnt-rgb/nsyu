@@ -66,7 +66,7 @@ export function KindIcon({ kind, className = "w-6 h-6" }: { kind: Kind; classNam
 export function ProductPlaceholder({ name, category, brand, compact = false }: { name: string; category?: string | null; brand?: string | null; compact?: boolean }) {
   const kind = productKind(category, name);
   const t = tintFor(`${category ?? ""}|${kind}`);
-  const label = (brand && brand.trim()) || (category && category.trim()) || "";
+  const label = (category && category.trim()) || (brand && brand.trim()) || "";
   return (
     <span className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br ${t.bg}`} aria-hidden>
       <span className={`${compact ? "w-9 h-9 rounded-xl" : "w-[34%] max-w-[88px] aspect-square rounded-[28%]"} bg-white/80 ring-1 ${t.ring} shadow-sm flex items-center justify-center ${t.fg}`}>
