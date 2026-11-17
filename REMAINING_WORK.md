@@ -29,12 +29,14 @@ Data isolation is enforced **in the API** (every query is scoped by the token's 
 |---|---|---|
 | Super Admin | Yes (`/auth/login`, `is_super_admin`) | API matrix + UI sweep |
 | Owner | Yes | API matrix, workflows, UI sweep |
-| Manager | **No login** — role + permissions exist, but there is no employee account table or employee login endpoint | Backend authorization verified with signed role tokens |
-| Staff (Sales / Billing / Inventory / Accountant) | **No login** (same reason) | Backend authorization verified with signed role tokens |
+| Manager | **Yes (added 2026-11-18)** — staff account with the Manager role in a shop | `test:staff` (real logins) + role matrix |
+| Staff (Sales / Billing / Inventory / Accountant / Staff) | **Yes (added 2026-11-18)** — same staff account, role chosen per shop | `test:staff` (real logins) + role matrix |
 | Customer | Yes (portal password / OTP) | API matrix, workflows, UI sweep |
 | Supplier | **No login** — suppliers are records owned by a shop (purchases, payables, supplier ledger) | Supplier workflows tested from the owner side |
 
-**Pending (needs a product decision + a new table, i.e. schema approval):** employee accounts (Manager/Staff login, shop assignment) and any supplier self-service login.
+**Staff accounts (added 2026-11-18, owner-approved schema change):** migration `07_employee_accounts.sql` adds `employees` and ensures the existing `user_roles` table (assignments: one role per staff member per shop). Owners manage staff at **Staff** (`/app/staff`): create login, choose shop + role, change role, add/remove shops, reset password, deactivate. Every staff request re-checks the account and its *current* assignment, so role changes, removals and deactivation apply immediately. Platform/owner/customer roles (Super Admin, Owner, User) can't be given to staff.
+
+**Still pending:** supplier self-service login (suppliers remain shop-owned records); a shop picker in the mobile app for staff assigned to several shops (single-shop staff work today).
 
 ## 3. Permission matrix — `npm run test:roles` → **103 passed, 0 failed**
 
@@ -60,12 +62,13 @@ Isolated in-memory DB, real HTTP API. Status codes observed:
 - **D Inventory:** create product, +15 purchase, −3 adjustment, sale −4, history rows, cancelling bill restores stock.
 - **E Suppliers / multi-shop:** create supplier, purchase adds stock, payable ₹2000 after ₹1000 paid, other owner can't read supplier/purchase or bill shop A's product.
 
-## 5. Full regression — `npm run test:all` → **342 checks, 0 failed**
+## 5. Full regression — `npm run test:all` → **398 checks, 0 failed** (2026-11-18)
 
 | Suite | Result |
 |---|---|
-| test:roles | 103 / 103 |
+| test:roles | 104 / 104 (real staff accounts; signed token for unknown staff id refused) |
 | test:workflows | 54 / 54 |
+| test:staff (staff logins) | 55 / 55 |
 | test:isolation (tenant isolation) | 57 / 57 |
 | test:phase-a (suppliers, purchases, supplier ledger) | 51 / 51 |
 | test:marketplace | 23 / 23 |
@@ -99,6 +102,9 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 | 8 | Low | Closed cart drawer's buttons were keyboard-focusable | Hidden when closed |
 | 9 | Low | Low-stock count ignored the default threshold when a product had no minimum | Uses default 5 |
 | 10 | Low | DB pooler host shown in the mobile About/Help screens | Removed |
+| 11 | High | Two logins by the same account in the same second created identical refresh tokens → unique-index error → the login request hung | Refresh tokens carry a random `jti` |
+| 12 | Medium | `/auth/me` let the "dashboard" alias overwrite the real "reports" permission, so the UI could show modules the API refuses | A module's own permission row always wins |
+| 13 | Medium | Super Admin / customer "User" system roles were offered as assignable roles | Excluded in API and UI |
 
 ## 8. Other results
 
@@ -109,7 +115,8 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 
 | Item | Why blocked | Needed |
 |---|---|---|
-| Manager / Staff / Supplier **login** | Not implemented (no account table) | Approval to add an employee-accounts migration + login |
+| Supplier **login** | Not implemented (suppliers are shop-owned records) | Product decision |
+| Mobile shop picker for multi-shop staff | Not built in the Flutter app yet | Small app change |
 | Supabase **RLS** policies | Requires the live database; tests never touch production | A staging Supabase project + its credentials |
 | Android **emulator** run | No emulator session in this environment | Run on a device/emulator; APK builds |
 | Testing against **production data** | Deliberately avoided | — |
@@ -124,7 +131,7 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 ## 11. Required follow-up actions for the owner
 
 1. **Rotate** the super-admin password, the `nsyu.mnt` owner password, the database password and both JWT secrets (they were committed in the past).
-2. Decide on employee accounts (Manager/Staff login) — then the role permissions already verified above become usable.
+2. After the Render deploy, check the API log shows "Employee accounts schema verified" (migration 07), then add staff at **Staff**.
 3. Provide a staging Supabase project if RLS should be verified independently of the API.
 
 ## 12. Release

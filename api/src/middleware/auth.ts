@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt";
 import { Shop, CustomerAccount } from "../models";
+import { resolveEmployeeAccess } from "../utils/employeeAccess";
 
 /**
  * Verifies the access token and attaches req.auth.
@@ -9,7 +10,7 @@ import { Shop, CustomerAccount } from "../models";
  * routes can require "logged in" without requiring "shop selected"
  * (e.g. GET /shops, POST /shops/switch).
  */
-export function authenticate(req: Request, res: Response, next: NextFunction) {
+export async function authenticate(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {
     return res.status(401).json({ success: false, message: "Authentication required" });
@@ -22,10 +23,23 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
       return res.status(403).json({ success: false, message: "Customer tokens cannot access staff endpoints" });
     }
     req.auth = payload;
-    return next();
   } catch (err) {
     return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
+
+  // Staff tokens: the account must still be active and assigned to the token's shop, and the
+  // role used is the one assigned NOW (deactivation / role changes apply on the next request).
+  if (req.auth.employeeId && !req.auth.isOwner) {
+    try {
+      const access = await resolveEmployeeAccess(req.auth.employeeId, req.auth.ownerId, req.auth.shopId);
+      if (!access.ok) return res.status(401).json({ success: false, message: "Staff access revoked or account inactive" });
+      req.auth.roleId = access.roleId;
+      req.auth.roleName = access.roleName;
+    } catch {
+      return res.status(503).json({ success: false, message: "Could not verify staff access" });
+    }
+  }
+  return next();
 }
 
 /**

@@ -18,6 +18,7 @@ import SelectShop from "./pages/SelectShop";
 import Dashboard from "./pages/Dashboard";
 import Shops from "./pages/Shops";
 import Roles from "./pages/Roles";
+import Staff from "./pages/Staff";
 import Products from "./pages/Products";
 import Inventory from "./pages/Inventory";
 import InventoryOverview from "./pages/InventoryOverview";
@@ -141,6 +142,7 @@ export default function App() {
             <Route path="ledger" element={<Ledger />} />
             <Route path="shops" element={<Shops />} />
             <Route path="roles" element={<Roles />} />
+            <Route path="staff" element={<Staff />} />
             <Route path="reports" element={<Reports />} />
             <Route path="settings" element={<Settings />} />
           </Route>

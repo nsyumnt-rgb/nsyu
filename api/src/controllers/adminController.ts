@@ -14,6 +14,7 @@ import {
   StatusHistory,
   CustomerAccount,
   Notification,
+  Employee,
 } from "../models";
 import { seedOwnerDefaults } from "../utils/seed";
 
@@ -70,7 +71,7 @@ export async function getAdminDashboard(req: Request, res: Response) {
       Shop.count({ where: { status: "suspended" } }),
       Shop.count({ where: { status: "pending_approval" } }),
       Owner.count({ where: { is_super_admin: false } }),
-      0,
+      Employee.count(),
       Customer.count(),
       Sale.findOne({
         attributes: [

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
@@ -48,7 +49,9 @@ export function signAccessToken(payload: AccessTokenPayload): string {
 }
 
 export function signRefreshToken(payload: { ownerId: number; employeeId?: number }): string {
-  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES });
+  // jwtid makes every refresh token unique — two logins in the same second would otherwise
+  // produce identical tokens and collide on the refresh_tokens.token unique index.
+  return jwt.sign(payload, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRES, jwtid: randomUUID() });
 }
 
 export function verifyAccessToken(token: string): AccessTokenPayload {

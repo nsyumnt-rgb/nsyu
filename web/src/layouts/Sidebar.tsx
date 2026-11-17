@@ -13,6 +13,8 @@ export interface NavItem {
   module: ModuleName;
   group: NavGroup;
   icon: (active: boolean) => ReactNode;
+  /** Shown only to the owner account (the API is owner-only too). */
+  ownerOnly?: boolean;
 }
 
 /** Stroke icon from one or more SVG path strings. */
@@ -49,6 +51,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/app/ledger", label: "Customer ledger", module: "ledger", group: "BUSINESS", icon: ico("M4 19.5A2.5 2.5 0 0 1 6.5 17H20", "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z", "M9 7h6", "M9 11h4") },
   { to: "/app/reports", label: "Reports", module: "reports", group: "BUSINESS", icon: ico("M3 3v18h18", "M7 15l4-4 3 3 5-6") },
   { to: "/app/settings", label: "Storefront & settings", module: "settings", group: "ADMIN", icon: ico("M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z") },
+  { to: "/app/staff", label: "Staff", module: "employees", group: "ADMIN", ownerOnly: true, icon: ico("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M19 8v6", "M22 11h-6") },
   { to: "/app/roles", label: "Roles & permissions", module: "role_permissions", group: "ADMIN", icon: ico("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z") },
 ];
 
@@ -96,7 +99,7 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
   };
 
   // Filter items by role-based permissions
-  const visibleItems = NAV_ITEMS.filter((item) => isOwner || can(item.module, "view"));
+  const visibleItems = NAV_ITEMS.filter((item) => (item.ownerOnly ? isOwner : isOwner || can(item.module, "view")));
 
   return (
     <>

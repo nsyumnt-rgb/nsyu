@@ -26,6 +26,7 @@ import { Module } from "./Module";
 import { Permission } from "./Permission";
 import { ShopModule } from "./ShopModule";
 import { UserRole } from "./UserRole";
+import { Employee } from "./Employee";
 import { CustomerAccount } from "./CustomerAccount";
 import { CustomerOtp } from "./CustomerOtp";
 import { CustomerRefreshToken } from "./CustomerRefreshToken";
@@ -74,6 +75,8 @@ UserRole.belongsTo(Role, { foreignKey: "role_id", as: "role" });
 
 Shop.hasMany(UserRole, { foreignKey: "shop_id", as: "userRoles" });
 UserRole.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+Owner.hasMany(Employee, { foreignKey: "owner_id", as: "employees" });
+Employee.belongsTo(Owner, { foreignKey: "owner_id", as: "owner" });
 
 /* ---------------- Refresh Tokens ---------------- */
 Owner.hasMany(RefreshToken, { foreignKey: "owner_id", as: "refreshTokens" });
@@ -233,6 +236,7 @@ export {
   Permission,
   ShopModule,
   UserRole,
+  Employee,
   CustomerAccount,
   CustomerOtp,
   CustomerRefreshToken,

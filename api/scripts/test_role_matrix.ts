@@ -7,9 +7,8 @@
  * running on an isolated in-memory SQLite database, returns that outcome.
  * Never touches the configured database.        npm run test:roles
  *
- * Note: there is no employee/supplier login in the product yet, so staff roles are
- * exercised with signed tokens carrying their role — this verifies the backend
- * authorization layer, not a login screen.
+ * Staff roles use real employee accounts + shop assignments (see test_staff_accounts.ts
+ * for the login flow itself). Supplier accounts have no login in the product.
  */
 process.env.TEST_DIALECT = "sqlite";
 process.env.DB_STORAGE = ":memory:";
@@ -29,7 +28,7 @@ const models = require(`${API}/models`);
 const app = require(`${API}/app`).default;
 const { signAccessToken } = require(`${API}/utils/jwt`);
 const { seedOwnerDefaults } = require(`${API}/utils/seed`);
-const { sequelize, Owner, Shop, Customer, CustomerAccount, Product, ProductStock, Category, Role, ShopPortalSettings } = models;
+const { sequelize, Owner, Shop, Customer, CustomerAccount, Product, ProductStock, Category, Role, ShopPortalSettings, Employee, UserRole } = models;
 
 type Expect = "ok" | "deny" | "unauth" | "notfound-or-deny" | ((r: Res) => boolean | string);
 type Res = { status: number; json: any; text: string };
@@ -71,17 +70,31 @@ async function main() {
   const custA2 = await mkCustomer(ownerA.id, shopA.id, "Cust A2", "9100000002");
   const custB1 = await mkCustomer(ownerB.id, shopB.id, "Cust B1", "9100000003");
 
+  // Real staff accounts assigned to shop A (the API re-checks the employee + assignment per request).
+  const mkStaff = async (name: string, roleName: string) => {
+    const e = await Employee.create({ owner_id: ownerA.id, name, email: `${name.toLowerCase().replace(/\W+/g, "")}@test.local`, password: "x", status: "active" });
+    const rid = await roleId(ownerA.id, roleName);
+    await UserRole.create({ user_type: "employee", user_id: e.id, shop_id: shopA.id, role_id: rid, is_active: true });
+    return { id: e.id, roleId: rid };
+  };
+  const mgr = await mkStaff("Matrix Manager", "Manager");
+  const sal = await mkStaff("Matrix Sales", "Sales Staff");
+  const stk = await mkStaff("Matrix Stock", "Inventory Staff");
+  const fak = await mkStaff("Matrix Fake Admin", "Sales Staff");
+
   const T = {
     anon: "",
     forged: signAccessToken({ ownerId: ownerA.id, isOwner: true, shopId: shopA.id }).slice(0, -3) + "abc",
     admin: signAccessToken({ ownerId: admin.id, isOwner: true, isSuperAdmin: true, roleName: "super_admin", shopId: null, roleId: null }),
     ownerA: signAccessToken({ ownerId: ownerA.id, isOwner: true, shopId: shopA.id }),
     ownerB: signAccessToken({ ownerId: ownerB.id, isOwner: true, shopId: shopB.id }),
-    manager: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: 9001, shopId: shopA.id, roleId: await roleId(ownerA.id, "Manager") }),
-    sales: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: 9002, shopId: shopA.id, roleId: await roleId(ownerA.id, "Sales Staff") }),
-    stock: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: 9003, shopId: shopA.id, roleId: await roleId(ownerA.id, "Inventory Staff") }),
+    manager: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: mgr.id, shopId: shopA.id, roleId: mgr.roleId }),
+    sales: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: sal.id, shopId: shopA.id, roleId: sal.roleId }),
+    stock: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: stk.id, shopId: shopA.id, roleId: stk.roleId }),
     // A role named like the platform role must not grant platform access.
-    fakeAdminRole: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: 9004, shopId: shopA.id, roleId: await roleId(ownerA.id, "Sales Staff"), roleName: "Super Admin", roleCode: "super_admin" }),
+    fakeAdminRole: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: fak.id, shopId: shopA.id, roleId: fak.roleId, roleName: "Super Admin", roleCode: "super_admin" }),
+    // A token for a staff id that doesn't exist must be refused even though it is correctly signed.
+    ghostStaff: signAccessToken({ ownerId: ownerA.id, isOwner: false, employeeId: 999999, shopId: shopA.id, roleId: mgr.roleId }),
     custA1: custA1.tok,
     custA2: custA2.tok,
     custB1: custB1.tok,
@@ -136,6 +149,8 @@ async function main() {
       await check("anon", `${m} ${p}`, m, p, "unauth");
       await check("forged", `${m} ${p}`, m, p, "unauth");
     }
+
+    await check("ghostStaff", "signed token for unknown staff id", "GET", "/products", "unauth");
 
     // ── Super Admin ─────────────────────────────────────────────────────
     await check("admin", "GET /admin/dashboard", "GET", "/admin/dashboard", "ok");

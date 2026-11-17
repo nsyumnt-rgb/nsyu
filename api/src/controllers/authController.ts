@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { Owner, Role, RolePermission, RoleFieldPermission, RefreshToken, Shop, ShopModule, ShopPortalSettings } from "../models";
+import { Owner, Role, RolePermission, RoleFieldPermission, RefreshToken, Shop, ShopModule, ShopPortalSettings, Employee } from "../models";
+import { employeeAssignments, resolveEmployeeAccess } from "../utils/employeeAccess";
+import sequelize from "../config/database";
 import { signAccessToken, signRefreshToken, verifyRefreshToken, refreshExpiryDate } from "../utils/jwt";
 import { seedOwnerDefaults } from "../utils/seed";
 import { MODULES, SENSITIVE_FIELDS, toCanonicalModule } from "../config/permissions";
@@ -90,9 +92,8 @@ export async function registerOwner(req: Request, res: Response) {
 /**
  * Unified login: tries Owner first, then Employee (scoped to that
  * owner via email lookup). Employees log in with the same email
- * they were created with — email is unique per-owner, not globally,
- * so the same email CAN exist under two different owners without
- * collision.
+ * they were created with. Employee emails are unique platform-wide
+ * (migrations/07) so the email alone identifies the account.
  */
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
@@ -172,6 +173,44 @@ export async function login(req: Request, res: Response) {
     }
   }
 
+  // Employee (staff) account
+  const employee = await Employee.findOne({
+    where: sequelize.where(sequelize.fn("lower", sequelize.col("email")), lookupEmail),
+  });
+  if (employee && (await bcrypt.compare(password, employee.password))) {
+    if (employee.status !== "active") {
+      return res.status(403).json({ success: false, message: "Your staff account is inactive. Contact your shop owner." });
+    }
+    const assignments = await employeeAssignments(employee);
+    if (assignments.length === 0) {
+      return res.status(403).json({ success: false, message: "You are not assigned to any active shop yet. Ask your shop owner to assign you." });
+    }
+    // One shop → start there directly; several → the app shows the shop picker.
+    const only: any = assignments.length === 1 ? assignments[0] : null;
+    const accessToken = signAccessToken({
+      ownerId: employee.owner_id,
+      isOwner: false,
+      employeeId: employee.id,
+      shopId: only ? only.shop_id : null,
+      roleId: only ? only.role_id : null,
+    });
+    const refreshToken = signRefreshToken({ ownerId: employee.owner_id, employeeId: employee.id });
+    await RefreshToken.create({ token: refreshToken, employee_id: employee.id, owner_id: employee.owner_id, expires_at: refreshExpiryDate() });
+    return res.json({
+      success: true,
+      data: {
+        accountType: "employee",
+        isSuperAdmin: false,
+        employee: employee.toJSON(),
+        shop: only ? only.shop : null,
+        roleName: only ? only.role.name : null,
+        assignedShopIds: assignments.map((a: any) => a.shop_id),
+        accessToken,
+        refreshToken,
+      },
+    });
+  }
+
   return res.status(401).json({ success: false, message: "Invalid email or password" });
 }
 
@@ -189,6 +228,10 @@ export async function refresh(req: Request, res: Response) {
   try {
     const payload = verifyRefreshToken(refreshToken);
     const isOwner = !payload.employeeId;
+    if (payload.employeeId) {
+      const access = await resolveEmployeeAccess(payload.employeeId, payload.ownerId, null);
+      if (!access.ok) return res.status(401).json({ success: false, message: "Staff account is no longer active" });
+    }
 
     let roleId: number | null = null;
     let roleName: string | null = null;
@@ -247,6 +290,9 @@ export async function getMe(req: Request, res: Response) {
         RolePermission.findAll({ where: { role_id: auth.roleId } }),
         RoleFieldPermission.findAll({ where: { role_id: auth.roleId } }),
       ]);
+      // A module's own row always wins; an alias row (e.g. "dashboard" → "reports") only fills a
+      // canonical key that has no row of its own. Otherwise the UI could show modules the API refuses.
+      const direct = new Set(rolePerms.map((p) => p.module));
       rolePerms.forEach((p) => {
         const perm = {
           can_view: p.can_view,
@@ -256,7 +302,7 @@ export async function getMe(req: Request, res: Response) {
         };
         permissions[p.module] = perm;
         const canonical = toCanonicalModule(p.module);
-        permissions[canonical] = perm;
+        if (canonical !== p.module && !direct.has(canonical)) permissions[canonical] = perm;
       });
       fieldPerms.forEach((f) => (fieldPermissions[f.field] = f.allowed));
 
@@ -299,6 +345,27 @@ export async function getMe(req: Request, res: Response) {
         shopId: auth.shopId ?? null,
         roleId: null,
         roleName: "Owner",
+        permissions,
+        fieldPermissions,
+      },
+    });
+  }
+
+  if (auth.employeeId) {
+    const employee = await Employee.findByPk(auth.employeeId);
+    if (!employee || employee.status !== "active") return res.status(401).json({ success: false, message: "Invalid session" });
+    const assignments = await employeeAssignments(employee);
+    const current: any = assignments.find((a: any) => a.shop_id === auth.shopId);
+    return res.json({
+      success: true,
+      data: {
+        accountType: "employee",
+        isSuperAdmin: false,
+        employee: employee.toJSON(),
+        shopId: current ? current.shop_id : null,
+        roleId: current ? current.role_id : null,
+        roleName: current ? current.role.name : null,
+        assignedShopIds: assignments.map((a: any) => a.shop_id),
         permissions,
         fieldPermissions,
       },

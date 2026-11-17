@@ -10,6 +10,8 @@ import {
   ShopPortalSettings,
 } from "../models";
 import { signAccessToken } from "../utils/jwt";
+import { Employee } from "../models";
+import { employeeAssignments, resolveEmployeeAccess } from "../utils/employeeAccess";
 import { logAudit } from "../utils/audit";
 
 /** Owner-only: create / register a new shop under their account. */
@@ -86,6 +88,15 @@ export async function createShop(req: Request, res: Response) {
  *  - Employee sees only shops they've been assigned to.
  */
 export async function listShops(req: Request, res: Response) {
+  if (req.auth!.employeeId) {
+    const employee = await Employee.findByPk(req.auth!.employeeId);
+    if (!employee) return res.json({ success: true, data: [] });
+    const rows = await employeeAssignments(employee);
+    return res.json({
+      success: true,
+      data: rows.map((r: any) => ({ ...r.shop.toJSON(), roleId: r.role_id, roleName: r.role.name })),
+    });
+  }
   const shops = await Shop.findAll({
     where: { owner_id: req.auth!.ownerId },
     order: [["created_at", "ASC"]],
@@ -226,6 +237,15 @@ export async function switchShop(req: Request, res: Response) {
     return res.status(404).json({ success: false, message: "Shop not found" });
   }
 
+  // Employees may only enter shops they are assigned to, with that shop's role.
+  let roleId: number | null = req.auth!.roleId ?? null;
+  if (req.auth!.employeeId) {
+    const access = await resolveEmployeeAccess(req.auth!.employeeId, req.auth!.ownerId, shop.id);
+    if (!access.ok) return res.status(404).json({ success: false, message: "Shop not found" });
+    if (shop.status === "suspended") return res.status(403).json({ success: false, message: "Shop is suspended" });
+    roleId = access.roleId;
+  }
+
   // Prevent employees from switching to an inactive shop
   if (!req.auth!.isOwner && shop.status === "inactive") {
     return res.status(403).json({ success: false, message: "Cannot switch to an inactive shop. Please contact the owner." });
@@ -234,8 +254,9 @@ export async function switchShop(req: Request, res: Response) {
   const accessToken = signAccessToken({
     ownerId: req.auth!.ownerId,
     isOwner: req.auth!.isOwner,
+    employeeId: req.auth!.employeeId,
     shopId: shop.id,
-    roleId: req.auth!.roleId ?? null,
+    roleId: req.auth!.isOwner ? null : roleId,
   });
 
   await logAudit({ req, module: "shops", action: "switch", entityType: "Shop", entityId: shop.id });

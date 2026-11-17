@@ -110,6 +110,11 @@ async function ensureShopApprovalSchema() {
   await runSqlMigration("06_shop_approval.sql", "Shop approval schema verified");
 }
 
+/** Staff accounts: employees table + user_roles assignments (additive, idempotent). */
+async function ensureEmployeeSchema() {
+  await runSqlMigration("07_employee_accounts.sql", "Employee accounts schema verified");
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -118,6 +123,7 @@ async function start() {
     await ensurePurchaseSchema();
     await ensureIdentitySchema();
     await ensureShopApprovalSchema();
+    await ensureEmployeeSchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);

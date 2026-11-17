@@ -9,7 +9,7 @@ export function getEmployee(employeeId: number | string) {
   return api.get<ApiEnvelope<Employee & { shopAssignments?: any[]; salaryConfigs?: any[]; attendanceRecords?: any[]; payrolls?: any[] }>>(`/employees/${employeeId}`);
 }
 
-export function createEmployee(payload: { name: string; email: string; password: string; phone?: string }) {
+export function createEmployee(payload: { name: string; email: string; password: string; phone?: string; shopId?: number; roleId?: number }) {
   return api.post<ApiEnvelope<Employee>>("/employees", payload);
 }
 
@@ -23,4 +23,12 @@ export function removeShopAssignment(payload: { employeeId: number; shopId: numb
 
 export function setEmployeeStatus(employeeId: number, status: "active" | "inactive") {
   return api.patch<ApiEnvelope<{ id: number; status: string }>>(`/employees/${employeeId}/status`, { status });
+}
+
+export function updateEmployee(employeeId: number, payload: { name?: string; phone?: string; email?: string }) {
+  return api.put<ApiEnvelope<Employee>>(`/employees/${employeeId}`, payload);
+}
+
+export function resetEmployeePassword(employeeId: number, password: string) {
+  return api.patch<ApiEnvelope<unknown>>(`/employees/${employeeId}/password`, { password });
 }
