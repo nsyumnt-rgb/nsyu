@@ -16,7 +16,7 @@ import InventoryOverview from "./pages/InventoryOverview";
 import Purchase from "./pages/Purchase";
 import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
-import Billing from "./pages/Billing";
+import SalesHub from "./pages/SalesHub";
 import Customers from "./pages/Customers";
 import Suppliers from "./pages/Suppliers";
 import Ledger from "./pages/Ledger";
@@ -110,7 +110,7 @@ export default function App() {
             <Route path="sales" element={<Sales />} />
             <Route path="sales/:id" element={<SaleDetail />} />
             <Route path="orders" element={<Orders />} />
-            <Route path="billing" element={<Billing />} />
+            <Route path="billing" element={<SalesHub />} />
             <Route path="customers" element={<Customers />} />
             <Route path="customers/:id" element={<CustomerDetail />} />
             <Route path="suppliers" element={<Suppliers />} />
