@@ -117,6 +117,68 @@ async function main() {
     r = await call("GET", "/cart", C.token);
     const ravisB = r.json.data.groups.find((g: any) => g.shop.id === B.shop.id);
     check("Ravi's shop-B cart unchanged (qty 3)", ravisB?.cart.items[0].quantity === 3, ravisB);
+
+    console.log("Checkout — one order per shop");
+    const { Order } = models;
+    const addr = { name: "Ravi", phone: "9000000001", line: "12 MG Road", city: "Pune", pincode: "411001" };
+    await put(C.token, A.shop.id, A.product.id, 2); // cart: A x2, B x3
+    let co = await call("POST", "/checkout", C.token, { checkoutId: "chk-11111111", address: { name: "Ravi" }, shops: [{ shopId: A.shop.id, deliveryType: "delivery", paymentMethod: "cod" }] });
+    check("delivery without full address → 400", co.status === 400, co.json);
+
+    const opts = await call("GET", "/checkout/options", C.token);
+    check("checkout options list shops + saved address", opts.status === 200 && opts.json.data.shops.length >= 2 && opts.json.data.address.phone === "9000000001", opts.json);
+
+    B.shop.settings = { ...(B.shop.settings || {}), enableCredit: false };
+    await B.shop.save();
+    co = await call("POST", "/checkout", C.token, { checkoutId: "chk-22222222", address: addr, shops: [{ shopId: B.shop.id, deliveryType: "pickup", paymentMethod: "khata" }] });
+    check("khata refused where shop disallows credit", co.status === 400 && co.json.data.results[0].ok === false, co.json);
+
+    const ordersBefore = await Order.count();
+    co = await call("POST", "/checkout", C.token, {
+      checkoutId: "chk-33333333",
+      address: addr,
+      shops: [
+        { shopId: A.shop.id, deliveryType: "delivery", paymentMethod: "khata", note: "Ring the bell" },
+        { shopId: B.shop.id, deliveryType: "pickup", paymentMethod: "upi" },
+      ],
+    });
+    check("checkout two shops → 201, both placed", co.status === 201 && co.json.data.results.every((x: any) => x.ok), co.json);
+    const orders = await Order.findAll({ order: [["id", "ASC"]] });
+    const oA = orders.find((o: any) => o.shop_id === A.shop.id);
+    const oB = orders.find((o: any) => o.shop_id === B.shop.id);
+    check("2 new orders, one per shop", (await Order.count()) - ordersBefore === 2 && !!oA && !!oB);
+    check("each order belongs to that shop's owner and account", oA.owner_id === A.owner.id && oB.owner_id === B.owner.id && oA.customer_account_id === Number(C.acc.id) && oB.customer_account_id !== Number(C.acc.id));
+    check("order totals from shop prices (₹200 + ₹300)", Number(oA.total_amount) === 200 && Number(oB.total_amount) === 300, [oA.total_amount, oB.total_amount]);
+    check("delivery vs pickup recorded", oA.order_type === "Delivery" && oB.order_type === "Pickup" && String(oA.shipping_address).includes("411001"), [oA.order_type, oB.order_type, oA.shipping_address]);
+    check("payment choice recorded for the shop", oA.payment_method === "Khata (pay later)" && oB.payment_method === "UPI" && oA.payment_status === "UNPAID");
+    check("note passed to the shop", oA.remarks === "Ring the bell");
+    check("cart emptied after checkout (only the awaiting-approval notice remains)", co.json.data.cart.itemCount === 0 && co.json.data.cart.groups.every((g: any) => g.status === "pending_approval"), co.json.data.cart);
+
+    co = await call("POST", "/checkout", C.token, { checkoutId: "chk-33333333", address: addr, shops: [{ shopId: A.shop.id, deliveryType: "delivery", paymentMethod: "cod" }] });
+    check("retry with same checkoutId → no duplicate order", (await Order.count()) - ordersBefore === 2 && co.json.data.results[0].repeated === true, co.json);
+
+    console.log("Partial success");
+    await put(C.token, A.shop.id, A.product.id, 2);
+    await put(C.token, B.shop.id, B.product.id, 1);
+    await ProductStock.update({ current_stock: 1 }, { where: { shop_id: A.shop.id, product_id: A.product.id } }); // stock dropped under the cart
+    co = await call("POST", "/checkout", C.token, {
+      checkoutId: "chk-44444444",
+      address: addr,
+      shops: [
+        { shopId: A.shop.id, deliveryType: "delivery", paymentMethod: "cod" },
+        { shopId: B.shop.id, deliveryType: "pickup", paymentMethod: "cod" },
+      ],
+    });
+    const rA = co.json.data.results.find((x: any) => x.shopId === A.shop.id);
+    const rB = co.json.data.results.find((x: any) => x.shopId === B.shop.id);
+    check("shop with changed stock fails, the other shop still orders", co.status === 201 && rA.ok === false && rB.ok === true, co.json.data.results);
+    check("failed shop's items stay in the cart", co.json.data.cart.groups.some((g: any) => g.shop.id === A.shop.id), co.json.data.cart);
+
+    console.log("Checkout isolation");
+    co = await call("POST", "/checkout", D.token, { checkoutId: "chk-55555555", address: addr, shops: [{ shopId: A.shop.id, deliveryType: "delivery", paymentMethod: "cod" }] });
+    check("Sita can't order Ravi's cart (her own A cart is empty)", co.status === 400, co.json);
+    co = await call("POST", "/checkout", D.token, { checkoutId: "chk-66666666", address: addr, shops: [{ shopId: P.shop.id, deliveryType: "delivery", paymentMethod: "cod" }] });
+    check("checkout at a shop she has no account with → refused", co.status === 400 && co.json.data.results[0].ok === false, co.json);
   } finally {
     server.close();
     await sequelize.close();

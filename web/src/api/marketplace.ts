@@ -117,3 +117,50 @@ export async function setMarketCartItem(shopId: number, productId: number, quant
   const res = await portalApi.put(`/customer-portal/market/cart/${shopId}/items/${productId}`, { quantity });
   return res.data?.data;
 }
+
+/* ── Checkout: one order per shop ── */
+export type PayMethod = "cod" | "upi" | "khata";
+export interface CheckoutOptions {
+  shops: { shopId: number; paymentMethods: PayMethod[] }[];
+  address: { name: string; phone: string; line: string };
+}
+export interface CheckoutAddress {
+  name: string;
+  phone: string;
+  line: string;
+  landmark?: string;
+  city?: string;
+  pincode: string;
+}
+export interface CheckoutShopChoice {
+  shopId: number;
+  deliveryType: "delivery" | "pickup";
+  paymentMethod: PayMethod;
+  note?: string;
+}
+export interface CheckoutResult {
+  shopId: number;
+  shopName: string;
+  ok: boolean;
+  message?: string;
+  orderId?: number;
+  orderNumber?: string;
+  total?: number;
+  paymentMethod?: string;
+}
+
+export async function getCheckoutOptions(): Promise<CheckoutOptions> {
+  const res = await portalApi.get("/customer-portal/market/checkout/options");
+  return res.data?.data;
+}
+
+/** Places one order per shop. Resolves with per-shop results even when some shops fail. */
+export async function placeMarketCheckout(body: { checkoutId: string; address: CheckoutAddress; shops: CheckoutShopChoice[] }) {
+  try {
+    const res = await portalApi.post("/customer-portal/market/checkout", body);
+    return res.data as { success: boolean; message: string; data: { results: CheckoutResult[]; cart: MarketCart } };
+  } catch (err: any) {
+    if (err?.response?.data?.data?.results) return err.response.data;
+    throw err;
+  }
+}

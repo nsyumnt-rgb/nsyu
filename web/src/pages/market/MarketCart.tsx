@@ -127,7 +127,11 @@ export default function MarketCart() {
             <p className="text-[12px] text-slate-500">
               {ready.length > 1 ? `Checkout creates ${ready.length} orders — one per shop. ` : ""}Delivery or pickup is chosen per shop at checkout.
             </p>
-            <button type="button" disabled className="btn-primary btn-lg w-full" title="Checkout is the next step being built">Checkout — coming next</button>
+            {ready.length > 0 ? (
+              <Link to="/market/checkout" className="btn-primary btn-lg w-full">Proceed to checkout</Link>
+            ) : (
+              <button type="button" disabled className="btn-primary btn-lg w-full">Nothing to check out yet</button>
+            )}
           </aside>
         </div>
       )}

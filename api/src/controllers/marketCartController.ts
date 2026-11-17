@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
 import { Op } from "sequelize";
-import { sequelize, CustomerAccount, Customer, Shop, ShopPortalSettings } from "../models";
+import { sequelize, CustomerAccount, Customer, Shop, ShopPortalSettings, Order } from "../models";
 import { getCart, setCartItem } from "./customerCartController";
+import { placeOrder } from "./customerOrderController";
 import { notifyOwner } from "../utils/notifications";
 
 /**
@@ -208,5 +209,132 @@ export async function setMarketCartItem(req: Request, res: Response) {
     return res.json({ success: true, data: await groupedCart(req, base) });
   } catch (err) {
     return fail(res, err, "Could not update cart");
+  }
+}
+
+/* ───────────────────────── checkout (phase 1, step 4) ───────────────────────── */
+
+const PAYMENT_LABEL: Record<string, string> = {
+  cod: "Cash on delivery",
+  upi: "UPI",
+  khata: "Khata (pay later)",
+};
+
+/** Payment options a shop offers at checkout. "Pay later on khata" only when the shop allows credit. */
+async function paymentOptions(shopId: number) {
+  const shop = await Shop.findByPk(shopId);
+  const allowsCredit = ((shop?.settings || {}) as any).enableCredit !== false;
+  return ["cod", "upi", ...(allowsCredit ? ["khata"] : [])];
+}
+
+/** GET /api/customer-portal/market/checkout/options — per-shop payment options + saved address. */
+export async function getCheckoutOptions(req: Request, res: Response) {
+  try {
+    const base = await currentAccount(req);
+    const me = await Customer.findByPk(base.customer_id);
+    const accounts = await groupAccounts(base.identity_group!);
+    const shops: any[] = [];
+    for (const acc of accounts) {
+      const shop = (acc as any).shop;
+      if (!shop || acc.status !== "active") continue;
+      shops.push({ shopId: shop.id, paymentMethods: await paymentOptions(shop.id) });
+    }
+    return res.json({
+      success: true,
+      data: { shops, address: { name: me?.name || "", phone: base.phone || me?.phone || "", line: me?.address || "" } },
+    });
+  } catch (err) {
+    return fail(res, err, "Could not load checkout options");
+  }
+}
+
+/**
+ * POST /api/customer-portal/market/checkout
+ * { checkoutId, address: { name, phone, line, landmark?, city?, pincode? },
+ *   shops: [{ shopId, deliveryType: "delivery"|"pickup", paymentMethod: "cod"|"upi"|"khata", note? }] }
+ *
+ * Places ONE order per shop by running the existing portal placeOrder handler as that
+ * shop's account (same stock checks, min order value, numbering, notifications, cart
+ * clearing). Each shop's order is its own transaction, so one shop failing (e.g. stock
+ * changed) never blocks the others; its items stay in the cart. Retrying with the same
+ * checkoutId never creates duplicates (per-shop clientRequestId = checkoutId:shopId).
+ * No online payment is taken: UPI is collected by the shop; khata adds to that shop's ledger
+ * when the shop bills the order.
+ */
+export async function checkout(req: Request, res: Response) {
+  try {
+    const { checkoutId, address, shops } = req.body || {};
+    const id = String(checkoutId || "").trim();
+    if (!/^[A-Za-z0-9-]{8,80}$/.test(id)) return res.status(400).json({ success: false, message: "checkoutId is required" });
+    if (!Array.isArray(shops) || shops.length === 0) return res.status(400).json({ success: false, message: "Choose at least one shop to order from" });
+
+    const base = await currentAccount(req);
+    const accounts = await groupAccounts(base.identity_group!);
+    const needsAddress = shops.some((s: any) => s?.deliveryType !== "pickup");
+    const addr = {
+      name: String(address?.name || "").trim().slice(0, 100),
+      phone: String(address?.phone || "").replace(/[^0-9+]/g, "").slice(0, 15),
+      line: String(address?.line || "").trim().slice(0, 300),
+      landmark: String(address?.landmark || "").trim().slice(0, 100),
+      city: String(address?.city || "").trim().slice(0, 60),
+      pincode: String(address?.pincode || "").replace(/[^0-9]/g, "").slice(0, 6),
+    };
+    if (needsAddress && (!addr.name || addr.phone.length < 10 || !addr.line || addr.pincode.length !== 6)) {
+      return res.status(400).json({ success: false, message: "Enter name, a 10-digit phone, address and a 6-digit pincode for delivery" });
+    }
+    const addressText = [addr.name, addr.phone, addr.line, addr.landmark && `Landmark: ${addr.landmark}`, addr.city, addr.pincode].filter(Boolean).join(", ");
+
+    const results: any[] = [];
+    for (const sel of shops) {
+      const shopId = Number(sel?.shopId);
+      const acc = accounts.find((a) => Number(a.shop_id) === shopId);
+      const shopName = (acc as any)?.shop?.name || `Shop #${shopId}`;
+      if (!acc || acc.status !== "active") {
+        results.push({ shopId, shopName, ok: false, message: "This shop isn't in your cart or hasn't approved your account yet" });
+        continue;
+      }
+      const method = String(sel?.paymentMethod || "cod");
+      if (!(await paymentOptions(shopId)).includes(method)) {
+        results.push({ shopId, shopName, ok: false, message: `${shopName} doesn't accept this payment option` });
+        continue;
+      }
+      const pickup = sel?.deliveryType === "pickup";
+      const { status, body } = await runAs(placeOrder as Handler, req, acc, {
+        body: {
+          clientRequestId: `${id}:${shopId}`,
+          note: String(sel?.note || "").trim().slice(0, 300) || undefined,
+          deliveryType: pickup ? "Pickup" : "Delivery",
+          shippingAddress: pickup ? `Pickup from shop — ${addr.name || ""} ${addr.phone || ""}`.trim() : addressText,
+        },
+      });
+      if (status >= 400 || !body?.data?.id) {
+        results.push({ shopId, shopName, ok: false, message: body?.message || "Could not place this order" });
+        continue;
+      }
+      // placeOrder doesn't take a payment choice; record it on the order for the shop to see.
+      await Order.update(
+        { payment_method: PAYMENT_LABEL[method], payment_status: "UNPAID" },
+        { where: { id: body.data.id, customer_account_id: acc.id } }
+      );
+      results.push({
+        shopId,
+        shopName,
+        ok: true,
+        orderId: body.data.id,
+        orderNumber: body.data.order_number,
+        total: Number(body.data.total_amount),
+        paymentMethod: PAYMENT_LABEL[method],
+        repeated: body.message?.includes("idempotent") || false,
+      });
+    }
+
+    const placed = results.filter((r) => r.ok);
+    return res.status(placed.length ? 201 : 400).json({
+      success: placed.length > 0,
+      message: placed.length === results.length ? `Placed ${placed.length} order${placed.length === 1 ? "" : "s"}` : placed.length ? "Some orders were placed; others need attention" : results[0]?.message || "No orders were placed",
+      data: { results, cart: await groupedCart(req, base) },
+    });
+  } catch (err) {
+    return fail(res, err, "Checkout failed");
   }
 }
