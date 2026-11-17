@@ -494,7 +494,7 @@ function SettingsInner() {
     <div className="space-y-6 pb-24">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Settings</h1>
+        <h1 className="page-title">Settings</h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">Manage your business settings and preferences</p>
       </div>
 

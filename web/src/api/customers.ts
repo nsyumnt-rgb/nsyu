@@ -42,5 +42,6 @@ export function updateCustomer(
 }
 
 export function updateCustomerPortalAccess(id: number, enabled: boolean) {
-  return api.post<ApiEnvelope<any>>(`/customers/${id}/portal-access`, { enabled });
+  // Backend routes: POST /customers/:customerId/portal/enable | /portal/disable
+  return api.post<ApiEnvelope<any>>(`/customers/${id}/portal/${enabled ? "enable" : "disable"}`);
 }

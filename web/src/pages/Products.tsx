@@ -599,7 +599,7 @@ function ProductsInner() {
       {/* ============================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[24px] font-bold text-slate-900 tracking-tight">Products</h1>
+          <h1 className="page-title">Products</h1>
           <p className="text-[13px] text-slate-500 mt-0.5">
             Manage your products, stock, categories and pricing
           </p>

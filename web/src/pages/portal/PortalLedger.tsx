@@ -69,7 +69,7 @@ export default function PortalLedger() {
       {/* Header */}
       <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Account Statement & Ledger</h1>
+          <h1 className="page-title">Account Statement & Ledger</h1>
           <p className="text-xs text-gray-500 mt-0.5">
             Real-time chronological financial transaction history and running balance.
           </p>

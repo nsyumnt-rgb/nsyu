@@ -103,7 +103,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     height: 40,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF064E3B), Color(0xFF047857)],
+                        colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),

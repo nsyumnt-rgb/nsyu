@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import clsx from "clsx";
 import { usePermission } from "../hooks/usePermission";
@@ -26,7 +26,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "MAIN",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -48,7 +48,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "MAIN",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -71,7 +71,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "MAIN",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -93,7 +93,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "MAIN",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -113,7 +113,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "MAIN",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -138,7 +138,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "BUSINESS MANAGEMENT",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -159,7 +159,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "BUSINESS MANAGEMENT",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -184,7 +184,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "ADMIN",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -203,7 +203,7 @@ const NAV_ITEMS: NavItem[] = [
     group: "ADMIN",
     icon: (active) => (
       <svg
-        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-slate-600")}
+        className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -226,8 +226,20 @@ const GROUPS: NavGroup[] = [
 
 const STORAGE_KEY = "nsyu_sidebar_collapsed_groups";
 
-export default function Sidebar() {
+interface SidebarProps {
+  /** Mobile drawer visibility (ignored on large screens where the sidebar is always shown) */
+  open?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const location = useLocation();
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    onClose?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
   const { can, isOwner } = usePermission();
   const activeShop = useAuthStore((s) => s.activeShop);
 
@@ -257,27 +269,41 @@ export default function Sidebar() {
   const visibleItems = NAV_ITEMS.filter((item) => isOwner || can(item.module, "view"));
 
   return (
-    <aside className="w-60 shrink-0 bg-white border-r border-slate-200/80 flex flex-col h-screen sticky top-0 z-20 select-none">
+    <>
+    {open && (
+      <div
+        className="fixed inset-0 z-40 bg-navy-950/50 backdrop-blur-[2px] lg:hidden animate-fade-in"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+    )}
+    <aside
+      className={clsx(
+        "w-64 lg:w-60 shrink-0 bg-navy-950 bg-gradient-to-b from-navy-900 to-navy-950 text-white flex flex-col h-screen select-none",
+        "fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:translate-x-0",
+        open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+      )}
+    >
       {/* Brand Header */}
-      <div className="h-14 flex items-center gap-2.5 px-4 border-b border-slate-100/90 shrink-0">
-        <div className="h-8 w-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-500/30">
+      <div className="h-16 flex items-center gap-3 px-4 border-b border-white/[0.06] shrink-0">
+        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-900/50 ring-1 ring-white/10">
           <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14px] font-bold text-slate-900 tracking-tight leading-none truncate">
+          <div className="text-[14.5px] font-bold text-white tracking-tight leading-none truncate">
             NSYU Business
           </div>
-          <div className="text-[10.5px] text-slate-400 font-medium leading-none mt-1 truncate">
+          <div className="text-[11px] text-slate-400 font-medium leading-none mt-1.5 truncate">
             {activeShop ? `${activeShop.name} (${activeShop.code})` : "Multi-Shop Management"}
           </div>
         </div>
       </div>
 
       {/* Nav List - Compact, Collapsible, Clean */}
-      <nav className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-3 scrollbar-thin scrollbar-thumb-slate-200">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
         {GROUPS.map((group) => {
           const itemsInGroup = visibleItems.filter((i) => i.group === group);
           if (itemsInGroup.length === 0) return null;
@@ -290,13 +316,13 @@ export default function Sidebar() {
               <button
                 type="button"
                 onClick={() => toggleGroup(group)}
-                className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-colors group/hdr rounded cursor-pointer"
+                className="w-full flex items-center justify-between px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 hover:text-slate-300 transition-colors group/hdr rounded cursor-pointer"
                 title={isCollapsed ? `Expand ${group}` : `Collapse ${group}`}
               >
                 <span>{group}</span>
                 <svg
                   className={clsx(
-                    "w-3 h-3 text-slate-300 group-hover/hdr:text-slate-500 transition-transform duration-200",
+                    "w-3 h-3 text-slate-600 group-hover/hdr:text-slate-400 transition-transform duration-200",
                     isCollapsed ? "-rotate-90" : "rotate-0"
                   )}
                   viewBox="0 0 24 24"
@@ -324,10 +350,10 @@ export default function Sidebar() {
                         to={item.to}
                         end={item.to === "/app"}
                         className={clsx(
-                          "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-all group",
+                          "relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all group",
                           isActive
-                            ? "bg-blue-600 text-white shadow-sm shadow-blue-500/20 font-semibold"
-                            : "text-slate-600 hover:bg-slate-100/70 hover:text-slate-900"
+                            ? "bg-white/[0.09] text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-brand-400"
+                            : "text-slate-300/90 hover:bg-white/[0.05] hover:text-white"
                         )}
                       >
                         {item.icon(isActive)}
@@ -343,27 +369,28 @@ export default function Sidebar() {
       </nav>
 
       {/* Compact Bottom Footer */}
-      <div className="p-2.5 border-t border-slate-100 bg-slate-50/50 shrink-0 space-y-1.5">
+      <div className="p-3 border-t border-white/[0.06] shrink-0 space-y-2">
         {useAuthStore.getState().isSuperAdmin() && (
           <NavLink
             to="/admin"
-            className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 text-[11px] font-bold border border-purple-200 transition"
+            className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.06] text-violet-200 hover:bg-white/10 text-[11.5px] font-semibold ring-1 ring-white/10 transition"
           >
             <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+              <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
               Super Admin Panel
             </span>
             <span className="font-mono text-[10px]">→</span>
           </NavLink>
         )}
-        <div className="flex items-center justify-between px-2 py-1 text-[11px] text-slate-500">
-          <span className="font-semibold text-slate-700 flex items-center gap-1.5 truncate">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+        <div className="flex items-center justify-between px-2.5 py-1 text-[11px] text-slate-400">
+          <span className="font-semibold text-slate-200 flex items-center gap-2 truncate">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 ring-4 ring-emerald-400/15" />
             {activeShop?.code || "NSYU-01"}
           </span>
-          <span className="text-[10px] text-slate-400 font-mono">v1.0.0</span>
+          <span className="text-[10px] text-slate-500 font-mono">v1.0.0</span>
         </div>
       </div>
     </aside>
+    </>
   );
 }

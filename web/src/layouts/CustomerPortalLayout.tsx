@@ -38,155 +38,165 @@ export default function CustomerPortalLayout() {
   };
 
   const navLinks = [
-    { label: "Dashboard", path: "/portal/home", icon: HomeIcon },
-    { label: "Catalog", path: "/portal/catalog", icon: CatalogIcon },
-    { label: "Orders", path: "/portal/orders", icon: OrdersIcon },
-    { label: "Bills & Invoices", path: "/portal/bills", icon: BillsIcon },
-    { label: "Ledger", path: "/portal/ledger", icon: LedgerIcon },
+    { label: "Home", path: "/portal/home", icon: HomeIcon },
+    { label: "Shop", path: "/portal/catalog", icon: CatalogIcon },
+    { label: "My Orders", path: "/portal/orders", icon: OrdersIcon },
+    { label: "Bills", path: "/portal/bills", icon: BillsIcon },
+    { label: "Account", path: "/portal/ledger", icon: LedgerIcon },
   ];
 
   const totalCartItems = cart?.itemCount ?? cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] flex flex-col font-sans">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-[#047857] text-white shadow-md border-b border-emerald-800">
+    <div className="min-h-screen bg-canvas flex flex-col font-sans">
+      {/* Store info strip */}
+      <div className="hidden sm:block bg-navy-900 text-[12px] text-brand-100/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-8 flex items-center justify-between gap-4">
+          <span className="truncate">
+            Welcome to <span className="font-semibold text-white">{customer?.shop?.name || "our store"}</span>
+            {customer?.shop?.address ? ` · ${customer.shop.address}` : ""}
+          </span>
+          {customer?.shop?.phone && (
+            <a href={`tel:${customer.shop.phone}`} className="shrink-0 hover:text-white transition">
+              Call us: <span className="font-semibold text-white">{customer.shop.phone}</span>
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Storefront header */}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            
-            {/* Left: Brand & Shop Info */}
-            <div className="flex items-center gap-4">
-              <Link to="/portal/home" className="flex items-center gap-2 group">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold text-xl text-white border border-white/20 group-hover:bg-white/20 transition">
-                  {customer?.shop?.name?.charAt(0) || "N"}
+          <div className="flex items-center justify-between gap-3 h-16">
+            {/* Brand */}
+            <Link to="/portal/home" className="flex items-center gap-2.5 shrink-0 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-navy-900 flex items-center justify-center font-bold text-lg text-white shadow-brand">
+                {customer?.shop?.name?.charAt(0) || "N"}
+              </div>
+              <div className="hidden sm:block">
+                <div className="font-bold text-[15px] text-navy-900 leading-tight tracking-tight max-w-[180px] truncate">
+                  {customer?.shop?.name || "Customer Portal"}
                 </div>
-                <div>
-                  <div className="font-bold text-base leading-tight tracking-tight flex items-center gap-2">
-                    <span>{customer?.shop?.name || "Customer Portal"}</span>
-                    {customer?.shop?.code && (
-                      <span className="text-[10px] bg-white/20 text-emerald-100 font-medium px-1.5 py-0.5 rounded uppercase">
-                        {customer.shop.code}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-emerald-200">Customer Portal</div>
-                </div>
-              </Link>
+                <div className="text-[11px] text-slate-500 leading-tight">Online Store</div>
+              </div>
+            </Link>
 
-              {/* Desktop Nav Links */}
-              <nav className="hidden md:flex items-center space-x-1 ml-6">
-                {navLinks.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5 ${
-                        isActive
-                          ? "bg-emerald-900/40 text-white font-semibold"
-                          : "text-emerald-100 hover:bg-white/10 hover:text-white"
-                      }`
-                    }
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
+            {/* Desktop nav */}
+            <nav className="hidden md:flex items-center gap-1 lg:ml-4">
+              {navLinks.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `px-3 py-2 rounded-lg text-[13.5px] font-medium transition ${
+                      isActive ? "text-brand-700 bg-brand-50 font-semibold" : "text-slate-600 hover:text-navy-900 hover:bg-slate-100"
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
 
-            {/* Right: Cart, Notifications, Profile Dropdown */}
-            <div className="flex items-center gap-3">
-              {/* Cart Button */}
-              <Link
-                to="/portal/cart"
-                className="relative p-2 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition"
-                title="View Cart"
-              >
-                <CartIcon className="w-6 h-6" />
-                {totalCartItems > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[11px] font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center border-2 border-[#047857] shadow">
-                    {totalCartItems > 99 ? "99+" : totalCartItems}
-                  </span>
-                )}
-              </Link>
+            <div className="flex-1" />
 
-              {/* Notification Bell */}
+            {/* Actions */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Link
                 to="/portal/notifications"
-                className="relative p-2 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition"
+                className="relative p-2.5 rounded-xl text-slate-600 hover:text-navy-900 hover:bg-slate-100 transition"
                 title="Notifications"
               >
-                <BellIcon className="w-6 h-6" />
+                <BellIcon className="w-[22px] h-[22px]" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[11px] font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center border-2 border-[#047857] shadow">
+                  <span className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] font-bold rounded-full h-[18px] min-w-[18px] px-1 flex items-center justify-center ring-2 ring-white">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
               </Link>
 
-              {/* Profile Dropdown */}
+              <Link
+                to="/portal/cart"
+                className="relative flex items-center gap-2 pl-2.5 pr-2.5 sm:pr-3.5 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 shadow-brand transition"
+                title="View Cart"
+              >
+                <span className="relative">
+                  <CartIcon className="w-[22px] h-[22px]" />
+                  {totalCartItems > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-amber-400 text-navy-950 text-[10px] font-bold rounded-full h-[18px] min-w-[18px] px-1 flex items-center justify-center ring-2 ring-brand-600">
+                      {totalCartItems > 99 ? "99+" : totalCartItems}
+                    </span>
+                  )}
+                </span>
+                <span className="hidden sm:block text-left leading-tight">
+                  <span className="block text-[10.5px] text-brand-100">Cart</span>
+                  <span className="block text-[13px] font-bold tabular">
+                    ₹{Number(cart?.estimatedTotal ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+                  </span>
+                </span>
+              </Link>
+
+              {/* Profile */}
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen((prev) => !prev)}
-                  className="flex items-center gap-2 p-1.5 pl-2.5 rounded-xl bg-white/10 hover:bg-white/20 transition text-sm font-medium text-white border border-white/20"
+                  className="flex items-center gap-2 p-1 sm:pr-2 rounded-xl hover:bg-slate-100 transition"
                 >
-                  <div className="text-left hidden sm:block">
-                    <div className="text-xs font-semibold leading-none">{customer?.name || "Customer"}</div>
-                    <div className="text-[11px] text-emerald-200 mt-0.5">{customer?.phone}</div>
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-navy-800 text-white flex items-center justify-center font-semibold text-[13px]">
+                    {customer?.name?.charAt(0)?.toUpperCase() || "C"}
                   </div>
-                  <div className="w-7 h-7 rounded-lg bg-emerald-800 text-white flex items-center justify-center font-bold text-xs">
-                    {customer?.name?.charAt(0) || "C"}
+                  <div className="text-left hidden lg:block">
+                    <div className="text-[12.5px] font-semibold text-navy-900 leading-none max-w-[110px] truncate">{customer?.name || "Customer"}</div>
+                    <div className="text-[11px] text-slate-500 mt-1">My account</div>
                   </div>
-                  <ChevronDownIcon className="w-3.5 h-3.5 text-emerald-200" />
+                  <ChevronDownIcon className="hidden sm:block w-3.5 h-3.5 text-slate-400" />
                 </button>
 
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-xl bg-white text-gray-800 shadow-xl border border-gray-100 py-2 z-50 animate-fadeIn">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-bold text-gray-900">{customer?.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{customer?.phone}</p>
-                      {customer?.email && <p className="text-xs text-gray-500">{customer.email}</p>}
-                      <div className="mt-2.5 p-2 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-between">
-                        <span className="text-xs text-gray-500">Balance:</span>
+                  <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-white text-slate-800 shadow-lift border border-border py-2 z-50 animate-fade-in">
+                    <div className="px-4 py-3 border-b border-slate-100">
+                      <p className="text-[14px] font-semibold text-navy-900">{customer?.name}</p>
+                      <p className="text-[12px] text-slate-500 mt-0.5">{customer?.phone}</p>
+                      {customer?.email && <p className="text-[12px] text-slate-500 truncate">{customer.email}</p>}
+                      <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <span className="text-[12px] text-slate-500">
+                          {(customer?.currentBalance ?? 0) < 0 ? "Advance" : "Balance due"}
+                        </span>
                         <span
-                          className={`text-xs font-bold ${
+                          className={`text-[14px] font-bold tabular ${
                             (customer?.currentBalance ?? 0) > 0
                               ? "text-rose-600"
                               : (customer?.currentBalance ?? 0) < 0
                               ? "text-emerald-600"
-                              : "text-gray-700"
+                              : "text-slate-700"
                           }`}
                         >
-                          ₹{Number(customer?.currentBalance ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          ₹{Math.abs(Number(customer?.currentBalance ?? 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     </div>
-
-                    <Link
-                      to="/portal/profile"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition"
-                    >
-                      <UserIcon className="w-4 h-4 text-gray-400" />
-                      <span>My Profile & Settings</span>
-                    </Link>
-
-                    <Link
-                      to="/portal/ledger"
-                      onClick={() => setProfileDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition"
-                    >
-                      <LedgerIcon className="w-4 h-4 text-gray-400" />
-                      <span>Account Statement</span>
-                    </Link>
-
-                    <div className="border-t border-gray-100 my-1"></div>
-
+                    {[
+                      { to: "/portal/orders", label: "My Orders", Icon: OrdersIcon },
+                      { to: "/portal/bills", label: "Bills & Invoices", Icon: BillsIcon },
+                      { to: "/portal/ledger", label: "Account Statement", Icon: LedgerIcon },
+                      { to: "/portal/profile", label: "Profile & Settings", Icon: UserIcon },
+                    ].map(({ to, label, Icon }) => (
+                      <Link
+                        key={to}
+                        to={to}
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition"
+                      >
+                        <Icon className="w-4 h-4 text-slate-400" />
+                        <span>{label}</span>
+                      </Link>
+                    ))}
+                    <div className="border-t border-slate-100 my-1" />
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition font-medium"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-rose-600 hover:bg-rose-50 transition font-medium"
                     >
                       <LogoutIcon className="w-4 h-4" />
                       <span>Sign Out</span>
@@ -195,11 +205,11 @@ export default function CustomerPortalLayout() {
                 )}
               </div>
 
-              {/* Mobile menu hamburger toggle */}
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                className="md:hidden p-2 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10"
+                className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100"
+                aria-label="Menu"
               >
                 <MenuIcon className="w-6 h-6" />
               </button>
@@ -207,105 +217,74 @@ export default function CustomerPortalLayout() {
           </div>
         </div>
 
-        {/* Mobile menu dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-emerald-800 border-t border-emerald-700 px-4 pt-2 pb-4 space-y-1">
-            {navLinks.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium ${
-                    isActive ? "bg-emerald-900 text-white font-semibold" : "text-emerald-100 hover:bg-emerald-700/60"
-                  }`
-                }
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-            <NavLink
-              to="/portal/profile"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-emerald-100 hover:bg-emerald-700/60"
-            >
-              <UserIcon className="w-4 h-4" />
-              <span>Profile</span>
-            </NavLink>
+          <div className="md:hidden border-t border-border bg-white px-4 pt-2 pb-4 space-y-1 animate-fade-in">
+            {[...navLinks, { label: "Bills & Invoices", path: "/portal/bills", icon: BillsIcon }, { label: "Profile", path: "/portal/profile", icon: UserIcon }]
+              .filter((v, i, arr) => arr.findIndex((x) => x.path === v.path) === i)
+              .map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium ${
+                      isActive ? "bg-brand-50 text-brand-700 font-semibold" : "text-slate-700 hover:bg-slate-50"
+                    }`
+                  }
+                >
+                  <item.icon className="w-[18px] h-[18px]" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
           </div>
         )}
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-24 md:pb-10">
         <Outlet />
       </main>
 
-      {/* Mobile Sticky Bottom Nav Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 px-2 py-1.5 flex justify-around items-center shadow-lg">
-        <NavLink
-          to="/portal/home"
-          className={({ isActive }) =>
-            `flex flex-col items-center py-1 px-3 text-[11px] font-medium transition ${
-              isActive ? "text-emerald-700 font-bold" : "text-gray-500 hover:text-gray-900"
-            }`
-          }
-        >
-          <HomeIcon className="w-5 h-5 mb-0.5" />
-          <span>Home</span>
-        </NavLink>
-        <NavLink
-          to="/portal/catalog"
-          className={({ isActive }) =>
-            `flex flex-col items-center py-1 px-3 text-[11px] font-medium transition ${
-              isActive ? "text-emerald-700 font-bold" : "text-gray-500 hover:text-gray-900"
-            }`
-          }
-        >
-          <CatalogIcon className="w-5 h-5 mb-0.5" />
-          <span>Catalog</span>
-        </NavLink>
-        <NavLink
-          to="/portal/cart"
-          className={({ isActive }) =>
-            `flex flex-col items-center py-1 px-3 text-[11px] font-medium relative transition ${
-              isActive ? "text-emerald-700 font-bold" : "text-gray-500 hover:text-gray-900"
-            }`
-          }
-        >
-          <div className="relative">
-            <CartIcon className="w-5 h-5 mb-0.5" />
-            {totalCartItems > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center">
-                {totalCartItems}
-              </span>
+      <footer className="hidden md:block border-t border-border bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between text-[12px] text-slate-500">
+          <span>© {new Date().getFullYear()} {customer?.shop?.name || "NSYU Business"}. All rights reserved.</span>
+          <span className="flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+            Secure ordering powered by NSYU Business
+          </span>
+        </div>
+      </footer>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-border px-1 pt-1.5 pb-[max(6px,env(safe-area-inset-bottom))] grid grid-cols-5">
+        {[
+          { to: "/portal/home", label: "Home", Icon: HomeIcon },
+          { to: "/portal/catalog", label: "Shop", Icon: CatalogIcon },
+          { to: "/portal/cart", label: "Cart", Icon: CartIcon, badge: totalCartItems },
+          { to: "/portal/orders", label: "Orders", Icon: OrdersIcon },
+          { to: "/portal/ledger", label: "Account", Icon: LedgerIcon },
+        ].map(({ to, label, Icon, badge }) => (
+          <NavLink
+            key={to}
+            to={to}
+            className={({ isActive }) =>
+              `flex flex-col items-center gap-0.5 py-1 text-[11px] font-medium transition ${isActive ? "text-brand-700 font-semibold" : "text-slate-500"}`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span className={`relative px-4 py-1 rounded-full transition ${isActive ? "bg-brand-50" : ""}`}>
+                  <Icon className="w-5 h-5" />
+                  {!!badge && badge > 0 && (
+                    <span className="absolute -top-1 right-1.5 bg-rose-600 text-white text-[9.5px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center ring-2 ring-white">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </span>
+                <span>{label}</span>
+              </>
             )}
-          </div>
-          <span>Cart</span>
-        </NavLink>
-        <NavLink
-          to="/portal/orders"
-          className={({ isActive }) =>
-            `flex flex-col items-center py-1 px-3 text-[11px] font-medium transition ${
-              isActive ? "text-emerald-700 font-bold" : "text-gray-500 hover:text-gray-900"
-            }`
-          }
-        >
-          <OrdersIcon className="w-5 h-5 mb-0.5" />
-          <span>Orders</span>
-        </NavLink>
-        <NavLink
-          to="/portal/ledger"
-          className={({ isActive }) =>
-            `flex flex-col items-center py-1 px-3 text-[11px] font-medium transition ${
-              isActive ? "text-emerald-700 font-bold" : "text-gray-500 hover:text-gray-900"
-            }`
-          }
-        >
-          <LedgerIcon className="w-5 h-5 mb-0.5" />
-          <span>Ledger</span>
-        </NavLink>
+          </NavLink>
+        ))}
       </nav>
     </div>
   );

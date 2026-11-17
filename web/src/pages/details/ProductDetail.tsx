@@ -78,7 +78,7 @@ export default function ProductDetail() {
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-bold text-slate-900">{product.name}</h1>
+              <h1 className="page-title">{product.name}</h1>
               <span className="text-xs font-mono font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                 SKU: {product.sku}
               </span>

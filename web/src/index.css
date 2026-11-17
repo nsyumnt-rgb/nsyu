@@ -5,68 +5,158 @@
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "cv11", "ss01";
   }
   body {
     @apply bg-canvas text-ink-800 font-sans;
   }
   h1, h2, h3, h4 {
-    @apply text-ink-900 font-bold tracking-tight;
+    @apply text-navy-900 font-bold tracking-tight;
   }
   :focus-visible {
-    outline: 2px solid #2563EB;
+    outline: 2px solid #16A06A;
     outline-offset: 2px;
+  }
+  ::selection {
+    background: #ABE9C8;
+    color: #04261D;
+  }
+  /* Tabular figures keep amounts aligned in tables, cards and totals */
+  .tabular, td, .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #CBD5E1 transparent;
   }
 }
 
 @layer components {
+  /* ── Surfaces ─────────────────────────────────────────── */
   .card {
-    @apply bg-surface border border-slate-200/80 rounded-xl shadow-soft;
+    @apply bg-surface border border-border rounded-card shadow-card;
   }
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lift hover:-translate-y-0.5 hover:border-brand-200;
+  }
+  .card-header {
+    @apply flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100;
+  }
+  .card-title {
+    @apply text-[13.5px] font-semibold text-navy-900 tracking-tight;
+  }
+  .hero-brand {
+    @apply relative overflow-hidden rounded-card text-white shadow-lift;
+    background: radial-gradient(120% 140% at 100% 0%, #16A06A 0%, rgba(22, 160, 106, 0) 55%),
+      linear-gradient(135deg, #04261D 0%, #064E3B 55%, #047857 100%);
+  }
+
+  /* ── Page header ──────────────────────────────────────── */
+  .page-title {
+    @apply text-xl sm:text-[22px] font-bold text-navy-900 tracking-tight leading-tight;
+  }
+  .page-subtitle {
+    @apply text-[13px] text-slate-500 mt-1;
+  }
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400;
+  }
+
+  /* ── Buttons ──────────────────────────────────────────── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 whitespace-nowrap;
   }
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-brand;
+  }
+  .btn-navy {
+    @apply btn bg-navy-900 text-white hover:bg-navy-800 shadow-sm;
   }
   .btn-secondary {
-    @apply btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm;
+    @apply btn bg-white border border-border text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs;
+  }
+  .btn-soft {
+    @apply btn bg-brand-50 text-brand-700 hover:bg-brand-100;
   }
   .btn-danger {
     @apply btn bg-rose-600 text-white hover:bg-rose-700 shadow-sm;
   }
   .btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100;
+    @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
   }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-lg {
+    @apply px-5 py-2.5 text-sm;
+  }
+
+  /* ── Forms ────────────────────────────────────────────── */
   .input {
-    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all shadow-sm;
+    @apply w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition-all shadow-xs;
   }
   .label {
     @apply block text-xs font-semibold text-slate-600 mb-1.5;
   }
+
+  /* ── Badges & status ──────────────────────────────────── */
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap;
   }
   .badge-active {
-    @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200/60;
+    @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/15;
   }
   .badge-inactive {
-    @apply badge bg-slate-100 text-slate-600 border border-slate-200/60;
+    @apply badge bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-500/10;
   }
+  .badge-brand {
+    @apply badge bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/15;
+  }
+  .badge-warn {
+    @apply badge bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20;
+  }
+  .badge-danger {
+    @apply badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/15;
+  }
+
+  /* ── Metrics ──────────────────────────────────────────── */
+  .stat-label {
+    @apply text-[11.5px] font-medium text-slate-500;
+  }
+  .stat-value {
+    @apply text-[22px] font-bold text-navy-900 tracking-tight leading-none tabular;
+  }
+  .icon-tile {
+    @apply w-10 h-10 rounded-xl flex items-center justify-center shrink-0;
+  }
+  .amount-due {
+    @apply text-rose-600 font-semibold tabular;
+  }
+  .amount-ok {
+    @apply text-emerald-600 font-semibold tabular;
+  }
+
+  /* ── Tables ───────────────────────────────────────────── */
   .table-wrap {
     @apply card overflow-hidden;
   }
   table {
-    @apply w-full text-xs;
+    @apply w-full text-[13px];
   }
   thead th {
-    @apply text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-4 py-3 border-b border-slate-200 bg-slate-50/70;
+    @apply text-left text-[11px] font-semibold text-slate-500 uppercase tracking-[0.06em] px-4 py-3 border-b border-border bg-slate-50/80;
   }
   tbody td {
-    @apply px-4 py-3 border-b border-slate-100 last:border-0 align-middle text-slate-700;
+    @apply px-4 py-3.5 border-b border-slate-100 last:border-0 align-middle text-slate-700;
+  }
+  tbody tr {
+    @apply transition-colors;
   }
   tbody tr:hover {
-    @apply bg-slate-50/60;
+    @apply bg-brand-50/40;
   }
 }
 

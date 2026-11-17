@@ -506,7 +506,7 @@ function InventoryInner() {
       {/* ============================================================== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[24px] font-bold text-slate-900 tracking-tight">
+          <h1 className="page-title">
             {activeTab === "Stock Adjustment"
               ? "Stock Adjustment"
               : activeTab === "Stock Movements"

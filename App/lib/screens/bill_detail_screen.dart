@@ -368,7 +368,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
               height: 36,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF064E3B), Color(0xFF047857)],
+                  colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -688,7 +688,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                   height: 44,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF064E3B), Color(0xFF047857)],
+                      colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),

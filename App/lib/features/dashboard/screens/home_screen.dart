@@ -204,12 +204,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.navy900, AppColors.navy700],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+                  gradient: AppGradients.primary,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -353,7 +353,7 @@ class _PortalMoreScreenState extends State<PortalMoreScreen> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.navy900, AppColors.navy700],
+              colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -380,7 +380,7 @@ class _PortalMoreScreenState extends State<PortalMoreScreen> {
                     height: 54,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.navy900, AppColors.navy700],
+                        colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),

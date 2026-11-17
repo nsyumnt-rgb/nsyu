@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { resolveAssetUrl } from "../api/client";
 
 interface ProductItemIconProps {
   name: string;
@@ -38,7 +39,7 @@ export default function ProductItemIcon({
         className={`${sizeClasses} bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-xs overflow-hidden ${className}`}
       >
         <img
-          src={imageUrl}
+          src={resolveAssetUrl(imageUrl) ?? undefined}
           alt={name}
           className="w-full h-full object-contain"
           onError={() => setImgFailed(true)}

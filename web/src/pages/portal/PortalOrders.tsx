@@ -44,7 +44,7 @@ export default function PortalOrders() {
     <div className="space-y-6">
       <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">My Orders</h1>
+          <h1 className="page-title">My Orders</h1>
           <p className="text-xs text-gray-500 mt-0.5">Track your past and live shop order status in real time.</p>
         </div>
 

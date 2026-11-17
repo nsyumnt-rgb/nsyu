@@ -43,8 +43,8 @@ function ShopsInner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl">Shops</h1>
-          <p className="text-sm text-muted mt-1">Every shop is a separate data boundary — inventory, sales and staff never cross.</p>
+          <h1 className="page-title">Shops</h1>
+          <p className="page-subtitle">Every shop is a separate data boundary — inventory, sales and staff never cross.</p>
         </div>
         {isOwner && (
           <button className="btn-primary" onClick={() => setShowForm((v) => !v)}>

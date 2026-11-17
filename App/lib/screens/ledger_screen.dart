@@ -135,7 +135,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF064E3B), Color(0xFF047857)],
+                        colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
                       ),
                       shape: BoxShape.circle,
                       boxShadow: [

@@ -38,7 +38,7 @@ class AppCard extends StatelessWidget {
         border: border ?? Border.all(color: AppColors.border, width: 1.0),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0F0B1F4B), // opacity 0.06
+            color: Color(0x0F04261D), // opacity 0.06, deep forest tint
             blurRadius: 16,
             offset: Offset(0, 4),
           ),

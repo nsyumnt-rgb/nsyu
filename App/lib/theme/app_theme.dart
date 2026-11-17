@@ -3,18 +3,19 @@ import 'package:flutter/material.dart';
 export '../widgets/app_ui_components.dart';
 
 /// ── NSYU Premium Design System — Foundation ─────────────────────────────────
-/// Palette: Modern Enterprise White, Navy Blue, and Subtle Blue Theme.
+/// Palette: White, deep forest green and emerald — shared with the web app tokens.
 /// Built for commercial trust, high readability, and effortless non-technical use.
 class AppColors {
-  // Official Design Tokens — Emerald & Forest Green Palette
+  // Official Design Tokens — Emerald & Forest Green Palette (web: brand-600 #047857, brand-900 #064E3B)
+  // Note: the `navy*` / `blue*` names are kept for backward compatibility; they hold the green brand tones.
   static const navy900 = Color(0xFF064E3B); // headers, primary text on light, primary buttons
   static const navy700 = Color(0xFF047857);
   static const blue600 = Color(0xFF047857); // accent, links, active states (unified emerald)
   static const blue100 = Color(0xFFD1FAE5); // soft surfaces, chips (light green)
   static const blue50 = Color(0xFFECFDF5);  // soft surfaces, active pills (lightest green)
-  static const bg = Color(0xFFF6F8FC);      // screen canvas
+  static const bg = Color(0xFFF6F8FA);      // screen canvas (matches web `canvas`)
   static const surface = Color(0xFFFFFFFF); // card surface
-  static const border = Color(0xFFE5EAF3);  // soft 1px border
+  static const border = Color(0xFFE4E9EE);  // soft 1px border (matches web `border`)
   static const textPrimary = Color(0xFF0F172A);
   static const textSecondary = Color(0xFF64748B);
   static const success = Color(0xFF16A34A);
@@ -61,13 +62,15 @@ class AppGradients {
   static const primary = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF064E3B), Color(0xFF047857)],
+    colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
+    stops: [0.0, 0.55, 1.0],
   );
 
   static const deepNavy = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF064E3B), Color(0xFF047857)],
+    colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
+    stops: [0.0, 0.55, 1.0],
   );
 
   static const subtleBlue = LinearGradient(
@@ -114,9 +117,9 @@ class AppDecorations {
       border: Border.all(color: borderColor, width: borderWidth),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF0F172A).withValues(alpha: shadowOpacity),
-          blurRadius: 10,
-          offset: const Offset(0, 3),
+          color: const Color(0xFF04261D).withValues(alpha: shadowOpacity),
+          blurRadius: 16,
+          offset: const Offset(0, 4),
         ),
       ],
     );

@@ -91,7 +91,7 @@ function ReportsInner() {
       {/* Page Title & Scope Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Business Intelligence & Reports</h1>
+          <h1 className="page-title">Business Intelligence & Reports</h1>
           <p className="text-sm text-slate-500 mt-1">
             Financial analytics, gross profit, inventory valuation, and multi-shop performance.
           </p>

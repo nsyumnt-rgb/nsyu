@@ -168,8 +168,8 @@ function PurchaseInner() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl">Purchases & Inward Stock</h1>
-          <p className="text-sm text-muted mt-1">
+          <h1 className="page-title">Purchases & Inward Stock</h1>
+          <p className="page-subtitle">
             Supplier purchase bills, inward stock receipts, and accounts payable.
           </p>
         </div>

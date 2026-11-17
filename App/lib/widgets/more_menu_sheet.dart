@@ -121,7 +121,7 @@ class MoreMenuSheet extends StatelessWidget {
                     height: 38,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppColors.navy900, AppColors.navy700],
+                        colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -812,7 +812,7 @@ void showMyPlanSheet(BuildContext context) {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [AppColors.navy900, AppColors.navy700],
+                colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),

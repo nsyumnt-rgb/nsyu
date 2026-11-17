@@ -23,8 +23,8 @@ export default function ModuleScaffold({ module, title, description }: Props) {
     <RequireModule module={module}>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl">{title}</h1>
-          <p className="text-sm text-muted mt-1">{description}</p>
+          <h1 className="page-title">{title}</h1>
+          <p className="page-subtitle">{description}</p>
         </div>
         <div className="card p-8 text-center">
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-accent-50 text-accent-600 font-display mb-3">

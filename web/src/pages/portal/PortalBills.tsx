@@ -65,7 +65,7 @@ export default function PortalBills() {
     <div className="space-y-6">
       <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Bills & Invoices</h1>
+          <h1 className="page-title">Bills & Invoices</h1>
           <p className="text-xs text-gray-500 mt-0.5">Download official tax invoices and track payment balances.</p>
         </div>
       </div>

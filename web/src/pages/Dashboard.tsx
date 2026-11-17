@@ -17,11 +17,15 @@ import { listShops } from "../api/shops";
 import { api } from "../api/client";
 import ReferenceLink from "../components/ReferenceLink";
 import ProductItemIcon from "../components/ProductItemIcon";
+import type { ReactNode } from "react";
 
 export default function Dashboard() {
   const shopId = useAuthStore((s) => s.shopId);
+  const activeShop = useAuthStore((s) => s.activeShop);
+  const owner = useAuthStore((s) => s.owner);
+  const employee = useAuthStore((s) => s.employee);
 
-  const [_loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [salesSummary, setSalesSummary] = useState<any>(null);
   const [purchaseSummary, setPurchaseSummary] = useState<any>(null);
   const [invSummary, setInvSummary] = useState<any>(null);
@@ -94,578 +98,486 @@ export default function Dashboard() {
   const todayPurchaseVal = todayPurchList.reduce((acc, p) => acc + Number(p.total_amount || 0), 0);
   const todayPurchaseCount = todayPurchList.length;
 
-  const receivablesVal = outSummary?.totalOutstanding ? Number(outSummary.totalOutstanding) : 0;
-  const payablesVal = suppOutSummary?.totalOutstanding ? Number(suppOutSummary.totalOutstanding) : 0;
+  // Report endpoints return { summary: { totalReceivable } } / { summary: { totalPayable } }
+  const receivablesVal = Number(outSummary?.summary?.totalReceivable ?? outSummary?.totalOutstanding ?? 0) || 0;
+  const payablesVal = Number(suppOutSummary?.summary?.totalPayable ?? suppOutSummary?.totalOutstanding ?? 0) || 0;
 
   // Real Low Stock Products from actual inventory
   const lowStockProducts = productsList.filter(
     (p) => (p.stocks?.[0]?.current_stock ?? 0) <= (p.min_stock ?? 5)
   );
 
+  const displayName = (owner?.name || employee?.name || "").split(" ")[0];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const todayLabel = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const tradeTotal = totalSalesVal + totalPurchaseVal;
+  const salesShare = tradeTotal > 0 ? Math.round((totalSalesVal / tradeTotal) * 100) : 0;
+  const inStockCount = productsList.filter((p) => (p.stocks?.[0]?.current_stock ?? 0) > 0).length;
+  const fmtDate = (d: string) =>
+    new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
   return (
-    <div className="space-y-5 pb-10">
-      {/* ============================================================== */}
-      {/* 1. TOP 5 PRIMARY METRIC CARDS                                 */}
-      {/* ============================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* Total Sales */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Total Sales</div>
-            <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
-              {formatCurrency(totalSalesVal)}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              {salesSummary?.count ? `${salesSummary.count} invoices` : "Live database record"}
-            </div>
-          </div>
+    <div className="space-y-6 pb-10">
+      {/* ── Page header ─────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <div className="section-label">{todayLabel}</div>
+          <h1 className="page-title mt-1.5">
+            {greeting}
+            {displayName ? `, ${displayName}` : ""}
+          </h1>
+          <p className="page-subtitle">
+            Here is how {activeShop?.name || "your business"} is doing today.
+          </p>
         </div>
-
-        {/* Total Purchase */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <path d="M16 10a4 4 0 0 1-8 0" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Total Purchase</div>
-            <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
-              {formatCurrency(totalPurchaseVal)}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              {purchaseSummary?.count ? `${purchaseSummary.count} bills` : "Live database record"}
-            </div>
-          </div>
-        </div>
-
-        {/* Current Stock Value */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="21 8 21 21 3 21 3 8" />
-              <rect x="1" y="3" width="22" height="5" />
-              <line x1="10" y1="12" x2="14" y2="12" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Current Stock Value</div>
-            <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
-              {formatCurrency(currentStockVal)}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              {productsList.length} products in catalog
-            </div>
-          </div>
-        </div>
-
-        {/* Total Customers */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Total Customers</div>
-            <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
-              {totalCustomersVal.toLocaleString()}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              Registered customers
-            </div>
-          </div>
-        </div>
-
-        {/* Total Employees */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Total Employees</div>
-            <div className="text-[19px] font-bold text-slate-800 tracking-tight mt-1">
-              {totalEmployeesVal}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              Staff members
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link to="/app/purchase" className="btn-secondary">
+            <Icon d="M12 5v14M5 12h14" /> Record Purchase
+          </Link>
+          <Link to="/app/billing" className="btn-primary">
+            <Icon d="M12 5v14M5 12h14" /> New Bill
+          </Link>
         </div>
       </div>
 
-      {/* ============================================================== */}
-      {/* 2. CHARTS SECTION (Sales & Purchase Trends)                    */}
-      {/* ============================================================== */}
+      {/* ── Hero: revenue + money position ─────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        <div className="hero-brand xl:col-span-7 p-6 sm:p-7">
+          <div className="absolute -right-16 -bottom-24 w-72 h-72 rounded-full bg-white/[0.04]" />
+          <div className="absolute right-10 -top-20 w-48 h-48 rounded-full bg-brand-400/10" />
+          <div className="relative">
+            <div className="flex items-center gap-2 text-[12px] font-medium text-brand-100/80">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Total Sales
+            </div>
+            <div className={`mt-2 text-[34px] sm:text-[40px] font-bold tracking-tight leading-none tabular ${loading ? "opacity-40 animate-pulse" : ""}`}>
+              {formatCurrency(totalSalesVal)}
+            </div>
+            <div className="mt-2 text-[13px] text-brand-100/70">
+              {salesSummary?.count ? `${salesSummary.count} invoices recorded` : "No invoices recorded yet"}
+            </div>
+
+            <div className="mt-7 grid grid-cols-3 gap-3 sm:gap-6 border-t border-white/10 pt-5">
+              <HeroStat label="Today's sales" value={formatCurrency(todaySalesVal)} hint={`${todaySalesCount} invoice${todaySalesCount === 1 ? "" : "s"}`} />
+              <HeroStat label="Today's purchase" value={formatCurrency(todayPurchaseVal)} hint={`${todayPurchaseCount} bill${todayPurchaseCount === 1 ? "" : "s"}`} />
+              <HeroStat label="Stock value" value={formatCurrency(currentStockVal)} hint={`${productsList.length} products`} />
+            </div>
+          </div>
+        </div>
+
+        <div className="xl:col-span-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-5">
+          <MoneyCard
+            to="/app/ledger"
+            tone="due"
+            label="To collect from customers"
+            value={formatCurrency(receivablesVal)}
+            hint="Outstanding customer balances"
+            loading={loading}
+            icon={<Icon d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />}
+          />
+          <MoneyCard
+            to="/app/suppliers"
+            tone="pay"
+            label="To pay suppliers"
+            value={formatCurrency(payablesVal)}
+            hint="Outstanding supplier balances"
+            loading={loading}
+            icon={<Icon d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4" />}
+          />
+        </div>
+      </div>
+
+      {/* ── KPI tiles ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiTile
+          label="Total Purchase"
+          value={formatCurrency(totalPurchaseVal)}
+          hint={purchaseSummary?.count ? `${purchaseSummary.count} bills` : "No bills yet"}
+          tint="bg-brand-50 text-brand-600"
+          loading={loading}
+          icon={<Icon d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0" />}
+        />
+        <KpiTile
+          label="Active Products"
+          value={productsList.length.toLocaleString("en-IN")}
+          hint={`${inStockCount} in stock`}
+          tint="bg-sky-50 text-sky-600"
+          loading={loading}
+          icon={<Icon d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01" />}
+        />
+        <KpiTile
+          label="Customers"
+          value={totalCustomersVal.toLocaleString("en-IN")}
+          hint="Registered customers"
+          tint="bg-teal-50 text-teal-600"
+          loading={loading}
+          icon={<Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />}
+        />
+        <KpiTile
+          label="Employees"
+          value={totalEmployeesVal.toLocaleString("en-IN")}
+          hint="Staff members"
+          tint="bg-slate-100 text-slate-600"
+          loading={loading}
+          icon={<Icon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />}
+        />
+      </div>
+
+      {/* ── Trend + shops ──────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Left: Sales & Purchase Trend */}
-        <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div className="text-[15px] font-bold text-slate-800">Sales & Purchase Trend</div>
-            <div className="flex items-center gap-4 text-xs font-medium">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                <span className="text-slate-600">Sales: {formatCurrency(totalSalesVal)}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span className="text-slate-600">Purchase: {formatCurrency(totalPurchaseVal)}</span>
-              </div>
+        <section className="card lg:col-span-8">
+          <div className="card-header">
+            <div>
+              <h2 className="card-title">Sales vs Purchase</h2>
+              <p className="text-[12px] text-slate-400 mt-0.5">Overall trading volume</p>
+            </div>
+            <div className="hidden sm:flex items-center gap-4 text-[12px] font-medium text-slate-500">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-brand-600" /> Sales</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-amber-300" /> Purchase</span>
             </div>
           </div>
 
-          {/* Database-Driven Trend Visualization or Clean Empty State */}
-          {totalSalesVal === 0 && totalPurchaseVal === 0 ? (
-            <div className="h-[220px] flex flex-col items-center justify-center text-center p-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-              <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-xl mb-2">
-                📊
-              </div>
-              <div className="text-sm font-semibold text-slate-700">No Transaction Trend Data Yet</div>
-              <p className="text-xs text-slate-500 max-w-sm mt-1">
-                Sales and purchase volume over time will be graphed dynamically here as invoices are created.
-              </p>
-              <div className="flex gap-3 mt-4">
-                <Link to="/app/billing" className="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  + Create Sale
-                </Link>
-                <Link to="/app/purchase" className="text-xs font-semibold px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">
-                  + Record Purchase
-                </Link>
-              </div>
-            </div>
+          {tradeTotal === 0 ? (
+            <EmptyState
+              icon={<Icon d="M3 3v18h18M7 15l4-4 3 3 5-6" />}
+              title="No transactions yet"
+              text="Your sales and purchase volume will appear here as soon as you create your first bill."
+              action={<Link to="/app/billing" className="btn-primary btn-sm">Create first bill</Link>}
+            />
           ) : (
-            <div className="relative w-full h-[220px] flex flex-col justify-end pb-2">
-              <div className="flex items-end justify-around h-40 gap-4 px-4 border-b border-slate-200">
-                <div className="flex flex-col items-center flex-1 max-w-[80px]">
-                  <div className="text-[11px] font-bold text-blue-600 mb-1">{formatCurrency(totalSalesVal)}</div>
-                  <div
-                    className="w-full bg-blue-500 rounded-t-md transition-all"
-                    style={{ height: `${Math.min(130, Math.max(16, (totalSalesVal / (totalSalesVal + totalPurchaseVal || 1)) * 130))}px` }}
-                  />
-                  <div className="text-[11px] text-slate-500 font-medium mt-1">Sales</div>
+            <div className="p-5 sm:p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="stat-label">Sales</div>
+                  <div className="text-[22px] font-bold text-navy-900 tabular mt-1">{formatCurrency(totalSalesVal)}</div>
                 </div>
-                <div className="flex flex-col items-center flex-1 max-w-[80px]">
-                  <div className="text-[11px] font-bold text-emerald-600 mb-1">{formatCurrency(totalPurchaseVal)}</div>
-                  <div
-                    className="w-full bg-emerald-500 rounded-t-md transition-all"
-                    style={{ height: `${Math.min(130, Math.max(16, (totalPurchaseVal / (totalSalesVal + totalPurchaseVal || 1)) * 130))}px` }}
-                  />
-                  <div className="text-[11px] text-slate-500 font-medium mt-1">Purchases</div>
+                <div className="text-right">
+                  <div className="stat-label">Purchase</div>
+                  <div className="text-[22px] font-bold text-navy-900 tabular mt-1">{formatCurrency(totalPurchaseVal)}</div>
                 </div>
+              </div>
+              <div>
+                <div className="flex h-3.5 w-full overflow-hidden rounded-full bg-slate-100 gap-0.5">
+                  <div className="bg-brand-600 rounded-l-full transition-all duration-700" style={{ width: `${salesShare}%` }} />
+                  <div className="bg-amber-300 rounded-r-full transition-all duration-700" style={{ width: `${100 - salesShare}%` }} />
+                </div>
+                <div className="flex justify-between mt-2 text-[12px] font-medium text-slate-500">
+                  <span>{salesShare}% sales</span>
+                  <span>{100 - salesShare}% purchase</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <MiniStat label="Sales − purchase" value={formatCurrency(totalSalesVal - totalPurchaseVal)} tone={totalSalesVal - totalPurchaseVal >= 0 ? "ok" : "due"} />
+                <MiniStat label="Receivables" value={formatCurrency(receivablesVal)} tone={receivablesVal > 0 ? "due" : "neutral"} />
+                <MiniStat label="Payables" value={formatCurrency(payablesVal)} tone={payablesVal > 0 ? "warn" : "neutral"} />
               </div>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Right: Shop Distribution */}
-        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-[15px] font-bold text-slate-800">Shops & Portals</div>
-            <span className="text-xs font-semibold text-slate-500">{shopsList.length} active</span>
+        <section className="card lg:col-span-4 flex flex-col">
+          <div className="card-header">
+            <h2 className="card-title">Shops & Branches</h2>
+            <span className="badge-brand">{shopsList.length} active</span>
           </div>
-
-          <div className="flex flex-col justify-center gap-3 my-auto pt-2">
+          <div className="p-3 flex-1 space-y-1.5">
             {shopsList.length === 0 ? (
-              <div className="text-center py-8 text-xs text-slate-400">
-                No active shop profiles found.
-              </div>
+              <EmptyState compact icon={<Icon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10" />} title="No shops found" text="Your registered shops will be listed here." />
             ) : (
-              shopsList.map((shop) => (
-                <div key={shop.id} className="p-3 rounded-lg border border-slate-100 bg-slate-50/60 flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-slate-800 text-xs">{shop.name}</div>
-                    <div className="text-[11px] text-slate-400 font-mono">{shop.code}</div>
+              shopsList.map((shop) => {
+                const current = activeShop?.id === shop.id;
+                return (
+                  <div
+                    key={shop.id}
+                    className={`p-3 rounded-xl flex items-center gap-3 transition-colors ${current ? "bg-brand-50 ring-1 ring-brand-100" : "hover:bg-slate-50"}`}
+                  >
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-[13px] font-bold shrink-0 ${current ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600"}`}>
+                      {(shop.name || "S").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-navy-900 text-[13px] truncate">{shop.name}</div>
+                      <div className="text-[11.5px] text-slate-400 font-mono">{shop.code}</div>
+                    </div>
+                    {current ? <span className="badge-brand">Current</span> : <span className="badge-active">Active</span>}
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10.5px] font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">
-                    Active
-                  </span>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* ============================================================== */}
-      {/* 3. SECONDARY 5 KPI CARDS                                       */}
-      {/* ============================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* Today's Sales */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
+      {/* ── Recent sales + low stock ───────────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <section className="card overflow-hidden">
+          <div className="card-header">
+            <h2 className="card-title">Recent Sales</h2>
+            <Link to="/app/sales" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">View all →</Link>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Today's Sales</div>
-            <div className="text-[16px] font-bold text-slate-800 leading-snug">
-              {formatCurrency(todaySalesVal)}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
-              {todaySalesCount} invoices today
-            </div>
-          </div>
-        </div>
-
-        {/* Today's Purchase */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <path d="M16 10a4 4 0 0 1-8 0" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Today's Purchase</div>
-            <div className="text-[16px] font-bold text-slate-800 leading-snug">
-              {formatCurrency(todayPurchaseVal)}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
-              {todayPurchaseCount} bills today
-            </div>
-          </div>
-        </div>
-
-        {/* Outstanding Receivables */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="8.5" cy="7" r="4" />
-              <line x1="20" y1="8" x2="20" y2="14" />
-              <line x1="23" y1="11" x2="17" y2="11" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Customer Receivables</div>
-            <div className="text-[16px] font-bold text-slate-800 leading-snug">
-              {formatCurrency(receivablesVal)}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
-              Due from customers
-            </div>
-          </div>
-        </div>
-
-        {/* Outstanding Payables */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Supplier Payables</div>
-            <div className="text-[16px] font-bold text-slate-800 leading-snug">
-              {formatCurrency(payablesVal)}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
-              Due to suppliers
-            </div>
-          </div>
-        </div>
-
-        {/* Catalog Items */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[11.5px] text-slate-500 font-medium">Active Products</div>
-            <div className="text-[16px] font-bold text-slate-800 leading-snug">
-              {productsList.length}
-            </div>
-            <div className="text-[11px] text-slate-400 mt-0.5">
-              In stock: {productsList.filter(p => (p.stocks?.[0]?.current_stock ?? 0) > 0).length}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ============================================================== */}
-      {/* 4. MIDDLE TWO TABLES (Recent Sales + Low Stock Products)       */}
-      {/* ============================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Left: Recent Sales */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[15px] font-bold text-slate-800">Recent Sales</div>
-            <Link to="/app/sales" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
-              View All
-            </Link>
-          </div>
-
           {liveSales.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-2">
-                🛒
-              </div>
-              <div className="text-sm font-semibold text-slate-700">No Recent Sales</div>
-              <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                Invoices and billings created through the point of sale will appear here.
-              </p>
-              <Link
-                to="/app/billing"
-                className="mt-3 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100"
-              >
-                + Create First Sale
-              </Link>
-            </div>
+            <EmptyState
+              icon={<Icon d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />}
+              title="No sales yet"
+              text="Bills you create will appear here."
+              action={<Link to="/app/billing" className="btn-soft btn-sm">+ Create first sale</Link>}
+            />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table>
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                    <th className="py-2.5 pr-2">Invoice No.</th>
-                    <th className="py-2.5 px-2">Customer</th>
-                    <th className="py-2.5 px-2">Amount</th>
-                    <th className="py-2.5 px-2">Payment</th>
-                    <th className="py-2.5 px-2">Status</th>
-                    <th className="py-2.5 pl-2 text-right">Date</th>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Customer</th>
+                    <th className="!text-right">Amount</th>
+                    <th>Payment</th>
+                    <th className="!text-right">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100/70">
+                <tbody>
                   {liveSales.slice(0, 5).map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 pr-2 font-mono font-medium">
+                    <tr key={s.id}>
+                      <td className="font-mono font-medium whitespace-nowrap">
                         <ReferenceLink type="sale" id={s.id} refNumber={s.invoice_number} />
                       </td>
-                      <td className="py-3 px-2 font-medium text-slate-800">
-                        <ReferenceLink type="customer" id={s.customer_id} refNumber={s.customer?.name || "Walk-in Customer"} className="text-slate-800 hover:text-blue-600 font-normal">
+                      <td className="font-medium text-slate-800 max-w-[160px] truncate">
+                        <ReferenceLink type="customer" id={s.customer_id} refNumber={s.customer?.name || "Walk-in Customer"} className="!font-sans text-slate-800 hover:text-brand-600 font-medium">
                           {s.customer?.name || "Walk-in Customer"}
                         </ReferenceLink>
                       </td>
-                      <td className="py-3 px-2 font-semibold text-slate-900">₹ {Number(s.total_amount).toLocaleString("en-IN")}</td>
-                      <td className="py-3 px-2">
-                        <span
-                          className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium ${
-                            Number(s.due_amount) === 0
-                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                              : "bg-blue-50 text-blue-600 border border-blue-100"
-                          }`}
-                        >
-                          {Number(s.due_amount) === 0 ? "Paid" : "Partial"}
-                        </span>
+                      <td className="text-right font-semibold text-navy-900 whitespace-nowrap">₹ {Number(s.total_amount).toLocaleString("en-IN")}</td>
+                      <td>
+                        {Number(s.due_amount) === 0 ? (
+                          <span className="badge-active">Paid</span>
+                        ) : (
+                          <span className="badge-warn" title={`Status: ${s.status}`}>Partial</span>
+                        )}
                       </td>
-                      <td className="py-3 px-2">
-                        <span
-                          className={`font-medium ${
-                            s.status === "completed" ? "text-emerald-600" : "text-amber-500"
-                          }`}
-                        >
-                          {s.status}
-                        </span>
-                      </td>
-                      <td className="py-3 pl-2 text-right text-slate-400">
-                        {new Date(s.invoice_date || s.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </td>
+                      <td className="text-right text-slate-500 whitespace-nowrap">{fmtDate(s.invoice_date || s.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Right: Low Stock Products */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[15px] font-bold text-slate-800">Low Stock Products</div>
-            <Link to="/app/inventory" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
-              View All
-            </Link>
+        <section className="card overflow-hidden">
+          <div className="card-header">
+            <div className="flex items-center gap-2">
+              <h2 className="card-title">Low Stock</h2>
+              {lowStockProducts.length > 0 && <span className="badge-danger">{lowStockProducts.length}</span>}
+            </div>
+            <Link to="/app/inventory" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">Inventory →</Link>
           </div>
-
           {lowStockProducts.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl mb-2">
-                ✓
-              </div>
-              <div className="text-sm font-semibold text-slate-700">All Products Well Stocked</div>
-              <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                No products are currently at or below their minimum reorder stock level.
-              </p>
-            </div>
+            <EmptyState
+              tone="ok"
+              icon={<Icon d="M20 6L9 17l-5-5" />}
+              title="All products well stocked"
+              text="No product is at or below its minimum stock level."
+            />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                    <th className="py-2.5 pr-2">Product</th>
-                    <th className="py-2.5 px-2">SKU</th>
-                    <th className="py-2.5 px-2 text-center">Current Stock</th>
-                    <th className="py-2.5 pl-2 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100/70">
-                  {lowStockProducts.slice(0, 5).map((p) => {
-                    const currentStock = p.stocks?.[0]?.current_stock ?? 0;
-                    return (
-                      <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-3 pr-2 flex items-center gap-2.5">
-                          <ProductItemIcon name={p.name} category={p.category?.name} size="sm" />
-                          <ReferenceLink type="product" refNumber={p.name} className="text-slate-800 hover:text-blue-600 font-medium">
-                            {p.name}
-                          </ReferenceLink>
-                        </td>
-                        <td className="py-3 px-2 font-mono text-slate-500 text-[11.5px]">
+            <ul className="divide-y divide-slate-100">
+              {lowStockProducts.slice(0, 5).map((p) => {
+                const currentStock = p.stocks?.[0]?.current_stock ?? 0;
+                const min = p.min_stock ?? 5;
+                const pct = min > 0 ? Math.max(4, Math.min(100, (currentStock / min) * 100)) : 0;
+                return (
+                  <li key={p.id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-brand-50/30 transition-colors">
+                    <ProductItemIcon name={p.name} category={p.category?.name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <ReferenceLink type="product" refNumber={p.name} className="!font-sans text-[13px] text-navy-900 hover:text-brand-600 font-semibold truncate block">
+                        {p.name}
+                      </ReferenceLink>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <div className="h-1.5 w-20 sm:w-24 rounded-full bg-slate-100 overflow-hidden shrink-0">
+                          <div className={`h-full rounded-full ${currentStock <= 0 ? "bg-rose-500" : "bg-amber-400"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-mono truncate">
                           <ReferenceLink type="product" refNumber={p.sku} />
-                        </td>
-                        <td className="py-3 px-2 text-center font-bold text-rose-500">{currentStock}</td>
-                        <td className="py-3 pl-2 text-right">
-                          <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-medium bg-rose-50 text-rose-500 border border-rose-100">
-                            {currentStock <= 0 ? "Out of Stock" : "Low Stock"}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className={`text-[15px] font-bold tabular ${currentStock <= 0 ? "text-rose-600" : "text-amber-600"}`}>{currentStock}</div>
+                      <div className="text-[10.5px] text-slate-400">min {min}</div>
+                    </div>
+                    <span className={`hidden sm:inline-flex ${currentStock <= 0 ? "badge-danger" : "badge-warn"}`}>
+                      {currentStock <= 0 ? "Out of stock" : "Low stock"}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </div>
+        </section>
       </div>
 
-      {/* ============================================================== */}
-      {/* 5. BOTTOM CARDS (Recent Purchases & Recent Activities)          */}
-      {/* ============================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Recent Purchases */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[15px] font-bold text-slate-800">Recent Purchases</div>
-            <Link to="/app/purchase" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
-              View All
-            </Link>
+      {/* ── Recent purchases + activity ────────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <section className="card overflow-hidden">
+          <div className="card-header">
+            <h2 className="card-title">Recent Purchases</h2>
+            <Link to="/app/purchase" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">View all →</Link>
           </div>
-
           {livePurchases.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-2">
-                🚚
-              </div>
-              <div className="text-sm font-semibold text-slate-700">No Purchases Recorded Yet</div>
-              <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                Inward inventory purchases from suppliers will appear here.
-              </p>
-              <Link
-                to="/app/purchase"
-                className="mt-3 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100"
-              >
-                + Record First Purchase
-              </Link>
-            </div>
+            <EmptyState
+              icon={<Icon d="M1 3h15v13H1zM16 8h4l3 3v5h-7zM5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />}
+              title="No purchases recorded"
+              text="Stock purchased from suppliers will appear here."
+              action={<Link to="/app/purchase" className="btn-soft btn-sm">+ Record first purchase</Link>}
+            />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table>
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
-                    <th className="py-2 pr-1">Bill No.</th>
-                    <th className="py-2 px-1">Supplier</th>
-                    <th className="py-2 px-1">Amount</th>
-                    <th className="py-2 px-1">Status</th>
-                    <th className="py-2 pl-1 text-right">Date</th>
+                  <tr>
+                    <th>Bill No.</th>
+                    <th>Supplier</th>
+                    <th className="!text-right">Amount</th>
+                    <th>Status</th>
+                    <th className="!text-right">Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100/70">
+                <tbody>
                   {livePurchases.slice(0, 5).map((pur) => (
-                    <tr key={pur.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-2.5 pr-1 font-mono text-[11px]">
+                    <tr key={pur.id}>
+                      <td className="font-mono whitespace-nowrap">
                         <ReferenceLink type="purchase" refNumber={pur.invoice_number} />
                       </td>
-                      <td className="py-2.5 px-1 font-medium text-slate-800 truncate max-w-[95px]">
-                        <ReferenceLink type="supplier" refNumber={pur.supplier?.name || "Supplier"} className="text-slate-800 hover:text-blue-600 font-normal">
+                      <td className="font-medium text-slate-800 max-w-[140px] truncate">
+                        <ReferenceLink type="supplier" refNumber={pur.supplier?.name || "Supplier"} className="!font-sans text-slate-800 hover:text-brand-600 font-medium">
                           {pur.supplier?.name || "Supplier"}
                         </ReferenceLink>
                       </td>
-                      <td className="py-2.5 px-1 font-semibold text-slate-800">
-                        ₹ {Number(pur.total_amount).toLocaleString("en-IN")}
-                      </td>
-                      <td className="py-2.5 px-1">
-                        <span
-                          className={`inline-block px-1.5 py-0.5 rounded text-[10.5px] font-medium ${
-                            pur.status === "received" || pur.status === "completed"
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-blue-50 text-blue-600"
-                          }`}
-                        >
+                      <td className="text-right font-semibold text-navy-900 whitespace-nowrap">₹ {Number(pur.total_amount).toLocaleString("en-IN")}</td>
+                      <td>
+                        <span className={`capitalize ${pur.status === "received" || pur.status === "completed" ? "badge-active" : "badge-brand"}`}>
                           {pur.status}
                         </span>
                       </td>
-                      <td className="py-2.5 pl-1 text-right text-slate-400 text-[11px]">
-                        {new Date(pur.purchase_date || pur.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </td>
+                      <td className="text-right text-slate-500 whitespace-nowrap">{fmtDate(pur.purchase_date || pur.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Recent Activities */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-[15px] font-bold text-slate-800">Recent Activities</div>
-            <Link to="/app/reports" className="text-xs font-semibold text-blue-600 hover:text-blue-700">
-              View All
-            </Link>
+        <section className="card overflow-hidden">
+          <div className="card-header">
+            <h2 className="card-title">Recent Activity</h2>
+            <Link to="/app/reports" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">Reports →</Link>
           </div>
-
           {activities.length === 0 ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center">
-              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-xl mb-2">
-                📋
-              </div>
-              <div className="text-sm font-semibold text-slate-700">No Recent Activity</div>
-              <p className="text-xs text-slate-400 mt-1 max-w-xs">
-                Audits, product updates, and business actions will be tracked here.
-              </p>
-            </div>
+            <EmptyState
+              icon={<Icon d="M22 12h-4l-3 9L9 3l-3 9H2" />}
+              title="No recent activity"
+              text="Updates to products, bills and customers will be tracked here."
+            />
           ) : (
-            <div className="space-y-3 pt-1">
-              {activities.slice(0, 5).map((act, idx) => (
-                <div key={idx} className="flex items-center justify-between gap-2.5 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs shrink-0">
-                      ⚡
-                    </div>
-                    <span className="font-medium text-slate-700 truncate">
-                      {act.action ? `${act.action.toUpperCase()} on ${act.entity_type || 'System'}` : act.details || "Activity recorded"}
-                    </span>
+            <ol className="px-5 py-4">
+              {activities.slice(0, 5).map((act, idx, arr) => (
+                <li key={idx} className="relative flex gap-3 pb-4 last:pb-0">
+                  {idx < arr.length - 1 && <span className="absolute left-[15px] top-8 bottom-0 w-px bg-slate-200" />}
+                  <div className="w-8 h-8 rounded-full bg-brand-50 text-brand-600 ring-4 ring-white flex items-center justify-center shrink-0">
+                    <Icon d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-[11px] text-slate-400 shrink-0">
-                    {act.createdAt ? new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
-                  </span>
-                </div>
+                  <div className="min-w-0 flex-1 pt-1">
+                    <div className="text-[13px] font-medium text-slate-800 truncate">
+                      {act.action ? `${act.action.charAt(0).toUpperCase()}${act.action.slice(1)} · ${act.entity_type || "System"}` : act.details || "Activity recorded"}
+                    </div>
+                    <div className="text-[11.5px] text-slate-400 mt-0.5">
+                      {act.createdAt ? `${fmtDate(act.createdAt)} · ${new Date(act.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Just now"}
+                    </div>
+                  </div>
+                </li>
               ))}
-            </div>
+            </ol>
           )}
-        </div>
+        </section>
       </div>
+    </div>
+  );
+}
+
+/* ───────────────────────── Presentational helpers ───────────────────────── */
+
+function Icon({ d, className = "w-[18px] h-[18px]" }: { d: string; className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
+  );
+}
+
+function HeroStat({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[11.5px] text-brand-100/70 font-medium truncate">{label}</div>
+      <div className="text-[14px] sm:text-[17px] font-semibold mt-1 tabular truncate">{value}</div>
+      <div className="text-[11px] text-brand-100/50 mt-0.5 truncate">{hint}</div>
+    </div>
+  );
+}
+
+function MoneyCard({
+  to, tone, label, value, hint, icon, loading,
+}: { to: string; tone: "due" | "pay"; label: string; value: string; hint: string; icon: ReactNode; loading: boolean }) {
+  const styles = tone === "due"
+    ? { tile: "bg-rose-50 text-rose-600", value: "text-rose-600", bar: "bg-rose-500" }
+    : { tile: "bg-amber-50 text-amber-600", value: "text-amber-600", bar: "bg-amber-400" };
+  return (
+    <Link to={to} className="card card-hover relative overflow-hidden p-5 flex items-center gap-4 group">
+      <span className={`absolute left-0 top-0 bottom-0 w-1 ${styles.bar}`} />
+      <div className={`icon-tile w-11 h-11 ${styles.tile}`}>{icon}</div>
+      <div className="min-w-0 flex-1">
+        <div className="stat-label">{label}</div>
+        <div className={`text-[22px] font-bold tracking-tight tabular mt-1 truncate ${styles.value} ${loading ? "opacity-40 animate-pulse" : ""}`}>{value}</div>
+        <div className="text-[11.5px] text-slate-400 mt-0.5">{hint}</div>
+      </div>
+      <svg className="w-4 h-4 text-slate-300 group-hover:text-brand-600 group-hover:translate-x-0.5 transition-all shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+    </Link>
+  );
+}
+
+function KpiTile({
+  label, value, hint, icon, tint, loading,
+}: { label: string; value: string; hint: string; icon: ReactNode; tint: string; loading: boolean }) {
+  return (
+    <div className="card p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="stat-label">{label}</div>
+        <div className={`icon-tile w-9 h-9 rounded-lg ${tint}`}>{icon}</div>
+      </div>
+      <div className={`stat-value mt-2 text-[19px] sm:text-[22px] truncate ${loading ? "opacity-40 animate-pulse" : ""}`}>{value}</div>
+      <div className="text-[11.5px] text-slate-400 mt-1.5 truncate">{hint}</div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value, tone }: { label: string; value: string; tone: "ok" | "due" | "warn" | "neutral" }) {
+  const color = { ok: "text-emerald-600", due: "text-rose-600", warn: "text-amber-600", neutral: "text-navy-900" }[tone];
+  return (
+    <div className="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3">
+      <div className="text-[11.5px] text-slate-500 font-medium truncate">{label}</div>
+      <div className={`text-[15px] font-bold tabular mt-1 ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function EmptyState({
+  icon, title, text, action, tone = "neutral", compact = false,
+}: { icon: ReactNode; title: string; text: string; action?: ReactNode; tone?: "neutral" | "ok"; compact?: boolean }) {
+  return (
+    <div className={`flex flex-col items-center justify-center text-center px-6 ${compact ? "py-8" : "py-12"}`}>
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 ${tone === "ok" ? "bg-emerald-50 text-emerald-600" : "bg-brand-50 text-brand-500"}`}>
+        {icon}
+      </div>
+      <div className="text-[13.5px] font-semibold text-navy-900">{title}</div>
+      <p className="text-[12.5px] text-slate-500 mt-1 max-w-xs">{text}</p>
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

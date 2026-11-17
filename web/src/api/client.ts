@@ -99,3 +99,14 @@ export function apiErrorMessage(err: unknown, fallback = "Something went wrong")
   }
   return fallback;
 }
+
+/**
+ * Resolve an asset URL returned by the API. Uploaded files are stored as relative
+ * paths (e.g. "/uploads/products/x.jpg") served by the API host, not the web host.
+ */
+export function resolveAssetUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (/^(https?:|data:|blob:)/i.test(url)) return url;
+  const origin = getApiBaseUrl().replace(/\/api\/?$/, "");
+  return `${origin}${url.startsWith("/") ? "" : "/"}${url}`;
+}

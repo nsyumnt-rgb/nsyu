@@ -185,7 +185,7 @@ class _PortalCartScreenState extends State<PortalCartScreen> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.navy900, AppColors.navy700],
+              colors: [Color(0xFF04261D), Color(0xFF064E3B), Color(0xFF047857)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

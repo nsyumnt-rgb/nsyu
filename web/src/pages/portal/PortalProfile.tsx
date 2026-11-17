@@ -47,7 +47,7 @@ export default function PortalProfile() {
       {/* Header */}
       <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">Profile & Shop Settings</h1>
+          <h1 className="page-title">Profile & Shop Settings</h1>
           <p className="text-xs text-gray-500 mt-0.5">Manage your contact details and view linked shop information.</p>
         </div>
 

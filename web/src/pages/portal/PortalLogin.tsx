@@ -236,7 +236,7 @@ export default function PortalLogin() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white/20 mb-3 shadow-inner">
             <span className="text-2xl font-black tracking-wider text-white">N</span>
           </div>
-          <h1 className="text-2xl font-black tracking-tight">NSYU Customer Portal</h1>
+          <h1 className="text-2xl font-black tracking-tight !text-white">NSYU Customer Portal</h1>
           <p className="text-emerald-100 text-xs mt-1">Shop orders, real-time catalog & statement portal</p>
         </div>
 

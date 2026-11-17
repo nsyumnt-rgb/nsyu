@@ -89,7 +89,7 @@ export default function PortalOrderDetail() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl md:text-2xl font-black text-gray-900">
+              <h1 className="page-title">
                 Order #{order.order_number}
               </h1>
               <OrderStatusBadge status={order.status} />
