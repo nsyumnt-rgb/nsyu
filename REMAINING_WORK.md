@@ -5,6 +5,134 @@
 **Credentials:** never stored in this file. Ask the platform owner; rotate anything that was ever committed (see Security below).  
 **Mobile Release APK (v1.0.9+11):** https://nsyumnt-rgb.github.io/nsyu/downloads/nsyu-business-release.apk  
 
+---
+
+# FULL AUDIT & RELEASE REPORT — 2026-11-17
+
+Evidence-based. "Pass" means a test actually ran and passed; anything not run is listed as **blocked** or **pending** with the reason.
+
+## 1. Architecture & stack (unchanged)
+
+| Layer | Technology | Notes |
+|---|---|---|
+| Web | React 19 + Vite + TypeScript + Tailwind 3, zustand, react-router (HashRouter), axios | GitHub Pages deploys `web/dist` via `.github/workflows/deploy-pages.yml` |
+| API | Node + Express 4 + TypeScript, Sequelize 6 | Render (`render.yaml`), `api/` root |
+| Database | PostgreSQL on Supabase | Numbered SQL migrations in `api/src/migrations` + idempotent startup DDL |
+| Mobile | Flutter 3.41 (provider, http) | Talks to the same REST API |
+| Auth | JWT access (15 min) + refresh (30 d); owner / super admin / customer token types | Customer tokens are rejected on staff routes and vice versa |
+
+Data isolation is enforced **in the API** (every query is scoped by the token's owner/shop/customer). The web and mobile apps never query Supabase tables directly, and the API connects as the database owner, so Supabase RLS is a second line of defence, not the primary one.
+
+## 2. Roles found in the code
+
+| Role | Login exists? | How it was tested |
+|---|---|---|
+| Super Admin | Yes (`/auth/login`, `is_super_admin`) | API matrix + UI sweep |
+| Owner | Yes | API matrix, workflows, UI sweep |
+| Manager | **No login** — role + permissions exist, but there is no employee account table or employee login endpoint | Backend authorization verified with signed role tokens |
+| Staff (Sales / Billing / Inventory / Accountant) | **No login** (same reason) | Backend authorization verified with signed role tokens |
+| Customer | Yes (portal password / OTP) | API matrix, workflows, UI sweep |
+| Supplier | **No login** — suppliers are records owned by a shop (purchases, payables, supplier ledger) | Supplier workflows tested from the owner side |
+
+**Pending (needs a product decision + a new table, i.e. schema approval):** employee accounts (Manager/Staff login, shop assignment) and any supplier self-service login.
+
+## 3. Permission matrix — `npm run test:roles` → **103 passed, 0 failed**
+
+Isolated in-memory DB, real HTTP API. Status codes observed:
+
+| Check | anon | forged | super admin | owner A | owner B | manager | sales staff | inventory staff | customer |
+|---|---|---|---|---|---|---|---|---|---|
+| Staff APIs (`/products`, `/customers`, `/reports`) | 401 | 401 | — | 200 | 200 (own) | 200 | products/customers 200, reports 403 | products 200, customers 403 | 403 |
+| Admin dashboard / shops / shop status | 401 | 401 | 200 | 403 | — | 403 | 403 | 403 | 403 |
+| Suspend shop B → shop B APIs & portal | — | — | 200 | — | 403 | — | — | — | 403 |
+| Owner B → owner A's customer / ledger / bill / order / product / shop / modules | — | — | — | — | 404 | — | — | — | — |
+| Create role, edit role permissions, create shop, shop settings, restore | — | — | — | 201 | — | 403 | 403 | — | — |
+| Backup export (all customer data) | — | — | — | 200 | — | 403 | 403 | — | — |
+| Delete product (delete off by default) | — | — | — | — | — | 403 | — | — | — |
+| Customer A1 → A2's order / bill / cancel | — | — | — | — | — | — | — | — | 404 |
+| Responses leak `purchase_price` / password hash? | no | — | no | — | — | — | no (sales) | — | no |
+
+## 4. Business workflows — `npm run test:workflows` → **54 passed, 0 failed**
+
+- **A Shopping:** browse category, search, product details (no cost price), cart add / + / − / over-stock flagged, server-side persistence, place order, idempotent double-submit = 1 order, cart emptied, owner sees it (other owner doesn't), confirmed → processing → shipped, customer tracks status + history.
+- **B Order → bill:** billing blocked until *Delivered*; one bill only (second convert refused); ledger posted once; stock reduced by exactly the ordered qty; outstanding = bill total; order marked billed.
+- **C Billing & ledger:** full payment → 0 due; idempotent retry → no duplicate bill; partial → ₹300 due; credit → ₹800 due; ledger payment → 0; retried payment not double-applied; negative qty rejected; with *negative stock disabled*, overselling rejected and nothing saved.
+- **D Inventory:** create product, +15 purchase, −3 adjustment, sale −4, history rows, cancelling bill restores stock.
+- **E Suppliers / multi-shop:** create supplier, purchase adds stock, payable ₹2000 after ₹1000 paid, other owner can't read supplier/purchase or bill shop A's product.
+
+## 5. Full regression — `npm run test:all` → **342 checks, 0 failed**
+
+| Suite | Result |
+|---|---|
+| test:roles | 103 / 103 |
+| test:workflows | 54 / 54 |
+| test:isolation (tenant isolation) | 57 / 57 |
+| test:phase-a (suppliers, purchases, supplier ledger) | 51 / 51 |
+| test:marketplace | 23 / 23 |
+| test:market-cart (multi-shop cart + checkout) | 42 / 42 |
+| test:shop-approval | 12 / 12 |
+
+API `tsc --noEmit` ✓, API `npm run build` ✓.
+
+## 6. Responsive sweep (automated, every route, 12 widths)
+
+Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check per route: page wider than viewport, any visible element past the right edge that isn't inside a scroll container, visible error banners, console errors.
+
+| Area | Routes | Result after fixes |
+|---|---|---|
+| Owner app | 20 (`/app/*` incl. detail pages) | clean at all 12 widths |
+| Customer portal | 14 | clean at all 12 widths |
+| Public marketplace + auth | 10 | clean at all widths tested (360, 390, 414, 430, 768, 1024, 1280, 1366, 1440, 1600, 1920) |
+| Super Admin | 5 | clean at 360, 390, 768, 1024, 1366, 1920 |
+
+## 7. Bugs found and fixed in this audit
+
+| # | Severity | Bug | Fix |
+|---|---|---|---|
+| 1 | **Critical** | Super-admin + owner passwords and DB host committed in `REMAINING_WORK.md` and in two orphaned JS bundles in the repo root | Removed; **rotate the passwords** (git history still contains them) |
+| 2 | High | `GET /api/backup` (all customers, ledger, sales) allowed for any staff token | Owner-only |
+| 3 | High | Permission check treated a role *named* "Super Admin" / roleCode `super_admin` as the platform admin | Only the verified `isSuperAdmin` flag counts |
+| 4 | High | Products page showed invented KPIs (1,248 / 1,182 / 46 / 12, "125 pages") for shops with 10+ products | Real counts |
+| 5 | Medium | Settings showed a fake "Connected · 200 OK · 24ms" card with the DB host | Live `/health` check |
+| 6 | Medium | Super Admin panel unusable on phones (572px header, fixed sidebar) | Drawer + responsive header |
+| 7 | Medium | Overflow: Roles (1024px), Products/Inventory pagination, Inventory tabs, Purchase bill lines, Reports dates | Wrapping / stacked layouts |
+| 8 | Low | Closed cart drawer's buttons were keyboard-focusable | Hidden when closed |
+| 9 | Low | Low-stock count ignored the default threshold when a product had no minimum | Uses default 5 |
+| 10 | Low | DB pooler host shown in the mobile About/Help screens | Removed |
+
+## 8. Other results
+
+- **Web:** `tsc -b` ✓, `vite build` ✓, `oxlint` 0 errors / 26 warnings (all `react-hooks/exhaustive-deps`, pre-existing; left as-is to avoid behaviour changes).
+- **Flutter:** `flutter pub get` ✓, `flutter analyze` → *No issues found*, `flutter test` → 6 / 6 (first tests in the app: `App/test/models_test.dart`), `flutter build apk --release` ✓ (65.9 MB).
+
+## 9. Blocked / not tested (and what's needed)
+
+| Item | Why blocked | Needed |
+|---|---|---|
+| Manager / Staff / Supplier **login** | Not implemented (no account table) | Approval to add an employee-accounts migration + login |
+| Supabase **RLS** policies | Requires the live database; tests never touch production | A staging Supabase project + its credentials |
+| Android **emulator** run | No emulator session in this environment | Run on a device/emulator; APK builds |
+| Testing against **production data** | Deliberately avoided | — |
+| Payment-provider flows | None configured in the product | — |
+
+## 10. Observations (not changed — business decisions)
+
+- Short-stock billing is **on by default** (`allowNegativeStock`); owners can turn it off per shop.
+- Order status rules allow moving a *delivered* order back to earlier states, and re-opening a cancelled order.
+- Wishlist is stored per shop + customer in the browser (no wishlist table).
+
+## 11. Required follow-up actions for the owner
+
+1. **Rotate** the super-admin password, the `nsyu.mnt` owner password, the database password and both JWT secrets (they were committed in the past).
+2. Decide on employee accounts (Manager/Staff login) — then the role permissions already verified above become usable.
+3. Provide a staging Supabase project if RLS should be verified independently of the API.
+
+## 12. Release
+
+- Branch: `release/full-audit-20261117` (backup of the pre-audit state: `backup/pre-audit-20261117`)
+- Merged fast-forward into `main` after the full regression run; see `git log` for the release commits.
+
+
 # NSYU
 # MULTI-OWNER, MULTI-SHOP B2B + B2C COMMERCE PLATFORM
 
