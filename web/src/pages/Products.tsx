@@ -358,7 +358,7 @@ function ProductsInner() {
       // Stock Status filter
       const stock = p.stocks?.[0]?.current_stock ?? 0;
       if (stockStatusFilter === "In Stock" && stock <= 0) return false;
-      if (stockStatusFilter === "Low Stock" && (stock > p.min_stock || stock <= 0)) return false;
+      if (stockStatusFilter === "Low Stock" && (stock > (Number(p.min_stock ?? 5) || 5) || stock <= 0)) return false;
       if (stockStatusFilter === "Out of Stock" && stock > 0) return false;
 
       return true;
@@ -392,10 +392,13 @@ function ProductsInner() {
   const paginatedProducts = sortedProducts.slice(startIndex, startIndex + pageSize);
 
   // Stock Metrics Calculation
-  const totalCount = products.length > 0 ? (products.length >= 10 ? 1248 : products.length) : 1248;
-  const activeCount = products.length > 0 ? (products.length >= 10 ? 1182 : products.filter((p) => p.status === "active").length) : 1182;
-  const lowStockCount = products.length > 0 ? (products.length >= 10 ? 46 : products.filter((p) => (p.stocks?.[0]?.current_stock ?? 0) <= p.min_stock && (p.stocks?.[0]?.current_stock ?? 0) > 0).length) : 46;
-  const outOfStockCount = products.length > 0 ? (products.length >= 10 ? 12 : products.filter((p) => (p.stocks?.[0]?.current_stock ?? 0) <= 0).length) : 12;
+  // Real counts from the loaded catalog (low stock uses the product's minimum, default 5 like the API).
+  const stockOf = (p: (typeof products)[number]) => Number(p.stocks?.[0]?.current_stock ?? 0);
+  const minOf = (p: (typeof products)[number]) => Number(p.min_stock ?? 5) || 5;
+  const totalCount = products.length;
+  const activeCount = products.filter((p) => p.status === "active").length;
+  const lowStockCount = products.filter((p) => stockOf(p) > 0 && stockOf(p) <= minOf(p)).length;
+  const outOfStockCount = products.filter((p) => stockOf(p) <= 0).length;
 
   // Toggle Single Selection
   function handleSelectRow(id: number) {
@@ -873,7 +876,7 @@ function ProductsInner() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="flex items-center gap-1.5">
             <span>Show</span>
             <select
@@ -931,7 +934,7 @@ function ProductsInner() {
                       : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  {totalPages > 10 ? 125 : totalPages}
+                  {totalPages}
                 </button>
               </>
             )}
@@ -1057,7 +1060,7 @@ function ProductsInner() {
               ) : (
                 paginatedProducts.map((p) => {
                   const stock = p.stocks?.[0]?.current_stock ?? 0;
-                  const isLow = stock > 0 && stock <= p.min_stock;
+                  const isLow = stock > 0 && stock <= (Number(p.min_stock ?? 5) || 5);
                   const isOut = stock <= 0;
                   const isSelected = selectedIds.includes(p.id);
 
@@ -1237,7 +1240,7 @@ function ProductsInner() {
                       : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  {totalPages > 10 ? 125 : totalPages}
+                  {totalPages}
                 </button>
               </>
             )}

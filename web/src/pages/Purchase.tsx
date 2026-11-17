@@ -388,7 +388,7 @@ function PurchaseInner() {
 
               {/* Lines */}
               <div>
-                <div className="grid grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400 pb-1.5 border-b border-slate-100">
+                <div className="hidden sm:grid grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400 pb-1.5 border-b border-slate-100">
                   <span>Product</span>
                   <span className="text-center">Qty</span>
                   <span>Cost ₹</span>
@@ -398,12 +398,14 @@ function PurchaseInner() {
                 </div>
                 <div className="divide-y divide-slate-50">
                   {lines.map((l, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 items-center py-2">
-                      <ProductPicker products={products} value={l.productId} onPick={(p) => pickProduct(i, p)} />
-                      <input type="number" min={1} step={1} className="input px-2 text-center" value={l.quantity} onChange={(e) => setLine(i, { quantity: Math.max(0, Math.floor(Number(e.target.value))) })} />
-                      <input type="number" min={0} step="0.01" className="input px-2" value={l.rate} onChange={(e) => setLine(i, { rate: Number(e.target.value) })} />
-                      <input type="number" min={0} max={28} step="0.01" className="input px-2" value={l.taxPercent} onChange={(e) => setLine(i, { taxPercent: Number(e.target.value) })} />
-                      <span className="text-right text-[13px] font-semibold text-navy-900 tabular">{inr(lineAmounts[i].total)}</span>
+                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr_28px] sm:grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 items-center py-2">
+                      <div className="col-span-4 sm:col-span-1 min-w-0">
+                        <ProductPicker products={products} value={l.productId} onPick={(p) => pickProduct(i, p)} />
+                      </div>
+                      <input type="number" min={1} step={1} aria-label="Quantity" placeholder="Qty" className="input px-2 text-center" value={l.quantity} onChange={(e) => setLine(i, { quantity: Math.max(0, Math.floor(Number(e.target.value))) })} />
+                      <input type="number" min={0} step="0.01" aria-label="Cost per unit" placeholder="Cost ₹" className="input px-2" value={l.rate} onChange={(e) => setLine(i, { rate: Number(e.target.value) })} />
+                      <input type="number" min={0} max={28} step="0.01" aria-label="GST percent" placeholder="GST %" className="input px-2" value={l.taxPercent} onChange={(e) => setLine(i, { taxPercent: Number(e.target.value) })} />
+                      <span className="order-last sm:order-none col-span-4 sm:col-span-1 text-right text-[13px] font-semibold text-navy-900 tabular"><span className="sm:hidden text-slate-400 font-normal mr-1">Amount</span>{inr(lineAmounts[i].total)}</span>
                       <button
                         type="button"
                         disabled={lines.length === 1}

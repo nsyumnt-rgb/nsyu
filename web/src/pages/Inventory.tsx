@@ -770,7 +770,7 @@ function InventoryInner() {
       {/* ============================================================== */}
       {/* 3. SUB-NAVIGATION TABS                                          */}
       {/* ============================================================== */}
-      <div className="flex items-center gap-6 border-b border-slate-200 text-xs font-semibold text-slate-500">
+      <div className="flex items-center gap-6 border-b border-slate-200 text-xs font-semibold text-slate-500 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(
           [
             "Current Stock",
@@ -1920,7 +1920,7 @@ function InventoryInner() {
               </button>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <div className="flex items-center gap-1.5">
                 <span>Show</span>
                 <select

@@ -1,9 +1,13 @@
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
 export default function AdminLayout() {
   const { owner, logout } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(false), [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -64,95 +68,97 @@ export default function AdminLayout() {
     },
   ];
 
+  const current = navItems.find((n) => (n.end ? location.pathname === n.to : location.pathname.startsWith(n.to)));
+
+  const sidebar = (
+    <>
+      <div className="h-16 px-5 border-b border-white/10 flex items-center justify-between shrink-0">
+        <Link to="/admin" className="flex items-center gap-3 min-w-0" onClick={() => setOpen(false)}>
+          <span className="w-9 h-9 rounded-lg bg-white p-1 shrink-0"><img src="./nsyu_logo.png" alt="" className="w-full h-full object-contain" /></span>
+          <span className="min-w-0">
+            <span className="block text-[14px] font-bold tracking-tight text-white">NSYU Platform</span>
+            <span className="block text-[10.5px] font-semibold uppercase tracking-[0.12em] text-emerald-300/90">Super admin</span>
+          </span>
+        </Link>
+        <button type="button" onClick={() => setOpen(false)} className="lg:hidden w-9 h-9 rounded-lg text-slate-300 hover:bg-white/10 flex items-center justify-center" aria-label="Close menu">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
+      </div>
+
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <div className="px-3 pt-2 pb-2 text-[11px] font-semibold tracking-[0.12em] text-slate-400 uppercase">Platform governance</div>
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            onClick={() => setOpen(false)}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 h-11 rounded-lg text-[13.5px] font-medium transition ${
+                isActive ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40" : "text-slate-300 hover:bg-white/5 hover:text-white"
+              }`
+            }
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="p-4 border-t border-white/10">
+        <div className="flex items-center gap-3 mb-3 min-w-0">
+          <span className="w-9 h-9 rounded-full bg-emerald-600/20 text-emerald-200 text-[12px] font-bold flex items-center justify-center shrink-0">
+            {(owner?.name || "SA").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[12.5px] font-semibold text-white truncate">{owner?.name || "Super admin"}</span>
+            {owner?.email && <span className="block text-[11px] text-slate-400 truncate">{owner.email}</span>}
+          </span>
+        </div>
+        <Link
+          to="/app"
+          className="w-full h-10 mb-2 flex items-center justify-center gap-2 text-[12.5px] font-semibold text-slate-200 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition"
+        >
+          View shop app
+        </Link>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full h-10 flex items-center justify-center gap-2 text-[12.5px] font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg border border-rose-500/20 transition"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>
+          Log out
+        </button>
+      </div>
+    </>
+  );
+
   return (
-    <div className="flex min-h-screen bg-slate-900 text-slate-100">
-      {/* Super Admin Sidebar */}
-      <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col shrink-0">
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center font-black text-white shadow-lg">
-              SA
-            </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-wide text-white">NSYU PLATFORM</h1>
-              <span className="text-[10px] font-semibold tracking-wider text-purple-400 uppercase bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-800/50">
-                Super Admin
-              </span>
-            </div>
-          </div>
-        </div>
+    <div className="flex min-h-[100dvh] bg-slate-900 text-slate-100">
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-64 bg-[#04261D] flex-col shrink-0 sticky top-0 h-[100dvh]">{sidebar}</aside>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
-          <div className="px-3 py-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
-            Platform Governance
-          </div>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition ${
-                  isActive
-                    ? "bg-purple-600 text-white shadow-md shadow-purple-900/40"
-                    : "text-slate-300 hover:bg-slate-900 hover:text-white"
-                }`
-              }
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
+      {/* Mobile drawer */}
+      <div className={`lg:hidden fixed inset-0 z-50 transition-[visibility] duration-300 ${open ? "visible" : "invisible"}`} aria-hidden={!open}>
+        <div onClick={() => setOpen(false)} className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} />
+        <aside className={`absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-[#04261D] flex flex-col shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}>{sidebar}</aside>
+      </div>
 
-        {/* Bottom User Area */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/50">
-          <div className="flex items-center justify-between mb-3">
-            <div className="min-w-0 pr-2">
-              <p className="text-xs font-semibold text-white truncate">{owner?.name || "Super Admin"}</p>
-              <p className="text-[11px] text-slate-400 truncate">{owner?.email || "superadmin@nsyu.com"}</p>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Link
-              to="/app"
-              className="w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-900 hover:bg-slate-800 rounded-md border border-slate-800 transition"
-            >
-              <span>View Shop App</span>
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-red-400 bg-red-950/30 hover:bg-red-900/40 rounded-md border border-red-900/40 transition"
-            >
-              <span>Log out</span>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 sm:h-16 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-3 bg-slate-950/70 backdrop-blur sticky top-0 z-30">
+          <div className="flex items-center gap-3 min-w-0">
+            <button type="button" onClick={() => setOpen(true)} className="lg:hidden w-10 h-10 -ml-1 rounded-lg text-slate-300 hover:bg-white/10 flex items-center justify-center" aria-label="Open menu">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
+            <span className="text-[14px] font-semibold text-white truncate">{current?.label || "Platform"}</span>
           </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-900">
-        <header className="h-14 border-b border-slate-800 px-6 flex items-center justify-between bg-slate-950/60 backdrop-blur shrink-0">
-          <div className="flex items-center space-x-2 text-xs text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>Platform Online</span>
-            <span className="text-slate-600">•</span>
-            <span>PostgreSQL & RLS Enforced</span>
-          </div>
-
-          <div className="flex items-center space-x-3 text-xs">
-            <span className="px-2.5 py-1 bg-amber-950/50 text-amber-300 border border-amber-800/60 rounded-full font-medium">
-              Read-Only for Shop Data
-            </span>
-            <span className="px-2.5 py-1 bg-slate-800 text-slate-300 rounded-full font-mono">
-              v1.0.0-PROD
-            </span>
-          </div>
+          <span className="shrink-0 px-2.5 py-1 bg-amber-950/50 text-amber-300 border border-amber-800/60 rounded-full text-[11.5px] font-medium">
+            <span className="hidden sm:inline">Shop data is </span>read-only
+          </span>
         </header>
 
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 min-w-0">
           <Outlet />
         </main>
       </div>

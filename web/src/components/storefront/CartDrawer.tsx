@@ -52,7 +52,7 @@ export default function CartDrawer() {
   const hasIssue = items.some((i) => i.isUnavailable);
 
   return (
-    <div className={`fixed inset-0 z-[60] ${open ? "" : "pointer-events-none"}`} aria-hidden={!open}>
+    <div className={`fixed inset-0 z-[60] overflow-hidden transition-[visibility] duration-300 ${open ? "visible" : "invisible pointer-events-none"}`} aria-hidden={!open}>
       <div onClick={close} className={`absolute inset-0 bg-navy-950/40 backdrop-blur-[1px] transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} />
       <aside
         role="dialog"

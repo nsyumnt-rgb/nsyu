@@ -605,7 +605,7 @@ function RolesInner() {
           </div>
 
           {/* Role Detail & Permissions */}
-          <div className="card p-5">
+          <div className="card p-5 min-w-0">
             {!selected && <p className="text-sm text-muted">Select a role to inspect or edit permissions.</p>}
             {selected && (
               <>
