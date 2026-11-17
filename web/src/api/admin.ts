@@ -5,6 +5,7 @@ export interface PlatformDashboardData {
   total_shops: number;
   active_shops: number;
   suspended_shops: number;
+  pending_shops?: number;
   total_users: number;
   total_owners: number;
   total_employees: number;
@@ -35,7 +36,7 @@ export interface AdminShopItem {
   address?: string | null;
   phone?: string | null;
   email?: string | null;
-  status: "active" | "inactive" | "suspended";
+  status: "active" | "inactive" | "suspended" | "pending_approval";
   created_at?: string;
   owner?: {
     id: number;
@@ -103,8 +104,16 @@ export function updateAdminShop(
   return api.put<ApiEnvelope<AdminShopItem>>(`/admin/shops/${id}`, data);
 }
 
-export function toggleAdminShopStatus(id: number, status: "active" | "suspended", reason?: string) {
+export function toggleAdminShopStatus(
+  id: number,
+  status: "active" | "suspended" | "pending_approval",
+  reason?: string
+) {
   return api.patch<ApiEnvelope<AdminShopItem>>(`/admin/shops/${id}/status`, { status, reason });
+}
+
+export function approveAdminShop(id: number, reason?: string) {
+  return api.post<ApiEnvelope<AdminShopItem>>(`/admin/shops/${id}/approve`, { reason });
 }
 
 export function fetchAdminOwners() {

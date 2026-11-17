@@ -50,7 +50,7 @@ export async function createShop(req: Request, res: Response) {
     phone: phone ? String(phone).trim() : undefined,
     email: email ? String(email).trim() : undefined,
     logo: logo ? String(logo).trim() : undefined,
-    status: "active",
+    status: "pending_approval",
     settings: settings && typeof settings === "object" ? settings : {},
   });
 
@@ -73,7 +73,11 @@ export async function createShop(req: Request, res: Response) {
 
   await logAudit({ req, module: "shops", action: "create", entityType: "Shop", entityId: shop.id });
 
-  return res.status(201).json({ success: true, data: shop, message: "Shop registered successfully" });
+  return res.status(201).json({
+    success: true,
+    data: shop,
+    message: "Shop registered successfully and submitted for admin approval",
+  });
 }
 
 /**

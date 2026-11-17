@@ -13,6 +13,7 @@ import {
   PlatformAuditLog,
   StatusHistory,
   CustomerAccount,
+  Notification,
 } from "../models";
 import { seedOwnerDefaults } from "../utils/seed";
 
@@ -57,6 +58,7 @@ export async function getAdminDashboard(req: Request, res: Response) {
       totalShops,
       activeShops,
       suspendedShops,
+      pendingShops,
       totalOwners,
       totalEmployees,
       totalCustomers,
@@ -66,6 +68,7 @@ export async function getAdminDashboard(req: Request, res: Response) {
       Shop.count(),
       Shop.count({ where: { status: "active" } }),
       Shop.count({ where: { status: "suspended" } }),
+      Shop.count({ where: { status: "pending_approval" } }),
       Owner.count({ where: { is_super_admin: false } }),
       0,
       Customer.count(),
@@ -93,6 +96,7 @@ export async function getAdminDashboard(req: Request, res: Response) {
         total_shops: totalShops,
         active_shops: activeShops,
         suspended_shops: suspendedShops,
+        pending_shops: pendingShops,
         total_users: totalUsers,
         total_owners: totalOwners,
         total_employees: totalEmployees,
@@ -232,7 +236,7 @@ export async function updateAdminShop(req: Request, res: Response) {
 
 /**
  * 5. PATCH /api/admin/shops/:id/status
- * Activate or suspend a shop.
+ * Activate, suspend, or set a shop pending approval.
  * Suspended shop blocks login and API access for all of its users.
  */
 export async function toggleAdminShopStatus(req: Request, res: Response) {
@@ -241,9 +245,12 @@ export async function toggleAdminShopStatus(req: Request, res: Response) {
     const shopId = Number(req.params.id);
     const { status, reason } = req.body;
 
-    if (!["active", "suspended"].includes(status)) {
+    if (!["active", "suspended", "pending_approval"].includes(status)) {
       await transaction.rollback();
-      return res.status(400).json({ success: false, message: "Invalid status. Must be 'active' or 'suspended'" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be 'active', 'suspended', or 'pending_approval'",
+      });
     }
 
     const shop = await Shop.findByPk(shopId, { transaction });
@@ -266,26 +273,66 @@ export async function toggleAdminShopStatus(req: Request, res: Response) {
         new_status: status,
         changed_by_id: req.auth?.ownerId || 0,
         changed_by_role: "super_admin",
-        reason: reason || `Shop status set to ${status} by Super Admin`,
+        reason:
+          reason ||
+          (status === "active" && oldStatus === "pending_approval"
+            ? "Approved by Super Admin"
+            : `Shop status set to ${status} by Super Admin`),
       },
       { transaction }
     );
 
     await transaction.commit();
 
+    const auditAction =
+      status === "active"
+        ? oldStatus === "pending_approval"
+          ? "APPROVE_SHOP"
+          : "ACTIVATE_SHOP"
+        : status === "suspended"
+        ? "SUSPEND_SHOP"
+        : "SET_SHOP_PENDING";
+
     // Log to platform audit log
     await logSuperAdminAction(
       req,
-      status === "suspended" ? "SUSPEND_SHOP" : "ACTIVATE_SHOP",
+      auditAction,
       "shop",
       shop.id,
       shop.name,
       { old_status: oldStatus, new_status: status, reason }
     );
 
+    // If shop was approved, notify the owner
+    if (status === "active" && oldStatus === "pending_approval") {
+      try {
+        await Notification.create({
+          owner_id: shop.owner_id,
+          shop_id: shop.id,
+          recipient_type: "owner",
+          recipient_id: shop.owner_id,
+          type: "general",
+          title: "Shop Approved!",
+          message: `Your shop "${shop.name}" has been approved by the platform administrator and is now live.`,
+          reference_type: "shop",
+          reference_id: shop.id,
+          is_read: false,
+        });
+      } catch {}
+    }
+
+    const successMessage =
+      status === "active"
+        ? oldStatus === "pending_approval"
+          ? "Shop approved and activated successfully"
+          : "Shop successfully activated"
+        : status === "suspended"
+        ? "Shop successfully suspended"
+        : "Shop status set to pending approval";
+
     return res.json({
       success: true,
-      message: `Shop successfully ${status === "suspended" ? "suspended" : "activated"}`,
+      message: successMessage,
       data: shop,
     });
   } catch (error: any) {
@@ -293,6 +340,16 @@ export async function toggleAdminShopStatus(req: Request, res: Response) {
     console.error("Error changing shop status:", error);
     return res.status(500).json({ success: false, message: "Failed to update shop status" });
   }
+}
+
+/**
+ * Quick approval endpoint for Super Admin:
+ * POST /api/admin/shops/:id/approve
+ */
+export async function approveAdminShop(req: Request, res: Response) {
+  req.body.status = "active";
+  req.body.reason = req.body.reason || "Approved by Super Admin";
+  return toggleAdminShopStatus(req, res);
 }
 
 /**

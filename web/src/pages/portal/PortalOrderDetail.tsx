@@ -95,7 +95,8 @@ export default function PortalOrderDetail() {
               <OrderStatusBadge status={order.status} />
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Placed on {new Date(order.createdAt).toLocaleDateString("en-IN", {
+              {order.shop?.name && <span className="font-semibold text-gray-700">{order.shop.name} · </span>}
+              Placed on {new Date(order.createdAt || order.order_date).toLocaleDateString("en-IN", {
                 weekday: "short",
                 day: "numeric",
                 month: "short",

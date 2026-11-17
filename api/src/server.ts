@@ -105,6 +105,11 @@ async function ensureIdentitySchema() {
   await runSqlMigration("05_customer_identity_groups.sql", "Customer identity schema verified");
 }
 
+/** MultiShop: shop admin approval status (additive, idempotent). */
+async function ensureShopApprovalSchema() {
+  await runSqlMigration("06_shop_approval.sql", "Shop approval schema verified");
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -112,6 +117,7 @@ async function start() {
     await ensureSingleLedgerSchema();
     await ensurePurchaseSchema();
     await ensureIdentitySchema();
+    await ensureShopApprovalSchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);

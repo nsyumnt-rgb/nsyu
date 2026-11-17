@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchAdminShops,
   createAdminShop,
   updateAdminShop,
   toggleAdminShopStatus,
+  approveAdminShop,
   fetchAdminOwners,
   type AdminShopItem,
   type AdminOwnerItem,
 } from "../../api/admin";
 
 export default function AdminShops() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentFilter = searchParams.get("status") || "all";
+
   const [shops, setShops] = useState<AdminShopItem[]>([]);
   const [owners, setOwners] = useState<AdminOwnerItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,6 +148,25 @@ export default function AdminShops() {
     }
   };
 
+  const handleApprove = async (shop: AdminShopItem) => {
+    if (!window.confirm(`Approve and activate "${shop.name}" (${shop.code})?`)) return;
+    try {
+      await approveAdminShop(shop.id);
+      await loadData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || "Failed to approve shop");
+    }
+  };
+
+  const pendingCount = shops.filter((s) => s.status === "pending_approval").length;
+  const activeCount = shops.filter((s) => s.status === "active").length;
+  const suspendedCount = shops.filter((s) => s.status === "suspended").length;
+
+  const filteredShops = shops.filter((s) => {
+    if (currentFilter === "all") return true;
+    return s.status === currentFilter;
+  });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -161,6 +184,38 @@ export default function AdminShops() {
           </svg>
           <span>Create New Shop</span>
         </button>
+      </div>
+
+      {/* Status Filter Tabs */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {[
+          { key: "all", label: `All (${shops.length})` },
+          { key: "pending_approval", label: `Pending Approval (${pendingCount})`, highlight: pendingCount > 0 },
+          { key: "active", label: `Active (${activeCount})` },
+          { key: "suspended", label: `Suspended (${suspendedCount})` },
+        ].map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              if (t.key === "all") next.delete("status");
+              else next.set("status", t.key);
+              setSearchParams(next);
+            }}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+              currentFilter === t.key
+                ? t.highlight
+                  ? "bg-amber-600 text-white shadow-sm"
+                  : "bg-purple-600 text-white shadow-sm"
+                : t.highlight
+                ? "bg-amber-950/60 text-amber-300 border border-amber-800/80 hover:bg-amber-900/60"
+                : "bg-slate-900/80 text-slate-400 border border-slate-800 hover:text-white"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -192,14 +247,14 @@ export default function AdminShops() {
                     Loading shops...
                   </td>
                 </tr>
-              ) : shops.length === 0 ? (
+              ) : filteredShops.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
-                    No shops registered yet. Click &quot;Create New Shop&quot; to begin.
+                    No shops match the selected filter.
                   </td>
                 </tr>
               ) : (
-                shops.map((shop) => (
+                filteredShops.map((shop) => (
                   <tr key={shop.id} className="hover:bg-slate-900/40 transition">
                     <td className="py-3.5 px-4 font-mono text-slate-400">{shop.id}</td>
                     <td className="py-3.5 px-4">
@@ -224,19 +279,39 @@ export default function AdminShops() {
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
                           shop.status === "active"
                             ? "bg-emerald-950/70 text-emerald-300 border-emerald-800"
+                            : shop.status === "pending_approval"
+                            ? "bg-amber-950/70 text-amber-300 border-amber-800"
                             : "bg-rose-950/70 text-rose-300 border-rose-800"
                         }`}
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            shop.status === "active" ? "bg-emerald-400" : "bg-rose-400"
+                            shop.status === "active"
+                              ? "bg-emerald-400"
+                              : shop.status === "pending_approval"
+                              ? "bg-amber-400 animate-pulse"
+                              : "bg-rose-400"
                           }`}
                         ></span>
-                        {shop.status === "active" ? "Active" : "Suspended"}
+                        {shop.status === "active"
+                          ? "Active"
+                          : shop.status === "pending_approval"
+                          ? "Pending Approval"
+                          : "Suspended"}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
+                        {shop.status === "pending_approval" && (
+                          <button
+                            onClick={() => handleApprove(shop)}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded transition flex items-center gap-1 shadow-sm"
+                            title="Approve this shop"
+                          >
+                            <span>✓</span>
+                            <span>Approve</span>
+                          </button>
+                        )}
                         <Link
                           to={`/admin/support?shopId=${shop.id}`}
                           className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-purple-300 text-xs rounded border border-slate-700 transition"
@@ -258,7 +333,7 @@ export default function AdminShops() {
                               : "bg-emerald-950/40 text-emerald-300 border-emerald-800/60 hover:bg-emerald-900/60"
                           }`}
                         >
-                          {shop.status === "active" ? "Suspend" : "Activate"}
+                          {shop.status === "active" ? "Suspend" : shop.status === "pending_approval" ? "Reject" : "Activate"}
                         </button>
                       </div>
                     </td>

@@ -13,7 +13,8 @@
     "test:phase-a": "ts-node-dev --transpile-only --exit-child scripts/test_phase_a_suppliers_purchases.ts",
     "test:isolation": "ts-node-dev --transpile-only --exit-child scripts/test_tenant_isolation.ts",
     "test:marketplace": "ts-node-dev --transpile-only --exit-child scripts/test_marketplace.ts",
-    "test:market-cart": "ts-node-dev --transpile-only --exit-child scripts/test_market_cart.ts"
+    "test:market-cart": "ts-node-dev --transpile-only --exit-child scripts/test_market_cart.ts",
+    "test:shop-approval": "ts-node-dev --transpile-only --exit-child scripts/test_shop_approval.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

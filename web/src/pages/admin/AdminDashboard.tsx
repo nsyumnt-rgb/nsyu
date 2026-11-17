@@ -92,10 +92,18 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="text-3xl font-extrabold text-white mb-2">{data?.total_shops ?? 0}</div>
-          <div className="flex items-center space-x-2 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="px-2 py-0.5 bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 rounded">
               {data?.active_shops ?? 0} Active
             </span>
+            {(data?.pending_shops ?? 0) > 0 && (
+              <Link
+                to="/admin/shops?status=pending_approval"
+                className="px-2 py-0.5 bg-amber-950/80 text-amber-300 border border-amber-800/60 rounded hover:underline font-semibold"
+              >
+                {data?.pending_shops} Pending
+              </Link>
+            )}
             <span className="px-2 py-0.5 bg-rose-950/80 text-rose-400 border border-rose-800/60 rounded">
               {data?.suspended_shops ?? 0} Suspended
             </span>

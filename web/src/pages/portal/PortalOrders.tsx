@@ -44,6 +44,7 @@ export default function PortalOrders() {
 
   const [tab, setTab] = useState<Tab>("active");
   const [orders, setOrders] = useState<any[]>([]);
+  const [selectedShopId, setSelectedShopId] = useState<number | "all">("all");
   const [loading, setLoading] = useState(true);
   const [khata, setKhata] = useState<any | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -67,8 +68,21 @@ export default function PortalOrders() {
     getPortalLedgerSummaryApi().then(setKhata).catch(() => setKhata(null));
   }, []);
 
-  const active = useMemo(() => orders.filter((o) => isActive(o.status)), [orders]);
-  const past = useMemo(() => orders.filter((o) => !isActive(o.status)), [orders]);
+  const shopsInOrders = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const o of orders) {
+      if (o.shop?.id && o.shop?.name) map.set(o.shop.id, o.shop.name);
+    }
+    return Array.from(map.entries());
+  }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    if (selectedShopId === "all") return orders;
+    return orders.filter((o) => o.shop_id === selectedShopId || o.shop?.id === selectedShopId);
+  }, [orders, selectedShopId]);
+
+  const active = useMemo(() => filteredOrders.filter((o) => isActive(o.status)), [filteredOrders]);
+  const past = useMemo(() => filteredOrders.filter((o) => !isActive(o.status)), [filteredOrders]);
   const list = tab === "active" ? active : past;
   const balance = Number(khata?.currentOutstanding ?? customer?.currentBalance ?? 0);
 
@@ -143,6 +157,29 @@ export default function PortalOrders() {
             ))}
           </div>
 
+          {shopsInOrders.length > 1 && tab !== "khata" && (
+            <div className="flex flex-wrap gap-1.5 items-center pt-1">
+              <span className="text-[12px] text-slate-500 font-medium mr-1">Shop:</span>
+              <button
+                type="button"
+                onClick={() => setSelectedShopId("all")}
+                className={`px-2.5 py-1 rounded-lg text-[12px] font-semibold transition ${selectedShopId === "all" ? "bg-navy-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              >
+                All shops
+              </button>
+              {shopsInOrders.map(([id, name]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setSelectedShopId(id)}
+                  className={`px-2.5 py-1 rounded-lg text-[12px] font-semibold transition ${selectedShopId === id ? "bg-navy-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
+
           {notice && (
             <div className={`rounded-xl px-4 py-3 text-[13px] ${notice.ok ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>{notice.text}</div>
           )}
@@ -174,7 +211,7 @@ export default function PortalOrders() {
                           Order #{String(o.order_number || o.id).replace(/^#/, "")}
                         </Link>
                         <div className="text-[12.5px] text-slate-500 mt-0.5">
-                          {customer?.shop?.name || "Shop"} · {new Date(o.order_date || o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                          {o.shop?.name || customer?.shop?.name || "Shop"} · {new Date(o.order_date || o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                         </div>
                       </div>
                       <span className={cancelled ? "badge-danger" : DONE.includes(String(o.status).toLowerCase()) ? "badge-active" : "badge-brand"}>{statusLabel(o.status)}</span>

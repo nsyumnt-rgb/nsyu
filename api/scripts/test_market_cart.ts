@@ -179,6 +179,28 @@ async function main() {
     check("Sita can't order Ravi's cart (her own A cart is empty)", co.status === 400, co.json);
     co = await call("POST", "/checkout", D.token, { checkoutId: "chk-66666666", address: addr, shops: [{ shopId: P.shop.id, deliveryType: "delivery", paymentMethod: "cod" }] });
     check("checkout at a shop she has no account with → refused", co.status === 400 && co.json.data.results[0].ok === false, co.json);
+
+    console.log("My orders across multiple shops");
+    const port = (server.address() as any).port;
+    const ordersRes = await fetch(`http://127.0.0.1:${port}/api/customer-portal/orders`, {
+      headers: { Authorization: `Bearer ${C.token}` },
+    });
+    const ordersJson = await ordersRes.json();
+    check("list orders returns 200", ordersRes.status === 200, ordersJson);
+    const shopIdsInOrders = new Set((ordersJson.data || []).map((o: any) => o.shop_id));
+    check("orders from shop A present in My orders", shopIdsInOrders.has(A.shop.id));
+    check("orders from shop B present in My orders", shopIdsInOrders.has(B.shop.id));
+    check("order includes shop association", ordersJson.data?.[0]?.shop?.name !== undefined);
+
+    const firstOrder = ordersJson.data?.[0];
+    if (firstOrder) {
+      const orderDetail = await fetch(`http://127.0.0.1:${port}/api/customer-portal/orders/${firstOrder.id}`, {
+        headers: { Authorization: `Bearer ${C.token}` },
+      });
+      const orderDetailJson = await orderDetail.json();
+      check("get order detail across shops returns 200", orderDetail.status === 200, orderDetailJson);
+      check("order detail includes shop details", orderDetailJson.data?.shop?.name !== undefined);
+    }
   } finally {
     server.close();
     await sequelize.close();

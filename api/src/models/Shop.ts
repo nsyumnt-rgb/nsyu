@@ -10,7 +10,7 @@ interface ShopAttributes {
   phone?: string;
   email?: string;
   logo?: string;
-  status: "active" | "inactive" | "suspended";
+  status: "active" | "inactive" | "suspended" | "pending_approval";
   reference_code?: string | null;
   settings?: Record<string, any>;
 }
@@ -29,7 +29,7 @@ export class Shop
   public phone?: string;
   public email?: string;
   public logo?: string;
-  public status!: "active" | "inactive" | "suspended";
+  public status!: "active" | "inactive" | "suspended" | "pending_approval";
   public reference_code?: string | null;
   public settings?: Record<string, any>;
 }
@@ -44,7 +44,10 @@ Shop.init(
     phone: { type: DataTypes.STRING(20) },
     email: { type: DataTypes.STRING(150) },
     logo: { type: DataTypes.STRING(255) },
-    status: { type: DataTypes.ENUM("active", "inactive", "suspended"), defaultValue: "active" },
+    status: {
+      type: DataTypes.ENUM("active", "inactive", "suspended", "pending_approval"),
+      defaultValue: "pending_approval",
+    },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
     settings: { type: DataTypes.JSONB, defaultValue: {} },
   },

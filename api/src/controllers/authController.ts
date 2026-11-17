@@ -56,7 +56,7 @@ export async function registerOwner(req: Request, res: Response) {
     phone: phone ? String(phone).trim() : null,
     email: normalizedEmail,
     address: address ? String(address).trim() : null,
-    status: "active",
+    status: "pending_approval",
   });
 
   // Initialize Customer Portal settings for this shop
@@ -77,10 +77,10 @@ export async function registerOwner(req: Request, res: Response) {
 
   return res.status(201).json({
     success: true,
-    message: "Business account registered successfully",
+    message: "Business account registered successfully. Your shop has been submitted for admin approval.",
     data: {
       owner: { id: owner.id, name: owner.name, email: owner.email, phone: owner.phone },
-      shop: { id: shop.id, name: shop.name, code: shop.code },
+      shop: { id: shop.id, name: shop.name, code: shop.code, status: shop.status },
       accessToken,
       refreshToken,
     },
@@ -151,7 +151,7 @@ export async function login(req: Request, res: Response) {
         });
       }
 
-      const firstShop = shop && shop.status === "active" ? shop : null;
+      const firstShop = shop && shop.status !== "suspended" ? shop : null;
       const defaultShopId = firstShop ? firstShop.id : null;
 
       const accessToken = signAccessToken({ ownerId: owner.id, isOwner: true, shopId: defaultShopId, roleId: null });

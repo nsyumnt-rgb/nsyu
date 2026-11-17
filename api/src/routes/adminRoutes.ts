@@ -6,6 +6,7 @@ import {
   createAdminShop,
   updateAdminShop,
   toggleAdminShopStatus,
+  approveAdminShop,
   getAdminOwners,
   createAdminOwner,
   resetAdminOwnerPassword,
@@ -28,6 +29,7 @@ router.get("/shops", getAdminShops);
 router.post("/shops", createAdminShop);
 router.put("/shops/:id", updateAdminShop);
 router.patch("/shops/:id/status", toggleAdminShopStatus);
+router.post("/shops/:id/approve", approveAdminShop);
 
 // Owner Management
 router.get("/owners", getAdminOwners);

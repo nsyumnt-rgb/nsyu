@@ -13,10 +13,34 @@ import {
   ShopPortalSettings,
   Notification,
   Shop,
+  CustomerAccount,
 } from "../models";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Resolves all (customer_id, shop_id) pairs for this customer.
+ * If the customer account belongs to an identity_group (MultiShop),
+ * orders across all linked shops are included.
+ */
+async function getCustomerScopePairs(req: Request): Promise<{ customer_id: number; shop_id: number }[]> {
+  const fallback = [{ customer_id: req.customer!.customerId, shop_id: req.customer!.shopId }];
+  try {
+    const accountId = req.customer?.accountId;
+    if (!accountId) return fallback;
+    const account = await CustomerAccount.findByPk(accountId);
+    if (!account?.identity_group) return fallback;
+    const linked = await CustomerAccount.findAll({
+      where: { identity_group: account.identity_group },
+      attributes: ["customer_id", "shop_id"],
+    });
+    if (!linked.length) return fallback;
+    return linked.map((a) => ({ customer_id: a.customer_id, shop_id: a.shop_id }));
+  } catch {
+    return fallback;
+  }
 }
 
 /**
@@ -266,12 +290,11 @@ export async function placeOrder(req: Request, res: Response) {
 
 /**
  * GET /api/customer-portal/orders
- * Returns customer's own orders only.
+ * Returns customer's own orders (across all shops in their identity group if MultiShop).
  */
 export async function listPortalOrders(req: Request, res: Response) {
   try {
-    const customerId = req.customer!.customerId;
-    const shopId = req.customer!.shopId;
+    const pairs = await getCustomerScopePairs(req);
     const { status, page = 1, limit = 20 } = req.query;
 
     const pageNum = Math.max(1, Number(page) || 1);
@@ -279,8 +302,7 @@ export async function listPortalOrders(req: Request, res: Response) {
     const offset = (pageNum - 1) * limitNum;
 
     const where: any = {
-      customer_id: customerId,
-      shop_id: shopId,
+      [Op.or]: pairs,
     };
 
     if (status && status !== "all") {
@@ -294,6 +316,7 @@ export async function listPortalOrders(req: Request, res: Response) {
       include: [
         { model: OrderItem, as: "items" },
         { model: OrderStatusHistory, as: "statusHistory" },
+        { model: Shop, as: "shop", attributes: ["id", "name", "code", "phone", "address"] },
       ],
       order: [["order_date", "DESC"], ["id", "DESC"]],
     });
@@ -319,16 +342,18 @@ export async function listPortalOrders(req: Request, res: Response) {
  */
 export async function getPortalOrder(req: Request, res: Response) {
   try {
-    const customerId = req.customer!.customerId;
-    const shopId = req.customer!.shopId;
+    const pairs = await getCustomerScopePairs(req);
     const orderId = Number(req.params.id);
 
     const order = await Order.findOne({
-      where: { id: orderId, customer_id: customerId, shop_id: shopId },
+      where: {
+        id: orderId,
+        [Op.or]: pairs,
+      },
       include: [
         { model: OrderItem, as: "items" },
         { model: OrderStatusHistory, as: "statusHistory" },
-        { model: Shop, as: "shop", attributes: ["id", "name", "phone", "address"] },
+        { model: Shop, as: "shop", attributes: ["id", "name", "code", "phone", "address"] },
       ],
     });
 
@@ -348,27 +373,28 @@ export async function getPortalOrder(req: Request, res: Response) {
  */
 export async function cancelPortalOrder(req: Request, res: Response) {
   try {
-    const customerId = req.customer!.customerId;
-    const shopId = req.customer!.shopId;
-    const ownerId = req.customer!.ownerId;
     const accountId = req.customer!.accountId;
     const orderId = Number(req.params.id);
+    const pairs = await getCustomerScopePairs(req);
 
-    // Check S5 setting
-    const settings = await ShopPortalSettings.findOne({ where: { shop_id: shopId } });
+    const order = await Order.findOne({
+      where: {
+        id: orderId,
+        [Op.or]: pairs,
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Check S5 setting for the order's specific shop
+    const settings = await ShopPortalSettings.findOne({ where: { shop_id: order.shop_id } });
     if (settings && !settings.allow_customer_cancel) {
       return res.status(403).json({
         success: false,
         message: "Customer order cancellation is disabled for this shop",
       });
-    }
-
-    const order = await Order.findOne({
-      where: { id: orderId, customer_id: customerId, shop_id: shopId },
-    });
-
-    if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found" });
     }
 
     // Must be Pending (CP-O07)
@@ -394,12 +420,12 @@ export async function cancelPortalOrder(req: Request, res: Response) {
 
     // Notify shop
     try {
-      const customer = await Customer.findByPk(customerId);
+      const customer = await Customer.findByPk(order.customer_id);
       await Notification.create({
-        owner_id: ownerId,
-        shop_id: shopId,
+        owner_id: order.owner_id,
+        shop_id: order.shop_id,
         recipient_type: "owner",
-        recipient_id: ownerId,
+        recipient_id: order.owner_id,
         type: "general",
         title: `Order Cancelled: ${order.order_number}`,
         message: `Order #${order.order_number} was cancelled by customer ${customer?.name || ""}.`,
