@@ -3,6 +3,12 @@ import RequireAuth from "./components/RequireAuth";
 import RequireCustomerAuth from "./components/RequireCustomerAuth";
 import DashboardLayout from "./layouts/DashboardLayout";
 import CustomerPortalLayout from "./layouts/CustomerPortalLayout";
+import MarketLayout from "./layouts/MarketLayout";
+import MarketHome from "./pages/market/MarketHome";
+import MarketSearch from "./pages/market/MarketSearch";
+import MarketShops from "./pages/market/MarketShops";
+import MarketShop from "./pages/market/MarketShop";
+import MarketProduct from "./pages/market/MarketProduct";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -59,7 +65,14 @@ export default function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/app" replace />} />
+        {/* Public marketplace (MultiShop phase 1) — no login required */}
+        <Route element={<MarketLayout />}>
+          <Route path="/" element={<MarketHome />} />
+          <Route path="/market/search" element={<MarketSearch />} />
+          <Route path="/market/shops" element={<MarketShops />} />
+          <Route path="/market/shop/:code" element={<MarketShop />} />
+          <Route path="/market/p/:shopId/:productId" element={<MarketProduct />} />
+        </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
