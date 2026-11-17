@@ -1,162 +1,219 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { listPurchases, createPurchase, recordPurchasePayment, cancelPurchase, downloadPurchasePdf } from "../api/purchases";
 import { listSuppliers } from "../api/suppliers";
 import { listProducts } from "../api/products";
+import { getSupplierOutstandingReport } from "../api/reports";
 import { apiErrorMessage } from "../api/client";
 import { usePermission } from "../hooks/usePermission";
 import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
-import ReferenceLink from "../components/ReferenceLink";
 import type { Purchase, Supplier, Product } from "../types";
+
+/* Marketplace wireframe — board 17 (Purchases). */
+
+const inr = (n: number) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const newKey = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `pur-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+const STATUS: Record<string, { label: string; tone: string }> = {
+  unpaid: { label: "Unpaid", tone: "badge-danger" },
+  received: { label: "Unpaid", tone: "badge-danger" },
+  partially_paid: { label: "Partial", tone: "badge-warn" },
+  paid: { label: "Paid", tone: "badge-active" },
+  partially_returned: { label: "Part returned", tone: "badge-brand" },
+  returned: { label: "Returned", tone: "badge-inactive" },
+  cancelled: { label: "Cancelled", tone: "badge-inactive" },
+};
+const FILTERS: [string, string][] = [
+  ["", "All"],
+  ["unpaid", "Unpaid"],
+  ["partially_paid", "Partial"],
+  ["paid", "Paid"],
+  ["partially_returned", "Returned"],
+  ["cancelled", "Cancelled"],
+];
+
+interface Line {
+  productId: number;
+  quantity: number;
+  rate: number;
+  taxPercent: number;
+}
+const blankLine = (): Line => ({ productId: 0, quantity: 1, rate: 0, taxPercent: 0 });
 
 function PurchaseInner() {
   const { can, isOwner } = usePermission();
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
+  const [params, setParams] = useSearchParams();
+  const supplierFilter = params.get("supplierId") ? Number(params.get("supplierId")) : undefined;
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [monthTotal, setMonthTotal] = useState(0);
+  const [payable, setPayable] = useState<number | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Filters
   const [statusFilter, setStatusFilter] = useState("");
   const [allShopsToggle, setAllShopsToggle] = useState(false);
 
-  // Create Purchase Modal State
-  const [showCreate, setShowCreate] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [selectedSupplierId, setSelectedSupplierId] = useState<number | "">("");
-  const [items, setItems] = useState<Array<{ productId: number; quantity: number; rate: number }>>([
-    { productId: 0, quantity: 1, rate: 0 },
-  ]);
-  const [initialPaid, setInitialPaid] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState("bank");
+  // Record purchase bill (inline form)
+  const formRef = useRef<HTMLFormElement>(null);
+  const [supplierId, setSupplierId] = useState<number | "">(supplierFilter ?? "");
+  const [billNo, setBillNo] = useState("");
+  const [billDate, setBillDate] = useState(todayISO());
+  const [lines, setLines] = useState<Line[]>([blankLine()]);
+  const [paidNow, setPaidNow] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const [requestKey, setRequestKey] = useState(newKey());
 
-  // Payment Modal State
-  const [payingPurchase, setPayingPurchase] = useState<Purchase | null>(null);
+  // Payment dialog
+  const [paying, setPaying] = useState<Purchase | null>(null);
   const [payAmount, setPayAmount] = useState("");
-  const [payMethod, setPayMethod] = useState("bank");
+  const [payMethod, setPayMethod] = useState("cash");
   const [paySaving, setPaySaving] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
-  function loadPurchases() {
+  function load() {
     setLoading(true);
-    listPurchases({
-      status: statusFilter || undefined,
-      allShops: isOwner && allShopsToggle ? true : undefined,
-    })
-      .then((res) => setPurchases(res.data.data ?? []))
+    setError(null);
+    const all = isOwner && allShopsToggle ? true : undefined;
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    Promise.all([
+      listPurchases({ status: statusFilter || undefined, supplierId: supplierFilter, allShops: all, limit: 200 }),
+      listPurchases({ from: monthStart, allShops: all, limit: 500 }).catch(() => ({ data: { data: [] as Purchase[] } })),
+      getSupplierOutstandingReport().catch(() => null),
+    ])
+      .then(([list, month, report]) => {
+        setPurchases(list.data.data ?? []);
+        setMonthTotal(
+          (month.data.data ?? [])
+            .filter((p: any) => p.status !== "cancelled")
+            .reduce((a: number, p: any) => a + Number(p.total_amount) - Number(p.returned_amount || 0), 0)
+        );
+        setPayable(report ? Number(report.data?.data?.summary?.totalPayable ?? 0) : null);
+      })
       .catch((err) => setError(apiErrorMessage(err, "Could not load purchases")))
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => {
-    loadPurchases();
-  }, [shopId, statusFilter, allShopsToggle]);
+  useEffect(load, [shopId, statusFilter, allShopsToggle, supplierFilter]);
 
   useEffect(() => {
-    Promise.all([listSuppliers(), listProducts()]).then(([s, p]) => {
-      setSuppliers(s.data.data ?? []);
-      setProducts(p.data.data ?? []);
-    });
+    Promise.all([listSuppliers(), listProducts()])
+      .then(([s, p]) => {
+        setSuppliers((s.data.data ?? []).filter((x) => x.status !== "inactive"));
+        setProducts(p.data.data ?? []);
+      })
+      .catch(() => {});
   }, [shopId]);
 
-  function handleAddItem() {
-    setItems([...items, { productId: 0, quantity: 1, rate: 0 }]);
+  const unpaidCount = purchases.filter((p) => Number(p.due_amount) > 0 && p.status !== "cancelled").length;
+  const filterSupplier = suppliers.find((s) => s.id === supplierFilter);
+
+  /* ── form maths (matches the server: rate is unit cost, GST added per line) ── */
+  const lineAmounts = lines.map((l) => {
+    const base = round2(l.quantity * l.rate);
+    const tax = round2((base * (l.taxPercent || 0)) / 100);
+    return { base, tax, total: round2(base + tax) };
+  });
+  const subtotal = round2(lineAmounts.reduce((a, x) => a + x.base, 0));
+  const gst = round2(lineAmounts.reduce((a, x) => a + x.tax, 0));
+  const total = round2(subtotal + gst);
+  const paid = Number(paidNow) || 0;
+
+  function setLine(i: number, patch: Partial<Line>) {
+    setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
 
-  function handleRemoveItem(idx: number) {
-    setItems(items.filter((_, i) => i !== idx));
+  function pickProduct(i: number, p: Product) {
+    setLine(i, { productId: p.id, rate: Number(p.purchase_price || 0) || Number(p.selling_price || 0) });
   }
 
-  function handleProductChange(idx: number, prodId: number) {
-    const prod = products.find((p) => p.id === prodId);
-    const updated = [...items];
-    updated[idx].productId = prodId;
-    updated[idx].rate = prod ? Number(prod.purchase_price || prod.selling_price) : 0;
-    setItems(updated);
+  function resetForm() {
+    setBillNo("");
+    setBillDate(todayISO());
+    setLines([blankLine()]);
+    setPaidNow("");
+    setPaymentMethod("cash");
+    setRequestKey(newKey());
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-
-  async function handleCreatePurchase(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedSupplierId) {
-      setCreateError("Please select a supplier");
-      return;
-    }
-    const validItems = items.filter((i) => i.productId > 0 && i.quantity > 0);
-    if (validItems.length === 0) {
-      setCreateError("Add at least one product with quantity > 0");
-      return;
-    }
+    setFormError(null);
+    setSavedMsg(null);
+    if (!supplierId) return setFormError("Choose a supplier.");
+    const valid = lines.filter((l) => l.productId > 0 && l.quantity > 0);
+    if (!valid.length) return setFormError("Add at least one product with a quantity.");
+    if (valid.some((l) => !(l.rate >= 0))) return setFormError("Every line needs a cost.");
+    if (paid < 0) return setFormError("Paid amount can't be negative.");
+    if (paid > total + 0.005) return setFormError(`Paid now can't be more than the bill total (${inr(total)}).`);
 
-    setCreating(true);
-    setCreateError(null);
+    setSaving(true);
     try {
-      await createPurchase({
-        supplierId: Number(selectedSupplierId),
-        items: validItems.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          rate: i.rate,
-        })),
-        initialPaid: Number(initialPaid) || 0,
-        paymentMethod: Number(initialPaid) > 0 ? paymentMethod : undefined,
+      const res = await createPurchase({
+        supplierId: Number(supplierId),
+        items: valid.map((l) => ({ productId: l.productId, quantity: l.quantity, rate: l.rate, taxPercent: l.taxPercent || 0 })),
+        initialPaid: paid,
+        paymentMethod: paid > 0 ? paymentMethod : undefined,
+        notes: billNo.trim() ? `Supplier bill no: ${billNo.trim()}` : undefined,
+        purchaseDate: billDate ? new Date(`${billDate}T12:00:00`).toISOString() : undefined,
+        clientRequestId: requestKey,
       });
-
-      setShowCreate(false);
-      setSelectedSupplierId("");
-      setItems([{ productId: 0, quantity: 1, rate: 0 }]);
-      setInitialPaid(0);
-      loadPurchases();
+      const created: any = res.data.data;
+      setSavedMsg(`Saved ${created?.purchase_number || "purchase"} · stock received${Number(created?.due_amount) > 0 ? ` · ${inr(Number(created.due_amount))} added to supplier ledger` : ""}`);
+      resetForm();
+      load();
     } catch (err) {
-      setCreateError(apiErrorMessage(err, "Could not create purchase"));
+      setFormError(apiErrorMessage(err, "Could not save the purchase bill"));
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }
 
-  async function handleRecordPayment(e: React.FormEvent) {
+  async function handlePay(e: React.FormEvent) {
     e.preventDefault();
-    if (!payingPurchase) return;
+    if (!paying) return;
+    const amt = Number(payAmount);
+    if (!(amt > 0)) return setPayError("Enter an amount above zero.");
     setPaySaving(true);
+    setPayError(null);
     try {
-      await recordPurchasePayment(payingPurchase.id, {
-        amount: Number(payAmount),
-        method: payMethod,
-      });
-      setPayingPurchase(null);
-      setPayAmount("");
-      loadPurchases();
+      await recordPurchasePayment(paying.id, { amount: amt, method: payMethod });
+      setPaying(null);
+      load();
     } catch (err) {
-      alert(apiErrorMessage(err, "Could not record payment"));
+      setPayError(apiErrorMessage(err, "Could not record payment"));
     } finally {
       setPaySaving(false);
     }
   }
 
-  async function handleCancel(purchaseId: number) {
-    const reason = prompt("Enter cancellation reason:");
+  async function handleCancel(p: Purchase) {
+    const reason = prompt(`Cancel ${p.purchase_number}? This reverses its stock. Reason:`);
     if (!reason) return;
     try {
-      await cancelPurchase(purchaseId, reason);
-      loadPurchases();
+      await cancelPurchase(p.id, reason);
+      load();
     } catch (err) {
       alert(apiErrorMessage(err, "Could not cancel purchase"));
     }
   }
 
-  async function handleDownloadPdf(purchaseId: number, num: string) {
+  async function handlePdf(p: Purchase) {
     try {
-      const res = await downloadPurchasePdf(purchaseId);
+      const res = await downloadPurchasePdf(p.id);
       const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Purchase_${num}.pdf`;
+      a.download = `${p.purchase_number}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -165,365 +222,357 @@ function PurchaseInner() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 pb-10">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="page-title">Purchases & Inward Stock</h1>
-          <p className="page-subtitle">
-            Supplier purchase bills, inward stock receipts, and accounts payable.
-          </p>
+          <h1 className="page-title">Purchases</h1>
+          <p className="page-subtitle">Supplier bills, stock received and what you owe.</p>
         </div>
-        {can("purchase", "create") && (
-          <button className="btn-primary" onClick={() => setShowCreate(true)}>
-            + New Purchase
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link to="/app/suppliers" className="btn-secondary">Suppliers</Link>
+          {can("purchase", "create") && (
+            <button
+              type="button"
+              className="btn-navy"
+              onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              + Record purchase bill
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="card p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-semibold text-muted uppercase">Status:</label>
-          <select
-            className="input py-1 text-xs"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value="paid">Paid</option>
-            <option value="partially_paid">Partially Paid</option>
-            <option value="received">Received (Unpaid)</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-
-        {isOwner && (
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-ink-700 cursor-pointer flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={allShopsToggle}
-                onChange={(e) => setAllShopsToggle(e.target.checked)}
-                className="rounded border-border text-accent-600 focus:ring-accent-500"
-              />
-              Consolidated (All Shops)
-            </label>
-          </div>
-        )}
+      {/* KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Stat label="Purchases this month" value={inr(monthTotal)} loading={loading} />
+        <Stat label="Payable to suppliers" value={payable === null ? "—" : inr(payable)} tone={payable ? "warn" : undefined} loading={loading} to="/app/suppliers" />
+        <Stat label="Unpaid bills" value={`${unpaidCount} bill${unpaidCount === 1 ? "" : "s"}`} loading={loading} />
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
-
-      {/* Purchases Table */}
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Purchase #</th>
-              <th>Date</th>
-              <th>Supplier</th>
-              {allShopsToggle && <th>Shop</th>}
-              <th>Total</th>
-              <th>Paid</th>
-              <th>Due</th>
-              <th>Status</th>
-              <th className="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={allShopsToggle ? 9 : 8} className="text-center py-8 text-muted">
-                  Loading purchases…
-                </td>
-              </tr>
-            ) : purchases.length === 0 ? (
-              <tr>
-                <td colSpan={allShopsToggle ? 9 : 8} className="text-center py-8 text-muted">
-                  No purchases found. Click "+ New Purchase" to record inventory stock-in.
-                </td>
-              </tr>
-            ) : (
-              purchases.map((p) => (
-                <tr key={p.id}>
-                  <td className="font-mono text-xs font-medium">
-                    <ReferenceLink type="purchase" id={p.id} refNumber={p.purchase_number} />
-                  </td>
-                  <td className="text-xs text-muted">
-                    {new Date(p.purchase_date).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td className="font-medium text-ink-900">
-                    {p.supplier ? (
-                      <ReferenceLink type="supplier" id={p.supplier.id}>
-                        {p.supplier.name}
-                      </ReferenceLink>
-                    ) : (
-                      <span className="text-muted">Supplier</span>
-                    )}
-                  </td>
-                  {allShopsToggle && (
-                    <td>
-                      <span className="badge bg-ink-100 text-ink-700 font-mono text-[11px]">
-                        {p.shop?.name || `Shop #${p.shop_id}`}
-                      </span>
-                    </td>
-                  )}
-                  <td className="font-mono font-medium">₹{Number(p.total_amount).toFixed(2)}</td>
-                  <td className="font-mono text-accent-600">₹{Number(p.paid_amount).toFixed(2)}</td>
-                  <td className="font-mono text-danger font-medium">
-                    {Number(p.due_amount) > 0 ? `₹${Number(p.due_amount).toFixed(2)}` : "—"}
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        p.status === "paid"
-                          ? "bg-accent-100 text-accent-700"
-                          : p.status === "partially_paid"
-                          ? "bg-amber-100 text-amber-700"
-                          : p.status === "cancelled"
-                          ? "bg-danger/10 text-danger"
-                          : "bg-ink-100 text-ink-600"
-                      }`}
-                    >
-                      {p.status.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="text-right space-x-2">
-                    <Link
-                      to={`/app/purchase/${p.id}`}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
-                    >
-                      View
-                    </Link>
-                    <button
-                      onClick={() => handleDownloadPdf(p.id, p.purchase_number)}
-                      className="text-xs text-accent-600 hover:text-accent-700 font-medium underline"
-                    >
-                      PDF
-                    </button>
-                    {Number(p.due_amount) > 0 && p.status !== "cancelled" && (
-                      <button
-                        onClick={() => {
-                          setPayingPurchase(p);
-                          setPayAmount(String(p.due_amount));
-                        }}
-                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium underline"
-                      >
-                        Pay Due
-                      </button>
-                    )}
-                    {p.status !== "cancelled" && (
-                      <button
-                        onClick={() => handleCancel(p.id)}
-                        className="text-xs text-danger hover:underline"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        {/* 1 · Purchase history */}
+        <section className="card overflow-hidden xl:col-span-7">
+          <div className="card-header flex-col sm:flex-row items-stretch sm:items-center">
+            <div className="flex items-center gap-2.5">
+              <Num n={1} />
+              <h2 className="card-title">Purchase history</h2>
+              {filterSupplier && (
+                <button type="button" onClick={() => setParams({})} className="badge-brand hover:bg-brand-100" title="Clear supplier filter">
+                  {filterSupplier.name} ✕
+                </button>
+              )}
+            </div>
+            {isOwner && (
+              <label className="inline-flex items-center gap-2 text-[12.5px] font-medium text-slate-600 cursor-pointer select-none">
+                <input type="checkbox" checked={allShopsToggle} onChange={(e) => setAllShopsToggle(e.target.checked)} className="rounded border-border text-brand-600" />
+                All shops
+              </label>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+          <div className="px-4 pt-3 flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+            {FILTERS.map(([v, l]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setStatusFilter(v)}
+                className={`px-3 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition ${
+                  statusFilter === v ? "bg-navy-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
 
-      {/* Create Purchase Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="text-lg font-bold">Inward Purchase Bill — {activeShop?.name}</h2>
-              <button onClick={() => setShowCreate(false)} className="text-muted hover:text-ink-900">
-                ✕
+          {error && <div className="mx-4 mt-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>}
+
+          {loading ? (
+            <div className="py-14 text-center text-[13px] text-slate-500">Loading purchases…</div>
+          ) : purchases.length === 0 ? (
+            <div className="py-14 px-6 text-center">
+              <div className="text-[14px] font-semibold text-navy-900">No purchase bills yet</div>
+              <p className="text-[12.5px] text-slate-500 mt-1">Record a supplier bill to add stock and track what you owe.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto mt-2">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Bill</th>
+                    <th>Supplier</th>
+                    <th>Status</th>
+                    <th className="!text-right">Amount</th>
+                    <th className="!text-right">Due</th>
+                    <th className="!text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchases.map((p) => {
+                    const st = STATUS[p.status] || { label: p.status, tone: "badge-inactive" };
+                    const due = Number(p.due_amount);
+                    const canPay = due > 0 && p.status !== "cancelled" && can("purchase", "edit");
+                    const canCancel = p.status !== "cancelled" && Number(p.paid_amount) === 0 && !Number((p as any).returned_amount) && can("purchase", "delete");
+                    return (
+                      <tr key={p.id}>
+                        <td className="whitespace-nowrap">
+                          <Link to={`/app/purchase/${p.id}`} className="font-mono font-medium text-brand-700 hover:underline">#{p.purchase_number}</Link>
+                          <div className="text-[11.5px] text-slate-400">
+                            {new Date(p.purchase_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                            {allShopsToggle && p.shop?.name ? ` · ${p.shop.name}` : ""}
+                          </div>
+                        </td>
+                        <td className="max-w-[170px] truncate text-slate-800">{p.supplier?.name || "—"}</td>
+                        <td><span className={st.tone}>{st.label}</span></td>
+                        <td className="text-right font-semibold text-navy-900 whitespace-nowrap">{inr(Number(p.total_amount))}</td>
+                        <td className={`text-right whitespace-nowrap font-semibold ${due > 0 && p.status !== "cancelled" ? "text-rose-600" : "text-slate-400"}`}>
+                          {p.status === "cancelled" ? "—" : inr(due)}
+                        </td>
+                        <td className="text-right whitespace-nowrap">
+                          <div className="inline-flex gap-1">
+                            {canPay && (
+                              <button type="button" className="btn-soft btn-sm" onClick={() => { setPaying(p); setPayAmount(due.toFixed(2)); setPayMethod("cash"); setPayError(null); }}>
+                                Pay
+                              </button>
+                            )}
+                            <button type="button" className="btn-ghost btn-sm" onClick={() => handlePdf(p)} title="Download PDF">PDF</button>
+                            {canCancel && (
+                              <button type="button" className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleCancel(p)}>
+                                Cancel
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* 2 · Record purchase bill */}
+        {can("purchase", "create") && (
+          <form ref={formRef} onSubmit={handleSave} className="card xl:col-span-5 xl:sticky xl:top-24 scroll-mt-24">
+            <div className="card-header">
+              <div className="flex items-center gap-2.5">
+                <Num n={2} />
+                <h2 className="card-title">Record purchase bill</h2>
+              </div>
+              {activeShop && <span className="text-[11.5px] text-slate-400">into {activeShop.name}</span>}
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Supplier</label>
+                  <select className="input" value={supplierId} onChange={(e) => setSupplierId(Number(e.target.value) || "")}>
+                    <option value="">Select supplier</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                  {suppliers.length === 0 && (
+                    <Link to="/app/suppliers" className="text-[11.5px] font-semibold text-brand-700 mt-1 inline-block">+ Add a supplier first</Link>
+                  )}
+                </div>
+                <div>
+                  <label className="label">Supplier bill no.</label>
+                  <input className="input" value={billNo} onChange={(e) => setBillNo(e.target.value)} placeholder="Bill number" maxLength={60} />
+                </div>
+              </div>
+              <div>
+                <label className="label">Bill date</label>
+                <input type="date" className="input" value={billDate} max={todayISO()} onChange={(e) => setBillDate(e.target.value)} />
+              </div>
+
+              {/* Lines */}
+              <div>
+                <div className="grid grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400 pb-1.5 border-b border-slate-100">
+                  <span>Product</span>
+                  <span className="text-center">Qty</span>
+                  <span>Cost ₹</span>
+                  <span>GST %</span>
+                  <span className="text-right">Amount</span>
+                  <span />
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {lines.map((l, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 items-center py-2">
+                      <ProductPicker products={products} value={l.productId} onPick={(p) => pickProduct(i, p)} />
+                      <input type="number" min={1} step={1} className="input px-2 text-center" value={l.quantity} onChange={(e) => setLine(i, { quantity: Math.max(0, Math.floor(Number(e.target.value))) })} />
+                      <input type="number" min={0} step="0.01" className="input px-2" value={l.rate} onChange={(e) => setLine(i, { rate: Number(e.target.value) })} />
+                      <input type="number" min={0} max={28} step="0.01" className="input px-2" value={l.taxPercent} onChange={(e) => setLine(i, { taxPercent: Number(e.target.value) })} />
+                      <span className="text-right text-[13px] font-semibold text-navy-900 tabular">{inr(lineAmounts[i].total)}</span>
+                      <button
+                        type="button"
+                        disabled={lines.length === 1}
+                        onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))}
+                        className="w-6 h-6 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
+                        aria-label="Remove line"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => setLines((ls) => [...ls, blankLine()])} className="btn-secondary btn-sm mt-2">+ Add line</button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                <div className="space-y-2">
+                  <div>
+                    <label className="label">Paid now (₹)</label>
+                    <input type="number" min={0} step="0.01" className="input tabular" value={paidNow} onChange={(e) => setPaidNow(e.target.value)} placeholder="0.00" />
+                  </div>
+                  {paid > 0 && (
+                    <select className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} aria-label="Payment method">
+                      <option value="cash">Cash</option>
+                      <option value="upi">UPI</option>
+                      <option value="bank_transfer">Bank transfer / NEFT</option>
+                      <option value="cheque">Cheque</option>
+                      <option value="card">Card</option>
+                    </select>
+                  )}
+                  <p className="text-[11.5px] text-slate-500">Balance goes to the supplier ledger.</p>
+                </div>
+                <dl className="text-[13px] space-y-1.5 self-end">
+                  <div className="flex justify-between text-slate-600"><dt>Subtotal</dt><dd className="tabular">{inr(subtotal)}</dd></div>
+                  <div className="flex justify-between text-slate-600"><dt>GST (input credit)</dt><dd className="tabular">{inr(gst)}</dd></div>
+                  <div className="flex justify-between font-bold text-navy-900 text-[15px] pt-1.5 border-t border-slate-100"><dt>Total</dt><dd className="tabular">{inr(total)}</dd></div>
+                  {total > 0 && (
+                    <div className="flex justify-between text-[12px] text-rose-600"><dt>Will owe supplier</dt><dd className="tabular">{inr(Math.max(0, total - paid))}</dd></div>
+                  )}
+                </dl>
+              </div>
+
+              {formError && <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">{formError}</div>}
+              {savedMsg && <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[12.5px] text-emerald-800">{savedMsg}</div>}
+
+              <button type="submit" disabled={saving} className="btn-navy btn-lg w-full">
+                {saving ? "Saving…" : "Save & receive stock"}
               </button>
             </div>
+          </form>
+        )}
+      </div>
 
-            <form onSubmit={handleCreatePurchase} className="space-y-4">
+      {/* Payment dialog */}
+      {paying && (
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4 animate-fade-in">
+          <form onSubmit={handlePay} className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 space-y-4 animate-scale-up">
+            <div className="flex items-start justify-between">
               <div>
-                <label className="label">Supplier *</label>
-                <select
-                  required
-                  className="input"
-                  value={selectedSupplierId}
-                  onChange={(e) => setSelectedSupplierId(Number(e.target.value) || "")}
-                >
-                  <option value="">Select Supplier</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.phone || "No phone"})
-                    </option>
-                  ))}
-                </select>
+                <h2 className="text-[16px] font-bold">Pay supplier</h2>
+                <p className="text-[12.5px] text-slate-500 mt-0.5">#{paying.purchase_number} · {paying.supplier?.name}</p>
               </div>
-
-              {/* Items Table */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="label">Inward Items</label>
-                  <button type="button" onClick={handleAddItem} className="text-xs text-accent-600 hover:underline">
-                    + Add Product
-                  </button>
-                </div>
-
-                {items.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-canvas p-2 rounded">
-                    <div className="col-span-6">
-                      <select
-                        required
-                        className="input text-xs"
-                        value={item.productId}
-                        onChange={(e) => handleProductChange(idx, Number(e.target.value))}
-                      >
-                        <option value="0">Select Product</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} ({p.sku})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        className="input text-xs font-mono"
-                        placeholder="Qty"
-                        value={item.quantity}
-                        onChange={(e) => {
-                          const updated = [...items];
-                          updated[idx].quantity = Number(e.target.value);
-                          setItems(updated);
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <input
-                        type="number"
-                        step="0.01"
-                        required
-                        className="input text-xs font-mono"
-                        placeholder="Cost Rate"
-                        value={item.rate}
-                        onChange={(e) => {
-                          const updated = [...items];
-                          updated[idx].rate = Number(e.target.value);
-                          setItems(updated);
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-1 text-right">
-                      {items.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(idx)}
-                          className="text-danger hover:text-red-700 text-xs"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Total preview */}
-              <div className="flex justify-between font-mono text-sm font-semibold border-t pt-2">
-                <span>Total Amount:</span>
-                <span>₹{subtotal.toFixed(2)}</span>
-              </div>
-
-              {/* Payment Section */}
-              <div className="grid grid-cols-2 gap-4 border-t pt-3">
-                <div>
-                  <label className="label">Initial Paid (Advance/Tender)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input font-mono"
-                    value={initialPaid}
-                    onChange={(e) => setInitialPaid(Number(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <label className="label">Payment Method</label>
-                  <select
-                    className="input"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                  >
-                    <option value="bank">Bank Transfer / NEFT</option>
-                    <option value="upi">UPI</option>
-                    <option value="cash">Cash</option>
-                    <option value="cheque">Cheque</option>
-                  </select>
-                </div>
-              </div>
-
-              {createError && <p className="text-sm text-danger">{createError}</p>}
-
-              <div className="flex justify-end gap-2 border-t pt-3">
-                <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={creating} className="btn-primary">
-                  {creating ? "Stocking In…" : "Stock In & Save Bill"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Pay Due Modal */}
-      {payingPurchase && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="card max-w-md w-full p-6 space-y-4">
-            <h2 className="text-lg font-bold">Pay Supplier Due for {payingPurchase.purchase_number}</h2>
-            <form onSubmit={handleRecordPayment} className="space-y-4">
-              <div>
-                <label className="label">Amount (Outstanding: ₹{payingPurchase.due_amount})</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  max={payingPurchase.due_amount}
-                  required
-                  className="input font-mono"
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="label">Payment Mode</label>
-                <select className="input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-                  <option value="bank">Bank Transfer</option>
-                  <option value="upi">UPI</option>
-                  <option value="cash">Cash</option>
-                  <option value="cheque">Cheque</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button type="button" className="btn-secondary" onClick={() => setPayingPurchase(null)}>
-                  Cancel
-                </button>
-                <button disabled={paySaving} className="btn-primary">
-                  {paySaving ? "Saving…" : "Confirm Payment"}
-                </button>
-              </div>
-            </form>
-          </div>
+              <button type="button" onClick={() => setPaying(null)} className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100" aria-label="Close">✕</button>
+            </div>
+            <div className="flex items-center justify-between rounded-xl bg-rose-50 border border-rose-100 px-4 py-3">
+              <span className="text-[12.5px] font-medium text-rose-700">Due on this bill</span>
+              <span className="text-[15px] font-bold text-rose-700 tabular">{inr(Number(paying.due_amount))}</span>
+            </div>
+            <div>
+              <label className="label">Amount (₹)</label>
+              <input type="number" min="0.01" step="0.01" max={Number(paying.due_amount)} required className="input text-[15px] font-semibold tabular" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Method</label>
+              <select className="input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="bank_transfer">Bank transfer / NEFT</option>
+                <option value="cheque">Cheque</option>
+                <option value="card">Card</option>
+              </select>
+            </div>
+            {payError && <p className="text-[12.5px] text-rose-600">{payError}</p>}
+            <div className="flex gap-2">
+              <button type="button" className="btn-secondary flex-1" onClick={() => setPaying(null)}>Cancel</button>
+              <button type="submit" disabled={paySaving} className="btn-primary flex-1">{paySaving ? "Saving…" : "Save payment"}</button>
+            </div>
+          </form>
         </div>
       )}
     </div>
   );
 }
 
-export default function Purchase() {
+/* ───────────────────────── components ───────────────────────── */
+
+function Num({ n }: { n: number }) {
+  return <span className="w-6 h-6 rounded-full bg-brand-600 text-white text-[11.5px] font-bold flex items-center justify-center shrink-0">{n}</span>;
+}
+
+function Stat({ label, value, loading, tone, to }: { label: string; value: string; loading: boolean; tone?: "warn"; to?: string }) {
+  const body = (
+    <>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</div>
+      <div className={`mt-2 text-[24px] font-bold tracking-tight tabular truncate ${tone === "warn" ? "text-amber-600" : "text-navy-900"} ${loading ? "opacity-40 animate-pulse" : ""}`}>{value}</div>
+    </>
+  );
+  return to ? <Link to={to} className="card card-hover p-5 block">{body}</Link> : <div className="card p-5">{body}</div>;
+}
+
+/** Type-to-search product picker (the catalogue can have thousands of products). */
+function ProductPicker({ products, value, onPick }: { products: Product[]; value: number; onPick: (p: Product) => void }) {
+  const selected = products.find((p) => p.id === value);
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const matches = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const list = s ? products.filter((p) => p.name.toLowerCase().includes(s) || String(p.sku || "").toLowerCase().includes(s)) : products;
+    return list.slice(0, 8);
+  }, [q, products]);
+
+  return (
+    <div ref={boxRef} className="relative min-w-0">
+      <input
+        className="input px-2 truncate"
+        value={open ? q : selected ? selected.name : q}
+        placeholder="Search product…"
+        onFocus={() => { setOpen(true); setQ(""); }}
+        onChange={(e) => { setQ(e.target.value); setOpen(true); }}
+        title={selected?.name}
+      />
+      {open && (
+        <ul className="absolute z-30 left-0 mt-1 w-[min(340px,80vw)] max-h-64 overflow-auto rounded-xl bg-white border border-border shadow-lift py-1">
+          {matches.length === 0 ? (
+            <li className="px-3 py-2 text-[12.5px] text-slate-500">No match</li>
+          ) : (
+            matches.map((p) => (
+              <li key={p.id}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { onPick(p); setOpen(false); setQ(""); }}
+                  className="w-full text-left px-3 py-2 hover:bg-brand-50"
+                >
+                  <div className="text-[12.5px] font-medium text-navy-900 truncate">{p.name}</div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    {p.sku} · cost ₹{Number(p.purchase_price || 0).toLocaleString("en-IN")} · stock {Number((p as any).stocks?.[0]?.current_stock ?? 0)}
+                  </div>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export default function PurchasePage() {
   return (
     <RequireModule module="purchase">
       <PurchaseInner />

@@ -13,6 +13,10 @@ export interface CreatePurchaseInput {
   paymentMethod?: string;
   notes?: string;
   transactionId?: string;
+  /** ISO date of the supplier's bill (defaults to now on the server). */
+  purchaseDate?: string;
+  /** Idempotency key: a retried submit returns the same bill instead of creating a second one. */
+  clientRequestId?: string;
 }
 
 export function listPurchases(params?: { supplierId?: number; status?: string; from?: string; to?: string; shopId?: number; allShops?: boolean; limit?: number }) {
