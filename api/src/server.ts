@@ -118,6 +118,9 @@ async function ensureEmployeeSchema() {
 async function start() {
   try {
     await sequelize.authenticate();
+    if (process.env.NODE_ENV !== "production" && sequelize.getDialect() === "sqlite") {
+      await sequelize.sync();
+    }
     console.log("✅ Database connected");
     await ensureSingleLedgerSchema();
     await ensurePurchaseSchema();
