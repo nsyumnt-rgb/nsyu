@@ -9,6 +9,7 @@ import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import ReferenceLink from "../components/ReferenceLink";
 import type { Sale, Customer, Product } from "../types";
+import { Avatar, EmptyState, Icon, Meter, Modal, PageHeader, SearchInput, Segmented, StatCard, type IconName } from "../components/ui";
 
 function SalesInner() {
   const { can, isOwner } = usePermission();
@@ -24,6 +25,7 @@ function SalesInner() {
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
   const [allShopsToggle, setAllShopsToggle] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Create Sale Modal State
   const [showCreate, setShowCreate] = useState(false);
@@ -196,413 +198,501 @@ function SalesInner() {
     }
   }
 
+  const q = search.trim().toLowerCase();
+  const visible = q
+    ? sales.filter((s) => s.invoice_number?.toLowerCase().includes(q) || s.customer?.name?.toLowerCase().includes(q) || String(s.customer?.phone || "").includes(q))
+    : sales;
+  const live = sales.filter((s) => s.status !== "cancelled");
+  const stats = {
+    billed: live.reduce((a, s) => a + Number(s.total_amount || 0), 0),
+    collected: live.reduce((a, s) => a + Number(s.paid_amount || 0), 0),
+    due: live.reduce((a, s) => a + Number(s.due_amount || 0), 0),
+    unpaidCount: live.filter((s) => Number(s.due_amount) > 0).length,
+  };
+  const collectedPct = stats.billed > 0 ? Math.round((stats.collected / stats.billed) * 100) : 0;
+  const cols = allShopsToggle ? 8 : 7;
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Sales & Invoicing</h1>
-          <p className="page-subtitle">
-            Manage invoices, counter billing, stock deduction, and payment settlements.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link to="/app/billing" className="btn-secondary">
-            POS Billing Terminal
-          </Link>
-          {can("sales", "create") && (
-            <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Sale
-            </button>
-          )}
-        </div>
+    <div className="space-y-6 pb-10">
+      <PageHeader
+        eyebrow="Sales"
+        title="Sales & invoices"
+        subtitle="Every invoice, what's been collected, and what customers still owe."
+        actions={
+          <>
+            <Link to="/app/billing" className="btn-secondary">
+              <Icon name="terminal" className="w-4 h-4 text-slate-500" /> POS billing
+            </Link>
+            {can("sales", "create") && (
+              <button type="button" className="btn-primary" onClick={() => setShowCreate(true)}>
+                <Icon name="plus" /> New sale
+              </button>
+            )}
+          </>
+        }
+      />
+
+      {/* KPIs (from the invoices currently listed) */}
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="Invoices" icon="receipt" tone="brand" value={live.length.toLocaleString("en-IN")} loading={loading} hint={`${sales.length - live.length} cancelled`} />
+        <StatCard label="Total billed" icon="trend" tone="sky" value={inr(stats.billed)} loading={loading} hint={statusFilter ? `Filter: ${STATUS_LABEL[statusFilter] || statusFilter}` : "All listed invoices"} />
+        <StatCard
+          label="Collected"
+          icon="wallet"
+          tone="emerald"
+          value={inr(stats.collected)}
+          valueClass="text-emerald-600"
+          loading={loading}
+          footer={
+            <div className="flex items-center gap-2">
+              <Meter value={stats.collected} max={stats.billed} tone="emerald" className="flex-1" />
+              <span className="tabular text-slate-500">{collectedPct}%</span>
+            </div>
+          }
+        />
+        <StatCard
+          label="Due"
+          icon="clock"
+          tone="rose"
+          value={inr(stats.due)}
+          valueClass={stats.due > 0 ? "text-rose-600" : undefined}
+          loading={loading}
+          hint={`${stats.unpaidCount} invoice${stats.unpaidCount === 1 ? "" : "s"} pending`}
+          active={statusFilter === "unpaid"}
+          onClick={() => setStatusFilter(statusFilter === "unpaid" ? "" : "unpaid")}
+        />
       </div>
 
-      {/* Filter Bar */}
-      <div className="card p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <label className="text-xs font-semibold text-muted uppercase">Status:</label>
-          <select
-            className="input py-1 text-xs"
+      {/* Table card */}
+      <section className="card overflow-hidden">
+        <div className="p-4 sm:px-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <Segmented
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Statuses</option>
-            <option value="paid">Paid</option>
-            <option value="partially_paid">Partially Paid</option>
-            <option value="unpaid">Unpaid</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            onChange={setStatusFilter}
+            options={[
+              { key: "", label: "All" },
+              { key: "paid", label: "Paid" },
+              { key: "partially_paid", label: "Partial" },
+              { key: "unpaid", label: "Unpaid" },
+              { key: "cancelled", label: "Cancelled" },
+            ]}
+          />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {isOwner && (
+              <label className="inline-flex items-center gap-2 text-[12.5px] font-medium text-slate-600 cursor-pointer select-none">
+                <span className={`relative w-9 h-5 rounded-full transition ${allShopsToggle ? "bg-brand-600" : "bg-slate-300"}`}>
+                  <input type="checkbox" className="sr-only" checked={allShopsToggle} onChange={(e) => setAllShopsToggle(e.target.checked)} />
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${allShopsToggle ? "translate-x-4" : ""}`} />
+                </span>
+                All shops
+              </label>
+            )}
+            <SearchInput className="sm:w-[260px]" value={search} onChange={setSearch} placeholder="Invoice #, customer or phone…" />
+          </div>
         </div>
 
-        {isOwner && (
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-ink-700 cursor-pointer flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={allShopsToggle}
-                onChange={(e) => setAllShopsToggle(e.target.checked)}
-                className="rounded border-border text-accent-600 focus:ring-accent-500"
-              />
-              Consolidated (All Shops)
-            </label>
+        {error && (
+          <div className="m-4 flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+            <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
           </div>
         )}
-      </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
-
-      {/* Sales Table */}
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Invoice #</th>
-              <th>Date</th>
-              <th>Customer</th>
-              {allShopsToggle && <th>Shop</th>}
-              <th>Total</th>
-              <th>Paid</th>
-              <th>Due</th>
-              <th>Status</th>
-              <th className="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        <div className="overflow-x-auto">
+          <table>
+            <thead>
               <tr>
-                <td colSpan={allShopsToggle ? 9 : 8} className="text-center py-8 text-muted">
-                  Loading sales…
-                </td>
+                <th>Invoice</th>
+                <th>Customer</th>
+                {allShopsToggle && <th>Shop</th>}
+                <th className="!text-right">Total</th>
+                <th className="!text-right">Paid</th>
+                <th className="!text-right">Due</th>
+                <th>Status</th>
+                <th className="!text-right">Actions</th>
               </tr>
-            ) : sales.length === 0 ? (
-              <tr>
-                <td colSpan={allShopsToggle ? 9 : 8} className="text-center py-8 text-muted">
-                  No sales found. Click "+ New Sale" or "POS Billing Terminal" to start.
-                </td>
-              </tr>
-            ) : (
-              sales.map((s) => (
-                <tr key={s.id}>
-                  <td className="font-mono text-xs font-medium">
-                    <ReferenceLink type="sale" id={s.id} refNumber={s.invoice_number} />
-                  </td>
-                  <td className="text-xs text-muted">
-                    {new Date(s.invoice_date).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
-                  <td className="font-medium text-ink-900">
-                    {s.customer ? (
-                      <ReferenceLink type="customer" id={s.customer.id}>
-                        {s.customer.name}
-                      </ReferenceLink>
-                    ) : (
-                      <span className="text-muted">Walk-in</span>
-                    )}
-                  </td>
-                  {allShopsToggle && (
-                    <td>
-                      <span className="badge bg-ink-100 text-ink-700 font-mono text-[11px]">
-                        {s.shop?.name || `Shop #${s.shop_id}`}
-                      </span>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 6 }, (_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={cols}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 h-3 rounded bg-slate-100" />
+                        <div className="w-8 h-8 rounded-full bg-slate-100" />
+                        <div className="flex-1 h-3 rounded bg-slate-100" />
+                      </div>
                     </td>
-                  )}
-                  <td className="font-mono font-medium">₹{Number(s.total_amount).toFixed(2)}</td>
-                  <td className="font-mono text-accent-600">₹{Number(s.paid_amount).toFixed(2)}</td>
-                  <td className="font-mono text-danger font-medium">
-                    {Number(s.due_amount) > 0 ? `₹${Number(s.due_amount).toFixed(2)}` : "—"}
-                  </td>
-                  <td>
-                    <span
-                      className={`badge ${
-                        s.status === "paid"
-                          ? "bg-accent-100 text-accent-700"
-                          : s.status === "partially_paid"
-                          ? "bg-amber-100 text-amber-700"
-                          : s.status === "cancelled"
-                          ? "bg-danger/10 text-danger"
-                          : "bg-ink-100 text-ink-600"
-                      }`}
-                    >
-                      {s.payment_status || (s.status === "partially_paid" ? "PARTIAL" : s.status.toUpperCase())}
-                    </span>
-                  </td>
-                  <td className="text-right space-x-2">
-                    <Link
-                      to={`/app/sales/${s.id}`}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium underline"
-                    >
-                      View
-                    </Link>
-                    <button
-                      onClick={() => handleDownloadPdf(s.id, s.invoice_number)}
-                      className="text-xs text-accent-600 hover:text-accent-700 font-medium underline"
-                    >
-                      PDF
-                    </button>
-                    {Number(s.due_amount) > 0 && s.status !== "cancelled" && (
-                      <button
-                        onClick={() => {
-                          setPayingSale(s);
-                          setPayAmount(String(s.due_amount));
-                        }}
-                        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium underline"
-                      >
-                        Pay Due
-                      </button>
-                    )}
-                    {s.status !== "cancelled" && (
-                      <button
-                        onClick={() => handleCancel(s.id)}
-                        className="text-xs text-danger hover:underline"
-                      >
-                        Cancel
-                      </button>
+                  </tr>
+                ))
+              ) : visible.length === 0 ? (
+                <tr>
+                  <td colSpan={cols} className="!p-0">
+                    {sales.length === 0 ? (
+                      <EmptyState
+                        icon="receipt"
+                        tone="brand"
+                        title={statusFilter ? `No ${(STATUS_LABEL[statusFilter] || statusFilter).toLowerCase()} invoices` : "No sales yet"}
+                        text="Create an invoice here, or ring up a sale on the POS billing screen."
+                        action={
+                          <div className="flex gap-2 justify-center">
+                            <Link to="/app/billing" className="btn-secondary btn-sm"><Icon name="terminal" className="w-3.5 h-3.5" /> POS billing</Link>
+                            {can("sales", "create") && <button type="button" onClick={() => setShowCreate(true)} className="btn-primary btn-sm"><Icon name="plus" className="w-3.5 h-3.5" /> New sale</button>}
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <EmptyState icon="search" title="No invoices match" text="Try a different invoice number or customer name." />
                     )}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                visible.map((s) => {
+                  const due = Number(s.due_amount);
+                  const st = statusChip(s);
+                  return (
+                    <tr key={s.id} className={s.status === "cancelled" ? "opacity-60" : ""}>
+                      <td className="whitespace-nowrap">
+                        <div className="font-mono text-[12.5px] font-semibold">
+                          <ReferenceLink type="sale" id={s.id} refNumber={s.invoice_number} />
+                        </div>
+                        <div className="text-[11.5px] text-slate-400">
+                          {new Date(s.invoice_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        </div>
+                      </td>
+                      <td>
+                        {s.customer ? (
+                          <div className="flex items-center gap-2.5 min-w-[160px]">
+                            <Avatar name={s.customer.name} size="sm" />
+                            <div className="min-w-0">
+                              <ReferenceLink type="customer" id={s.customer.id} className="!font-sans block truncate max-w-[200px] text-[13px] font-semibold text-navy-900 hover:text-brand-700">
+                                {s.customer.name}
+                              </ReferenceLink>
+                              {s.customer.phone && <div className="text-[11.5px] text-slate-400 tabular">{s.customer.phone}</div>}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2.5">
+                            <Avatar name="Walk in" size="sm" />
+                            <span className="text-slate-500">Walk-in</span>
+                          </div>
+                        )}
+                      </td>
+                      {allShopsToggle && (
+                        <td>
+                          <span className="badge-inactive">{s.shop?.name || `Shop #${s.shop_id}`}</span>
+                        </td>
+                      )}
+                      <td className="text-right font-semibold text-navy-900 tabular whitespace-nowrap">{inr2(s.total_amount)}</td>
+                      <td className="text-right tabular text-emerald-600 whitespace-nowrap">{inr2(s.paid_amount)}</td>
+                      <td className="text-right tabular whitespace-nowrap">
+                        {due > 0 ? <span className="font-semibold text-rose-600">{inr2(due)}</span> : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td>
+                        <span className={st.cls}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} /> {st.label}
+                        </span>
+                        {s.is_emi && <span className="ml-1 badge-brand">EMI</span>}
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1">
+                          {due > 0 && s.status !== "cancelled" && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPayingSale(s);
+                                setPayAmount(String(s.due_amount));
+                              }}
+                              className="btn-soft btn-sm"
+                            >
+                              <Icon name="wallet" className="w-3.5 h-3.5" /> Collect
+                            </button>
+                          )}
+                          <RowBtn title="View invoice" icon="eye" to={`/app/sales/${s.id}`} />
+                          <RowBtn title="Download PDF" icon="download" onClick={() => handleDownloadPdf(s.id, s.invoice_number)} />
+                          {s.status !== "cancelled" && <RowBtn title="Cancel sale" icon="ban" tone="rose" onClick={() => handleCancel(s.id)} />}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        {!loading && visible.length > 0 && (
+          <div className="px-4 sm:px-5 py-3 border-t border-slate-100 text-[12.5px] text-slate-500 flex flex-wrap gap-x-5 gap-y-1">
+            <span><b className="text-navy-900 tabular">{visible.length}</b> invoice{visible.length === 1 ? "" : "s"}</span>
+            <span>Total <b className="text-navy-900 tabular">{inr(visible.filter((s) => s.status !== "cancelled").reduce((a, s) => a + Number(s.total_amount || 0), 0))}</b></span>
+            <span>Due <b className="text-rose-600 tabular">{inr(visible.filter((s) => s.status !== "cancelled").reduce((a, s) => a + Number(s.due_amount || 0), 0))}</b></span>
+          </div>
+        )}
+      </section>
 
       {/* Create Sale Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="card max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h2 className="text-lg font-bold">New Sale Invoice — {activeShop?.name}</h2>
-              <button onClick={() => setShowCreate(false)} className="text-muted hover:text-ink-900">
-                ✕
+        <Modal
+          icon="receipt"
+          title="New sale invoice"
+          subtitle={activeShop?.name ? `Billing from ${activeShop.name}` : undefined}
+          onClose={() => setShowCreate(false)}
+          footer={
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button>
+              <button type="submit" form="create-sale-form" disabled={creating} className="btn-primary">
+                {creating ? "Generating invoice…" : "Create invoice"}
               </button>
+            </>
+          }
+        >
+          <form id="create-sale-form" onSubmit={handleCreateSale} className="space-y-5">
+            <div>
+              <label className="label">Customer *</label>
+              <select required className="input" value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(Number(e.target.value) || "")}>
+                <option value="">Select customer</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.phone})
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <form onSubmit={handleCreateSale} className="space-y-4">
+            {/* Items */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="label !mb-0">Items</label>
+                <button type="button" onClick={handleAddItem} className="btn-ghost btn-sm text-brand-700">
+                  <Icon name="plus" className="w-3.5 h-3.5" /> Add item
+                </button>
+              </div>
+              <div className="rounded-xl border border-border overflow-hidden">
+                <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-2 bg-slate-50 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                  <div className="col-span-6">Product</div>
+                  <div className="col-span-2">Qty</div>
+                  <div className="col-span-3">Rate (₹)</div>
+                  <div className="col-span-1" />
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {saleItems.map((item, idx) => {
+                    const currentStock = getProductCurrentStock(item.productId);
+                    return (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center p-2.5">
+                        <div className="col-span-12 sm:col-span-6">
+                          <select required className="input text-[12.5px]" value={item.productId} onChange={(e) => handleProductChange(idx, Number(e.target.value))}>
+                            <option value="0">Select product</option>
+                            {products.map((p) => {
+                              const pStock = getProductCurrentStock(p.id);
+                              return (
+                                <option key={p.id} value={p.id} disabled={pStock <= 0}>
+                                  {p.name} (Stock: {pStock})
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                        <div className="col-span-4 sm:col-span-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max={currentStock || 1}
+                            required
+                            className="input text-[12.5px] tabular"
+                            placeholder="Qty"
+                            value={item.quantity}
+                            onChange={(e) => {
+                              const updated = [...saleItems];
+                              updated[idx].quantity = Number(e.target.value);
+                              setSaleItems(updated);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-6 sm:col-span-3">
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            className="input text-[12.5px] tabular"
+                            placeholder="Rate"
+                            value={item.unitPrice}
+                            onChange={(e) => {
+                              const updated = [...saleItems];
+                              updated[idx].unitPrice = Number(e.target.value);
+                              setSaleItems(updated);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-2 sm:col-span-1 flex justify-end">
+                          {saleItems.length > 1 && (
+                            <button type="button" onClick={() => handleRemoveItem(idx)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Remove item">
+                              <Icon name="trash" className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between items-center px-3 py-2.5 bg-slate-50 border-t border-slate-100">
+                  <span className="text-[12.5px] font-semibold text-slate-600">Subtotal</span>
+                  <span className="text-[16px] font-bold text-navy-900 tabular">{inr2(subtotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">Customer *</label>
-                <select
-                  required
-                  className="input"
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(Number(e.target.value) || "")}
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.phone})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Items Table */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="label">Line Items</label>
-                  <button type="button" onClick={handleAddItem} className="text-xs text-accent-600 hover:underline">
-                    + Add Product
-                  </button>
-                </div>
-
-                {saleItems.map((item, idx) => {
-                  const currentStock = getProductCurrentStock(item.productId);
-                  return (
-                    <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-canvas p-2 rounded">
-                      <div className="col-span-6">
-                        <select
-                          required
-                          className="input text-xs"
-                          value={item.productId}
-                          onChange={(e) => handleProductChange(idx, Number(e.target.value))}
-                        >
-                          <option value="0">Select Product</option>
-                          {products.map((p) => {
-                            const pStock = getProductCurrentStock(p.id);
-                            return (
-                              <option key={p.id} value={p.id} disabled={pStock <= 0}>
-                                {p.name} (Stock: {pStock})
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          min="1"
-                          max={currentStock || 1}
-                          required
-                          className="input text-xs font-mono"
-                          placeholder="Qty"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const updated = [...saleItems];
-                            updated[idx].quantity = Number(e.target.value);
-                            setSaleItems(updated);
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-3">
-                        <input
-                          type="number"
-                          step="0.01"
-                          required
-                          className="input text-xs font-mono"
-                          placeholder="Rate"
-                          value={item.unitPrice}
-                          onChange={(e) => {
-                            const updated = [...saleItems];
-                            updated[idx].unitPrice = Number(e.target.value);
-                            setSaleItems(updated);
-                          }}
-                        />
-                      </div>
-                      <div className="col-span-1 text-right">
-                        {saleItems.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(idx)}
-                            className="text-danger hover:text-red-700 text-xs"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Subtotal preview */}
-              <div className="flex justify-between font-mono text-sm font-semibold border-t pt-2">
-                <span>Subtotal:</span>
-                <span>₹{subtotal.toFixed(2)}</span>
-              </div>
-
-              {/* Payment Section */}
-              <div className="grid grid-cols-2 gap-4 border-t pt-3">
-                <div>
-                  <label className="label">Amount Paid</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="input font-mono"
-                    value={paidAmount}
-                    onChange={(e) => setPaidAmount(Number(e.target.value))}
-                  />
-                </div>
-                <div>
-                  <label className="label">Payment Mode</label>
-                  <select
-                    className="input"
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    disabled={isEmi}
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="upi">UPI</option>
-                    <option value="card">Card</option>
-                    <option value="bank">Bank Transfer</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* EMI Toggle */}
-              <div className="bg-canvas p-3 rounded space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
-                  <input
-                    type="checkbox"
-                    checked={isEmi}
-                    onChange={(e) => setIsEmi(e.target.checked)}
-                    className="rounded border-border text-accent-600"
-                  />
-                  Enable EMI / Installment Plan
-                </label>
-
-                {isEmi && (
-                  <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
-                    <div>
-                      <label className="label">Tenure (Months)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="60"
-                        className="input"
-                        value={emiTenure}
-                        onChange={(e) => setEmiTenure(Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Interest Rate (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        className="input"
-                        value={emiInterest}
-                        onChange={(e) => setEmiInterest(Number(e.target.value))}
-                      />
-                    </div>
+                <label className="label">{isEmi ? "Down payment" : "Amount paid"}</label>
+                <input type="number" step="0.01" className="input tabular" value={paidAmount} onChange={(e) => setPaidAmount(Number(e.target.value))} />
+                {subtotal > 0 && (
+                  <div className="mt-1.5 flex gap-1.5">
+                    <button type="button" onClick={() => setPaidAmount(subtotal)} className="text-[11.5px] font-semibold text-brand-700 hover:underline">Full amount</button>
+                    <span className="text-slate-300">·</span>
+                    <button type="button" onClick={() => setPaidAmount(0)} className="text-[11.5px] font-semibold text-slate-500 hover:underline">Nothing now</button>
                   </div>
                 )}
               </div>
-
-              {createError && <p className="text-sm text-danger">{createError}</p>}
-
-              <div className="flex justify-end gap-2 border-t pt-3">
-                <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={creating} className="btn-primary">
-                  {creating ? "Generating Invoice…" : "Confirm & Create Invoice"}
-                </button>
+              <div>
+                <label className="label">Payment mode</label>
+                <select className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} disabled={isEmi}>
+                  <option value="cash">Cash</option>
+                  <option value="upi">UPI</option>
+                  <option value="card">Card</option>
+                  <option value="bank">Bank transfer</option>
+                </select>
               </div>
-            </form>
-          </div>
-        </div>
+            </div>
+
+            {subtotal > 0 && (
+              <div className="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-100 px-4 py-3 text-[13px]">
+                <span className="text-slate-500">Balance after this sale</span>
+                <b className={`tabular ${subtotal - (Number(paidAmount) || 0) > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                  {inr2(Math.max(0, subtotal - (Number(paidAmount) || 0)))}
+                </b>
+              </div>
+            )}
+
+            {/* EMI */}
+            <div className={`rounded-xl border p-3.5 transition ${isEmi ? "border-brand-300 bg-brand-50/40" : "border-border"}`}>
+              <label className="flex items-center gap-2.5 cursor-pointer text-[13px] font-semibold text-navy-900">
+                <input type="checkbox" checked={isEmi} onChange={(e) => setIsEmi(e.target.checked)} className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4" />
+                Sell on EMI / installments
+              </label>
+              {isEmi && (
+                <div className="grid grid-cols-2 gap-3 pt-3">
+                  <div>
+                    <label className="label">Tenure (months)</label>
+                    <input type="number" min="1" max="60" className="input" value={emiTenure} onChange={(e) => setEmiTenure(Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <label className="label">Interest rate (%)</label>
+                    <input type="number" step="0.1" className="input" value={emiInterest} onChange={(e) => setEmiInterest(Number(e.target.value))} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {createError && (
+              <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {createError}</p>
+            )}
+          </form>
+        </Modal>
       )}
 
       {/* Pay Due Modal */}
       {payingSale && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="card max-w-md w-full p-6 space-y-4">
-            <h2 className="text-lg font-bold">Record Payment against {payingSale.invoice_number}</h2>
-            <form onSubmit={handleRecordPayment} className="space-y-4">
-              <div>
-                <label className="label">Payment Amount * (Outstanding: ₹{payingSale.due_amount})</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  max={payingSale.due_amount}
-                  required
-                  className="input font-mono"
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(e.target.value)}
-                />
+        <Modal
+          size="sm"
+          icon="wallet"
+          title="Collect payment"
+          subtitle={`Invoice ${payingSale.invoice_number}${payingSale.customer ? ` · ${payingSale.customer.name}` : ""}`}
+          onClose={() => setPayingSale(null)}
+          footer={
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setPayingSale(null)}>Cancel</button>
+              <button type="submit" form="pay-due-form" disabled={paySaving} className="btn-primary">{paySaving ? "Saving…" : "Save payment"}</button>
+            </>
+          }
+        >
+          <form id="pay-due-form" onSubmit={handleRecordPayment} className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <MiniFigure label="Total" value={inr2(payingSale.total_amount)} />
+              <MiniFigure label="Paid" value={inr2(payingSale.paid_amount)} tone="text-emerald-600" />
+              <MiniFigure label="Due" value={inr2(payingSale.due_amount)} tone="text-rose-600" />
+            </div>
+            <div>
+              <label className="label">Amount *</label>
+              <input type="number" step="0.01" max={payingSale.due_amount} required className="input text-[16px] font-semibold tabular" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} autoFocus />
+            </div>
+            <div>
+              <label className="label">Method</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  ["cash", "Cash"],
+                  ["upi", "UPI"],
+                  ["card", "Card"],
+                  ["bank_transfer", "Bank"],
+                ].map(([k, l]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setPayMethod(k)}
+                    className={`rounded-lg px-3 py-2 text-[12.5px] font-semibold ring-1 transition ${payMethod === k ? "ring-2 ring-brand-500 bg-brand-50 text-brand-800" : "ring-border text-slate-600 hover:ring-slate-300"}`}
+                  >
+                    {l}
+                  </button>
+                ))}
               </div>
-              <div>
-                <label className="label">Payment Method</label>
-                <select className="input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-                  <option value="cash">Cash</option>
-                  <option value="upi">UPI</option>
-                  <option value="card">Card</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button type="button" className="btn-secondary" onClick={() => setPayingSale(null)}>
-                  Cancel
-                </button>
-                <button disabled={paySaving} className="btn-primary">
-                  {paySaving ? "Saving…" : "Save Payment"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          </form>
+        </Modal>
       )}
+    </div>
+  );
+}
+
+const STATUS_LABEL: Record<string, string> = { paid: "Paid", partially_paid: "Partial", unpaid: "Unpaid", cancelled: "Cancelled" };
+
+const inr = (n: number) => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+const inr2 = (n: number | string) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function statusChip(s: Sale): { label: string; cls: string; dot: string } {
+  switch (s.status) {
+    case "paid":
+      return { label: "Paid", cls: "badge-active", dot: "bg-emerald-500" };
+    case "partially_paid":
+      return { label: "Partial", cls: "badge-warn", dot: "bg-amber-500" };
+    case "cancelled":
+      return { label: "Cancelled", cls: "badge-inactive", dot: "bg-slate-400" };
+    case "returned":
+      return { label: "Returned", cls: "badge-inactive", dot: "bg-slate-400" };
+    case "partially_returned":
+      return { label: "Part returned", cls: "badge-warn", dot: "bg-amber-500" };
+    default:
+      return { label: "Unpaid", cls: "badge-danger", dot: "bg-rose-500" };
+  }
+}
+
+function RowBtn({ title, icon, onClick, to, tone }: { title: string; icon: IconName; onClick?: () => void; to?: string; tone?: "rose" }) {
+  const cls = `w-8 h-8 rounded-lg flex items-center justify-center transition ${tone === "rose" ? "text-slate-400 hover:bg-rose-50 hover:text-rose-600" : "text-slate-500 hover:bg-slate-100 hover:text-navy-900"}`;
+  if (to)
+    return (
+      <Link to={to} title={title} aria-label={title} className={cls}>
+        <Icon name={icon} className="w-4 h-4" />
+      </Link>
+    );
+  return (
+    <button type="button" onClick={onClick} title={title} aria-label={title} className={cls}>
+      <Icon name={icon} className="w-4 h-4" />
+    </button>
+  );
+}
+
+function MiniFigure({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 border border-slate-100 px-2 py-2.5">
+      <div className="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-slate-500">{label}</div>
+      <div className={`mt-0.5 text-[13.5px] font-bold tabular truncate ${tone || "text-navy-900"}`}>{value}</div>
     </div>
   );
 }

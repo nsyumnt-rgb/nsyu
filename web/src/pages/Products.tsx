@@ -14,6 +14,16 @@ import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import ReferenceLink from "../components/ReferenceLink";
 import type { Category, Product } from "../types";
+import { EmptyState, Icon, Meter, PageHeader, Pagination, SearchInput, Segmented, StatCard, type IconName } from "../components/ui";
+
+function IconBtn({ title, icon, onClick, tone }: { title: string; icon: IconName; onClick: () => void; tone?: "brand" | "rose" }) {
+  const t = tone === "brand" ? "text-brand-600 hover:bg-brand-50 hover:border-brand-200" : tone === "rose" ? "text-rose-600 hover:bg-rose-50 hover:border-rose-200" : "text-slate-500 hover:bg-slate-50 hover:text-navy-900";
+  return (
+    <button type="button" onClick={onClick} title={title} aria-label={title} className={`w-8 h-8 rounded-lg border border-transparent flex items-center justify-center transition ${t}`}>
+      <Icon name={icon} className="w-4 h-4" />
+    </button>
+  );
+}
 
 // Helper for formatting INR currency without decimals if whole
 function formatINR(amount?: number | null): string {
@@ -595,596 +605,292 @@ function ProductsInner() {
     }
   }
 
+  function SortTh({ field, label, right }: { field: string; label: string; right?: boolean }) {
+    const on = sortField === field;
+    return (
+      <th className={right ? "!text-right" : ""}>
+        <button type="button" onClick={() => handleSort(field)} className={`inline-flex items-center gap-1 uppercase tracking-[0.06em] hover:text-navy-900 transition ${on ? "text-navy-900" : ""}`}>
+          {label}
+          <span className={`text-[10px] ${on ? "text-brand-600" : "text-slate-300"}`}>{on ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}</span>
+        </button>
+      </th>
+    );
+  }
+
   return (
-    <div className="space-y-5 pb-12">
+    <div className="space-y-6 pb-12">
       {/* ============================================================== */}
-      {/* 1. HEADER SECTION                                              */}
+      {/* 1. HEADER                                                      */}
       {/* ============================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="page-title">Products</h1>
-          <p className="text-[13px] text-slate-500 mt-0.5">
-            Manage your products, stock, categories and pricing
-          </p>
-        </div>
+      <PageHeader
+        eyebrow="Catalog"
+        title="Products"
+        subtitle="Your full catalog — prices, margins and stock levels in one place."
+        actions={
+          <>
+            <button type="button" onClick={() => setShowImportModal(true)} className="btn-secondary">
+              <Icon name="upload" className="w-4 h-4 text-slate-500" /> Import
+            </button>
+            <button type="button" onClick={handleExportCSV} className="btn-secondary">
+              <Icon name="download" className="w-4 h-4 text-slate-500" /> Export
+            </button>
+            <button type="button" onClick={openCreate} className="btn-primary">
+              <Icon name="plus" /> Add product
+            </button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2.5">
-          {/* Import Button */}
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200/90 rounded-lg text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
-          >
-            <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <span>Import</span>
-          </button>
-
-          {/* Export Button */}
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200/90 rounded-lg text-[13px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
-          >
-            <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span>Export</span>
-          </button>
-
-          {/* Add Product Button */}
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[13px] font-semibold shadow-xs transition-colors"
-          >
-            <span className="text-base leading-none">+</span>
-            <span>Add Product</span>
-          </button>
-        </div>
+      {/* ============================================================== */}
+      {/* 2. METRICS                                                     */}
+      {/* ============================================================== */}
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard
+          label="Total products"
+          icon="box"
+          tone="brand"
+          value={totalCount.toLocaleString("en-IN")}
+          loading={loading && products.length === 0}
+          hint={`${categories.length} categories · ${uniqueBrands.length} brands`}
+          active={stockStatusFilter === "All" && statusFilter === "All"}
+          onClick={() => { setStockStatusFilter("All"); setStatusFilter("All"); setCurrentPage(1); }}
+        />
+        <StatCard
+          label="Active"
+          icon="checkCircle"
+          tone="emerald"
+          value={activeCount.toLocaleString("en-IN")}
+          loading={loading && products.length === 0}
+          hint={`${(totalCount - activeCount).toLocaleString("en-IN")} inactive`}
+          active={statusFilter === "Active"}
+          onClick={() => { setStatusFilter(statusFilter === "Active" ? "All" : "Active"); setCurrentPage(1); }}
+        />
+        <StatCard
+          label="Low stock"
+          icon="alert"
+          tone="amber"
+          value={lowStockCount.toLocaleString("en-IN")}
+          valueClass={lowStockCount ? "text-amber-600" : undefined}
+          loading={loading && products.length === 0}
+          hint="At or below reorder level"
+          active={stockStatusFilter === "Low Stock"}
+          onClick={() => { setStockStatusFilter(stockStatusFilter === "Low Stock" ? "All" : "Low Stock"); setCurrentPage(1); }}
+        />
+        <StatCard
+          label="Out of stock"
+          icon="archive"
+          tone="rose"
+          value={outOfStockCount.toLocaleString("en-IN")}
+          valueClass={outOfStockCount ? "text-rose-600" : undefined}
+          loading={loading && products.length === 0}
+          hint="Zero units on hand"
+          active={stockStatusFilter === "Out of Stock"}
+          onClick={() => { setStockStatusFilter(stockStatusFilter === "Out of Stock" ? "All" : "Out of Stock"); setCurrentPage(1); }}
+        />
       </div>
 
       {/* ============================================================== */}
-      {/* 2. TOP METRIC CARDS (4 Cards)                                  */}
+      {/* 3. TABLE CARD (filters, bulk bar, table, pagination)           */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Products */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Total Products</div>
-            <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
-              {totalCount.toLocaleString()}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              Catalog products
-            </div>
-          </div>
-        </div>
-
-        {/* Active Products */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-              <line x1="12" y1="22.08" x2="12" y2="12" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Active Products</div>
-            <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
-              {activeCount.toLocaleString()}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              Available for sale
-            </div>
-          </div>
-        </div>
-
-        {/* Low Stock */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-              <line x1="12" y1="9" x2="12" y2="13" />
-              <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Low Stock</div>
-            <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
-              {lowStockCount.toLocaleString()}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              At/below threshold
-            </div>
-          </div>
-        </div>
-
-        {/* Out of Stock */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs flex items-center gap-3.5 transition-all hover:shadow-sm">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="21 8 21 21 3 21 3 8" />
-              <rect x="1" y="3" width="22" height="5" />
-              <line x1="10" y1="12" x2="14" y2="12" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-[12px] text-slate-500 font-medium leading-none">Out of Stock</div>
-            <div className="text-[20px] font-bold text-slate-800 tracking-tight mt-1">
-              {outOfStockCount.toLocaleString()}
-            </div>
-            <div className="text-[11px] font-medium text-slate-400 mt-1">
-              Zero units
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ============================================================== */}
-      {/* 3. SEARCH & FILTERS BAR                                        */}
-      {/* ============================================================== */}
-      <div className="bg-white rounded-xl border border-slate-200/90 p-3 shadow-xs">
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Search Input */}
-          <div className="relative flex-1 min-w-[220px]">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-            </span>
-            <input
-              type="text"
+      <section className="card overflow-hidden">
+        {/* Filters */}
+        <div className="p-4 sm:p-5 border-b border-slate-100 space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
+            <Segmented
+              value={stockStatusFilter}
+              onChange={(k) => { setStockStatusFilter(k); setCurrentPage(1); }}
+              options={[
+                { key: "All", label: "All", count: totalCount },
+                { key: "In Stock", label: "In stock", count: totalCount - outOfStockCount, tone: "emerald" },
+                { key: "Low Stock", label: "Low", count: lowStockCount, tone: "amber" },
+                { key: "Out of Stock", label: "Out", count: outOfStockCount, tone: "rose" },
+              ]}
+            />
+            <SearchInput
+              className="md:w-[300px]"
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Search products..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white hover:border-slate-300 focus:border-blue-500 focus:outline-none transition-colors"
+              onChange={(v) => { setSearchQuery(v); setCurrentPage(1); }}
+              placeholder="Search name, SKU or barcode…"
             />
           </div>
-
-          {/* Categories Selector */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 hover:border-slate-300 focus:border-blue-500 focus:outline-none cursor-pointer"
-          >
-            <option value="All">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Brands Selector */}
-          <select
-            value={brandFilter}
-            onChange={(e) => {
-              setBrandFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 hover:border-slate-300 focus:border-blue-500 focus:outline-none cursor-pointer"
-          >
-            <option value="All">All Brands</option>
-            {uniqueBrands.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
-
-          {/* Status Selector */}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 hover:border-slate-300 focus:border-blue-500 focus:outline-none cursor-pointer"
-          >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-
-          {/* Stock Status Selector */}
-          <select
-            value={stockStatusFilter}
-            onChange={(e) => {
-              setStockStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 hover:border-slate-300 focus:border-blue-500 focus:outline-none cursor-pointer"
-          >
-            <option value="All">Stock Status</option>
-            <option value="In Stock">In Stock</option>
-            <option value="Low Stock">Low Stock</option>
-            <option value="Out of Stock">Out of Stock</option>
-          </select>
-
-          {/* Clear Button */}
-          <button
-            onClick={handleClearFilters}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            <svg className="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="1 4 1 10 7 10" />
-              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-            </svg>
-            <span>Clear</span>
-          </button>
-
-          {/* Search Button */}
-          <button
-            onClick={() => setCurrentPage(1)}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
-          >
-            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <span>Search</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ============================================================== */}
-      {/* 4. TABLE CONTROLS BAR (Bulk Actions & Top Pagination)          */}
-      {/* ============================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600">
-        <div className="flex items-center gap-2.5">
-          <input
-            type="checkbox"
-            checked={selectedIds.length > 0 && selectedIds.length === paginatedProducts.length}
-            onChange={handleSelectAll}
-            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
-          />
-
-          <select
-            value={bulkAction}
-            onChange={(e) => setBulkAction(e.target.value)}
-            className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-white text-slate-700 focus:border-blue-500 focus:outline-none"
-          >
-            <option value="">Bulk Actions</option>
-            <option value="active">Mark as Active</option>
-            <option value="inactive">Mark as Inactive</option>
-            <option value="delete">Delete Selected</option>
-          </select>
-
-          <button
-            onClick={handleBulkApply}
-            disabled={!bulkAction || selectedIds.length === 0}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
-          >
-            Apply
-          </button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <div className="flex items-center gap-1.5">
-            <span>Show</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="px-2 py-0.5 text-xs rounded border border-slate-200 bg-white font-medium"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 mr-1">
+              <Icon name="sliders" className="w-3.5 h-3.5" /> Filters
+            </span>
+            <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${categoryFilter !== "All" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
+              <option value="All">All categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
             </select>
-            <span>of {totalCount.toLocaleString()} products</span>
-          </div>
-
-          {/* Pagination mini buttons */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1 rounded border border-slate-200 bg-white disabled:opacity-40 hover:bg-slate-50 text-slate-600"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-
-            {[1, 2, 3, 4, 5].map((pg) => {
-              if (pg > totalPages && totalPages > 1) return null;
-              return (
-                <button
-                  key={pg}
-                  onClick={() => setCurrentPage(pg)}
-                  className={`w-6 h-6 rounded text-xs font-medium transition-colors ${
-                    currentPage === pg
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {pg}
-                </button>
-              );
-            })}
-
-            {totalPages > 5 && (
-              <>
-                <span className="text-slate-400 text-xs px-0.5">...</span>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  className={`px-1.5 h-6 rounded text-xs font-medium transition-colors ${
-                    currentPage === totalPages
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {totalPages}
-                </button>
-              </>
+            <select value={brandFilter} onChange={(e) => { setBrandFilter(e.target.value); setCurrentPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${brandFilter !== "All" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
+              <option value="All">All brands</option>
+              {uniqueBrands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${statusFilter !== "All" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
+              <option value="All">Any status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            {(searchQuery || categoryFilter !== "All" || brandFilter !== "All" || statusFilter !== "All" || stockStatusFilter !== "All") && (
+              <button type="button" onClick={handleClearFilters} className="btn-ghost btn-sm">
+                <Icon name="refresh" className="w-3.5 h-3.5" /> Reset
+              </button>
             )}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-1 rounded border border-slate-200 bg-white disabled:opacity-40 hover:bg-slate-50 text-slate-600"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
+            <span className="ml-auto text-[12px] text-slate-500">
+              <b className="text-navy-900 tabular">{sortedProducts.length.toLocaleString("en-IN")}</b> {sortedProducts.length === 1 ? "product" : "products"}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* ============================================================== */}
-      {/* 5. PRODUCTS MAIN DATA TABLE                                    */}
-      {/* ============================================================== */}
-      <div className="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
+        {/* Bulk action bar */}
+        {selectedIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2.5 px-4 sm:px-5 py-2.5 bg-brand-50/70 border-b border-brand-100 animate-fade-in">
+            <span className="text-[12.5px] font-semibold text-brand-800">{selectedIds.length} selected</span>
+            <select value={bulkAction} onChange={(e) => setBulkAction(e.target.value)} className="input w-auto py-1 pr-8 text-[12.5px]">
+              <option value="">Choose action…</option>
+              <option value="active">Mark as active</option>
+              <option value="inactive">Mark as inactive</option>
+              <option value="delete">Delete selected</option>
+            </select>
+            <button type="button" onClick={handleBulkApply} disabled={!bulkAction} className="btn-primary btn-sm">Apply</button>
+            <button type="button" onClick={() => setSelectedIds([])} className="btn-ghost btn-sm ml-auto">Clear selection</button>
+          </div>
+        )}
+
+        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table>
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-500 font-semibold text-[11px]">
-                <th className="py-3 px-3 w-8">
+              <tr>
+                <th className="w-10 !pr-0">
                   <input
                     type="checkbox"
                     checked={selectedIds.length > 0 && selectedIds.length === paginatedProducts.length}
                     onChange={handleSelectAll}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
+                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer"
+                    aria-label="Select all on this page"
                   />
                 </th>
-                <th className="py-3 px-3">Image</th>
-                <th
-                  onClick={() => handleSort("name")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Product Name</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("sku")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>SKU</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("category")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Category</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("brand")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Brand</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("purchase_price")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Purchase Price</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("selling_price")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Selling Price</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("stock")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Current Stock</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort("status")}
-                  className="py-3 px-3 cursor-pointer hover:text-slate-800 transition-colors select-none"
-                >
-                  <div className="flex items-center gap-1">
-                    <span>Status</span>
-                    <span className="text-slate-400 text-[10px]">↕</span>
-                  </div>
-                </th>
-                <th className="py-3 px-3 text-right">Actions</th>
+                <SortTh field="name" label="Product" />
+                <SortTh field="category" label="Category" />
+                <SortTh field="purchase_price" label="Cost" right />
+                <SortTh field="selling_price" label="Price" right />
+                <SortTh field="stock" label="Stock" />
+                <SortTh field="status" label="Status" />
+                <th className="!text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {loading && products.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400 text-xs">
-                    Loading products catalog…
-                  </td>
-                </tr>
+                Array.from({ length: 6 }, (_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={8}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3 rounded bg-slate-100 w-1/3" />
+                          <div className="h-2.5 rounded bg-slate-100 w-1/5" />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : paginatedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-12 text-center text-slate-400 text-xs">
-                    No products found matching your filter criteria.
+                  <td colSpan={8} className="!p-0">
+                    {products.length === 0 ? (
+                      <EmptyState
+                        icon="box"
+                        tone="brand"
+                        title="No products yet"
+                        text="Add your first product or import your catalog from a spreadsheet."
+                        action={
+                          <div className="flex gap-2 justify-center">
+                            <button type="button" onClick={() => setShowImportModal(true)} className="btn-secondary btn-sm"><Icon name="upload" className="w-3.5 h-3.5" /> Import</button>
+                            <button type="button" onClick={openCreate} className="btn-primary btn-sm"><Icon name="plus" className="w-3.5 h-3.5" /> Add product</button>
+                          </div>
+                        }
+                      />
+                    ) : (
+                      <EmptyState
+                        icon="search"
+                        title="No products match"
+                        text="Try a different search or reset the filters."
+                        action={<button type="button" onClick={handleClearFilters} className="btn-secondary btn-sm"><Icon name="refresh" className="w-3.5 h-3.5" /> Reset filters</button>}
+                      />
+                    )}
                   </td>
                 </tr>
               ) : (
                 paginatedProducts.map((p) => {
-                  const stock = p.stocks?.[0]?.current_stock ?? 0;
-                  const isLow = stock > 0 && stock <= (Number(p.min_stock ?? 5) || 5);
+                  const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
+                  const min = Number(p.min_stock ?? 5) || 5;
                   const isOut = stock <= 0;
+                  const isLow = !isOut && stock <= min;
                   const isSelected = selectedIds.includes(p.id);
-
-                  // Status badge format
-                  let statusBadge = (
-                    <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                      Active
-                    </span>
-                  );
-                  if (isOut) {
-                    statusBadge = (
-                      <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-500 border border-rose-100">
-                        Out of Stock
-                      </span>
-                    );
-                  } else if (isLow) {
-                    statusBadge = (
-                      <span className="inline-block px-2.5 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-100">
-                        Low Stock
-                      </span>
-                    );
-                  }
+                  const cost = Number(p.purchase_price) || 0;
+                  const price = Number(p.selling_price) || 0;
+                  const margin = price > 0 && cost > 0 ? Math.round(((price - cost) / price) * 100) : null;
 
                   return (
-                    <tr
-                      key={p.id}
-                      className={`hover:bg-slate-50/70 transition-colors ${
-                        isSelected ? "bg-blue-50/40" : ""
-                      }`}
-                    >
-                      <td className="py-3 px-3">
+                    <tr key={p.id} className={isSelected ? "!bg-brand-50/60" : ""}>
+                      <td className="w-10 !pr-0">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectRow(p.id)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
+                          className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer"
+                          aria-label={`Select ${p.name}`}
                         />
                       </td>
-
-                      <td className="py-3 px-3">
-                        <ProductThumbnail name={p.name} category={p.category?.name} />
+                      <td>
+                        <div className="flex items-center gap-3 min-w-[220px]">
+                          <ProductThumbnail name={p.name} category={p.category?.name} />
+                          <div className="min-w-0">
+                            <ReferenceLink type="product" id={p.id} refNumber={p.sku} className="!font-sans block max-w-[280px] truncate text-[13.5px] font-semibold text-navy-900 hover:text-brand-700">
+                              {p.name}
+                            </ReferenceLink>
+                            <div className="text-[11.5px] text-slate-400 font-mono truncate">{p.sku}</div>
+                          </div>
+                        </div>
                       </td>
-
-                      <td className="py-3 px-3 font-semibold text-slate-800">
-                        <ReferenceLink type="product" id={p.id} refNumber={p.sku}>
-                          {p.name}
-                        </ReferenceLink>
+                      <td>
+                        <div className="text-[13px] text-slate-700 whitespace-nowrap">{p.category?.name || "—"}</div>
+                        {p.brand && <div className="text-[11.5px] text-slate-400 truncate max-w-[160px]">{p.brand}</div>}
                       </td>
-
-                      <td className="py-3 px-3 font-mono text-[11.5px] text-slate-500">
-                        <ReferenceLink type="product" id={p.id} refNumber={p.sku} />
+                      <td className="text-right whitespace-nowrap tabular text-slate-600">{formatINR(p.purchase_price)}</td>
+                      <td className="text-right whitespace-nowrap">
+                        <div className="font-semibold text-navy-900 tabular">{formatINR(p.selling_price)}</div>
+                        {margin !== null && (
+                          <div className={`text-[11px] font-semibold ${margin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{margin}% margin</div>
+                        )}
                       </td>
-
-                      <td className="py-3 px-3 text-slate-700">
-                        {p.category?.name || "—"}
+                      <td>
+                        <div className="w-[110px]">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className={`text-[13.5px] font-bold tabular ${isOut ? "text-rose-600" : isLow ? "text-amber-600" : "text-navy-900"}`}>{stock}</span>
+                            <span className={`text-[10.5px] font-semibold uppercase tracking-wide ${isOut ? "text-rose-500" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
+                              {isOut ? "Out" : isLow ? "Low" : "In stock"}
+                            </span>
+                          </div>
+                          <Meter value={stock} max={Math.max(min * 3, stock, 1)} tone={isOut ? "rose" : isLow ? "amber" : "emerald"} className="mt-1" />
+                        </div>
                       </td>
-
-                      <td className="py-3 px-3 text-slate-700">
-                        {p.brand || "—"}
+                      <td>
+                        {p.status === "active" ? (
+                          <span className="badge-active"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active</span>
+                        ) : (
+                          <span className="badge-inactive"><span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Inactive</span>
+                        )}
                       </td>
-
-                      <td className="py-3 px-3 font-medium text-slate-800">
-                        {formatINR(p.purchase_price)}
-                      </td>
-
-                      <td className="py-3 px-3 font-medium text-slate-800">
-                        {formatINR(p.selling_price)}
-                      </td>
-
-                      <td className="py-3 px-3">
-                        <span
-                          className={`font-bold ${
-                            isOut || isLow ? "text-rose-500" : "text-emerald-600"
-                          }`}
-                        >
-                          {stock}
-                        </span>
-                      </td>
-
-                      <td className="py-3 px-3">{statusBadge}</td>
-
-                      <td className="py-3 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* View Action */}
-                          <button
-                            onClick={() => {
-                              setActiveProduct(p);
-                              setShowViewModal(true);
-                            }}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors"
-                            title="View Details"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </button>
-
-                          {/* Edit Action */}
-                          <button
-                            onClick={() => openEdit(p)}
-                            className="p-1.5 rounded-lg border border-blue-100 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                            title="Edit Product"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                          </button>
-
-                          {/* Delete Action */}
-                          <button
-                            onClick={() => {
-                              setActiveProduct(p);
-                              setShowDeleteModal(true);
-                            }}
-                            className="p-1.5 rounded-lg border border-rose-100 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
-                            title="Delete Product"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            </svg>
-                          </button>
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <IconBtn title="View details" icon="eye" onClick={() => { setActiveProduct(p); setShowViewModal(true); }} />
+                          <IconBtn title="Edit product" icon="edit" tone="brand" onClick={() => openEdit(p)} />
+                          <IconBtn title="Delete product" icon="trash" tone="rose" onClick={() => { setActiveProduct(p); setShowDeleteModal(true); }} />
                         </div>
                       </td>
                     </tr>
@@ -1195,68 +901,28 @@ function ProductsInner() {
           </table>
         </div>
 
-        {/* Table Bottom Pagination bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between p-3.5 border-t border-slate-100 text-xs text-slate-500">
-          <div>
-            Showing 1 to {Math.min(pageSize, sortedProducts.length)} of {totalCount.toLocaleString()} products
-          </div>
-
-          <div className="flex items-center gap-1 mt-2 sm:mt-0">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-1 rounded border border-slate-200 bg-white disabled:opacity-40 hover:bg-slate-50 text-slate-600"
+        <Pagination
+          page={currentPage}
+          pages={totalPages}
+          total={sortedProducts.length}
+          pageSize={pageSize}
+          onPage={(pg) => setCurrentPage(Math.min(totalPages, Math.max(1, pg)))}
+          noun="products"
+          left={
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+              className="input w-auto py-1 pr-7 text-[12px]"
+              aria-label="Rows per page"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-
-            {[1, 2, 3, 4, 5].map((pg) => {
-              if (pg > totalPages && totalPages > 1) return null;
-              return (
-                <button
-                  key={pg}
-                  onClick={() => setCurrentPage(pg)}
-                  className={`w-6 h-6 rounded text-xs font-medium transition-colors ${
-                    currentPage === pg
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {pg}
-                </button>
-              );
-            })}
-
-            {totalPages > 5 && (
-              <>
-                <span className="text-slate-400 text-xs px-0.5">...</span>
-                <button
-                  onClick={() => setCurrentPage(totalPages)}
-                  className={`px-1.5 h-6 rounded text-xs font-medium transition-colors ${
-                    currentPage === totalPages
-                      ? "bg-blue-600 text-white"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {totalPages}
-                </button>
-              </>
-            )}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-1 rounded border border-slate-200 bg-white disabled:opacity-40 hover:bg-slate-50 text-slate-600"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
+              <option value={10}>10 / page</option>
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </select>
+          }
+        />
+      </section>
 
       {/* ============================================================== */}
       {/* 6. MODALS (Add, Edit, View, Delete, Import)                    */}

@@ -9,6 +9,7 @@ import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import ProductItemIcon from "../components/ProductItemIcon";
 import type { InventoryTransaction, Product } from "../types";
+import { EmptyState, Icon, Meter, PageHeader, Pagination, SearchInput, Segmented, StatCard, Toast } from "../components/ui";
 
 /* Marketplace wireframe — board 15 (Inventory). */
 
@@ -194,66 +195,100 @@ function InventoryInner() {
   }
 
   const canAdjust = can("inventory", "edit") || can("inventory", "create");
+  const okCount = Math.max(0, kpi.skus - kpi.low - kpi.out);
+  const pct = (n: number) => (kpi.skus ? (n / kpi.skus) * 100 : 0);
 
   return (
     <div className="space-y-6 pb-10">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Inventory</h1>
-          <p className="page-subtitle">Stock on hand, what's held by open orders, and every movement.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to="/app/inventory/manage?tab=Stock%20Transfer" className="btn-ghost">Transfers & advanced</Link>
-          <button type="button" onClick={exportCsv} className="btn-secondary">Export CSV</button>
-          {can("purchase", "create") && <Link to="/app/purchase" className="btn-navy">+ Receive stock</Link>}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Stock"
+        title="Inventory"
+        subtitle="Stock on hand, what's held by open orders, and every movement."
+        actions={
+          <>
+            <Link to="/app/inventory/manage?tab=Stock%20Transfer" className="btn-ghost">
+              <Icon name="layers" /> Transfers & advanced
+            </Link>
+            <button type="button" onClick={exportCsv} className="btn-secondary">
+              <Icon name="download" className="w-4 h-4 text-slate-500" /> Export CSV
+            </button>
+            {can("purchase", "create") && (
+              <Link to="/app/purchase" className="btn-primary">
+                <Icon name="truck" /> Receive stock
+              </Link>
+            )}
+          </>
+        }
+      />
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <Stat label="Total SKUs" value={kpi.skus.toLocaleString("en-IN")} loading={loading} />
-        <Stat label="Stock value (cost)" value={inr(kpi.value)} loading={loading} />
-        <Stat label="Low stock" value={String(kpi.low)} tone={kpi.low ? "warn" : undefined} loading={loading} onClick={() => setTab("low")} />
-        <Stat label="Out of stock" value={String(kpi.out)} tone={kpi.out ? "due" : undefined} loading={loading} onClick={() => setTab("out")} />
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="Total SKUs" icon="box" tone="brand" value={kpi.skus.toLocaleString("en-IN")} loading={loading} active={tab === "all"} onClick={() => setTab("all")} hint={`${okCount.toLocaleString("en-IN")} healthy`} />
+        <StatCard label="Stock value (cost)" icon="rupee" tone="violet" value={inr(kpi.value)} loading={loading} hint="Units on hand × cost price" />
+        <StatCard label="Low stock" icon="alert" tone="amber" value={String(kpi.low)} valueClass={kpi.low ? "text-amber-600" : undefined} loading={loading} active={tab === "low"} onClick={() => setTab("low")} hint="At or below reorder level" />
+        <StatCard label="Out of stock" icon="archive" tone="rose" value={String(kpi.out)} valueClass={kpi.out ? "text-rose-600" : undefined} loading={loading} active={tab === "out"} onClick={() => setTab("out")} hint="Can't be sold right now" />
       </div>
+
+      {/* Stock health bar */}
+      {!loading && kpi.skus > 0 && (
+        <div className="card px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+            <span className="text-[13px] font-semibold text-navy-900">Stock health</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-slate-500">
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Healthy <b className="text-navy-900 tabular">{okCount}</b></span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" /> Low <b className="text-navy-900 tabular">{kpi.low}</b></span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> Out <b className="text-navy-900 tabular">{kpi.out}</b></span>
+            </div>
+          </div>
+          <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-100 gap-[2px]">
+            <div className="bg-emerald-500 transition-all duration-700" style={{ width: `${pct(okCount)}%` }} />
+            <div className="bg-amber-400 transition-all duration-700" style={{ width: `${pct(kpi.low)}%` }} />
+            <div className="bg-rose-500 transition-all duration-700" style={{ width: `${pct(kpi.out)}%` }} />
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
         {/* Stock table / movements */}
         <section className="card overflow-hidden xl:col-span-8">
-          <div className="card-header flex-col sm:flex-row items-stretch sm:items-center">
-            <div className="inline-flex p-1 rounded-xl bg-slate-100 overflow-x-auto self-start">
-              {([
-                ["all", "All stock"],
-                ["low", `Low stock (${kpi.low})`],
-                ["out", `Out of stock (${kpi.out})`],
-                ["movements", "Stock movements"],
-              ] as [Tab, string][]).map(([k, l]) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setTab(k)}
-                  className={`px-3 py-1.5 rounded-lg text-[12.5px] font-semibold whitespace-nowrap transition ${tab === k ? "bg-white text-navy-900 shadow-sm" : "text-slate-500 hover:text-navy-900"}`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-            {tab !== "movements" && (
-              <input className="input sm:max-w-[240px]" placeholder="Search name, SKU or barcode…" value={search} onChange={(e) => setSearch(e.target.value)} />
-            )}
+          <div className="p-4 sm:px-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <Segmented
+              value={tab}
+              onChange={setTab}
+              options={[
+                { key: "all", label: "All stock", count: kpi.skus },
+                { key: "low", label: "Low", count: kpi.low, tone: "amber" },
+                { key: "out", label: "Out", count: kpi.out, tone: "rose" },
+                { key: "movements", label: "Movements" },
+              ]}
+            />
+            {tab !== "movements" && <SearchInput className="md:w-[260px]" value={search} onChange={setSearch} placeholder="Search name, SKU or barcode…" />}
           </div>
 
-          {error && <div className="m-4 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>}
+          {error && (
+            <div className="m-4 flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+              <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
+            </div>
+          )}
 
           {tab === "movements" ? (
             <MovementList moves={moves} loading={loading} full />
           ) : loading ? (
-            <div className="py-14 text-center text-[13px] text-slate-500">Loading stock…</div>
-          ) : filtered.length === 0 ? (
-            <div className="py-14 text-center text-[13px] text-slate-500">
-              {tab === "low" ? "Nothing is low on stock." : tab === "out" ? "Nothing is out of stock." : "No products match."}
+            <div className="p-5 space-y-3">
+              {Array.from({ length: 6 }, (_, i) => (
+                <div key={i} className="flex items-center gap-3 animate-pulse">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100" />
+                  <div className="flex-1 h-3 rounded bg-slate-100" />
+                  <div className="w-16 h-3 rounded bg-slate-100" />
+                </div>
+              ))}
             </div>
+          ) : filtered.length === 0 ? (
+            tab === "low" || tab === "out" ? (
+              <EmptyState icon="checkCircle" tone="emerald" title={tab === "low" ? "Nothing is low on stock" : "Nothing is out of stock"} text="Nice — your shelves are covered." />
+            ) : (
+              <EmptyState icon="search" title="No products match" text={search ? "Try a different name, SKU or barcode." : "Add products to start tracking stock."} />
+            )
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -261,165 +296,169 @@ function InventoryInner() {
                   <thead>
                     <tr>
                       <th>Product</th>
-                      <th className="!text-right">On hand</th>
-                      <th className="!text-right">Reserved</th>
-                      <th className="!text-right">Available</th>
-                      <th className="!text-right">Reorder at</th>
+                      <th className="!text-right whitespace-nowrap">On hand</th>
+                      <th>Available</th>
                       <th className="!text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pageRows.map((r) => (
-                      <tr key={r.p.id} className={adjusting?.id === r.p.id ? "bg-brand-50/50" : ""}>
+                      <tr key={r.p.id} className={adjusting?.id === r.p.id ? "!bg-brand-50/60" : ""}>
                         <td>
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center gap-3 min-w-[200px]">
                             <ProductItemIcon name={r.p.name} category={r.p.category?.name} imageUrl={r.p.images?.[0]?.url} size="sm" />
                             <div className="min-w-0">
-                              <Link to={`/app/products/${r.p.id}`} className="block max-w-[260px] truncate text-[13px] font-medium text-navy-900 hover:text-brand-700">{r.p.name}</Link>
+                              <Link to={`/app/products/${r.p.id}`} className="block max-w-[240px] truncate text-[13px] font-semibold text-navy-900 hover:text-brand-700">{r.p.name}</Link>
                               <div className="text-[11.5px] text-slate-400 font-mono">{r.p.sku}</div>
                             </div>
                           </div>
                         </td>
-                        <td className="text-right font-semibold tabular">{r.onHand}</td>
-                        <td className="text-right tabular text-slate-500">{r.res || "—"}</td>
-                        <td className="text-right">
-                          <span className={`inline-flex items-center gap-1.5 font-semibold tabular ${r.state === "out" ? "text-rose-600" : r.state === "low" ? "text-amber-600" : "text-emerald-600"}`}>
-                            {r.available}
-                            <span className={r.state === "out" ? "badge-danger" : r.state === "low" ? "badge-warn" : "badge-active"}>
-                              {r.state === "out" ? "Out" : r.state === "low" ? "Low" : "OK"}
-                            </span>
-                          </span>
-                        </td>
-                        <td className="text-right tabular text-slate-500">{r.reorderAt}</td>
                         <td className="text-right whitespace-nowrap">
-                          {r.state === "ok" ? (
-                            canAdjust && <button type="button" className="btn-secondary btn-sm" onClick={() => openAdjust(r.p)}>Adjust</button>
-                          ) : (
-                            <div className="inline-flex gap-1">
-                              {canAdjust && <button type="button" className="btn-ghost btn-sm" onClick={() => openAdjust(r.p)}>Adjust</button>}
-                              <Link to="/app/purchase" className="btn-soft btn-sm">Reorder</Link>
+                          <div className="font-semibold tabular text-navy-900">{r.onHand}</div>
+                          {r.res > 0 && <div className="text-[11px] font-medium text-brand-700 tabular">{r.res} reserved</div>}
+                        </td>
+                        <td>
+                          <div className="w-[130px]">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className={`text-[13.5px] font-bold tabular ${r.state === "out" ? "text-rose-600" : r.state === "low" ? "text-amber-600" : "text-emerald-600"}`}>{r.available}</span>
+                              <span className={r.state === "out" ? "badge-danger" : r.state === "low" ? "badge-warn" : "badge-active"}>
+                                {r.state === "out" ? "Out" : r.state === "low" ? "Low" : "OK"}
+                              </span>
                             </div>
-                          )}
+                            <Meter value={Math.max(0, r.available)} max={Math.max(r.reorderAt * 3, r.onHand, 1)} tone={r.state === "out" ? "rose" : r.state === "low" ? "amber" : "emerald"} className="mt-1" />
+                            <div className="mt-0.5 text-[10.5px] text-slate-400 tabular">Reorder at {r.reorderAt}</div>
+                          </div>
+                        </td>
+                        <td className="text-right whitespace-nowrap">
+                          <div className="inline-flex gap-1">
+                            {canAdjust && (
+                              <button type="button" className={adjusting?.id === r.p.id ? "btn-soft btn-sm" : "btn-secondary btn-sm"} onClick={() => openAdjust(r.p)}>
+                                <Icon name="sliders" className="w-3.5 h-3.5" /> Adjust
+                              </button>
+                            )}
+                            {r.state !== "ok" && (
+                              <Link to="/app/purchase" className="btn-soft btn-sm" title="Reorder — record a purchase">
+                                <Icon name="truck" className="w-3.5 h-3.5" /> <span className="hidden 2xl:inline">Reorder</span>
+                              </Link>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              {pages > 1 && (
-                <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 text-[12.5px] text-slate-500">
-                  <span>
-                    {(page - 1) * PAGE + 1}–{Math.min(page * PAGE, filtered.length)} of {filtered.length}
-                  </span>
-                  <div className="flex gap-2">
-                    <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="btn-secondary btn-sm">‹ Prev</button>
-                    <button type="button" disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="btn-secondary btn-sm">Next ›</button>
-                  </div>
-                </div>
-              )}
+              <Pagination page={page} pages={pages} total={filtered.length} pageSize={PAGE} onPage={(p) => setPage(Math.min(pages, Math.max(1, p)))} noun="products" />
             </>
           )}
         </section>
 
         {/* Right column: adjust + recent movements */}
         <div className="xl:col-span-4 space-y-5 xl:sticky xl:top-24">
-          <section className="card">
+          <section className={`card overflow-hidden transition ${adjusting ? "ring-4 ring-brand-500/10 border-brand-300" : ""}`}>
             <div className="card-header">
-              <h2 className="card-title">Adjust stock</h2>
-              {adjusting && <button type="button" onClick={() => setAdjusting(null)} className="text-[12px] text-slate-400 hover:text-slate-700">Clear</button>}
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-600/10 flex items-center justify-center">
+                  <Icon name="sliders" className="w-4 h-4" />
+                </span>
+                <h2 className="card-title text-[14px]">Adjust stock</h2>
+              </div>
+              {adjusting && <button type="button" onClick={() => setAdjusting(null)} className="btn-ghost btn-sm">Clear</button>}
             </div>
             {!adjusting ? (
-              <p className="p-5 text-[13px] text-slate-500">Choose <b>Adjust</b> on a product to correct its stock. Every change needs a reason and is saved in the movement log.</p>
+              <EmptyState compact icon="sliders" tone="brand" title="Pick a product" text={<>Choose <b>Adjust</b> on any row to correct its stock. Every change needs a reason and is saved in the movement log.</>} />
             ) : (
               <form onSubmit={saveAdjustment} className="p-5 space-y-4">
-                <div className="rounded-xl bg-slate-50 border border-slate-100 p-3">
-                  <div className="text-[13.5px] font-semibold text-navy-900 truncate">{adjusting.name}</div>
-                  <div className="text-[12px] text-slate-500 mt-0.5">Current stock <b className="text-navy-900 tabular">{current}</b></div>
+                <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-3">
+                  <ProductItemIcon name={adjusting.name} category={adjusting.category?.name} imageUrl={adjusting.images?.[0]?.url} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13.5px] font-semibold text-navy-900 truncate">{adjusting.name}</div>
+                    <div className="text-[12px] text-slate-500">In stock now</div>
+                  </div>
+                  <div className="text-[20px] font-bold tabular text-navy-900">{current}</div>
                 </div>
                 <div>
                   <label className="label">Reason</label>
-                  <div className="space-y-1.5">
+                  <div className="grid grid-cols-2 gap-2">
                     {REASONS.map((r) => (
-                      <label key={r.key} className={`flex items-start gap-2.5 rounded-lg px-3 py-2 cursor-pointer ring-1 transition ${reason === r.key ? "ring-brand-400 bg-brand-50/60" : "ring-border hover:ring-slate-300"}`}>
-                        <input type="radio" name="reason" checked={reason === r.key} onChange={() => setReason(r.key)} className="mt-0.5 text-brand-600" />
-                        <span>
-                          <span className="block text-[13px] font-medium text-navy-900">{r.label}</span>
-                          <span className="block text-[11.5px] text-slate-500">{r.hint}</span>
-                        </span>
+                      <label key={r.key} className={`relative flex flex-col rounded-xl px-3 py-2.5 cursor-pointer ring-1 transition ${reason === r.key ? "ring-2 ring-brand-500 bg-brand-50/60" : "ring-border hover:ring-slate-300"}`}>
+                        <input type="radio" name="reason" checked={reason === r.key} onChange={() => setReason(r.key)} className="sr-only" />
+                        <span className="text-[12.5px] font-semibold text-navy-900">{r.label}</span>
+                        <span className="text-[11px] text-slate-500 leading-snug mt-0.5">{r.hint}</span>
+                        {reason === r.key && <Icon name="checkCircle" className="absolute top-2 right-2 w-3.5 h-3.5 text-brand-600" />}
                       </label>
                     ))}
                   </div>
                 </div>
                 {(reason === "count" || reason === "other") && (
-                  <div className="inline-flex p-1 rounded-lg bg-slate-100">
-                    {([
-                      ["change", "Change by ±"],
-                      ["set", "Set counted qty"],
-                    ] as const).map(([k, l]) => (
-                      <button key={k} type="button" onClick={() => setMode(k)} className={`px-3 py-1 rounded-md text-[12px] font-semibold ${mode === k ? "bg-white shadow-sm text-navy-900" : "text-slate-500"}`}>{l}</button>
-                    ))}
-                  </div>
+                  <Segmented
+                    size="sm"
+                    value={mode}
+                    onChange={setMode}
+                    options={[
+                      { key: "change", label: "Change by ±" },
+                      { key: "set", label: "Set counted qty" },
+                    ]}
+                  />
                 )}
                 <div>
                   <label className="label">
                     {reason === "damaged" ? "Quantity to remove" : reason === "return" ? "Quantity returned" : mode === "set" ? "Counted quantity" : "Quantity change (use − to reduce)"}
                   </label>
-                  <input type="number" step={1} className="input text-[15px] font-semibold tabular" value={qty} onChange={(e) => setQty(e.target.value)} placeholder={mode === "set" ? String(current) : "e.g. 5 or -2"} autoFocus />
+                  <input type="number" step={1} className="input text-[16px] font-semibold tabular" value={qty} onChange={(e) => setQty(e.target.value)} placeholder={mode === "set" ? String(current) : "e.g. 5 or -2"} autoFocus />
                   {delta !== 0 && (
-                    <p className={`text-[12px] mt-1.5 font-medium ${current + delta < 0 ? "text-rose-600" : "text-slate-600"}`}>
-                      {current} → <b className="tabular">{current + delta}</b> ({delta > 0 ? "+" : ""}{delta})
-                    </p>
+                    <div className={`mt-2 flex items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] font-medium ${current + delta < 0 ? "bg-rose-50 text-rose-700" : "bg-slate-50 text-slate-600"}`}>
+                      <span className="tabular">{current}</span>
+                      <Icon name="arrowRight" className="w-3.5 h-3.5" />
+                      <b className="tabular text-navy-900">{current + delta}</b>
+                      <span className={`ml-auto font-bold tabular ${delta > 0 ? "text-emerald-600" : "text-rose-600"}`}>{delta > 0 ? "+" : ""}{delta}</span>
+                    </div>
                   )}
                 </div>
                 <div>
                   <label className="label">Note {reason === "other" ? "" : "(optional)"}</label>
                   <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Shelf count on 17 Nov" maxLength={200} />
                 </div>
-                {adjError && <p className="text-[12.5px] text-rose-600">{adjError}</p>}
-                <button type="submit" disabled={saving} className="btn-navy w-full">{saving ? "Saving…" : "Save adjustment"}</button>
+                {adjError && (
+                  <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {adjError}</p>
+                )}
+                <button type="submit" disabled={saving} className="btn-primary w-full">{saving ? "Saving…" : "Save adjustment"}</button>
               </form>
             )}
           </section>
 
           <section className="card overflow-hidden">
             <div className="card-header">
-              <h2 className="card-title">Recent movements</h2>
-              <button type="button" onClick={() => setTab("movements")} className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">All →</button>
+              <h2 className="card-title text-[14px]">Recent movements</h2>
+              <button type="button" onClick={() => setTab("movements")} className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1">
+                View all <Icon name="arrowRight" className="w-3.5 h-3.5" />
+              </button>
             </div>
             <MovementList moves={moves.slice(0, 6)} loading={loading} />
           </section>
         </div>
       </div>
 
-      {toast && <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lift bg-navy-900 text-white text-[13px] font-medium animate-fade-in">{toast}</div>}
+      {toast && <Toast text={toast} />}
     </div>
   );
 }
 
-function Stat({ label, value, loading, tone, onClick }: { label: string; value: string; loading: boolean; tone?: "warn" | "due"; onClick?: () => void }) {
-  const cls = `card p-4 sm:p-5 text-left w-full ${onClick ? "card-hover" : ""}`;
-  const body = (
-    <>
-      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</div>
-      <div className={`mt-2 text-[22px] sm:text-[26px] font-bold tracking-tight tabular truncate ${tone === "due" ? "text-rose-600" : tone === "warn" ? "text-amber-600" : "text-navy-900"} ${loading ? "opacity-40 animate-pulse" : ""}`}>{value}</div>
-    </>
-  );
-  return onClick ? <button type="button" onClick={onClick} className={cls}>{body}</button> : <div className={cls}>{body}</div>;
-}
-
 function MovementList({ moves, loading, full = false }: { moves: InventoryTransaction[]; loading: boolean; full?: boolean }) {
   if (loading) return <div className="py-10 text-center text-[13px] text-slate-500">Loading…</div>;
-  if (!moves.length) return <div className="py-10 text-center text-[13px] text-slate-500">No stock movements yet.</div>;
+  if (!moves.length) return <EmptyState compact icon="clock" title="No stock movements yet" text="Purchases, sales and adjustments will be logged here." />;
   return (
     <ul className="divide-y divide-slate-100">
       {moves.map((m) => {
         const q = Number(m.signed_quantity);
         const reason = (m.notes || "").match(/\[Reason: ([^\]]+)\]/)?.[1];
         return (
-          <li key={m.id} className="px-5 py-3 flex items-center gap-3">
-            <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-[13px] font-bold shrink-0 ${q >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>{q >= 0 ? "+" : "−"}</span>
+          <li key={m.id} className="px-5 py-3 flex items-center gap-3 hover:bg-slate-50/60 transition-colors">
+            <span className={`w-9 h-9 rounded-xl ring-1 ring-inset flex items-center justify-center shrink-0 ${q >= 0 ? "bg-emerald-50 text-emerald-600 ring-emerald-600/10" : "bg-rose-50 text-rose-600 ring-rose-600/10"}`}>
+              <Icon name={q >= 0 ? "arrowDown" : "arrowUp"} className="w-4 h-4" />
+            </span>
             <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium text-navy-900 truncate">
+              <div className="text-[13px] font-semibold text-navy-900 truncate">
                 {reason && m.type === "adjustment" ? `Adjustment: ${reason.toLowerCase()}` : MOVE_LABEL[m.type] || m.type}
               </div>
               <div className="text-[11.5px] text-slate-400 truncate">
