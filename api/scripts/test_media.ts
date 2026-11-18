@@ -206,6 +206,20 @@ async function main() {
     ok(seen.some((s) => s.method === "DELETE"), "removing the banner deletes the stored object");
     ok((await json("GET", `/marketplace/shops/MDA`)).json?.data?.banner === null, "storefront shows no banner after removal");
 
+    // ── C2: new-format secret key (sb_secret_…) ──────────────────────────
+    console.log("\nNew Supabase secret key format");
+    useSupabase();
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "sb_secret_TESTONLY_not_a_real_key";
+    seen.length = 0;
+    const nk = await upload(`/products/${prod.id}/images`, tokA, "images", [{ buf: PNG, name: "nk.png", type: "image/png" }]);
+    const nkPost = seen.find((s) => s.method === "POST");
+    ok(nk.status === 201 && nkPost?.headers.apikey === "sb_secret_TESTONLY_not_a_real_key", "sb_secret key is sent as the apikey header", nk.text);
+    ok(nkPost && nkPost.headers.authorization === undefined, "sb_secret key is NOT sent as a Bearer token (Supabase rejects non-JWT bearer keys)", nkPost?.headers.authorization);
+    seen.length = 0;
+    await json("DELETE", `/products/images/${nk.json?.data?.[0]?.id}`, tokA);
+    const nkDel = seen.find((s) => s.method === "DELETE");
+    ok(nkDel && nkDel.headers.apikey === "sb_secret_TESTONLY_not_a_real_key" && nkDel.headers.authorization === undefined, "deletes use the same apikey-only auth");
+
     // ── D: storage modes ─────────────────────────────────────────────────
     console.log("\nStorage modes");
     noSupabase();
