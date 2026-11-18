@@ -161,6 +161,22 @@ async function main() {
     ok(await balanceOf(c2.id) === 0, "balance back to zero", await balanceOf(c2.id));
     await call("POST", "/ledger/payment", tokA, { customerId: c2.id, amount: 800, paymentMethod: "cash" }, { "x-idempotency-key": "wf-ledger-pay-0001" });
     ok(await balanceOf(c2.id) === 0, "retried payment is not applied twice", await balanceOf(c2.id));
+
+    // Browsers send a CORS preflight before POSTs with x-idempotency-key; if the API doesn't
+    // allow that header, the live web app can't save any bill (Node fetch never preflights,
+    // so the calls above can't catch it).
+    for (const [p, label] of [["/sales", "bill/sale"], ["/ledger/payment", "ledger payment"]] as const) {
+      const pre = await fetch(base + p, {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://nsyumnt-rgb.github.io",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "content-type,authorization,x-idempotency-key",
+        },
+      });
+      const allowed = (pre.headers.get("access-control-allow-headers") || "").toLowerCase();
+      ok(pre.status < 300 && allowed.includes("x-idempotency-key") && pre.headers.get("access-control-allow-origin") === "https://nsyumnt-rgb.github.io", `browser preflight for ${label} allows x-idempotency-key from the live site`, allowed);
+    }
     const overpay = await call("POST", "/ledger/payment", tokA, { customerId: c2.id, amount: 50, paymentMethod: "cash" });
     ok(overpay.status >= 400 || (await balanceOf(c2.id)) <= 0, "payment with nothing due is refused or recorded as advance", overpay.status);
     const led = await call("GET", `/ledger/${c2.id}`, tokA);

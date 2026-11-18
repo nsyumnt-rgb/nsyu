@@ -56,7 +56,9 @@ app.use(cors({
   },
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+  // X-Idempotency-Key: sent by the web app when saving bills/sales/payments so a retry
+  // can't create a duplicate. Without it here, browsers block those requests (CORS preflight).
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Idempotency-Key"]
 }));
 app.use(express.json());
 if (process.env.NODE_ENV !== "test") {
