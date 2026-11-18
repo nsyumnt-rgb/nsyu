@@ -47,6 +47,8 @@ export interface MarketShopDetail {
   phone: string | null;
   email: string | null;
   logo: string | null;
+  /** Storefront banner uploaded by the owner (Settings → Shop), if any. */
+  banner?: string | null;
   acceptsOrders: boolean;
   minOrderValue: number;
   categories: { name: string; count: number }[];

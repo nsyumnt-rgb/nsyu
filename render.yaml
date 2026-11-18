@@ -29,3 +29,10 @@ services:
         sync: false
       - key: JWT_REFRESH_SECRET
         sync: false
+      # Product photos + shop banners live in Supabase Storage (this disk is wiped on restart).
+      - key: SUPABASE_URL
+        value: https://lggjtxzannywecuvwqbl.supabase.co
+      - key: SUPABASE_STORAGE_BUCKET
+        value: nsyu-media
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

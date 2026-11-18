@@ -11,7 +11,9 @@ import {
   Shop,
 } from "../models";
 import { getAllowedFields, stripFields } from "../middleware/permission";
-import { publicUrlFor } from "../middleware/upload";
+import { removeImage, saveImage } from "../utils/mediaStorage";
+
+const MAX_IMAGES_PER_PRODUCT = 8;
 import { recordStockMovement } from "../utils/inventory";
 import { logAudit } from "../utils/audit";
 
@@ -257,12 +259,26 @@ export async function uploadProductImages(req: Request, res: Response) {
   }
 
   const existingCount = await ProductImage.count({ where: { product_id: productId } });
+  if (existingCount + files.length > MAX_IMAGES_PER_PRODUCT) {
+    return res.status(400).json({ success: false, message: `A product can have at most ${MAX_IMAGES_PER_PRODUCT} photos (it has ${existingCount}).` });
+  }
+
+  // Store every file first; only then create rows, so a failed upload leaves no broken rows.
+  const urls: string[] = [];
+  try {
+    for (const file of files) {
+      urls.push(await saveImage(file, `owners/${req.auth!.ownerId}/products/${productId}`));
+    }
+  } catch (err: any) {
+    await Promise.all(urls.map((u) => removeImage(u)));
+    return res.status(err?.status || 500).json({ success: false, message: err?.message || "Could not store the image" });
+  }
 
   const created = await Promise.all(
-    files.map((file, idx) =>
+    urls.map((url, idx) =>
       ProductImage.create({
         product_id: productId,
-        url: publicUrlFor(file.filename),
+        url,
         is_primary: existingCount === 0 && idx === 0,
         sort_order: existingCount + idx,
       })
@@ -272,6 +288,20 @@ export async function uploadProductImages(req: Request, res: Response) {
   await logAudit({ req, module: "products", action: "upload_images", entityType: "Product", entityId: productId, details: { count: created.length } });
 
   return res.status(201).json({ success: true, data: created });
+}
+
+/** Make one photo the product's main (cover) photo. */
+export async function setPrimaryProductImage(req: Request, res: Response) {
+  const imageId = Number(req.params.imageId);
+  const image = await ProductImage.findByPk(imageId, { include: [{ model: Product, as: "product" }] });
+  if (!image || (image as any).product.owner_id !== req.auth!.ownerId) {
+    return res.status(404).json({ success: false, message: "Image not found" });
+  }
+  await ProductImage.update({ is_primary: false }, { where: { product_id: image.product_id } });
+  image.is_primary = true;
+  await image.save();
+  await logAudit({ req, module: "products", action: "set_primary_image", entityType: "ProductImage", entityId: imageId });
+  return res.json({ success: true, data: image });
 }
 
 /** Replace one image (delete old file + insert new) in a single call. */
@@ -285,11 +315,16 @@ export async function replaceProductImage(req: Request, res: Response) {
     return res.status(404).json({ success: false, message: "Image not found" });
   }
 
-  const oldPath = path.join(__dirname, "..", "..", "uploads", "products", path.basename(image.url));
-  fs.unlink(oldPath, () => {}); // best-effort cleanup
-
-  image.url = publicUrlFor(file.filename);
+  let newUrl: string;
+  try {
+    newUrl = await saveImage(file, `owners/${req.auth!.ownerId}/products/${image.product_id}`);
+  } catch (err: any) {
+    return res.status(err?.status || 500).json({ success: false, message: err?.message || "Could not store the image" });
+  }
+  const oldUrl = image.url;
+  image.url = newUrl;
   await image.save();
+  await removeImage(oldUrl); // best-effort cleanup, only after the new one is saved
 
   await logAudit({ req, module: "products", action: "replace_image", entityType: "ProductImage", entityId: imageId });
 
@@ -303,9 +338,20 @@ export async function deleteProductImage(req: Request, res: Response) {
     return res.status(404).json({ success: false, message: "Image not found" });
   }
 
-  const filePath = path.join(__dirname, "..", "..", "uploads", "products", path.basename(image.url));
-  fs.unlink(filePath, () => {});
+  const wasPrimary = image.is_primary;
+  const productId = image.product_id;
+  const oldUrl = image.url;
   await image.destroy();
+  await removeImage(oldUrl);
+
+  // Keep a cover photo: promote the next image when the primary one is removed.
+  if (wasPrimary) {
+    const next = await ProductImage.findOne({ where: { product_id: productId }, order: [["sort_order", "ASC"], ["id", "ASC"]] });
+    if (next) {
+      next.is_primary = true;
+      await next.save();
+    }
+  }
 
   await logAudit({ req, module: "products", action: "delete_image", entityType: "ProductImage", entityId: imageId });
 

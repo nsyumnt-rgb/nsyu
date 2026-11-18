@@ -13,6 +13,7 @@ import { signAccessToken } from "../utils/jwt";
 import { Employee } from "../models";
 import { employeeAssignments, resolveEmployeeAccess } from "../utils/employeeAccess";
 import { logAudit } from "../utils/audit";
+import { removeImage, saveImage } from "../utils/mediaStorage";
 
 /** Owner-only: create / register a new shop under their account. */
 export async function createShop(req: Request, res: Response) {
@@ -130,7 +131,9 @@ export async function updateShop(req: Request, res: Response) {
   if (address !== undefined) shop.address = address;
   if (logo !== undefined) shop.logo = logo;
   if (settings !== undefined && typeof settings === "object") {
-    shop.settings = { ...(shop.settings || {}), ...settings };
+    // The banner is only set through the upload endpoint (stored file, validated image).
+    const { bannerUrl: _ignored, ...rest } = settings as Record<string, any>;
+    shop.settings = { ...(shop.settings || {}), ...rest };
   }
 
   if (code !== undefined && String(code).trim().toUpperCase() !== shop.code) {
@@ -379,3 +382,47 @@ export async function updateShopSettings(req: Request, res: Response) {
 }
 
 
+
+/* ---------------- Storefront banner ---------------- */
+
+/** Owner-only: upload (or replace) the shop's storefront banner image. */
+export async function uploadShopBanner(req: Request, res: Response) {
+  const shopId = Number(req.params.shopId);
+  const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } });
+  if (!shop) return res.status(404).json({ success: false, message: "Shop not found" });
+
+  const file = req.file as Express.Multer.File | undefined;
+  if (!file) return res.status(400).json({ success: false, message: "Choose a banner image to upload" });
+
+  let url: string;
+  try {
+    url = await saveImage(file, `owners/${req.auth!.ownerId}/shops/${shop.id}`);
+  } catch (err: any) {
+    return res.status(err?.status || 500).json({ success: false, message: err?.message || "Could not store the banner" });
+  }
+
+  const oldUrl = (shop.settings || {}).bannerUrl as string | undefined;
+  shop.settings = { ...(shop.settings || {}), bannerUrl: url };
+  shop.changed("settings", true);
+  await shop.save();
+  await removeImage(oldUrl);
+
+  await logAudit({ req, module: "shops", action: "upload_banner", entityType: "Shop", entityId: shop.id });
+  return res.json({ success: true, data: { bannerUrl: url, shop } });
+}
+
+/** Owner-only: remove the shop's banner (the storefront falls back to its default header). */
+export async function deleteShopBanner(req: Request, res: Response) {
+  const shopId = Number(req.params.shopId);
+  const shop = await Shop.findOne({ where: { id: shopId, owner_id: req.auth!.ownerId } });
+  if (!shop) return res.status(404).json({ success: false, message: "Shop not found" });
+
+  const { bannerUrl: oldUrl, ...rest } = (shop.settings || {}) as Record<string, any>;
+  shop.settings = rest;
+  shop.changed("settings", true);
+  await shop.save();
+  await removeImage(oldUrl);
+
+  await logAudit({ req, module: "shops", action: "delete_banner", entityType: "Shop", entityId: shop.id });
+  return res.json({ success: true, data: { bannerUrl: null, shop } });
+}

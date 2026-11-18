@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getProduct } from "../../api/products";
 import ReferenceLink from "../../components/ReferenceLink";
+import ProductPhotos from "../../components/ProductPhotos";
+import { usePermission } from "../../hooks/usePermission";
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { can } = usePermission();
 
   const [product, setProduct] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,7 +63,7 @@ export default function ProductDetail() {
     );
   }
 
-  const totalStockAcrossShops = (product.stocks || []).reduce((sum: number, s: any) => sum + (Number(s.quantity) || 0), 0);
+  const totalStockAcrossShops = (product.stocks || []).reduce((sum: number, s: any) => sum + (Number(s.current_stock ?? s.quantity) || 0), 0);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -115,6 +118,25 @@ export default function ProductDetail() {
           </button>
         </div>
       </div>
+
+      {/* Photos */}
+      <section className="card">
+        <div className="card-header">
+          <div>
+            <h2 className="card-title text-[14px]">Photos</h2>
+            <p className="text-[12px] text-slate-500 mt-0.5">Shown in your product list, the customer store and the marketplace.</p>
+          </div>
+          <span className="text-[12px] text-slate-400 tabular">{(product.images || []).length} / 8</span>
+        </div>
+        <div className="p-5">
+          <ProductPhotos
+            productId={product.id}
+            images={product.images || []}
+            canEdit={can("products", "edit")}
+            onChange={(images) => setProduct((p: any) => ({ ...p, images }))}
+          />
+        </div>
+      </section>
 
       {/* Pricing and Stock Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -180,7 +202,7 @@ export default function ProductDetail() {
           <tbody className="divide-y divide-slate-100">
             {product.stocks && product.stocks.length > 0 ? (
               product.stocks.map((st: any) => {
-                const qty = Number(st.quantity || 0);
+                const qty = Number(st.current_stock ?? st.quantity ?? 0);
                 const isLow = qty <= (st.min_stock || product.min_stock || 5);
                 return (
                   <tr key={st.id || st.shop_id} className="hover:bg-slate-50/60 transition-colors">

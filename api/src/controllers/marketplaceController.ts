@@ -217,6 +217,7 @@ export async function getMarketShop(req: Request, res: Response) {
         phone: shop.phone || null,
         email: shop.email || null,
         logo: shop.logo || null,
+        banner: (shop.settings as any)?.bannerUrl || null,
         acceptsOrders: settings ? Boolean(settings.allow_orders) : true,
         minOrderValue: Number(settings?.min_order_value || 0),
         categories: (cats as any[]).map((c) => ({ name: c.name, count: Number(c.count) })),

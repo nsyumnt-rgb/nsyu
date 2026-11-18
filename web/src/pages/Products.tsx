@@ -9,7 +9,8 @@ import {
   type ImportPreviewResult,
 } from "../api/products";
 import { listCategories } from "../api/categories";
-import { apiErrorMessage } from "../api/client";
+import { apiErrorMessage, resolveAssetUrl } from "../api/client";
+import ProductPhotos from "../components/ProductPhotos";
 import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import ReferenceLink from "../components/ReferenceLink";
@@ -26,13 +27,23 @@ function IconBtn({ title, icon, onClick, tone }: { title: string; icon: IconName
 }
 
 // Helper for formatting INR currency without decimals if whole
+/** The product's cover photo (or its first photo), if it has any. */
+function coverOf(p: Product): string | null {
+  const imgs = p.images || [];
+  return (imgs.find((i) => i.is_primary) || imgs[0])?.url || null;
+}
+
 function formatINR(amount?: number | null): string {
   if (amount === undefined || amount === null) return "—";
   return "₹ " + Number(amount).toLocaleString("en-IN");
 }
 
 // Product Device Icons matching the screenshot thumbnails
-function ProductThumbnail({ name, category }: { name: string; category?: string }) {
+function ProductThumbnail({ name, category, imageUrl }: { name: string; category?: string; imageUrl?: string | null }) {
+  const src = resolveAssetUrl(imageUrl);
+  if (src) {
+    return <img src={src} alt="" loading="lazy" className="w-10 h-10 rounded-xl object-cover ring-1 ring-border bg-slate-100 shrink-0" />;
+  }
   const lower = (name + " " + (category || "")).toLowerCase();
 
   if (lower.includes("iphone") || lower.includes("samsung") || lower.includes("phone")) {
@@ -848,7 +859,7 @@ function ProductsInner() {
                       </td>
                       <td>
                         <div className="flex items-center gap-3 min-w-[220px]">
-                          <ProductThumbnail name={p.name} category={p.category?.name} />
+                          <ProductThumbnail name={p.name} category={p.category?.name} imageUrl={coverOf(p)} />
                           <div className="min-w-0">
                             <ReferenceLink type="product" id={p.id} refNumber={p.sku} className="!font-sans block max-w-[280px] truncate text-[13.5px] font-semibold text-navy-900 hover:text-brand-700">
                               {p.name}
@@ -1150,6 +1161,21 @@ function ProductsInner() {
                 </div>
               )}
 
+              {activeProduct && (
+                <div className="rounded-xl border border-border p-3">
+                  <div className="label !mb-2">Photos</div>
+                  <ProductPhotos
+                    compact
+                    productId={activeProduct.id}
+                    images={activeProduct.images || []}
+                    onChange={(images) => {
+                      setActiveProduct((p) => (p ? { ...p, images } : p));
+                      setProducts((list) => list.map((x) => (x.id === activeProduct.id ? { ...x, images } : x)));
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Product Name</label>
@@ -1272,7 +1298,7 @@ function ProductsInner() {
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <ProductThumbnail name={activeProduct.name} category={activeProduct.category?.name} />
+                <ProductThumbnail name={activeProduct.name} category={activeProduct.category?.name} imageUrl={coverOf(activeProduct)} />
                 <div>
                   <h3 className="text-base font-bold text-slate-800">{activeProduct.name}</h3>
                   <p className="text-xs text-slate-400 font-mono">{activeProduct.sku}</p>

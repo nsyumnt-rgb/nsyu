@@ -38,11 +38,25 @@ function fileFilter(_req: Request, file: Express.Multer.File, cb: multer.FileFil
   cb(null, true);
 }
 
+/**
+ * Images are kept in memory and handed to utils/mediaStorage, which checks the
+ * real file bytes and stores them in Supabase Storage (or ./uploads in dev).
+ * The on-disk `storage` above is no longer used for images.
+ */
 export const productImageUpload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: { fileSize: MAX_FILE_SIZE_BYTES, files: 10 }, // up to 10 images per upload call
 });
+
+/** One banner image per request; banners can be a little larger than product photos. */
+export const bannerImageUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: 8 * 1024 * 1024, files: 1 },
+});
+
+void storage; // kept for reference; image uploads no longer write straight to disk
 
 const CSV_UPLOAD_DIR = path.join(__dirname, "..", "..", "uploads", "imports");
 fs.mkdirSync(CSV_UPLOAD_DIR, { recursive: true });

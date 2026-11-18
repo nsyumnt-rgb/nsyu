@@ -10,6 +10,7 @@ import {
   getProductOwnerView,
   deleteProduct,
   uploadProductImages,
+  setPrimaryProductImage,
   replaceProductImage,
   deleteProductImage,
   setProductLocation,
@@ -45,6 +46,7 @@ router.delete("/:productId", requirePermission("products", "delete"), deleteProd
 router.post("/:productId/images", requirePermission("products", "edit"), productImageUpload.array("images", 10), uploadProductImages);
 router.put("/images/:imageId", requirePermission("products", "edit"), productImageUpload.single("image"), replaceProductImage);
 router.delete("/images/:imageId", requirePermission("products", "edit"), deleteProductImage);
+router.put("/images/:imageId/primary", requirePermission("products", "edit"), setPrimaryProductImage);
 
 // Location (shop -> rack -> shelf -> bin, with history)
 router.post("/:productId/location", requirePermission("inventory", "edit"), setProductLocation);

@@ -186,3 +186,7 @@ export function importProductsApi(payload: {
 
   return api.post<ApiEnvelope<ImportProductsResult>>("/products/import", payload);
 }
+
+export function setPrimaryProductImage(imageId: number) {
+  return api.put<ApiEnvelope<ProductImage>>(`/products/images/${imageId}/primary`);
+}

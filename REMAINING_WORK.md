@@ -131,6 +131,19 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 - Order status rules allow moving a *delivered* order back to earlier states, and re-opening a cancelled order.
 - Wishlist is stored per shop + customer in the browser (no wishlist table).
 
+## 10b. Product photos & shop banner (added 2026-11-18)
+
+- **Owner app:** product detail and the product Edit dialog have a photo manager (add several / drag & drop, set cover, replace, delete; max 8). Photos are shrunk in the browser (≤1600 px, WEBP) before upload. Settings → Shop has a **Store banner** card (owner only). The banner leads the customer-store slider and is the background of the shop's marketplace page; product cover photos show in the Products list.
+- **Storage:** Supabase Storage via its REST API (`api/src/utils/mediaStorage.ts`), objects under `owners/<owner>/products/<product>/` and `owners/<owner>/shops/<shop>/`. Files are checked by their real bytes (JPG/PNG/WEBP/GIF only). Without config, dev/test use `./uploads`; **production refuses uploads** (HTTP 503) rather than writing to Render's wiped disk.
+- **Tests:** `npm run test:media` — 39 checks against a fake Supabase server (exact requests, cleanup on replace/delete, fake-image and oversize rejection, other-owner / staff / anonymous refused, storage failure leaves no broken rows, production-without-config refuses). Part of `test:all`.
+- **Also fixed:** product detail showed **0 units / Out of stock for every product** (read `quantity`, API sends `current_stock`); deleting the cover photo left no cover.
+
+**One-time setup (owner):**
+1. Supabase dashboard → Storage → **New bucket** → name `nsyu-media`, **Public bucket: ON** (optionally limit to 8 MB and `image/*`).
+2. Supabase → Project Settings → API → copy the **service_role** key.
+3. Render → nsyu-backend-api → Environment → add `SUPABASE_SERVICE_ROLE_KEY` (secret). `SUPABASE_URL` and `SUPABASE_STORAGE_BUCKET` come from `render.yaml`; if the service doesn't use the blueprint, add them there too.
+4. Deploy the API. Until step 3 is done, uploads in production show "Image storage is not configured".
+
 ## 11. Required follow-up actions for the owner
 
 1. **Rotate** the super-admin password, the `nsyu.mnt` owner password, the database password and both JWT secrets (they were committed in the past).

@@ -28,10 +28,17 @@ export default function MarketShop() {
   if (!shop) return <div className="card h-40 animate-pulse" />;
 
   const logo = resolveAssetUrl(shop.logo);
+  const banner = resolveAssetUrl(shop.banner);
   return (
     <div className="space-y-8">
-      <section className="hero-brand p-6 sm:p-8">
-        <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
+      <section className={`hero-brand p-6 sm:p-8 ${banner ? "min-h-[220px] sm:min-h-[300px] flex items-end" : ""}`}>
+        {banner && (
+          <>
+            <img src={banner} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/40 to-transparent" />
+          </>
+        )}
+        <div className="relative w-full flex flex-col sm:flex-row sm:items-center gap-5">
           <span className="w-20 h-20 rounded-2xl bg-white text-navy-900 flex items-center justify-center text-[30px] font-bold overflow-hidden shrink-0">
             {logo ? <img src={logo} alt="" className="w-full h-full object-cover" /> : shop.name.charAt(0).toUpperCase()}
           </span>

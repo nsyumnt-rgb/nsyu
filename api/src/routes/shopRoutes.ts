@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOwner } from "../middleware/auth";
+import { bannerImageUpload } from "../middleware/upload";
 import {
   createShop,
   listShops,
@@ -12,6 +13,8 @@ import {
   updateShopPortalSettings,
   getShopSettings,
   updateShopSettings,
+  uploadShopBanner,
+  deleteShopBanner,
 } from "../controllers/shopController";
 
 const router = Router();
@@ -29,6 +32,8 @@ router.get("/:shopId/portal-settings", getShopPortalSettings);
 router.put("/:shopId/portal-settings", requireOwner, updateShopPortalSettings);
 router.patch("/:shopId/status", requireOwner, toggleShopStatus);
 router.delete("/:shopId", requireOwner, deleteShop);
+router.post("/:shopId/banner", requireOwner, bannerImageUpload.single("banner"), uploadShopBanner);
+router.delete("/:shopId/banner", requireOwner, deleteShopBanner);
 
 export default router;
 

@@ -40,6 +40,8 @@ export default function PortalStore() {
   // Banner slides from real products: the shop itself, its best offer and its newest arrival.
   const slides = useMemo(() => {
     const out: Slide[] = [];
+    // The owner's uploaded store banner leads the slider when there is one.
+    if (shop?.banner) out.push({ kind: "banner", url: shop.banner });
     const withImg = (list: Product[]) => list.filter((p) => primaryImage(p));
     const collage = withImg([...newest.items, ...offers.items, ...more.items]).slice(0, 3);
     out.push({ kind: "shop", products: collage });
@@ -48,7 +50,7 @@ export default function PortalStore() {
     const fresh = newest.items.find((p) => p.id !== offer?.id);
     if (fresh) out.push({ kind: "new", product: fresh });
     return out;
-  }, [newest.items, offers.items, more.items]);
+  }, [newest.items, offers.items, more.items, shop?.banner]);
 
   const shopName = customer?.shop?.name || "our store";
   const inStockCount = more.items.length;
@@ -128,7 +130,7 @@ export default function PortalStore() {
 
 /* ───────────────────────── Banner slider ───────────────────────── */
 
-type Slide = { kind: "shop"; products: Product[] } | { kind: "offer"; product: Product } | { kind: "new"; product: Product };
+type Slide = { kind: "banner"; url: string } | { kind: "shop"; products: Product[] } | { kind: "offer"; product: Product } | { kind: "new"; product: Product };
 
 function BannerSlider({ slides, shopName, address, loading }: { slides: Slide[]; shopName: string; address: string | null; loading: boolean }) {
   const [i, setI] = useState(0);
@@ -165,11 +167,22 @@ function BannerSlider({ slides, shopName, address, loading }: { slides: Slide[];
         <div className="absolute inset-0 animate-pulse" />
       ) : (
         <div className="flex h-full transition-transform duration-700 ease-out" style={{ transform: `translateX(-${idx * 100}%)` }}>
-          {slides.map((s, k) => (
-            <div key={k} className="relative shrink-0 w-full min-h-[260px] sm:min-h-[320px] grid sm:grid-cols-[1.1fr_1fr] items-center gap-4 px-6 sm:px-20 py-8 pb-12" aria-hidden={k !== idx}>
-              <SlideContent slide={s} shopName={shopName} address={address} />
-            </div>
-          ))}
+          {slides.map((s, k) =>
+            s.kind === "banner" ? (
+              <div key={k} className="relative shrink-0 w-full min-h-[260px] sm:min-h-[320px]" aria-hidden={k !== idx}>
+                <img src={resolveAssetUrl(s.url) || ""} alt={`${shopName} banner`} className="absolute inset-0 w-full h-full object-cover" />
+                <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+                <div className="absolute left-6 sm:left-20 bottom-10 right-6 text-white">
+                  <div className="text-[22px] sm:text-[30px] font-bold tracking-tight drop-shadow">{shopName}</div>
+                  {address && <div className="text-[13px] text-white/85 drop-shadow">{address}</div>}
+                </div>
+              </div>
+            ) : (
+              <div key={k} className="relative shrink-0 w-full min-h-[260px] sm:min-h-[320px] grid sm:grid-cols-[1.1fr_1fr] items-center gap-4 px-6 sm:px-20 py-8 pb-12" aria-hidden={k !== idx}>
+                <SlideContent slide={s} shopName={shopName} address={address} />
+              </div>
+            )
+          )}
         </div>
       )}
 
@@ -226,6 +239,7 @@ function SlideContent({ slide, shopName, address }: { slide: Slide; shopName: st
       </>
     );
   }
+  if (slide.kind === "banner") return null; // rendered full-bleed by BannerSlider
   const p = slide.product;
   const { price, mrp, off } = priceInfo(p);
   const img = primaryImage(p);

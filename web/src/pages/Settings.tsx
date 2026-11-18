@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import RequireModule from "../components/RequireModule";
 import { useAuthStore } from "../store/authStore";
 import { api } from "../api/client";
+import ShopBannerCard from "../components/ShopBannerCard";
 
 interface FullSettingsState {
   // 1. General (Account, Preferences, Theme)
@@ -1226,9 +1227,11 @@ function SettingsInner() {
       {/* ========================================================================= */}
       {/* 3. SHOP TAB                                                               */}
       {/* ========================================================================= */}
+      {activeTab === "shop" && <ShopBannerCard />}
+
       {activeTab === "shop" && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🏪</span>
               <div>
