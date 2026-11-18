@@ -1,13 +1,20 @@
-import { useEffect, useState, useRef } from "react";
-import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../store/portalStore";
-import { logoutCustomerApi, getCartApi, getPortalUnreadCountApi, getPortalCategoriesApi } from "../api/portal";
+import { getCartApi, getPortalCategoriesApi, getPortalUnreadCountApi, logoutCustomerApi } from "../api/portal";
 import { getMarketShop } from "../api/marketplace";
 import { resolveAssetUrl } from "../api/client";
 import { useStorefront } from "../store/storefrontStore";
 import CartDrawer from "../components/storefront/CartDrawer";
-import { HeartIcon } from "../components/StoreProduct";
-import { KindIcon, initialsOf, productKind, shopGradient } from "../components/ProductArt";
+import { KindIcon, initialsOf, productKind } from "../components/ProductArt";
+
+/**
+ * Customer storefront shell: dark-green sticky header (Home · Shop · Categories ·
+ * My Orders · My Account, search, cart, notifications, profile), hamburger menu on
+ * phones, and a matching footer with the shop's real contact details.
+ * Customers never see owner/admin navigation here.
+ */
+type Cat = { id: number; name: string; productCount?: number };
 
 export default function CustomerPortalLayout() {
   const navigate = useNavigate();
@@ -17,31 +24,36 @@ export default function CustomerPortalLayout() {
   const unreadCount = usePortalStore((s) => s.unreadCount);
   const setCart = usePortalStore((s) => s.setCart);
   const setUnreadCount = usePortalStore((s) => s.setUnreadCount);
-  const wishlistCount = useStorefront((s) => s.wishlist.length);
   const bindWishlist = useStorefront((s) => s.bindWishlist);
   const openCart = useStorefront((s) => s.openCart);
   const cartBump = useStorefront((s) => s.cartBump);
 
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [categories, setCategories] = useState<Cat[]>([]);
   const [logo, setLogo] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [bumping, setBumping] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const moreRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const catsRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  // Poll unread notifications & cart count on route change
+  // Refresh cart + unread count on every page change; close menus.
   useEffect(() => {
     getPortalUnreadCountApi().then(setUnreadCount).catch(() => {});
     getCartApi().then(setCart).catch(() => {});
-    setMoreOpen(false);
-  }, [location.pathname, setCart, setUnreadCount]);
+    setMenuOpen(false);
+    setCatsOpen(false);
+    setProfileOpen(false);
+    setSearchOpen(false);
+  }, [location.pathname, location.search, setCart, setUnreadCount]);
 
-  // Shop branding (public shop profile) + live categories for the nav bar
+  // Shop branding + live categories (with product counts) from the database.
   useEffect(() => {
     bindWishlist(customer?.shop?.id, customer?.id);
-    getPortalCategoriesApi().then((c: any[]) => setCategories(c || [])).catch(() => {});
+    getPortalCategoriesApi().then((c: any[]) => setCategories(c || [])).catch(() => setCategories([]));
     if (customer?.shop?.code) {
       getMarketShop(customer.shop.code)
         .then((s) => setLogo(s?.logo ? resolveAssetUrl(s.logo) : null))
@@ -49,7 +61,6 @@ export default function CustomerPortalLayout() {
     }
   }, [customer?.shop?.id, customer?.shop?.code, customer?.id, bindWishlist]);
 
-  // Badge "pop" when something is added to the cart
   useEffect(() => {
     if (!cartBump) return;
     setBumping(true);
@@ -57,22 +68,35 @@ export default function CustomerPortalLayout() {
     return () => clearTimeout(t);
   }, [cartBump]);
 
-  // Keep the header search in sync with the catalog URL
   useEffect(() => {
     const q = new URLSearchParams(location.search).get("q");
     if (location.pathname === "/portal/catalog") setQuery(q || "");
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setProfileDropdownOpen(false);
-      if (moreRef.current && !moreRef.current.contains(event.target as Node)) setMoreOpen(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const onDown = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+      if (catsRef.current && !catsRef.current.contains(e.target as Node)) setCatsOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  const handleLogout = async () => {
+  useEffect(() => {
+    if (searchOpen) setTimeout(() => searchRef.current?.focus(), 30);
+  }, [searchOpen]);
+
+  // Lock page scroll while the phone menu is open.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  const logout = async () => {
     await logoutCustomerApi();
     navigate("/portal/login", { replace: true });
   };
@@ -83,347 +107,328 @@ export default function CustomerPortalLayout() {
     navigate(q ? `/portal/catalog?q=${encodeURIComponent(q)}` : "/portal/catalog");
   };
 
-  const totalCartItems = cart?.itemCount ?? cart?.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+  const cartCount = cart?.itemCount ?? cart?.items?.reduce((sum, i) => sum + i.quantity, 0) ?? 0;
   const shopName = customer?.shop?.name || "Online store";
-  const navCats = categories.slice(0, 6);
-  const moreCats = categories.slice(6);
-  const activeCat = new URLSearchParams(location.search).get("category");
+  const path = location.pathname;
+  const onCatalog = path.startsWith("/portal/catalog") || path.startsWith("/portal/product");
+  const nav: { to: string; label: string; active: boolean }[] = [
+    { to: "/portal/home", label: "Home", active: path === "/portal/home" },
+    { to: "/portal/catalog", label: "Shop", active: onCatalog && !catsOpen },
+    { to: "/portal/orders", label: "My Orders", active: path.startsWith("/portal/orders") },
+    { to: "/portal/account", label: "My Account", active: ["/portal/account", "/portal/profile", "/portal/bills", "/portal/ledger", "/portal/wishlist", "/portal/notifications"].some((p) => path.startsWith(p)) },
+  ];
 
   const Brand = (
-    <Link to="/portal/home" className="flex items-center gap-2.5 shrink-0 min-w-0">
-      <span className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${logo ? "bg-white ring-1 ring-slate-200" : `bg-gradient-to-br ${shopGradient(shopName)} text-white font-bold text-[15px] shadow-brand`}`}>
-        {logo ? <img src={logo} alt="" className="w-full h-full object-contain p-1" onError={() => setLogo(null)} /> : initialsOf(shopName)}
+    <Link to="/portal/home" className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 lg:flex-none">
+      <span className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center overflow-hidden shrink-0 ${logo ? "bg-white" : "bg-white/10 ring-1 ring-inset ring-white/20 text-white font-bold text-[15px]"}`}>
+        {logo ? <img src={logo} alt="" className="w-full h-full object-contain p-1" onError={() => setLogo(null)} /> : <StoreIcon className="w-6 h-6" />}
       </span>
       <span className="min-w-0">
-        <span className="block font-bold text-[15px] sm:text-[17px] text-navy-900 leading-tight tracking-tight truncate max-w-[150px] sm:max-w-[220px]">{shopName}</span>
-        <span className="block text-[11.5px] text-slate-500 leading-tight">Online store</span>
+        <span className="block font-bold text-[15px] sm:text-[17px] text-white leading-tight tracking-tight truncate sm:max-w-[220px]">{shopName}</span>
+        <span className="block text-[11.5px] text-emerald-100/70 leading-tight">Online store</span>
       </span>
     </Link>
   );
 
   return (
-    <div className="min-h-screen bg-[#F7F8F7] flex flex-col font-sans">
-      {/* Storefront header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-[0_1px_0_rgba(15,23,42,0.06)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 lg:gap-6 h-16 sm:h-[72px]">
-            {Brand}
+    <div className="min-h-screen bg-[#F6F8F7] flex flex-col font-sans">
+      {/* ───────────── Header ───────────── */}
+      <header className="sticky top-0 z-40 bg-navy-900 text-white shadow-[0_2px_12px_-4px_rgba(2,26,19,0.5)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center gap-3 lg:gap-6">
+          <button type="button" onClick={() => setMenuOpen(true)} className="lg:hidden -ml-1 w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10" aria-label="Open menu">
+            <MenuIcon className="w-6 h-6" />
+          </button>
+          {Brand}
 
-            <form onSubmit={submitSearch} role="search" className="hidden md:block flex-1 max-w-2xl mx-auto">
+          {/* Desktop navigation */}
+          <nav className="hidden lg:flex items-center gap-1 mx-auto" aria-label="Main">
+            {nav.slice(0, 2).map((n) => (
+              <NavItem key={n.to} to={n.to} label={n.label} active={n.active} icon={n.label === "Home" ? <HomeIcon className="w-[18px] h-[18px]" /> : <BagIcon className="w-[18px] h-[18px]" />} />
+            ))}
+            <div className="relative" ref={catsRef}>
+              <button
+                type="button"
+                onClick={() => setCatsOpen((v) => !v)}
+                aria-expanded={catsOpen}
+                className={`h-11 px-4 rounded-xl inline-flex items-center gap-2 text-[14.5px] font-semibold transition ${catsOpen ? "bg-brand-600 text-white" : "text-emerald-50/90 hover:bg-white/10 hover:text-white"}`}
+              >
+                <GridIcon className="w-[18px] h-[18px]" /> Categories <ChevronDownIcon className={`w-4 h-4 transition ${catsOpen ? "rotate-180" : ""}`} />
+              </button>
+              {catsOpen && (
+                <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-[min(560px,90vw)] rounded-2xl bg-white text-slate-800 shadow-lift border border-border p-3 z-50 animate-fade-in">
+                  {categories.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-[13px] text-slate-500">No categories yet.</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1 max-h-[60vh] overflow-y-auto">
+                      <Link to="/portal/catalog" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-50">
+                        <span className="w-9 h-9 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center"><GridIcon className="w-[18px] h-[18px]" /></span>
+                        <span className="text-[13.5px] font-semibold text-navy-900">All products</span>
+                      </Link>
+                      {categories.map((c) => (
+                        <Link key={c.id} to={`/portal/catalog?category=${c.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-brand-50">
+                          <span className="w-9 h-9 rounded-lg bg-slate-50 text-brand-700 flex items-center justify-center"><KindIcon kind={productKind(c.name)} className="w-[18px] h-[18px]" /></span>
+                          <span className="min-w-0">
+                            <span className="block text-[13.5px] font-semibold text-navy-900 truncate capitalize">{c.name.toLowerCase()}</span>
+                            {c.productCount !== undefined && <span className="block text-[11.5px] text-slate-400">{c.productCount} product{c.productCount === 1 ? "" : "s"}</span>}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            {nav.slice(2).map((n) => (
+              <NavItem key={n.to} to={n.to} label={n.label} active={n.active} icon={n.label === "My Orders" ? <OrdersIcon className="w-[18px] h-[18px]" /> : <UserIcon className="w-[18px] h-[18px]" />} />
+            ))}
+          </nav>
+
+
+          {/* Actions */}
+          <div className="flex items-center gap-0 sm:gap-1 shrink-0">
+            <IconBtn label="Search products" onClick={() => setSearchOpen((v) => !v)} active={searchOpen}>
+              <SearchIcon className="w-[22px] h-[22px]" />
+            </IconBtn>
+            <IconBtn label={`Cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`} onClick={openCart} dataCart>
+              <CartIcon className={`w-[22px] h-[22px] transition-transform ${bumping ? "scale-125" : ""}`} />
+              {cartCount > 0 && <Badge n={cartCount} className={`bg-amber-400 !text-navy-950 ${bumping ? "scale-125" : ""}`} />}
+            </IconBtn>
+            <Link to="/portal/notifications" className="relative hidden sm:flex w-11 h-11 rounded-xl items-center justify-center text-emerald-50/90 hover:bg-white/10 hover:text-white" aria-label={`Notifications, ${unreadCount} unread`} title="Notifications">
+              <BellIcon className="w-[22px] h-[22px]" />
+              {unreadCount > 0 && <Badge n={unreadCount} className="bg-rose-500" />}
+            </Link>
+
+            <div className="relative sm:ml-1" ref={profileRef}>
+              <button type="button" onClick={() => setProfileOpen((v) => !v)} className="flex items-center gap-2 p-1 lg:pr-2 rounded-xl hover:bg-white/10" aria-haspopup="menu" aria-expanded={profileOpen} aria-label="Account menu">
+                <span className="w-9 h-9 rounded-full bg-white text-navy-900 flex items-center justify-center font-bold text-[13px]">{initialsOf(customer?.name || "C")}</span>
+                <span className="hidden xl:block text-left">
+                  <span className="block text-[13px] font-semibold leading-none max-w-[120px] truncate">{customer?.name || "Customer"}</span>
+                  <span className="block text-[11px] text-emerald-100/70 mt-1">Customer</span>
+                </span>
+                <ChevronDownIcon className="hidden xl:block w-4 h-4 text-emerald-100/70" />
+              </button>
+              {profileOpen && (
+                <div role="menu" className="absolute right-0 mt-2 w-72 rounded-2xl bg-white text-slate-800 shadow-lift border border-border py-2 z-50 animate-fade-in">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-[14px] font-semibold text-navy-900 truncate">{customer?.name}</p>
+                    <p className="text-[12px] text-slate-500 mt-0.5">{customer?.phone}</p>
+                    <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <span className="text-[12px] text-slate-500">{(customer?.currentBalance ?? 0) < 0 ? "Advance" : "Balance due"}</span>
+                      <span className={`text-[14px] font-bold tabular ${(customer?.currentBalance ?? 0) > 0 ? "text-rose-600" : (customer?.currentBalance ?? 0) < 0 ? "text-emerald-600" : "text-slate-700"}`}>
+                        ₹{Math.abs(Number(customer?.currentBalance ?? 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                  {ACCOUNT_LINKS.map((l) => (
+                    <Link key={l.to} to={l.to} role="menuitem" className="flex items-center justify-between px-4 py-2.5 text-[13.5px] text-slate-700 hover:bg-brand-50 hover:text-brand-700">
+                      {l.label}
+                      {l.to === "/portal/notifications" && unreadCount > 0 && <span className="badge-danger">{unreadCount}</span>}
+                    </Link>
+                  ))}
+                  <div className="border-t border-slate-100 my-1" />
+                  <button type="button" onClick={logout} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] text-rose-600 hover:bg-rose-50 font-semibold">
+                    <LogoutIcon className="w-4 h-4" /> Log out
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Search bar (toggle) */}
+        {searchOpen && (
+          <div className="border-t border-white/10 bg-navy-900 animate-fade-in">
+            <form onSubmit={submitSearch} role="search" className="max-w-3xl mx-auto px-4 sm:px-6 py-3">
               <label className="relative block">
                 <span className="sr-only">Search products</span>
                 <SearchIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
+                  ref={searchRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search products, brands, categories…"
-                  className="w-full h-11 pl-12 pr-24 rounded-full bg-slate-100/80 border border-transparent text-[14px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:bg-white focus:border-brand-400 focus:ring-4 focus:ring-brand-500/10"
+                  onKeyDown={(e) => e.key === "Escape" && setSearchOpen(false)}
+                  placeholder="Search product by name, SKU or barcode…"
+                  className="w-full h-12 pl-12 pr-28 rounded-xl bg-white text-[15px] text-navy-900 placeholder:text-slate-400 outline-none focus:ring-4 focus:ring-brand-500/30"
                 />
-                <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 px-4 rounded-full bg-brand-600 text-white text-[12.5px] font-semibold hover:bg-brand-700">Search</button>
+                <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 px-5 rounded-lg bg-brand-600 text-white text-[13.5px] font-semibold hover:bg-brand-700">Search</button>
               </label>
             </form>
-
-            <div className="flex-1 md:hidden" />
-
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <Link to="/portal/wishlist" className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition" title="Wishlist" aria-label={`Wishlist (${wishlistCount})`}>
-                <HeartIcon className="w-[22px] h-[22px]" filled={wishlistCount > 0} />
-                {wishlistCount > 0 && <Badge n={wishlistCount} className="bg-rose-600" />}
-              </Link>
-              <Link to="/portal/notifications" className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full hidden sm:flex items-center justify-center text-slate-600 hover:text-navy-900 hover:bg-slate-100 transition" title="Notifications" aria-label={`Notifications (${unreadCount})`}>
-                <BellIcon className="w-[22px] h-[22px]" />
-                {unreadCount > 0 && <Badge n={unreadCount} className="bg-amber-500" />}
-              </Link>
-              <button type="button" data-cart-target onClick={openCart} className="relative w-10 h-10 sm:w-auto sm:h-11 sm:pl-3 sm:pr-4 rounded-full flex items-center justify-center gap-2 bg-brand-600 text-white hover:bg-brand-700 shadow-brand transition" aria-label={`Open cart (${totalCartItems} items)`}>
-                <CartIcon className={`w-[21px] h-[21px] transition-transform ${bumping ? "scale-125" : ""}`} />
-                <span className="hidden sm:block text-[13px] font-semibold tabular">₹{Number(cart?.estimatedTotal ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
-                {totalCartItems > 0 && <Badge n={totalCartItems} className={`bg-amber-400 !text-navy-950 transition-transform ${bumping ? "scale-125" : ""}`} />}
-              </button>
-
-              {/* Profile */}
-              <div className="relative ml-0.5" ref={dropdownRef}>
-                <button type="button" onClick={() => setProfileDropdownOpen((prev) => !prev)} className="flex items-center gap-2 p-1 lg:pr-2.5 rounded-full hover:bg-slate-100 transition" aria-haspopup="menu" aria-expanded={profileDropdownOpen}>
-                  <span className={`w-9 h-9 rounded-full bg-gradient-to-br ${shopGradient(customer?.name || "C")} text-white flex items-center justify-center font-semibold text-[13px]`}>
-                    {initialsOf(customer?.name || "C")}
-                  </span>
-                  <span className="text-left hidden lg:block">
-                    <span className="block text-[13px] font-semibold text-navy-900 leading-none max-w-[120px] truncate">{customer?.name || "Customer"}</span>
-                    <span className="block text-[11px] text-slate-500 mt-1">Customer</span>
-                  </span>
-                  <ChevronDownIcon className="hidden lg:block w-3.5 h-3.5 text-slate-400" />
-                </button>
-
-                {profileDropdownOpen && (
-                  <div role="menu" className="absolute right-0 mt-2 w-72 rounded-2xl bg-white text-slate-800 shadow-lift border border-border py-2 z-50 animate-fadeIn">
-                    <div className="px-4 py-3 border-b border-slate-100">
-                      <p className="text-[14px] font-semibold text-navy-900">{customer?.name}</p>
-                      <p className="text-[12px] text-slate-500 mt-0.5">{customer?.phone}</p>
-                      <div className="mt-3 p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                        <span className="text-[12px] text-slate-500">{(customer?.currentBalance ?? 0) < 0 ? "Advance" : "Balance due"}</span>
-                        <span className={`text-[14px] font-bold tabular ${(customer?.currentBalance ?? 0) > 0 ? "text-rose-600" : (customer?.currentBalance ?? 0) < 0 ? "text-emerald-600" : "text-slate-700"}`}>
-                          ₹{Math.abs(Number(customer?.currentBalance ?? 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </div>
-                    {[
-                      { to: "/portal/account", label: "My account", Icon: UserIcon },
-                      { to: "/portal/orders", label: "My orders", Icon: OrdersIcon },
-                      { to: "/portal/wishlist", label: "Wishlist", Icon: HeartLineIcon },
-                      { to: "/portal/bills", label: "Bills & invoices", Icon: BillsIcon },
-                      { to: "/portal/ledger", label: "Khata / statement", Icon: LedgerIcon },
-                      { to: "/portal/notifications", label: "Notifications", Icon: BellIcon },
-                      { to: "/portal/profile", label: "Profile & settings", Icon: UserIcon },
-                    ].map(({ to, label, Icon }) => (
-                      <Link key={to + label} to={to} role="menuitem" onClick={() => setProfileDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition">
-                        <Icon className="w-4 h-4 text-slate-400" />
-                        <span>{label}</span>
-                      </Link>
-                    ))}
-                    <div className="border-t border-slate-100 my-1" />
-                    <button type="button" onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-rose-600 hover:bg-rose-50 transition font-medium">
-                      <LogoutIcon className="w-4 h-4" />
-                      <span>Sign out</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
+        )}
+      </header>
 
-          {/* Mobile search */}
-          <form onSubmit={submitSearch} role="search" className="md:hidden pb-3">
-            <label className="relative block">
-              <span className="sr-only">Search products</span>
-              <SearchIcon className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products…" className="w-full h-11 pl-12 pr-4 rounded-full bg-slate-100 text-[15px] text-navy-900 placeholder:text-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-brand-500/30" />
-            </label>
-          </form>
-        </div>
-
-        {/* Category bar (desktop) */}
-        <div className="hidden md:block border-t border-slate-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center gap-1">
-            <Link to="/portal/catalog" className="h-9 pl-3 pr-4 rounded-full bg-brand-600 text-white text-[13px] font-semibold inline-flex items-center gap-2 hover:bg-brand-700 shrink-0">
-              <MenuIcon className="w-4 h-4" /> All categories
-            </Link>
-            <nav className="flex items-center gap-0.5 min-w-0 overflow-hidden">
-              {navCats.map((c) => (
-                <Link key={c.id} to={`/portal/catalog?category=${c.id}`} className={`h-9 px-3 rounded-full inline-flex items-center gap-2 text-[13px] font-medium whitespace-nowrap transition ${activeCat === String(c.id) ? "bg-brand-50 text-brand-700" : "text-slate-600 hover:bg-slate-100 hover:text-navy-900"}`}>
-                  <KindIcon kind={productKind(c.name)} className="w-4 h-4 text-slate-400" />
-                  <span className="capitalize">{c.name.toLowerCase()}</span>
+      {/* ───────────── Phone menu ───────────── */}
+      {menuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-navy-950/50 animate-fade-in" onMouseDown={(e) => e.target === e.currentTarget && setMenuOpen(false)}>
+          <aside className="h-full w-[min(320px,86vw)] bg-white shadow-2xl flex flex-col" aria-label="Menu">
+            <div className="bg-navy-900 px-4 py-4 flex items-center justify-between">
+              {Brand}
+              <button type="button" onClick={() => setMenuOpen(false)} className="w-9 h-9 rounded-lg flex items-center justify-center text-white hover:bg-white/10" aria-label="Close menu">
+                <CloseIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto py-2">
+              {nav.map((n) => (
+                <Link key={n.to} to={n.to} className={`flex items-center gap-3 mx-2 px-3 py-3 rounded-xl text-[15px] font-semibold ${n.active ? "bg-brand-50 text-brand-800" : "text-navy-900 hover:bg-slate-50"}`}>
+                  {n.label}
+                </Link>
+              ))}
+              <div className="px-5 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Categories</div>
+              {categories.length === 0 ? (
+                <div className="px-5 py-2 text-[13px] text-slate-400">No categories yet.</div>
+              ) : (
+                categories.map((c) => (
+                  <Link key={c.id} to={`/portal/catalog?category=${c.id}`} className="flex items-center gap-3 mx-2 px-3 py-2.5 rounded-xl text-[14px] text-slate-700 hover:bg-slate-50">
+                    <KindIcon kind={productKind(c.name)} className="w-[18px] h-[18px] text-brand-700" />
+                    <span className="flex-1 capitalize">{c.name.toLowerCase()}</span>
+                    {c.productCount !== undefined && <span className="text-[12px] text-slate-400">{c.productCount}</span>}
+                  </Link>
+                ))
+              )}
+              <div className="px-5 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Account</div>
+              {ACCOUNT_LINKS.map((l) => (
+                <Link key={l.to} to={l.to} className="flex items-center justify-between mx-2 px-3 py-2.5 rounded-xl text-[14px] text-slate-700 hover:bg-slate-50">
+                  {l.label}
+                  {l.to === "/portal/notifications" && unreadCount > 0 && <span className="badge-danger">{unreadCount}</span>}
                 </Link>
               ))}
             </nav>
-            {moreCats.length > 0 && (
-              <div className="relative shrink-0" ref={moreRef}>
-                <button type="button" onClick={() => setMoreOpen((v) => !v)} className="h-9 px-3 rounded-full inline-flex items-center gap-1 text-[13px] font-medium text-slate-600 hover:bg-slate-100" aria-expanded={moreOpen}>
-                  More <ChevronDownIcon className="w-3.5 h-3.5" />
-                </button>
-                {moreOpen && (
-                  <div className="absolute left-0 mt-1 w-56 max-h-80 overflow-y-auto rounded-xl bg-white shadow-lift border border-border py-1.5 z-50 animate-fadeIn">
-                    {moreCats.map((c) => (
-                      <Link key={c.id} to={`/portal/catalog?category=${c.id}`} className="flex items-center gap-2.5 px-3.5 py-2 text-[13px] text-slate-700 hover:bg-brand-50 hover:text-brand-700 capitalize">
-                        <KindIcon kind={productKind(c.name)} className="w-4 h-4 text-slate-400" />
-                        {c.name.toLowerCase()}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <div className="flex-1" />
-            <nav className="hidden lg:flex items-center gap-0.5 shrink-0">
-              {[
-                { to: "/portal/orders", label: "My orders" },
-                { to: "/portal/bills", label: "Bills" },
-                { to: "/portal/ledger", label: "Khata" },
-              ].map((l) => (
-                <NavLink key={l.to} to={l.to} className={({ isActive }) => `h-9 px-3 rounded-full inline-flex items-center text-[13px] font-medium transition ${isActive ? "text-brand-700 bg-brand-50" : "text-slate-600 hover:bg-slate-100 hover:text-navy-900"}`}>
-                  {l.label}
-                </NavLink>
-              ))}
-            </nav>
-          </div>
+            <div className="p-3 border-t border-slate-100">
+              <button type="button" onClick={logout} className="w-full h-11 rounded-xl text-rose-600 font-semibold hover:bg-rose-50 inline-flex items-center justify-center gap-2">
+                <LogoutIcon className="w-4 h-4" /> Log out
+              </button>
+            </div>
+          </aside>
         </div>
-      </header>
+      )}
 
-      <main key={location.pathname} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-28 md:pb-12 animate-fadeIn">
+      <main key={location.pathname} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-12 animate-fade-in">
         <Outlet />
       </main>
 
-      <footer className="hidden md:block bg-navy-950 text-emerald-50/70">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-4 gap-8 text-[13px]">
-          <div className="col-span-2">
-            <div className="text-[16px] font-bold text-white">{shopName}</div>
-            {customer?.shop?.address && <p className="mt-2 max-w-sm">{customer.shop.address}</p>}
-            {customer?.shop?.phone && (
-              <a href={`tel:${customer.shop.phone}`} className="mt-2 inline-block font-semibold text-white hover:text-emerald-200">Call {customer.shop.phone}</a>
-            )}
+      {/* ───────────── Footer ───────────── */}
+      <footer className="bg-navy-900 text-emerald-50/75">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr] gap-8 text-[13.5px]">
+          <div>
+            <div className="flex items-center gap-3">
+              <span className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden ${logo ? "bg-white" : "bg-white/10 text-white"}`}>
+                {logo ? <img src={logo} alt="" className="w-full h-full object-contain p-1" /> : <StoreIcon className="w-6 h-6" />}
+              </span>
+              <div>
+                <div className="text-[16px] font-bold text-white leading-tight">{shopName}</div>
+                <div className="text-[12px] text-emerald-100/60">Powered by NSYU Business</div>
+              </div>
+            </div>
+            <p className="mt-4 max-w-sm leading-relaxed">Browse {shopName}'s products, order online and track every order and bill in one place.</p>
           </div>
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200/70">Shop</div>
+            <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white">Quick links</div>
             <ul className="mt-3 space-y-2">
-              <li><Link to="/portal/catalog" className="hover:text-white">All products</Link></li>
-              <li><Link to="/portal/catalog?sort=discount" className="hover:text-white">Offers</Link></li>
-              <li><Link to="/portal/wishlist" className="hover:text-white">Wishlist</Link></li>
+              {[
+                ["/portal/home", "Home"],
+                ["/portal/catalog", "Shop"],
+                ["/portal/catalog", "Categories"],
+                ["/portal/orders", "My Orders"],
+                ["/portal/account", "My Account"],
+              ].map(([to, label]) => (
+                <li key={label}><Link to={to} className="hover:text-white">{label}</Link></li>
+              ))}
             </ul>
           </div>
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-200/70">My account</div>
-            <ul className="mt-3 space-y-2">
-              <li><Link to="/portal/orders" className="hover:text-white">Orders</Link></li>
-              <li><Link to="/portal/bills" className="hover:text-white">Bills</Link></li>
-              <li><Link to="/portal/ledger" className="hover:text-white">Khata</Link></li>
+            <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white">Customer support</div>
+            <ul className="mt-3 space-y-2.5">
+              {customer?.shop?.phone && (
+                <li className="flex items-start gap-2.5"><PhoneIcon className="w-4 h-4 mt-0.5 shrink-0" /><a href={`tel:${customer.shop.phone}`} className="hover:text-white tabular">{customer.shop.phone}</a></li>
+              )}
+              {customer?.shop?.email && (
+                <li className="flex items-start gap-2.5"><MailIcon className="w-4 h-4 mt-0.5 shrink-0" /><a href={`mailto:${customer.shop.email}`} className="hover:text-white break-all">{customer.shop.email}</a></li>
+              )}
+              {customer?.shop?.address && (
+                <li className="flex items-start gap-2.5"><PinIcon className="w-4 h-4 mt-0.5 shrink-0" /><span>{customer.shop.address}</span></li>
+              )}
+              {!customer?.shop?.phone && !customer?.shop?.email && !customer?.shop?.address && <li className="text-emerald-100/50">Contact details not added by the shop yet.</li>}
             </ul>
           </div>
         </div>
         <div className="border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between text-[12px]">
-            <span>© {new Date().getFullYear()} {shopName}</span>
-            <span>Powered by NSYU Business</span>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row gap-1 items-center justify-between text-[12.5px] text-emerald-100/60">
+            <span>© {new Date().getFullYear()} {shopName}. All rights reserved.</span>
+            <span>NSYU Business</span>
           </div>
         </div>
       </footer>
-
-      {/* Mobile bottom tab bar with a prominent cart button */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-border px-1 pt-1.5 pb-[max(6px,env(safe-area-inset-bottom))] grid grid-cols-5 items-end">
-        <TabLink to="/portal/home" label="Home" Icon={HomeIcon} />
-        <TabLink to="/portal/catalog" label="Shop" Icon={CatalogIcon} />
-        <button type="button" data-cart-target onClick={openCart} className="flex flex-col items-center -mt-6" aria-label={`Open cart (${totalCartItems} items)`}>
-          <span className={`relative w-14 h-14 rounded-full bg-brand-600 text-white flex items-center justify-center shadow-brand ring-4 ring-white transition-transform ${bumping ? "scale-110" : ""}`}>
-            <CartIcon className="w-6 h-6" />
-            {totalCartItems > 0 && <Badge n={totalCartItems} className="bg-amber-400 !text-navy-950" />}
-          </span>
-          <span className="text-[11px] font-semibold text-brand-700 mt-0.5">Cart</span>
-        </button>
-        <TabLink to="/portal/wishlist" label="Wishlist" Icon={HeartLineIcon} />
-        <TabLink to="/portal/account" label="Account" Icon={UserIcon} />
-      </nav>
 
       <CartDrawer />
     </div>
   );
 }
 
-function TabLink({ to, label, Icon }: { to: string; label: string; Icon: (p: { className?: string }) => React.ReactElement }) {
+const ACCOUNT_LINKS = [
+  { to: "/portal/account", label: "My account" },
+  { to: "/portal/orders", label: "My orders" },
+  { to: "/portal/bills", label: "Bills & invoices" },
+  { to: "/portal/ledger", label: "Khata / statement" },
+  { to: "/portal/wishlist", label: "Wishlist" },
+  { to: "/portal/notifications", label: "Notifications" },
+  { to: "/portal/profile", label: "Profile & password" },
+];
+
+function NavItem({ to, label, active, icon }: { to: string; label: string; active: boolean; icon: React.ReactNode }) {
   return (
-    <NavLink to={to} className={({ isActive }) => `flex flex-col items-center gap-0.5 py-1 text-[11px] font-medium transition ${isActive ? "text-brand-700 font-semibold" : "text-slate-500"}`}>
-      {({ isActive }) => (
-        <>
-          <span className={`px-4 py-1 rounded-full transition ${isActive ? "bg-brand-50" : ""}`}>
-            <Icon className="w-5 h-5" />
-          </span>
-          <span>{label}</span>
-        </>
-      )}
+    <NavLink
+      to={to}
+      className={`h-11 px-4 rounded-xl inline-flex items-center gap-2 text-[14.5px] font-semibold transition ${active ? "bg-brand-600 text-white shadow-sm" : "text-emerald-50/90 hover:bg-white/10 hover:text-white"}`}
+    >
+      {icon}
+      {label}
     </NavLink>
+  );
+}
+
+function IconBtn({ label, onClick, children, active, dataCart }: { label: string; onClick: () => void; children: React.ReactNode; active?: boolean; dataCart?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      {...(dataCart ? { "data-cart-target": true } : {})}
+      className={`relative w-11 h-11 rounded-xl flex items-center justify-center transition ${active ? "bg-white/15 text-white" : "text-emerald-50/90 hover:bg-white/10 hover:text-white"}`}
+    >
+      {children}
+    </button>
   );
 }
 
 function Badge({ n, className = "" }: { n: number; className?: string }) {
   return (
-    <span className={`absolute -top-1 -right-1 text-white text-[10px] font-bold rounded-full h-[18px] min-w-[18px] px-1 flex items-center justify-center ring-2 ring-white ${className}`}>
+    <span className={`absolute top-0.5 right-0.5 text-white text-[10px] font-bold rounded-full h-[18px] min-w-[18px] px-1 flex items-center justify-center ring-2 ring-navy-900 transition-transform ${className}`}>
       {n > 99 ? "99+" : n}
     </span>
   );
 }
 
-function SearchIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-  );
-}
-
-function HeartLineIcon({ className }: { className?: string }) {
-  return <HeartIcon className={className} />;
-}
-
-/* --- Inline Clean SVG Icons --- */
-function HomeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  );
-}
-
-function CatalogIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-    </svg>
-  );
-}
-
-function OrdersIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-    </svg>
-  );
-}
-
-function BillsIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  );
-}
-
-function LedgerIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function CartIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-  );
-}
-
-function BellIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-  );
-}
-
-function UserIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
-}
-
-function LogoutIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  );
-}
-
-function MenuIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  );
-}
-
+/* ───────── icons ───────── */
+type IP = { className?: string };
+const sv = (className: string | undefined, d: React.ReactNode) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    {d}
+  </svg>
+);
+const StoreIcon = ({ className }: IP) => sv(className, <><path d="M3 9l1.5-5h15L21 9" /><path d="M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z" /><path d="M5 12v8h14v-8M10 20v-5h4v5" /></>);
+const HomeIcon = ({ className }: IP) => sv(className, <><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V21h14V9.5" /></>);
+const BagIcon = ({ className }: IP) => sv(className, <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18M16 10a4 4 0 0 1-8 0" /></>);
+const GridIcon = ({ className }: IP) => sv(className, <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>);
+const OrdersIcon = ({ className }: IP) => sv(className, <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 7h6M9 11h6M9 15h4" /></>);
+const UserIcon = ({ className }: IP) => sv(className, <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>);
+const SearchIcon = ({ className }: IP) => sv(className, <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>);
+const CartIcon = ({ className }: IP) => sv(className, <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" /></>);
+const BellIcon = ({ className }: IP) => sv(className, <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>);
+const ChevronDownIcon = ({ className }: IP) => sv(className, <path d="m6 9 6 6 6-6" />);
+const MenuIcon = ({ className }: IP) => sv(className, <path d="M4 6h16M4 12h16M4 18h16" />);
+const CloseIcon = ({ className }: IP) => sv(className, <path d="M18 6 6 18M6 6l12 12" />);
+const LogoutIcon = ({ className }: IP) => sv(className, <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5M21 12H9" /></>);
+const PhoneIcon = ({ className }: IP) => sv(className, <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" />);
+const MailIcon = ({ className }: IP) => sv(className, <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" /></>);
+const PinIcon = ({ className }: IP) => sv(className, <><path d="M12 22s7-6.5 7-12a7 7 0 0 0-14 0c0 5.5 7 12 7 12z" /><circle cx="12" cy="10" r="2.5" /></>);

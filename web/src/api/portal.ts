@@ -255,3 +255,9 @@ export async function updatePortalProfileApi(data: { email?: string; address?: s
   return res.data;
 }
 
+
+/** Signed-in password change. Other devices are signed out; this session (its refresh token) stays. */
+export async function changePortalPasswordApi(data: { currentPassword: string; newPassword: string; refreshToken?: string | null }) {
+  const res = await portalApi.post("/customer-portal/auth/change-password", data);
+  return res.data as { success: boolean; message: string };
+}

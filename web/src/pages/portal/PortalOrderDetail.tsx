@@ -72,6 +72,9 @@ export default function PortalOrderDetail() {
   const currentStepIdx = steps.indexOf(order.status);
   const isCancelled = order.status === "cancelled";
 
+  // API sends `statusHistory` (to_status, note, createdAt); older payloads used `status_history`.
+  const history: any[] = (order as any).statusHistory ?? (order as any).status_history ?? [];
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Top Bar */}
@@ -182,22 +185,22 @@ export default function PortalOrderDetail() {
         )}
 
         {/* Order Status History Log */}
-        {order.status_history && order.status_history.length > 0 && (
+        {history.length > 0 && (
           <div className="pt-3 border-t border-gray-100">
             <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
               Status Activity Log
             </h3>
             <div className="space-y-1.5">
-              {order.status_history.map((h: any) => (
+              {history.map((h: any) => (
                 <div key={h.id} className="text-xs text-gray-600 flex items-center justify-between bg-gray-50 p-2 rounded-lg">
                   <div className="flex items-center gap-2">
                     <span className="font-bold uppercase text-[10px] bg-white px-2 py-0.5 rounded border border-gray-200">
-                      {h.status}
+                      {String(h.to_status ?? h.status ?? "").replace(/_/g, " ")}
                     </span>
-                    {h.comment && <span className="text-gray-500">({h.comment})</span>}
+                    {(h.note ?? h.comment) && <span className="text-gray-500">({h.note ?? h.comment})</span>}
                   </div>
                   <span className="text-gray-400 text-[11px]">
-                    {new Date(h.createdAt).toLocaleTimeString("en-IN", {
+                    {new Date(h.createdAt ?? h.created_at).toLocaleTimeString("en-IN", {
                       hour: "2-digit",
                       minute: "2-digit",
                       day: "numeric",
@@ -225,7 +228,7 @@ export default function PortalOrderDetail() {
                 <div>
                   <h4 className="font-bold text-gray-900 text-sm">{item.product_name}</h4>
                   <div className="text-gray-400 font-mono text-[11px] mt-0.5">
-                    Unit Price: ₹{Number(item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    Unit Price: ₹{Number(item.rate ?? item.unit_price ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
@@ -233,7 +236,7 @@ export default function PortalOrderDetail() {
               <div className="text-right">
                 <div className="font-bold text-gray-700">Qty: {item.quantity}</div>
                 <div className="text-sm font-black text-gray-900 mt-0.5">
-                  ₹{Number(item.line_total || item.quantity * item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  ₹{Number(item.amount ?? item.line_total ?? item.quantity * Number(item.rate ?? item.unit_price ?? 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
               </div>
             </div>

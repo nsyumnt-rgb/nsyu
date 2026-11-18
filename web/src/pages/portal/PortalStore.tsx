@@ -4,7 +4,7 @@ import { getPortalCategoriesApi, getPortalProductsApi } from "../../api/portal";
 import { getMarketShop, type MarketShopDetail } from "../../api/marketplace";
 import { resolveAssetUrl } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
-import { ProductCard, ProductCardSkeleton, inr, priceInfo, primaryImage, type Category, type Product } from "../../components/StoreProduct";
+import { CatalogCard, inr, priceInfo, primaryImage, type Category, type Product } from "../../components/StoreProduct";
 import { KindIcon, ProductPlaceholder, productKind, tintFor } from "../../components/ProductArt";
 import { useCartQty } from "../../components/storefront/useCartQty";
 
@@ -84,7 +84,7 @@ export default function PortalStore() {
       {/* Categories */}
       {(categories === null || categories.length > 0) && (
         <section>
-          <SectionHead title="Shop by category" to="/portal/catalog" />
+          <SectionHead title="Featured categories" to="/portal/catalog" />
           <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-3 sm:gap-4 overflow-x-auto snap-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {categories === null
               ? Array.from({ length: 7 }).map((_, i) => <div key={i} className="shrink-0 w-[104px] sm:w-[124px] h-[136px] rounded-2xl bg-white ring-1 ring-slate-200/70 animate-pulse" />)
@@ -97,6 +97,7 @@ export default function PortalStore() {
                         {img ? <img src={img} alt="" loading="lazy" className="w-[78%] h-[78%] object-contain mix-blend-multiply" /> : <KindIcon kind={productKind(c.name)} className="w-8 h-8" />}
                       </span>
                       <span className="mt-2.5 text-[12.5px] sm:text-[13px] font-semibold text-navy-900 leading-tight line-clamp-2 capitalize">{c.name.toLowerCase()}</span>
+                      {(c as any).productCount !== undefined && <span className="text-[11.5px] text-slate-400 tabular">{(c as any).productCount} item{(c as any).productCount === 1 ? "" : "s"}</span>}
                     </Link>
                   );
                 })}
@@ -104,8 +105,8 @@ export default function PortalStore() {
         </section>
       )}
 
-      <ProductRail title="New arrivals" to="/portal/catalog?sort=newest" rail={newest} cardProps={cardProps} />
-      <ProductRail title="Best sellers" subtitle="Most bought at this shop" to="/portal/catalog?sort=popular" rail={popular} cardProps={cardProps} hideWhenEmpty />
+      <ProductRail title="Featured products" subtitle="Most bought at this shop" to="/portal/catalog?sort=popular" rail={popular} cardProps={cardProps} hideWhenEmpty />
+      <ProductRail title="Latest products" subtitle="Recently added to the store" to="/portal/catalog?sort=newest" rail={newest} cardProps={cardProps} />
       <ProductRail title="Special offers" subtitle="Biggest savings on MRP" to="/portal/catalog?sort=discount" rail={offers} cardProps={cardProps} hideWhenEmpty accent />
 
       {/* More to explore (grid) */}
@@ -114,8 +115,8 @@ export default function PortalStore() {
         {!more.loading && more.items.length === 0 ? (
           <EmptyCatalog />
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            {more.loading ? Array.from({ length: 10 }).map((_, i) => <ProductCardSkeleton key={i} />) : more.items.map((p) => <ProductCard key={p.id} product={p} {...cardProps(p)} />)}
+          <div className="grid grid-cols-1 min-[560px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {more.loading ? Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-[200px] rounded-2xl bg-white border border-border animate-pulse" />) : more.items.map((p) => <CatalogCard key={p.id} product={p} {...cardProps(p)} />)}
           </div>
         )}
         {inStockCount >= 10 && (
@@ -311,8 +312,8 @@ function ProductRail({
       </div>
       <div ref={ref} className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-3 sm:gap-4 overflow-x-auto snap-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(rail.loading ? Array.from({ length: 5 }) : rail.items).map((p: any, k) => (
-          <div key={p?.id ?? k} className="snap-start shrink-0 w-[46%] sm:w-[31%] lg:w-[calc((100%-4*16px)/5)]">
-            {p ? <ProductCard product={p} {...cardProps(p)} /> : <ProductCardSkeleton />}
+          <div key={p?.id ?? k} className="snap-start shrink-0 w-[86%] min-[560px]:w-[48%] lg:w-[calc((100%-2*16px)/3)] xl:w-[calc((100%-3*16px)/4)]">
+            {p ? <CatalogCard product={p} {...cardProps(p)} /> : <div className="h-[200px] rounded-2xl bg-white border border-border animate-pulse" />}
           </div>
         ))}
       </div>

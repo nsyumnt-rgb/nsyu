@@ -32,6 +32,9 @@ export interface Product {
   inventory: {
     availableStock: number;
     isAvailable: boolean;
+    availability?: "in_stock" | "low_stock" | "out_of_stock" | string;
+    /** Shop setting: show the exact stock number to customers. */
+    showStockQty?: boolean;
   };
 }
 
@@ -147,6 +150,106 @@ export function ProductCard({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ───────────────────────── Catalog card (grid / list) ───────────────────────── */
+
+/** Stock label that respects the shop's "show stock quantity" setting. */
+export function stockChip(p: Product): { text: string; cls: string } {
+  const n = Number(p.inventory?.availableStock ?? 0);
+  const low = p.inventory?.availability === "low_stock";
+  const exact = Boolean(p.inventory?.showStockQty);
+  if (n <= 0) return { text: exact ? "Stock: 0" : "Out of stock", cls: "bg-rose-50 text-rose-700" };
+  if (low) return { text: exact ? `Stock: ${n}` : "Low stock", cls: "bg-amber-100 text-amber-800" };
+  return { text: exact ? `Stock: ${n}` : "In stock", cls: "bg-emerald-50 text-emerald-700" };
+}
+
+export function CatalogCard({
+  product,
+  qty,
+  updating,
+  onQty,
+  layout = "grid",
+}: {
+  product: Product;
+  qty: number;
+  updating: boolean;
+  onQty: (q: number) => void;
+  layout?: "grid" | "list";
+}) {
+  const href = `/portal/product/${product.id}`;
+  const img = primaryImage(product);
+  const [imgFailed, setImgFailed] = useState(false);
+  const { price, mrp, off } = priceInfo(product);
+  const stock = Number(product.inventory?.availableStock ?? 0);
+  const out = stock <= 0;
+  const chip = stockChip(product);
+  const wished = useStorefront((s) => s.wishlist.includes(product.id));
+  const toggleWish = useStorefront((s) => s.toggleWishlist);
+  const bumpCart = useStorefront((s) => s.bumpCart);
+  const imgBox = useRef<HTMLAnchorElement>(null);
+  const add = () => {
+    flyToCart(imgBox.current);
+    bumpCart();
+    onQty(1);
+  };
+  const list = layout === "list";
+
+  const action =
+    qty > 0 ? (
+      <div className={`flex items-center justify-between rounded-xl bg-brand-700 text-white h-11 ${list ? "w-40" : "w-full"}`}>
+        <button type="button" disabled={updating} onClick={() => onQty(qty - 1)} className="w-11 h-full text-[18px] font-bold disabled:opacity-60" aria-label={`Remove one ${product.name}`}>−</button>
+        <span className="text-[13.5px] font-bold tabular">{updating ? "…" : `${qty} in cart`}</span>
+        <button type="button" disabled={updating || qty >= stock} onClick={() => { bumpCart(); onQty(qty + 1); }} className="w-11 h-full text-[18px] font-bold disabled:opacity-40" aria-label={`Add one more ${product.name}`}>+</button>
+      </div>
+    ) : (
+      <button
+        type="button"
+        disabled={updating || out}
+        onClick={add}
+        aria-label={`Add ${product.name} to cart`}
+        className={`h-11 rounded-xl bg-brand-700 hover:bg-brand-800 text-white text-[14px] font-bold inline-flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none ${list ? "w-40" : "w-full"}`}
+      >
+        {updating ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CartIcon className="w-[18px] h-[18px]" />}
+        {out ? "Out of stock" : "Add to Cart"}
+      </button>
+    );
+
+  return (
+    <div className={`group relative bg-white rounded-2xl border border-border p-4 transition hover:shadow-lift hover:border-brand-200 ${list ? "flex flex-col sm:flex-row sm:items-center gap-4" : "flex flex-col gap-4"}`}>
+      <button
+        type="button"
+        onClick={() => toggleWish(product.id)}
+        aria-pressed={wished}
+        aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+        className={`absolute right-3 top-3 w-8 h-8 rounded-full flex items-center justify-center transition ${wished ? "text-rose-600" : "text-slate-300 hover:text-rose-500"}`}
+      >
+        <HeartIcon filled={wished} className="w-[18px] h-[18px]" />
+      </button>
+      <div className="flex gap-4 min-w-0 flex-1">
+        <Link ref={imgBox} to={href} className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-xl bg-[#F3F4F2] overflow-hidden flex items-center justify-center" aria-label={`View ${product.name}`}>
+          {img && !imgFailed ? (
+            <img src={img} alt={product.name} loading="lazy" onError={() => setImgFailed(true)} className={`w-full h-full object-contain p-1.5 mix-blend-multiply transition-transform duration-300 group-hover:scale-105 ${out ? "opacity-50 grayscale" : ""}`} />
+          ) : (
+            <ProductPlaceholder name={product.name} category={product.category?.name} brand={product.brand} compact />
+          )}
+        </Link>
+        <div className="min-w-0 flex-1 pr-6">
+          <Link to={href} title={product.name} className="block text-[14.5px] font-bold text-navy-900 leading-snug line-clamp-2 hover:text-brand-700">
+            {product.name}
+          </Link>
+          <div className="text-[12px] text-slate-500 mt-1 truncate">SKU: {product.sku}</div>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-[17px] font-bold text-navy-900 font-mono tabular">{"₹" + price.toFixed(2)}</span>
+            {off > 0 && <span className="text-[12px] text-slate-400 line-through tabular">{inr(mrp)}</span>}
+            {off > 0 && <span className="text-[11.5px] font-bold text-rose-600">{off}% off</span>}
+          </div>
+          <span className={`mt-2 inline-block px-2.5 py-1 rounded-md text-[11.5px] font-bold tabular whitespace-nowrap ${chip.cls}`}>{chip.text}</span>
+        </div>
+      </div>
+      {action}
     </div>
   );
 }

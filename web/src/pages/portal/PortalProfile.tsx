@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePortalStore } from "../../store/portalStore";
-import { updatePortalProfileApi, logoutCustomerApi } from "../../api/portal";
+import { updatePortalProfileApi, logoutCustomerApi, changePortalPasswordApi } from "../../api/portal";
+import { apiErrorMessage } from "../../api/client";
 
 export default function PortalProfile() {
   const navigate = useNavigate();
@@ -173,6 +174,8 @@ export default function PortalProfile() {
         </div>
       </form>
 
+      <ChangePasswordCard />
+
       {/* Linked Shop Card */}
       <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
         <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider pb-2 border-b border-gray-100">
@@ -212,3 +215,60 @@ export default function PortalProfile() {
   );
 }
 
+
+/** Change password (needs the current one). Other devices are signed out; this one stays signed in. */
+function ChangePasswordCard() {
+  const refreshToken = usePortalStore((st) => st.refreshToken);
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    if (next.trim().length < 6) return setMsg({ ok: false, text: "New password must be at least 6 characters." });
+    if (next !== confirm) return setMsg({ ok: false, text: "The new passwords don't match." });
+    setBusy(true);
+    try {
+      const r = await changePortalPasswordApi({ currentPassword: current, newPassword: next, refreshToken });
+      setMsg({ ok: true, text: r.message || "Password changed." });
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+    } catch (err) {
+      setMsg({ ok: false, text: apiErrorMessage(err, "Could not change the password") });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+      <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Change password</h2>
+        <button type="button" onClick={() => setShow((v) => !v)} className="text-[12px] font-semibold text-brand-700 hover:underline">{show ? "Hide" : "Show"} passwords</button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <label className="block">
+          <span className="label">Current password</span>
+          <input type={show ? "text" : "password"} autoComplete="current-password" className="input" value={current} onChange={(e) => setCurrent(e.target.value)} placeholder="Leave empty if you only use OTP" />
+        </label>
+        <label className="block">
+          <span className="label">New password</span>
+          <input type={show ? "text" : "password"} autoComplete="new-password" minLength={6} required className="input" value={next} onChange={(e) => setNext(e.target.value)} placeholder="At least 6 characters" />
+        </label>
+        <label className="block">
+          <span className="label">Confirm new password</span>
+          <input type={show ? "text" : "password"} autoComplete="new-password" minLength={6} required className="input" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        </label>
+      </div>
+      {msg && <p className={`text-[13px] rounded-lg px-3 py-2 ${msg.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{msg.text}</p>}
+      <div className="flex justify-end">
+        <button type="submit" disabled={busy} className="btn-primary">{busy ? "Saving…" : "Change password"}</button>
+      </div>
+    </form>
+  );
+}

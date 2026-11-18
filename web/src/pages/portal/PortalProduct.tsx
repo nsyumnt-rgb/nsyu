@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { getPortalProductApi, getPortalProductsApi, setCartItemApi } from "../../api/portal";
 import { resolveAssetUrl } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
-import { CartIcon, ProductCard, inr, priceInfo, type Product } from "../../components/StoreProduct";
+import { CartIcon, CatalogCard, stockChip, inr, priceInfo, type Product } from "../../components/StoreProduct";
 import { ProductPlaceholder } from "../../components/ProductArt";
 import { flyToCart, useStorefront } from "../../store/storefrontStore";
 import { HeartIcon } from "../../components/StoreProduct";
@@ -205,6 +205,7 @@ export default function PortalProduct() {
           <h1 className="text-[24px] sm:text-[30px] font-bold leading-tight tracking-tight">{product.name}</h1>
           <p className="mt-2 text-[13px] text-slate-500">
             {product.sku ? <span className="font-mono text-slate-400">SKU {product.sku} · </span> : null}
+            {(product as any).barcode ? <span className="font-mono text-slate-400">Barcode {(product as any).barcode} · </span> : null}
             {product.brand ? <>{product.brand} · </> : null}
             Sold by <span className="font-semibold text-navy-900">{customer?.shop?.name || "this shop"}</span>
           </p>
@@ -222,7 +223,10 @@ export default function PortalProduct() {
           </p>
 
           <div className={`mt-4 text-[13.5px] font-semibold ${out ? "text-rose-600" : stock <= 5 ? "text-amber-700" : "text-emerald-700"}`}>
-            {out ? "Out of stock" : stock <= 5 ? `Only ${stock} left in stock` : "In stock"}
+            {(() => {
+              const c = stockChip(product);
+              return <span className={`inline-block px-2.5 py-1 rounded-md text-[12.5px] font-bold ${c.cls}`}>{c.text}</span>;
+            })()}
             {already > 0 && <span className="ml-2 font-medium text-slate-500">· {already} already in your cart</span>}
           </div>
 
@@ -285,6 +289,7 @@ export default function PortalProduct() {
             <dl className="grid grid-cols-1 sm:grid-cols-2 max-w-3xl border border-border rounded-2xl overflow-hidden">
               {[
                 ["SKU", product.sku],
+                ...((product as any).barcode ? [["Barcode", (product as any).barcode]] : []),
                 ["Brand", product.brand || "—"],
                 ["Category", product.category?.name || "—"],
                 ["GST", product.pricing?.gstPercent > 0 ? `${product.pricing.gstPercent}%` : "Included"],
@@ -304,10 +309,10 @@ export default function PortalProduct() {
       {/* Related */}
       {related.length > 0 && (
         <section className="space-y-6">
-          <h2 className="text-[22px] sm:text-[28px] font-semibold tracking-tight">Related products</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6">
+          <h2 className="text-[20px] sm:text-[24px] font-bold tracking-tight text-navy-900">Related products</h2>
+          <div className="grid grid-cols-1 min-[560px]:grid-cols-2 xl:grid-cols-4 gap-4">
             {related.map((p) => (
-              <ProductCard key={p.id} product={p} qty={inCart(p.id)} updating={updatingId === p.id} onQty={(q) => relatedQty(p.id, q)} />
+              <CatalogCard key={p.id} product={p} qty={inCart(p.id)} updating={updatingId === p.id} onQty={(q) => relatedQty(p.id, q)} />
             ))}
           </div>
         </section>

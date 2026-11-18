@@ -261,7 +261,8 @@ export default function PortalCart() {
                 </div>
                 <div className="min-w-0">
                   <div className="text-[14px] font-semibold text-navy-900">{customer?.name}</div>
-                  <div className="text-[12px] text-slate-500 truncate">{customer?.phone}{customer?.address ? ` · ${customer.address}` : ""}</div>
+                  <div className="text-[12px] text-slate-500 truncate">{[customer?.phone, customer?.email].filter(Boolean).join(" · ")}</div>
+                  {customer?.address && <div className="text-[12px] text-slate-500 truncate">{customer.address}</div>}
                 </div>
               </div>
 

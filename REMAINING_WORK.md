@@ -144,6 +144,35 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 3. Render → nsyu-backend-api → Environment → add `SUPABASE_SERVICE_ROLE_KEY` (secret). `SUPABASE_URL` and `SUPABASE_STORAGE_BUCKET` come from `render.yaml`; if the service doesn't use the blueprint, add them there too.
 4. Deploy the API. Until step 3 is done, uploads in production show "Image storage is not configured".
 
+## 10c. Sales screen + live bill-save fix (2026-11-18)
+
+- **Fixed (production):** the API's CORS allow-list lacked `X-Idempotency-Key`, so browsers blocked every bill save / new sale / payment from the live site. Fixed and pushed (`8d5aa9f`); `test:workflows` now sends the real browser preflight. **Needs the Render API redeploy.**
+- "Sales & POS" is now **Sales**: full-width product grid (photo, SKU, price, stock, add button), barcode/SKU Enter-to-add, category filter, bill in a drawer opened from a top-bar cart with item count.
+
+## 10d. Customer Portal rebuild (2026-11-18)
+
+**Done**
+- Dark-green sticky header (Home · Shop · Categories dropdown with counts · My Orders · My Account), search toggle, cart with live count, notifications, profile menu with logout; hamburger menu on phones. Matching footer with the shop's real phone / email / address from the database.
+- Home: shop banner slider, featured categories (with product counts), Featured products (best-selling), Latest products, more-to-explore grid.
+- Shop / catalog: category tiles with icons + live counts, search (name, SKU, **barcode**), price filter, sort (latest, price, best-selling, discount), grid/list toggle, new product cards (photo, name, SKU, price, stock, Add to Cart / qty stepper).
+- Product page: barcode shown, stock label, related products in the new card.
+- Checkout shows name, phone, email and address. Order totals stay server-calculated; duplicate submits are blocked by the existing `clientRequestId`.
+- My Account → **Change password** (new `POST /customer-portal/auth/change-password`: checks the current password, signs out other devices, keeps this one).
+- API: categories return `productCount`; catalog search matches barcode; products carry `inventory.showStockQty` so the store shows the exact stock number only when the shop allows it.
+
+**Bugs found and fixed**
+- Customer order detail showed **₹NaN** for every item price/total (page read `unit_price`/`line_total`; API sends `rate`/`amount`).
+- Customer order **status history never showed** (page read `status_history`; API sends `statusHistory` with `to_status`/`note`).
+- Header was 7px too wide on 375px phones (brand couldn't shrink).
+
+**Tests:** `test:workflows` 71 checks (barcode search, category counts, stock-qty flag, 9 change-password checks, customer-only access); full `test:all` green. Browser end-to-end on a local test DB: password login → catalog → add / + / out-of-stock disabled → cart → place order → order detail (prices + history after owner confirms) → change password (wrong / right) → logout → protected route redirects → old password 401 / new 200. All 12 portal pages checked at 1280px and 375px: no overflow, no NaN.
+
+**Pending / known issues**
+- Footer "Information" column (Privacy policy, Terms, Return policy) is not shown: there is no shop-configured policy text yet, and writing legal text for the shop would be fake. Needs an owner setting for these texts first.
+- The API still sends the exact stock number to customers even when the shop hides it (the store now hides it in the UI). Hiding it server-side needs a check that cart limits still work.
+- Promotional banners: no "promotions" data model exists, so none are shown.
+- RLS: unchanged — the portal still goes through the API, which scopes every query to the signed-in customer.
+
 ## 11. Required follow-up actions for the owner
 
 1. **Rotate** the super-admin password, the `nsyu.mnt` owner password, the database password and both JWT secrets (they were committed in the past).
