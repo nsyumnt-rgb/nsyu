@@ -202,6 +202,12 @@ async function main() {
       const allowed = (pre.headers.get("access-control-allow-headers") || "").toLowerCase();
       ok(pre.status < 300 && allowed.includes("x-idempotency-key") && pre.headers.get("access-control-allow-origin") === "https://nsyumnt-rgb.github.io", `browser preflight for ${label} allows x-idempotency-key from the live site`, allowed);
     }
+    for (const origin of ["https://nsyu.vercel.app", "https://nsyu.in", "https://www.nsyu.in"]) {
+      const pre = await fetch(base + "/auth/login", { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type" } });
+      ok(pre.status < 300 && pre.headers.get("access-control-allow-origin") === origin, `web app on ${origin} is allowed by CORS`, pre.status);
+    }
+    const evil = await fetch(base + "/auth/login", { method: "OPTIONS", headers: { Origin: "https://evil.example", "Access-Control-Request-Method": "POST" } });
+    ok(evil.headers.get("access-control-allow-origin") !== "https://evil.example", "unknown websites are still refused by CORS", evil.status);
     const overpay = await call("POST", "/ledger/payment", tokA, { customerId: c2.id, amount: 50, paymentMethod: "cash" });
     ok(overpay.status >= 400 || (await balanceOf(c2.id)) <= 0, "payment with nothing due is refused or recorded as advance", overpay.status);
     const led = await call("GET", `/ledger/${c2.id}`, tokA);

@@ -38,6 +38,10 @@ app.use(helmet({ crossOriginResourcePolicy: false })); // allow <img> tags to lo
 
 const allowedOrigins = [
   "https://nsyumnt-rgb.github.io",
+  // Production web app on Vercel and the shop's own domain
+  "https://nsyu.vercel.app",
+  "https://nsyu.in",
+  "https://www.nsyu.in",
   "http://localhost:5173",
   "http://localhost:3000",
   "http://127.0.0.1:5173",
