@@ -30,7 +30,7 @@ export interface Product {
     mrp?: number;
   };
   inventory: {
-    availableStock: number;
+    availableStock: number | null;
     isAvailable: boolean;
     availability?: "in_stock" | "low_stock" | "out_of_stock" | string;
     /** Shop setting: show the exact stock number to customers. */
@@ -74,8 +74,10 @@ export function ProductCard({
   const img = primaryImage(product);
   const [imgFailed, setImgFailed] = useState(false);
   const { price, mrp, off } = priceInfo(product);
-  const stock = product.inventory.availableStock;
-  const out = stock <= 0;
+  const hasExact = typeof product.inventory?.availableStock === "number";
+  const stock = hasExact ? (product.inventory.availableStock as number) : null;
+  const isAvailable = product.inventory?.isAvailable ?? (product.inventory?.availability !== "out_of_stock");
+  const out = !isAvailable || (stock !== null && stock <= 0);
   const wished = useStorefront((s) => s.wishlist.includes(product.id));
   const toggleWish = useStorefront((s) => s.toggleWishlist);
   const bumpCart = useStorefront((s) => s.bumpCart);
@@ -123,7 +125,17 @@ export function ProductCard({
           {product.name}
         </Link>
         <div className="mt-1 text-[11.5px] font-medium">
-          {out ? <span className="text-slate-400">Currently unavailable</span> : stock <= 5 ? <span className="text-amber-600">Only {stock} left</span> : <span className="text-emerald-600">In stock</span>}
+          {out ? (
+            <span className="text-slate-400">Currently unavailable</span>
+          ) : product.inventory?.availability === "low_stock" || (stock !== null && stock <= 5) ? (
+            <span className="text-amber-600">
+              {product.inventory?.showStockQty && stock !== null ? `Only ${stock} left` : "Low stock"}
+            </span>
+          ) : (
+            <span className="text-emerald-600">
+              {product.inventory?.showStockQty && stock !== null ? `In stock (${stock})` : "In stock"}
+            </span>
+          )}
         </div>
 
         <div className="mt-auto pt-2.5 flex items-end justify-between gap-2">
@@ -135,7 +147,7 @@ export function ProductCard({
             <div className="flex items-center rounded-xl bg-brand-600 text-white h-10 shadow-brand">
               <button type="button" disabled={updating} onClick={() => onQty(qty - 1)} className="w-8 h-full text-[17px] font-bold disabled:opacity-60" aria-label="Decrease quantity">−</button>
               <span className="w-6 text-center text-[13.5px] font-bold tabular">{updating ? "…" : qty}</span>
-              <button type="button" disabled={updating || qty >= stock} onClick={() => { bumpCart(); onQty(qty + 1); }} className="w-8 h-full text-[17px] font-bold disabled:opacity-40" aria-label="Increase quantity">+</button>
+              <button type="button" disabled={updating || (stock !== null && qty >= stock)} onClick={() => { bumpCart(); onQty(qty + 1); }} className="w-8 h-full text-[17px] font-bold disabled:opacity-40" aria-label="Increase quantity">+</button>
             </div>
           ) : (
             <button
@@ -158,12 +170,18 @@ export function ProductCard({
 
 /** Stock label that respects the shop's "show stock quantity" setting. */
 export function stockChip(p: Product): { text: string; cls: string } {
-  const n = Number(p.inventory?.availableStock ?? 0);
+  const isAvailable = p.inventory?.isAvailable ?? (p.inventory?.availability !== "out_of_stock");
   const low = p.inventory?.availability === "low_stock";
   const exact = Boolean(p.inventory?.showStockQty);
-  if (n <= 0) return { text: exact ? "Stock: 0" : "Out of stock", cls: "bg-rose-50 text-rose-700" };
-  if (low) return { text: exact ? `Stock: ${n}` : "Low stock", cls: "bg-amber-100 text-amber-800" };
-  return { text: exact ? `Stock: ${n}` : "In stock", cls: "bg-emerald-50 text-emerald-700" };
+  const n = typeof p.inventory?.availableStock === "number" ? p.inventory.availableStock : null;
+
+  if (!isAvailable || p.inventory?.availability === "out_of_stock" || (n !== null && n <= 0)) {
+    return { text: exact && n !== null ? `Stock: ${n}` : "Out of stock", cls: "bg-rose-50 text-rose-700" };
+  }
+  if (low || (n !== null && n <= 5)) {
+    return { text: exact && n !== null ? `Stock: ${n}` : "Low stock", cls: "bg-amber-100 text-amber-800" };
+  }
+  return { text: exact && n !== null ? `Stock: ${n}` : "In stock", cls: "bg-emerald-50 text-emerald-700" };
 }
 
 export function CatalogCard({
@@ -183,8 +201,10 @@ export function CatalogCard({
   const img = primaryImage(product);
   const [imgFailed, setImgFailed] = useState(false);
   const { price, mrp, off } = priceInfo(product);
-  const stock = Number(product.inventory?.availableStock ?? 0);
-  const out = stock <= 0;
+  const hasExact = typeof product.inventory?.availableStock === "number";
+  const stock = hasExact ? (product.inventory.availableStock as number) : null;
+  const isAvailable = product.inventory?.isAvailable ?? (product.inventory?.availability !== "out_of_stock");
+  const out = !isAvailable || (stock !== null && stock <= 0);
   const chip = stockChip(product);
   const wished = useStorefront((s) => s.wishlist.includes(product.id));
   const toggleWish = useStorefront((s) => s.toggleWishlist);
@@ -202,7 +222,7 @@ export function CatalogCard({
       <div className={`flex items-center justify-between rounded-xl bg-brand-700 text-white h-11 ${list ? "w-40" : "w-full"}`}>
         <button type="button" disabled={updating} onClick={() => onQty(qty - 1)} className="w-11 h-full text-[18px] font-bold disabled:opacity-60" aria-label={`Remove one ${product.name}`}>−</button>
         <span className="text-[13.5px] font-bold tabular">{updating ? "…" : `${qty} in cart`}</span>
-        <button type="button" disabled={updating || qty >= stock} onClick={() => { bumpCart(); onQty(qty + 1); }} className="w-11 h-full text-[18px] font-bold disabled:opacity-40" aria-label={`Add one more ${product.name}`}>+</button>
+        <button type="button" disabled={updating || (stock !== null && qty >= stock)} onClick={() => { bumpCart(); onQty(qty + 1); }} className="w-11 h-full text-[18px] font-bold disabled:opacity-40" aria-label={`Add one more ${product.name}`}>+</button>
       </div>
     ) : (
       <button

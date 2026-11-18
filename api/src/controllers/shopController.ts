@@ -309,12 +309,23 @@ export async function updateShopPortalSettings(req: Request, res: Response) {
       },
     });
 
-    const { showStockQty, allowSelfRegistration, allowOrders, minOrderValue, allowCustomerCancel } = req.body;
-    if (showStockQty !== undefined) settings.show_stock_qty = Boolean(showStockQty);
-    if (allowSelfRegistration !== undefined) settings.allow_self_registration = Boolean(allowSelfRegistration);
-    if (allowOrders !== undefined) settings.allow_orders = Boolean(allowOrders);
-    if (minOrderValue !== undefined) settings.min_order_value = Math.max(0, Number(minOrderValue) || 0);
-    if (allowCustomerCancel !== undefined) settings.allow_customer_cancel = Boolean(allowCustomerCancel);
+    const showStock = req.body.showStockQty !== undefined ? req.body.showStockQty : req.body.show_stock_qty;
+    const allowSelfReg = req.body.allowSelfRegistration !== undefined ? req.body.allowSelfRegistration : req.body.allow_self_registration;
+    const allowOrd = req.body.allowOrders !== undefined ? req.body.allowOrders : req.body.allow_orders;
+    const minVal = req.body.minOrderValue !== undefined ? req.body.minOrderValue : req.body.min_order_value;
+    const allowCancel = req.body.allowCustomerCancel !== undefined ? req.body.allowCustomerCancel : req.body.allow_customer_cancel;
+    const privPol = req.body.privacyPolicy !== undefined ? req.body.privacyPolicy : req.body.privacy_policy;
+    const terms = req.body.termsConditions !== undefined ? req.body.termsConditions : req.body.terms_conditions;
+    const retPol = req.body.returnPolicy !== undefined ? req.body.returnPolicy : req.body.return_policy;
+
+    if (showStock !== undefined) settings.show_stock_qty = Boolean(showStock);
+    if (allowSelfReg !== undefined) settings.allow_self_registration = Boolean(allowSelfReg);
+    if (allowOrd !== undefined) settings.allow_orders = Boolean(allowOrd);
+    if (minVal !== undefined) settings.min_order_value = Math.max(0, Number(minVal) || 0);
+    if (allowCancel !== undefined) settings.allow_customer_cancel = Boolean(allowCancel);
+    if (privPol !== undefined) settings.privacy_policy = privPol ? String(privPol).trim() : null;
+    if (terms !== undefined) settings.terms_conditions = terms ? String(terms).trim() : null;
+    if (retPol !== undefined) settings.return_policy = retPol ? String(retPol).trim() : null;
 
     await settings.save();
     return res.json({ success: true, message: "Portal settings updated", data: settings });

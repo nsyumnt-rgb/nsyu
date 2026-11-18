@@ -16,6 +16,7 @@ import {
   getPortalCategories,
   getPortalProducts,
   getPortalProduct,
+  getPortalShopPolicies,
 } from "../controllers/customerCatalogController";
 import {
   getCart,
@@ -62,8 +63,9 @@ router.use(requireCustomer);
 // Signed-in password change (needs the current password)
 router.post("/auth/change-password", changeCustomerPassword);
 
-// Dashboard
+// Dashboard & Shop Info
 router.get("/dashboard", getPortalDashboard);
+router.get("/shop/policies", getPortalShopPolicies);
 
 // Catalog
 router.get("/catalog/categories", getPortalCategories);

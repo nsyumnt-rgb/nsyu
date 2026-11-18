@@ -124,10 +124,12 @@ export default function PortalProduct() {
 
   const images = (product.images || []).map((i) => resolveAssetUrl(i.url)).filter(Boolean) as string[];
   const { price, mrp, off } = priceInfo(product);
-  const stock = Number(product.inventory?.availableStock ?? 0);
-  const out = stock <= 0;
+  const hasExact = typeof product.inventory?.availableStock === "number";
+  const stock = hasExact ? (product.inventory.availableStock as number) : null;
+  const isAvailable = product.inventory?.isAvailable ?? (product.inventory?.availability !== "out_of_stock");
+  const out = !isAvailable || (stock !== null && stock <= 0);
   const already = inCart(product.id);
-  const maxQty = Math.max(0, stock - already);
+  const maxQty = stock !== null ? Math.max(0, stock - already) : 99;
 
   return (
     <div className="space-y-10 pb-6">
@@ -222,7 +224,7 @@ export default function PortalProduct() {
             {product.pricing?.gstPercent > 0 ? `Price includes ${product.pricing.gstPercent}% GST` : "Inclusive of all taxes"}
           </p>
 
-          <div className={`mt-4 text-[13.5px] font-semibold ${out ? "text-rose-600" : stock <= 5 ? "text-amber-700" : "text-emerald-700"}`}>
+          <div className={`mt-4 text-[13.5px] font-semibold ${out ? "text-rose-600" : (stock !== null && stock <= 5) || product.inventory?.availability === "low_stock" ? "text-amber-700" : "text-emerald-700"}`}>
             {(() => {
               const c = stockChip(product);
               return <span className={`inline-block px-2.5 py-1 rounded-md text-[12.5px] font-bold ${c.cls}`}>{c.text}</span>;
@@ -236,14 +238,14 @@ export default function PortalProduct() {
               <span className="w-12 text-center text-[15px] font-bold text-navy-900 tabular" aria-live="polite">{qty}</span>
               <button type="button" disabled={qty >= maxQty} onClick={() => setQty((q) => Math.min(maxQty, q + 1))} className="w-11 h-full text-[18px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Increase quantity">+</button>
             </div>
-            <button type="button" disabled={out || maxQty <= 0 || busy !== null} onClick={() => addToCart(false)} className="btn-primary h-12 flex-1 text-[14.5px] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none">
+            <button type="button" disabled={out || (stock !== null && maxQty <= 0) || busy !== null} onClick={() => addToCart(false)} className="btn-primary h-12 flex-1 text-[14.5px] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none">
               <CartIcon className="w-4 h-4" /> {busy === "add" ? "Adding…" : "Add to cart"}
             </button>
-            <button type="button" disabled={out || maxQty <= 0 || busy !== null} onClick={() => addToCart(true)} className="btn-secondary h-12 flex-1 text-[14.5px] border-navy-900 text-navy-900">
+            <button type="button" disabled={out || (stock !== null && maxQty <= 0) || busy !== null} onClick={() => addToCart(true)} className="btn-secondary h-12 flex-1 text-[14.5px] border-navy-900 text-navy-900">
               {busy === "buy" ? "Please wait…" : "Buy now"}
             </button>
           </div>
-          {!out && maxQty <= 0 && <p className="text-[12.5px] text-amber-700 mt-2">All available stock is already in your cart.</p>}
+          {!out && stock !== null && maxQty <= 0 && <p className="text-[12.5px] text-amber-700 mt-2">All available stock is already in your cart.</p>}
           {message && (
             <div className={`mt-3 rounded-lg px-3 py-2 text-[13px] ${message.ok ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
               {message.text}

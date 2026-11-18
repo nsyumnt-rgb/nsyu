@@ -33,3 +33,32 @@ export function uploadShopBanner(shopId: number, file: File) {
 export function deleteShopBanner(shopId: number) {
   return api.delete<ApiEnvelope<{ bannerUrl: null; shop: Shop }>>(`/shops/${shopId}/banner`);
 }
+
+export interface ShopPortalSettingsData {
+  id?: number;
+  shop_id?: number;
+  show_stock_qty?: boolean;
+  showStockQty?: boolean;
+  allow_self_registration?: boolean;
+  allowSelfRegistration?: boolean;
+  allow_orders?: boolean;
+  allowOrders?: boolean;
+  min_order_value?: number;
+  minOrderValue?: number;
+  allow_customer_cancel?: boolean;
+  allowCustomerCancel?: boolean;
+  privacy_policy?: string | null;
+  privacyPolicy?: string | null;
+  terms_conditions?: string | null;
+  termsConditions?: string | null;
+  return_policy?: string | null;
+  returnPolicy?: string | null;
+}
+
+export function getShopPortalSettings(shopId: number) {
+  return api.get<ApiEnvelope<ShopPortalSettingsData>>(`/shops/${shopId}/portal-settings`);
+}
+
+export function updateShopPortalSettings(shopId: number, payload: Partial<ShopPortalSettingsData>) {
+  return api.put<ApiEnvelope<ShopPortalSettingsData>>(`/shops/${shopId}/portal-settings`, payload);
+}

@@ -195,9 +195,9 @@ export async function getPortalProducts(req: Request, res: Response) {
         images: (p as any).images?.map((img: any) => ({ id: img.id, url: img.url, is_primary: img.is_primary })) || [],
         availability,
         ...(sort === "popular" ? { unitsSold: Number((p as any).get("units_sold") || 0) } : {}),
-        stock: currentStock,
-        stockQuantity: currentStock,
-        availableStock: currentStock,
+        stock: showExactStock ? currentStock : null,
+        stockQuantity: showExactStock ? currentStock : null,
+        availableStock: showExactStock ? currentStock : null,
         pricing: {
           sellingPrice: priceVal,
           sellingPriceInclTax: priceVal,
@@ -207,8 +207,9 @@ export async function getPortalProducts(req: Request, res: Response) {
           gstPercent: gstVal,
         },
         inventory: {
-          availableStock: currentStock,
+          availableStock: showExactStock ? currentStock : null,
           inStock: currentStock > 0,
+          isAvailable: currentStock > 0,
           availability,
           // Shop setting "show stock quantity to customers": the storefront shows the
           // number only when this is true, otherwise just in / low / out of stock.
@@ -313,9 +314,9 @@ export async function getPortalProduct(req: Request, res: Response) {
         imageUrl: primaryImg ? primaryImg.url : null,
         images: (product as any).images?.map((img: any) => ({ id: img.id, url: img.url, is_primary: img.is_primary })) || [],
         availability,
-        stock: currentStock,
-        stockQuantity: currentStock,
-        availableStock: currentStock,
+        stock: showExactStock ? currentStock : null,
+        stockQuantity: showExactStock ? currentStock : null,
+        availableStock: showExactStock ? currentStock : null,
         pricing: {
           sellingPrice: priceVal,
           sellingPriceInclTax: priceVal,
@@ -325,8 +326,9 @@ export async function getPortalProduct(req: Request, res: Response) {
           gstPercent: gstVal,
         },
         inventory: {
-          availableStock: currentStock,
+          availableStock: showExactStock ? currentStock : null,
           inStock: currentStock > 0,
+          isAvailable: currentStock > 0,
           availability,
           // Shop setting "show stock quantity to customers": the storefront shows the
           // number only when this is true, otherwise just in / low / out of stock.
@@ -336,5 +338,26 @@ export async function getPortalProduct(req: Request, res: Response) {
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Failed to load product" });
+  }
+}
+
+/**
+ * GET /api/customer-portal/shop/policies
+ * Returns the shop's configured policies (Privacy Policy, Terms, Return Policy).
+ */
+export async function getPortalShopPolicies(req: Request, res: Response) {
+  try {
+    const shopId = req.customer!.shopId;
+    const settings = await ShopPortalSettings.findOne({ where: { shop_id: shopId } });
+    return res.json({
+      success: true,
+      data: {
+        privacyPolicy: settings?.privacy_policy || null,
+        termsConditions: settings?.terms_conditions || null,
+        returnPolicy: settings?.return_policy || null,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to load shop policies" });
   }
 }

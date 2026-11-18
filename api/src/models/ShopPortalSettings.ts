@@ -9,6 +9,9 @@ export interface ShopPortalSettingsAttributes {
   allow_orders: boolean;
   min_order_value: number;
   allow_customer_cancel: boolean;
+  privacy_policy?: string | null;
+  terms_conditions?: string | null;
+  return_policy?: string | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -22,6 +25,9 @@ export interface ShopPortalSettingsCreationAttributes
     | "allow_orders"
     | "min_order_value"
     | "allow_customer_cancel"
+    | "privacy_policy"
+    | "terms_conditions"
+    | "return_policy"
     | "created_at"
     | "updated_at"
   > {}
@@ -37,6 +43,9 @@ export class ShopPortalSettings
   public allow_orders!: boolean;
   public min_order_value!: number;
   public allow_customer_cancel!: boolean;
+  public privacy_policy?: string | null;
+  public terms_conditions?: string | null;
+  public return_policy?: string | null;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 }
@@ -50,6 +59,9 @@ ShopPortalSettings.init(
     allow_orders: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     min_order_value: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     allow_customer_cancel: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
+    privacy_policy: { type: DataTypes.TEXT, allowNull: true },
+    terms_conditions: { type: DataTypes.TEXT, allowNull: true },
+    return_policy: { type: DataTypes.TEXT, allowNull: true },
   },
   {
     sequelize,

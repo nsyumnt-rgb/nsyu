@@ -115,6 +115,11 @@ async function ensureEmployeeSchema() {
   await runSqlMigration("07_employee_accounts.sql", "Employee accounts schema verified");
 }
 
+/** Shop store policies: privacy policy, terms, return policy (additive, idempotent). */
+async function ensureShopPoliciesSchema() {
+  await runSqlMigration("08_shop_policies.sql", "Shop policies schema verified");
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -124,6 +129,7 @@ async function start() {
     await ensureIdentitySchema();
     await ensureShopApprovalSchema();
     await ensureEmployeeSchema();
+    await ensureShopPoliciesSchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../store/portalStore";
-import { getCartApi, getPortalCategoriesApi, getPortalUnreadCountApi, logoutCustomerApi } from "../api/portal";
+import { getCartApi, getPortalCategoriesApi, getPortalShopPoliciesApi, getPortalUnreadCountApi, logoutCustomerApi } from "../api/portal";
 import { getMarketShop } from "../api/marketplace";
 import { resolveAssetUrl } from "../api/client";
 import { useStorefront } from "../store/storefrontStore";
@@ -36,6 +36,8 @@ export default function CustomerPortalLayout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [bumping, setBumping] = useState(false);
+  const [policies, setPolicies] = useState<{ privacyPolicy: string; termsConditions: string; returnPolicy: string } | null>(null);
+  const [policyModal, setPolicyModal] = useState<{ title: string; text: string } | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const catsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -58,6 +60,11 @@ export default function CustomerPortalLayout() {
       getMarketShop(customer.shop.code)
         .then((s) => setLogo(s?.logo ? resolveAssetUrl(s.logo) : null))
         .catch(() => setLogo(null));
+    }
+    if (customer?.shop?.id) {
+      getPortalShopPoliciesApi()
+        .then((p) => setPolicies(p))
+        .catch(() => setPolicies(null));
     }
   }, [customer?.shop?.id, customer?.shop?.code, customer?.id, bindWishlist]);
 
@@ -308,7 +315,7 @@ export default function CustomerPortalLayout() {
 
       {/* ───────────── Footer ───────────── */}
       <footer className="bg-navy-900 text-emerald-50/75">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.2fr] gap-8 text-[13.5px]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] gap-8 text-[13.5px]">
           <div>
             <div className="flex items-center gap-3">
               <span className={`w-11 h-11 rounded-xl flex items-center justify-center overflow-hidden ${logo ? "bg-white" : "bg-white/10 text-white"}`}>
@@ -336,6 +343,38 @@ export default function CustomerPortalLayout() {
             </ul>
           </div>
           <div>
+            <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white">Information</div>
+            <ul className="mt-3 space-y-2">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setPolicyModal({ title: "Privacy Policy", text: policies?.privacyPolicy || "" })}
+                  className="hover:text-white text-left transition"
+                >
+                  Privacy Policy
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setPolicyModal({ title: "Terms & Conditions", text: policies?.termsConditions || "" })}
+                  className="hover:text-white text-left transition"
+                >
+                  Terms & Conditions
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setPolicyModal({ title: "Return & Refund Policy", text: policies?.returnPolicy || "" })}
+                  className="hover:text-white text-left transition"
+                >
+                  Return Policy
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div>
             <div className="text-[12px] font-semibold uppercase tracking-[0.12em] text-white">Customer support</div>
             <ul className="mt-3 space-y-2.5">
               {customer?.shop?.phone && (
@@ -358,6 +397,52 @@ export default function CustomerPortalLayout() {
           </div>
         </div>
       </footer>
+
+      {policyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in text-navy-900">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-base font-bold text-navy-900">{policyModal.title}</h3>
+              <button
+                type="button"
+                onClick={() => setPolicyModal(null)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                aria-label="Close dialog"
+              >
+                <CloseIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh] text-[13.5px] leading-relaxed text-slate-600">
+              {policyModal.text ? (
+                <div className="whitespace-pre-wrap">{policyModal.text}</div>
+              ) : (
+                <div className="text-center py-6">
+                  <div className="text-3xl mb-2">📜</div>
+                  <p className="font-semibold text-slate-800">No published policy text yet</p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                    {shopName} has not published a specific {policyModal.title.toLowerCase()} yet. Please contact the shop directly for details or assistance.
+                  </p>
+                  {(customer?.shop?.phone || customer?.shop?.email) && (
+                    <div className="mt-4 text-xs text-brand-700 font-semibold space-y-1">
+                      {customer?.shop?.phone && <div>📞 {customer.shop.phone}</div>}
+                      {customer?.shop?.email && <div>✉️ {customer.shop.email}</div>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-3.5 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPolicyModal(null)}
+                className="px-5 py-2 rounded-xl bg-brand-600 text-white font-semibold text-xs hover:bg-brand-700 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CartDrawer />
     </div>

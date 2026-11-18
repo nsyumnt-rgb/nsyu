@@ -4,6 +4,7 @@ import RequireModule from "../components/RequireModule";
 import { useAuthStore } from "../store/authStore";
 import { api } from "../api/client";
 import ShopBannerCard from "../components/ShopBannerCard";
+import ShopPortalSettingsCard from "../components/ShopPortalSettingsCard";
 
 interface FullSettingsState {
   // 1. General (Account, Preferences, Theme)
@@ -1329,6 +1330,8 @@ function SettingsInner() {
           </div>
         </div>
       )}
+
+      {activeTab === "shop" && <ShopPortalSettingsCard />}
 
       {/* ========================================================================= */}
       {/* 4. INVOICE TAB                                                            */}

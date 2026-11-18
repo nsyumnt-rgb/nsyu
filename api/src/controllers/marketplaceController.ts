@@ -220,6 +220,11 @@ export async function getMarketShop(req: Request, res: Response) {
         banner: (shop.settings as any)?.bannerUrl || null,
         acceptsOrders: settings ? Boolean(settings.allow_orders) : true,
         minOrderValue: Number(settings?.min_order_value || 0),
+        policies: {
+          privacyPolicy: settings?.privacy_policy || null,
+          termsConditions: settings?.terms_conditions || null,
+          returnPolicy: settings?.return_policy || null,
+        },
         categories: (cats as any[]).map((c) => ({ name: c.name, count: Number(c.count) })),
       },
     });

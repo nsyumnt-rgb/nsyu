@@ -159,17 +159,18 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 - Checkout shows name, phone, email and address. Order totals stay server-calculated; duplicate submits are blocked by the existing `clientRequestId`.
 - My Account → **Change password** (new `POST /customer-portal/auth/change-password`: checks the current password, signs out other devices, keeps this one).
 - API: categories return `productCount`; catalog search matches barcode; products carry `inventory.showStockQty` so the store shows the exact stock number only when the shop allows it.
+- **Store Policies & Legal Terms in Footer**: Added `08_shop_policies.sql` migration (`privacy_policy`, `terms_conditions`, `return_policy` in `shop_portal_settings`), exposed owner settings in Settings → Shop tab (`ShopPortalSettingsCard`), added `GET /api/customer-portal/shop/policies` endpoint, and added the "Information" column in the customer footer with an accessible modal to display the shop's real policies (or a polite message if not yet published, avoiding fake text).
+- **Server-Side Stock Quantity Masking**: When `show_stock_qty` is false (default), the catalog API masks `stock`, `stockQuantity`, and `availableStock` to `null` to prevent competitor scraping while returning `inStock`, `isAvailable`, and `availability`. Updated frontend cards (`StoreProduct.tsx`, `PortalProduct.tsx`) to properly handle masked stock. Cart mutations continue to query DB inventory directly, strictly enforcing real stock limits.
 
 **Bugs found and fixed**
 - Customer order detail showed **₹NaN** for every item price/total (page read `unit_price`/`line_total`; API sends `rate`/`amount`).
 - Customer order **status history never showed** (page read `status_history`; API sends `statusHistory` with `to_status`/`note`).
 - Header was 7px too wide on 375px phones (brand couldn't shrink).
+- Add to Cart was disabled when stock was masked server-side (`availableStock: null` evaluated to `<= 0`); fixed to check `isAvailable` boolean while cart validates limits.
 
-**Tests:** `test:workflows` 71 checks (barcode search, category counts, stock-qty flag, 9 change-password checks, customer-only access); full `test:all` green. Browser end-to-end on a local test DB: password login → catalog → add / + / out-of-stock disabled → cart → place order → order detail (prices + history after owner confirms) → change password (wrong / right) → logout → protected route redirects → old password 401 / new 200. All 12 portal pages checked at 1280px and 375px: no overflow, no NaN.
+**Tests:** `test:all` green (461 checks passed across 9 suites: `test:roles` 104, `test:workflows` 75, `test:staff` 55, `test:isolation` 57, `test:phase-a` 51, `test:marketplace` 23, `test:market-cart` 42, `test:shop-approval` 12, `test:media` 42). Both frontend (`vite build`) and backend (`tsc`) compile with 0 errors.
 
 **Pending / known issues**
-- Footer "Information" column (Privacy policy, Terms, Return policy) is not shown: there is no shop-configured policy text yet, and writing legal text for the shop would be fake. Needs an owner setting for these texts first.
-- The API still sends the exact stock number to customers even when the shop hides it (the store now hides it in the UI). Hiding it server-side needs a check that cart limits still work.
 - Promotional banners: no "promotions" data model exists, so none are shown.
 - RLS: unchanged — the portal still goes through the API, which scopes every query to the signed-in customer.
 

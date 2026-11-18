@@ -129,6 +129,15 @@ export async function logoutCustomerApi() {
 }
 
 /* ---------------- Catalog & Cart ---------------- */
+export async function getPortalShopPoliciesApi() {
+  const res = await portalApi.get("/customer-portal/shop/policies");
+  return res.data?.data as {
+    privacyPolicy: string;
+    termsConditions: string;
+    returnPolicy: string;
+  };
+}
+
 export async function getPortalCategoriesApi() {
   const res = await portalApi.get("/customer-portal/catalog/categories");
   return res.data?.data || [];
