@@ -9,6 +9,7 @@ import {
   loginWithPassword,
   forgotPassword,
   resetPasswordWithOtp,
+  changeCustomerPassword,
   getPortalDashboard,
 } from "../controllers/customerAuthController";
 import {
@@ -57,6 +58,9 @@ router.post("/auth/register", selfRegisterCustomer);
 
 /* ---------------- Protected Customer Routes ---------------- */
 router.use(requireCustomer);
+
+// Signed-in password change (needs the current password)
+router.post("/auth/change-password", changeCustomerPassword);
 
 // Dashboard
 router.get("/dashboard", getPortalDashboard);

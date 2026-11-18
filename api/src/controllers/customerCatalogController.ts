@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op, literal } from "sequelize";
+import { Op, col, fn, literal } from "sequelize";
 import { Product, ProductStock, Category, ProductImage, ShopPortalSettings, Shop } from "../models";
 
 function round2(n: number): number {
@@ -38,12 +38,22 @@ export async function getPortalCategories(req: Request, res: Response) {
       })
     );
 
+    // Active products per category, for "Cables (32)" style tiles. One grouped query.
+    const countRows = (await Product.findAll({
+      where: { owner_id: ownerId, status: "active" },
+      attributes: ["category_id", [fn("COUNT", col("id")), "n"]],
+      group: ["category_id"],
+      raw: true,
+    })) as any[];
+    const countByCategory = new Map<number, number>(countRows.map((r) => [Number(r.category_id), Number(r.n) || 0]));
+
     return res.json({
       success: true,
       data: categories.map((c) => ({
         id: c.id,
         name: c.name,
         imageUrl: imageByCategory.get(c.id) ?? null,
+        productCount: countByCategory.get(c.id) ?? 0,
       })),
     });
   } catch (err: any) {
@@ -97,6 +107,7 @@ export async function getPortalProducts(req: Request, res: Response) {
       where[Op.or] = [
         { name: { [Op.like]: q } },
         { sku: { [Op.like]: q } },
+        { barcode: { [Op.like]: q } },
         { brand: { [Op.like]: q } },
         { description: { [Op.like]: q } },
       ];
@@ -199,6 +210,9 @@ export async function getPortalProducts(req: Request, res: Response) {
           availableStock: currentStock,
           inStock: currentStock > 0,
           availability,
+          // Shop setting "show stock quantity to customers": the storefront shows the
+          // number only when this is true, otherwise just in / low / out of stock.
+          showStockQty: showExactStock,
         },
       };
     });
@@ -284,6 +298,7 @@ export async function getPortalProduct(req: Request, res: Response) {
         desc: product.name,
         sku: product.sku,
         code: product.sku,
+        barcode: (product as any).barcode || null,
         brand: product.brand,
         description: product.description,
         spec: product.description,
@@ -313,6 +328,9 @@ export async function getPortalProduct(req: Request, res: Response) {
           availableStock: currentStock,
           inStock: currentStock > 0,
           availability,
+          // Shop setting "show stock quantity to customers": the storefront shows the
+          // number only when this is true, otherwise just in / low / out of stock.
+          showStockQty: showExactStock,
         },
       },
     });

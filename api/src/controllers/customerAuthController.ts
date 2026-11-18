@@ -1090,3 +1090,50 @@ export async function getPortalDashboard(req: Request, res: Response) {
     return res.status(500).json({ success: false, message: err.message || "Failed to load dashboard metrics" });
   }
 }
+
+/**
+ * POST /api/customer-portal/auth/change-password   (signed-in customer)
+ * Body: { currentPassword, newPassword, refreshToken? }
+ * Checks the current password (if the account has one — OTP-only accounts can set
+ * their first password), stores the new bcrypt hash, syncs Supabase Auth, and signs
+ * out every other session. The session that sent `refreshToken` stays signed in.
+ */
+export async function changeCustomerPassword(req: Request, res: Response) {
+  try {
+    const { currentPassword, newPassword, refreshToken } = req.body || {};
+    const next = String(newPassword ?? "").trim();
+    if (next.length < 6) {
+      return res.status(400).json({ success: false, message: "New password must be at least 6 characters." });
+    }
+
+    const account = await CustomerAccount.findByPk(req.customer!.accountId);
+    if (!account || Number(account.customer_id) !== Number(req.customer!.customerId)) {
+      return res.status(401).json({ success: false, message: "Invalid session" });
+    }
+
+    if (account.password_hash) {
+      const ok = await bcrypt.compare(String(currentPassword ?? "").trim(), account.password_hash);
+      if (!ok) return res.status(400).json({ success: false, message: "Current password is incorrect." });
+      if (await bcrypt.compare(next, account.password_hash)) {
+        return res.status(400).json({ success: false, message: "New password must be different from the current one." });
+      }
+    }
+
+    const passwordHash = await bcrypt.hash(next, 10);
+    account.password_hash = passwordHash;
+    await account.save();
+    if (account.email) await updateSupabaseAuthPassword(account.email, passwordHash);
+
+    const keep = refreshToken ? hashString(String(refreshToken)) : null;
+    await CustomerRefreshToken.update(
+      { revoked_at: new Date() },
+      { where: { account_id: account.id, revoked_at: null, ...(keep ? { token_hash: { [Op.ne]: keep } } : {}) } }
+    );
+
+    await logAudit({ req, module: "customer_portal", action: "change_password", entityType: "CustomerAccount", entityId: account.id });
+    return res.json({ success: true, message: "Password changed. Other devices have been signed out." });
+  } catch (err: any) {
+    console.error("changeCustomerPassword error:", err);
+    return res.status(500).json({ success: false, message: "Could not change the password" });
+  }
+}

@@ -80,6 +80,31 @@ async function main() {
     ok(cat1.status === 200 && cat1.json.data.some((p: any) => p.id === prod.id), "browse category shows the product", cat1.text);
     const srch = await call("GET", "/customer-portal/catalog/products?search=charger", tokC);
     ok(srch.status === 200 && srch.json.data.length === 1, "search finds the product", srch.json?.data?.length);
+    await Product.update({ barcode: "8907654323814" }, { where: { id: prod.id } });
+    const byBarcode = await call("GET", "/customer-portal/catalog/products?search=8907654323814", tokC);
+    ok(byBarcode.status === 200 && byBarcode.json.data.length === 1 && byBarcode.json.data[0].id === prod.id, "search finds the product by barcode", byBarcode.json?.data?.length);
+    const cats = await call("GET", "/customer-portal/catalog/categories", tokC);
+    const catRow = (cats.json?.data || []).find((c: any) => c.id === cat.id);
+    ok(cats.status === 200 && catRow?.productCount === 1, "categories report their active product count", catRow);
+    const catsB = await call("GET", "/customer-portal/catalog/categories", tokB);
+    ok(catsB.status === 401 || catsB.status === 403, "staff/owner tokens can't use the customer catalog", catsB.status);
+    ok(cats.json?.data !== undefined && (await call("GET", `/customer-portal/catalog/products/${prod.id}`, tokC)).json?.data?.inventory?.showStockQty === false, "product says stock quantity is hidden unless the shop enables it");
+
+    // Customer "change password" (My Account)
+    const cp = (body: any, tok = tokC) => call("POST", "/customer-portal/auth/change-password", tok, body);
+    ok((await cp({ newPassword: "abc" })).status === 400, "change password: too-short password refused");
+    const first = await cp({ newPassword: "first-pass-1" });
+    ok(first.status === 200, "change password: OTP-only account can set its first password", first.text);
+    ok((await cp({ currentPassword: "wrong-pass", newPassword: "second-pass-2" })).status === 400, "change password: wrong current password refused");
+    ok((await cp({ currentPassword: "first-pass-1", newPassword: "first-pass-1" })).status === 400, "change password: new must differ from current");
+    const second = await cp({ currentPassword: "first-pass-1", newPassword: "second-pass-2" });
+    ok(second.status === 200, "change password: correct current password accepted", second.text);
+    const relog = await call("POST", "/customer-portal/auth/login", "", { identifier: "wfc@test.local", password: "second-pass-2", shopId: shopA.id });
+    ok(relog.status === 200 && relog.json?.data?.accessToken, "customer can log in with the new password", relog.text);
+    const oldPw = await call("POST", "/customer-portal/auth/login", "", { identifier: "wfc@test.local", password: "first-pass-1", shopId: shopA.id });
+    ok(oldPw.status === 401 || oldPw.status === 400, "old password no longer works", oldPw.status);
+    ok((await cp({ currentPassword: "x", newPassword: "whatever-1" }, "")).status === 401, "change password needs a signed-in customer");
+    ok([401, 403].includes((await cp({ currentPassword: "x", newPassword: "whatever-1" }, tokA)).status), "owner/staff tokens can't use customer change password");
     const det = await call("GET", `/customer-portal/catalog/products/${prod.id}`, tokC);
     ok(det.status === 200 && !/purchase_?price/i.test(det.text), "product details load without cost price", det.status);
     let cart = await call("PUT", `/customer-portal/cart/items/${prod.id}`, tokC, { quantity: 2 });
