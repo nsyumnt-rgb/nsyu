@@ -320,6 +320,56 @@ export function Meter({ value, max, tone = "brand", className = "" }: { value: n
   );
 }
 
+/* ── Icon button (row actions) ─────────────────────────────── */
+
+export function IconButton({ title, icon, onClick, to, tone }: { title: string; icon: IconName; onClick?: () => void; to?: string; tone?: "brand" | "rose" }) {
+  const cls = `w-8 h-8 rounded-lg flex items-center justify-center transition ${
+    tone === "rose" ? "text-slate-400 hover:bg-rose-50 hover:text-rose-600" : tone === "brand" ? "text-brand-600 hover:bg-brand-50" : "text-slate-500 hover:bg-slate-100 hover:text-navy-900"
+  }`;
+  if (to)
+    return (
+      <Link to={to} title={title} aria-label={title} className={cls}>
+        <Icon name={icon} className="w-4 h-4" />
+      </Link>
+    );
+  return (
+    <button type="button" onClick={onClick} title={title} aria-label={title} className={cls}>
+      <Icon name={icon} className="w-4 h-4" />
+    </button>
+  );
+}
+
+export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="inline-flex items-center gap-2 text-[12.5px] font-medium text-slate-600 cursor-pointer select-none">
+      <span className={`relative w-9 h-5 rounded-full transition ${checked ? "bg-brand-600" : "bg-slate-300"}`}>
+        <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
+      </span>
+      {label}
+    </label>
+  );
+}
+
+/** Pill-style choice buttons (payment method etc.). */
+export function ChoiceGroup<K extends string>({ value, onChange, options, cols = 4 }: { value: K; onChange: (k: K) => void; options: [K, string][]; cols?: 2 | 3 | 4 | 5 }) {
+  const grid = { 2: "grid-cols-2", 3: "grid-cols-3", 4: "grid-cols-2 sm:grid-cols-4", 5: "grid-cols-3 sm:grid-cols-5" }[cols];
+  return (
+    <div className={`grid ${grid} gap-2`}>
+      {options.map(([k, l]) => (
+        <button
+          key={k}
+          type="button"
+          onClick={() => onChange(k)}
+          className={`rounded-lg px-3 py-2 text-[12.5px] font-semibold ring-1 transition ${value === k ? "ring-2 ring-brand-500 bg-brand-50 text-brand-800" : "ring-border text-slate-600 hover:ring-slate-300"}`}
+        >
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Toast({ text, ok = true }: { text: string; ok?: boolean }) {
   return (
     <div className={`fixed bottom-5 right-5 left-5 sm:left-auto z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lift text-[13px] font-medium animate-fade-in ${ok ? "bg-navy-900 text-white" : "bg-rose-600 text-white"}`}>

@@ -192,7 +192,10 @@ export async function getOrderById(req: Request, res: Response) {
         { model: OrderItem, as: "items" },
         { model: Customer, as: "customer" },
         { model: Shop, as: "shop", attributes: ["id", "name", "address", "phone", "email", "logo"] },
+        // Real status timeline for the order view / tracking screen.
+        { model: OrderStatusHistory, as: "statusHistory" },
       ],
+      order: [[{ model: OrderStatusHistory, as: "statusHistory" }, "created_at", "ASC"]],
     });
 
     if (!order) {

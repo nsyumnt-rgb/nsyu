@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   getSalesReport,
@@ -12,6 +12,7 @@ import { apiErrorMessage } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { usePermission } from "../hooks/usePermission";
 import RequireModule from "../components/RequireModule";
+import { Avatar, EmptyState, Icon, Meter, PageHeader, Segmented, StatCard, Switch, TONE, type IconName, type Tone } from "../components/ui";
 
 function ReportsInner() {
   const shopId = useAuthStore((s) => s.shopId);
@@ -86,598 +87,544 @@ function ReportsInner() {
     loadReport();
   }, [shopId, activeTab, allShopsToggle, from, to]);
 
+  const tabs: { id: TabId; label: string; icon: IconName; tone: Tone }[] = [
+    { id: "sales", label: "Sales", icon: "trend", tone: "brand" },
+    { id: "purchases", label: "Purchases", icon: "truck", tone: "violet" },
+    { id: "profit", label: "Gross profit", icon: "rupee", tone: "emerald" },
+    { id: "inventory", label: "Stock valuation", icon: "layers", tone: "sky" },
+    { id: "outstanding", label: "Customer dues", icon: "users", tone: "amber" },
+    ...(isOwner ? [{ id: "performance" as TabId, label: "Shop performance", icon: "box" as IconName, tone: "slate" as Tone }] : []),
+  ];
+
+  const presets: [string, string, string][] = (() => {
+    const d = new Date();
+    const ymd = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+    const today = ymd(d);
+    return [
+      ["All time", "", ""],
+      ["This month", ymd(new Date(d.getFullYear(), d.getMonth(), 1)), today],
+      ["Last 30 days", ymd(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 29)), today],
+      ["This year", ymd(new Date(d.getFullYear(), 0, 1)), today],
+    ];
+  })();
+  const activePreset = presets.find(([, f, t]) => f === from && t === to)?.[0] ?? "Custom";
+
+  const S = reportData?.summary ?? {};
+  const rows = {
+    sales: (reportData?.sales || []) as any[],
+    purchases: (reportData?.purchases || []) as any[],
+    profit: (reportData?.byProduct || []) as any[],
+    inventory: (reportData?.lines || reportData?.items || []) as any[],
+    outstanding: (reportData?.customers || []) as any[],
+    performance: (reportData?.shops || []) as any[],
+  };
+
+  function exportCsv() {
+    const d = (v: string) => (v ? new Date(v).toISOString().slice(0, 10) : "");
+    let head: string[] = [];
+    let body: (string | number)[][] = [];
+    switch (activeTab) {
+      case "sales":
+        head = ["Invoice", "Date", "Customer", "Shop", "Subtotal", "Discount", "Tax", "Total", "Paid", "Due"];
+        body = rows.sales.map((s) => [s.invoice_number, d(s.invoice_date), s.customer?.name || "Walk-in", s.shop?.name || "", s.subtotal, s.discount_amount, s.tax_amount, s.total_amount, s.paid_amount, s.due_amount]);
+        break;
+      case "purchases":
+        head = ["Bill", "Date", "Supplier", "Subtotal", "Discount", "Tax", "Total", "Paid", "Due"];
+        body = rows.purchases.map((p) => [p.purchase_number || `PO-${p.id}`, d(p.purchase_date), p.supplier?.name || "", p.subtotal, p.discount_amount, p.tax_amount, p.total_amount, p.paid_amount, p.due_amount]);
+        break;
+      case "profit":
+        head = ["Product", "Revenue", "COGS", "Gross profit", "Margin %"];
+        body = rows.profit.map((p) => [p.name || `Product #${p.productId}`, p.revenue, p.cogs, p.profit, p.revenue > 0 ? ((p.profit / p.revenue) * 100).toFixed(1) : "0.0"]);
+        break;
+      case "inventory":
+        head = ["Product", "SKU", "Shop", "Stock", "Unit cost", "Selling price", "Valuation (cost)", "Low stock"];
+        body = rows.inventory.map((it) => {
+          const stock = it.currentStock ?? it.stock ?? 0;
+          const cost = Number(it.product?.purchase_price ?? it.purchase_price ?? 0);
+          return [it.product?.name || it.product_name || "Item", it.product?.sku || it.sku || "", it.shop?.name || it.shop_name || "", stock, cost, Number(it.product?.selling_price ?? it.selling_price ?? 0), Number(it.costValue ?? stock * cost), it.isLowStock ? "yes" : ""];
+        });
+        break;
+      case "outstanding":
+        head = ["Customer", "Phone", "Balance", "Type"];
+        body = rows.outstanding.map((c) => {
+          const o = c.customer || c;
+          const bal = Number(c.balance ?? c.current_balance ?? 0);
+          return [o.name || "Customer", o.phone || "", Math.abs(bal), bal > 0 ? "Due" : "Advance"];
+        });
+        break;
+      case "performance":
+        head = ["Shop", "Code", "Bills", "Revenue", "Collected", "Due"];
+        body = rows.performance.map((s) => {
+          const revenue = Number(s.revenue || 0);
+          const due = Number(s.due || 0);
+          return [s.shop?.name || s.name || "", s.shop?.code || s.code || "", s.salesCount || 0, revenue, Number(s.paid || revenue - due), due];
+        });
+        break;
+    }
+    const csv = [head, ...body].map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${activeTab}-report${from ? `-${from}` : ""}${to ? `-to-${to}` : ""}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const currentRows = rows[activeTab];
+
   return (
-    <div className="space-y-6">
-      {/* Page Title & Scope Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Business Intelligence & Reports</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Financial analytics, gross profit, inventory valuation, and multi-shop performance.
-          </p>
-        </div>
+    <div className="space-y-6 pb-10">
+      <PageHeader
+        eyebrow="Insights"
+        title="Reports"
+        subtitle="Sales, purchases, profit, stock value and dues — for any date range."
+        actions={
+          <>
+            {isOwner && <Switch checked={allShopsToggle} onChange={setAllShopsToggle} label="All shops" />}
+            <button type="button" onClick={exportCsv} disabled={loading || !reportData || currentRows.length === 0} className="btn-secondary">
+              <Icon name="download" className="w-4 h-4 text-slate-500" /> Export CSV
+            </button>
+          </>
+        }
+      />
 
-        {isOwner && (
-          <label className="text-xs font-semibold text-slate-700 cursor-pointer flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-xs">
-            <input
-              type="checkbox"
-              checked={allShopsToggle}
-              onChange={(e) => setAllShopsToggle(e.target.checked)}
-              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            Consolidated (All Shops)
-          </label>
-        )}
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex flex-wrap border-b border-slate-200 gap-2 sm:gap-3">
-        {[
-          { id: "sales", label: "Sales Analytics" },
-          { id: "purchases", label: "Purchases" },
-          { id: "profit", label: "Gross Profit & Margins" },
-          { id: "inventory", label: "Inventory Valuation" },
-          { id: "outstanding", label: "Customer Outstanding" },
-          ...(isOwner ? [{ id: "performance", label: "Shop Performance" }] : []),
-        ].map((tab) => {
-          const isActive = activeTab === tab.id;
+      {/* Report picker */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+        {tabs.map((t) => {
+          const on = activeTab === t.id;
           return (
             <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`pb-2.5 px-3 text-xs sm:text-sm font-semibold transition-all border-b-2 cursor-pointer ${
-                isActive
-                  ? "border-blue-600 text-blue-600 font-bold"
-                  : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-              }`}
+              key={t.id}
+              type="button"
+              onClick={() => handleTabChange(t.id)}
+              className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition ${on ? "bg-white border-brand-400 ring-4 ring-brand-500/10 shadow-card" : "bg-white/60 border-border hover:bg-white hover:border-brand-200"}`}
             >
-              {tab.label}
+              <span className={`w-8 h-8 rounded-lg ring-1 ring-inset flex items-center justify-center shrink-0 ${TONE[t.tone].tile}`}>
+                <Icon name={t.icon} className="w-4 h-4" />
+              </span>
+              <span className={`text-[12.5px] font-semibold leading-tight ${on ? "text-navy-900" : "text-slate-600"}`}>{t.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Filter Bar */}
-      <div className="card p-4 flex flex-wrap items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Scope:</span>
-          <span className="badge bg-slate-100 text-slate-800 font-medium text-xs px-2.5 py-1 rounded-md">
-            {allShopsToggle ? "All Authorized Shops (Consolidated)" : activeShop?.name || "Selected Shop"}
-          </span>
+      {/* Range */}
+      <div className="card px-4 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented
+            size="sm"
+            value={activePreset}
+            onChange={(k) => {
+              const p = presets.find(([l]) => l === k);
+              if (p) {
+                setFrom(p[1]);
+                setTo(p[2]);
+              }
+            }}
+            options={[...presets.map(([l]) => ({ key: l, label: l })), ...(activePreset === "Custom" ? [{ key: "Custom", label: "Custom" }] : [])]}
+          />
+          <span className="badge-inactive">{allShopsToggle ? "All shops" : activeShop?.name || "This shop"}</span>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <label className="text-slate-500 font-medium">From:</label>
-          <input
-            type="date"
-            className="input py-1.5 px-2 text-xs font-mono rounded-md border border-slate-200"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-          <label className="text-slate-500 font-medium ml-2">To:</label>
-          <input
-            type="date"
-            className="input py-1.5 px-2 text-xs font-mono rounded-md border border-slate-200"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
-          {(from || to) && (
-            <button
-              onClick={() => {
-                setFrom("");
-                setTo("");
-              }}
-              className="text-blue-600 hover:underline font-semibold ml-2 cursor-pointer"
-            >
-              Clear
-            </button>
-          )}
+        <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-slate-500">
+          <label className="flex items-center gap-1.5">
+            From <input type="date" className="input w-auto py-1.5 text-[12.5px]" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+          </label>
+          <label className="flex items-center gap-1.5">
+            To <input type="date" className="input w-auto py-1.5 text-[12.5px]" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+          </label>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
-          <span className="font-bold">Error:</span> {error}
+        <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+          <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
         </div>
       )}
 
-      {/* Content based on Active Tab */}
       {loading ? (
-        <div className="card p-12 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3" />
-          <div className="text-xs font-medium">Calculating reports from database…</div>
+        <div className="space-y-4 animate-pulse">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }, (_, i) => <div key={i} className="h-[104px] rounded-card bg-white border border-border" />)}
+          </div>
+          <div className="h-72 rounded-card bg-white border border-border" />
         </div>
       ) : !reportData ? (
-        <div className="card p-12 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-          <div className="text-sm font-semibold">No data available for this period.</div>
-        </div>
+        <div className="card"><EmptyState icon="file" title="No data for this period" text="Try a wider date range." /></div>
       ) : activeTab === "sales" ? (
-        /* ========================================================================= */
-        /* 1. SALES ANALYTICS REPORT                                                 */
-        /* ========================================================================= */
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Invoiced Revenue</div>
-              <div className="text-2xl font-mono font-bold text-blue-600 mt-1">
-                ₹{Number(reportData.summary?.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">{reportData.summary?.count || 0} invoices issued</div>
-            </div>
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Amount Collected</div>
-              <div className="text-2xl font-mono font-bold text-emerald-600 mt-1">
-                ₹{Number(reportData.summary?.paid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Settled payments</div>
-            </div>
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Due Balance</div>
-              <div className="text-2xl font-mono font-bold text-rose-600 mt-1">
-                ₹{Number(reportData.summary?.due || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Pending collection</div>
-            </div>
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Discounts Given</div>
-              <div className="text-2xl font-mono font-bold text-amber-600 mt-1">
-                ₹{Number(reportData.summary?.discount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Customer concessions</div>
-            </div>
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+            <StatCard label="Invoiced" icon="receipt" tone="brand" value={inr0(S.total)} hint={`${S.count || 0} invoices`} />
+            <StatCard label="Collected" icon="wallet" tone="emerald" value={inr0(S.paid)} valueClass="text-emerald-600" footer={<CollectBar paid={S.paid} total={S.total} />} />
+            <StatCard label="Due" icon="clock" tone="rose" value={inr0(S.due)} valueClass={Number(S.due) ? "text-rose-600" : undefined} hint="Pending collection" />
+            <StatCard label="Discounts given" icon="sparkle" tone="amber" value={inr0(S.discount)} hint="Customer concessions" />
           </div>
-
-          <div className="card bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800">Sales Transactions & Breakdown</h2>
-              <span className="text-xs text-slate-400 font-mono">{(reportData.sales || []).length} records</span>
-            </div>
-            <div className="table-wrap overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-2.5 px-4">Invoice #</th>
-                    <th className="py-2.5 px-4">Date</th>
-                    <th className="py-2.5 px-4">Customer</th>
-                    {allShopsToggle && <th className="py-2.5 px-4">Shop</th>}
-                    <th className="py-2.5 px-4 text-right">Subtotal</th>
-                    <th className="py-2.5 px-4 text-right">Discount</th>
-                    <th className="py-2.5 px-4 text-right">Tax</th>
-                    <th className="py-2.5 px-4 text-right">Total</th>
-                    <th className="py-2.5 px-4 text-right">Paid</th>
-                    <th className="py-2.5 px-4 text-right">Due</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(reportData.sales || []).map((s: any) => (
-                    <tr key={s.id} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 px-4 font-mono font-medium text-blue-600">{s.invoice_number}</td>
-                      <td className="py-2.5 px-4 text-slate-500">
-                        {new Date(s.invoice_date).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="py-2.5 px-4 font-medium text-slate-900">{s.customer?.name || "Walk-in"}</td>
-                      {allShopsToggle && (
-                        <td className="py-2.5 px-4">
-                          <span className="badge bg-slate-100 text-slate-700 font-mono text-[11px] px-2 py-0.5 rounded">
-                            {s.shop?.name || `Shop #${s.shop_id}`}
-                          </span>
-                        </td>
-                      )}
-                      <td className="py-2.5 px-4 text-right font-mono">₹{Number(s.subtotal).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-amber-600">₹{Number(s.discount_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono">₹{Number(s.tax_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">₹{Number(s.total_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-emerald-600 font-semibold">₹{Number(s.paid_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-rose-600 font-semibold">₹{Number(s.due_amount).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <ReportTable title="Invoices" count={rows.sales.length} noun="invoices">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Customer</th>
+                {allShopsToggle && <th>Shop</th>}
+                <th className="!text-right">Subtotal</th>
+                <th className="!text-right">Discount</th>
+                <th className="!text-right">Tax</th>
+                <th className="!text-right">Total</th>
+                <th className="!text-right">Paid</th>
+                <th className="!text-right">Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.sales.map((s) => (
+                <tr key={s.id}>
+                  <td className="whitespace-nowrap">
+                    <Link to={`/app/sales/${s.id}`} className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline">{s.invoice_number}</Link>
+                    <div className="text-[11.5px] text-slate-400">{fmtDate(s.invoice_date)}</div>
+                  </td>
+                  <td className="font-medium text-navy-900 max-w-[200px] truncate">{s.customer?.name || "Walk-in"}</td>
+                  {allShopsToggle && <td><span className="badge-inactive">{s.shop?.name || `Shop #${s.shop_id}`}</span></td>}
+                  <Money v={s.subtotal} />
+                  <Money v={s.discount_amount} cls="text-amber-600" dashZero />
+                  <Money v={s.tax_amount} dashZero />
+                  <Money v={s.total_amount} cls="font-bold text-navy-900" />
+                  <Money v={s.paid_amount} cls="text-emerald-600 font-semibold" />
+                  <Money v={s.due_amount} cls="text-rose-600 font-semibold" dashZero />
+                </tr>
+              ))}
+            </tbody>
+          </ReportTable>
         </div>
       ) : activeTab === "purchases" ? (
-        /* ========================================================================= */
-        /* 2. PURCHASES REPORT                                                       */
-        /* ========================================================================= */
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Purchases</div>
-              <div className="text-2xl font-mono font-bold text-slate-900 mt-1">
-                ₹{Number(reportData.summary?.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">{reportData.summary?.count || 0} purchase orders</div>
-            </div>
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Paid</div>
-              <div className="text-2xl font-mono font-bold text-emerald-600 mt-1">
-                ₹{Number(reportData.summary?.paid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Disbursed to suppliers</div>
-            </div>
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Due to Suppliers</div>
-              <div className="text-2xl font-mono font-bold text-rose-600 mt-1">
-                ₹{Number(reportData.summary?.due || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Payables pending</div>
-            </div>
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Discounts Received</div>
-              <div className="text-2xl font-mono font-bold text-amber-600 mt-1">
-                ₹{Number(reportData.summary?.discount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Supplier concessions</div>
-            </div>
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+            <StatCard label="Total purchases" icon="truck" tone="violet" value={inr0(S.total)} hint={`${S.count || 0} bills`} />
+            <StatCard label="Paid" icon="wallet" tone="emerald" value={inr0(S.paid)} valueClass="text-emerald-600" footer={<CollectBar paid={S.paid} total={S.total} />} />
+            <StatCard label="Due to suppliers" icon="clock" tone="rose" value={inr0(S.due)} valueClass={Number(S.due) ? "text-rose-600" : undefined} hint="Payables pending" />
+            <StatCard label="Discounts received" icon="sparkle" tone="amber" value={inr0(S.discount)} hint="Supplier concessions" />
           </div>
 
-          {/* Top Suppliers Summary */}
           {reportData.bySupplier && reportData.bySupplier.length > 0 && (
-            <div className="card p-4 bg-white border border-slate-200 rounded-xl">
-              <div className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wider">Purchases by Supplier</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {reportData.bySupplier.map((sup: any, i: number) => (
-                  <div key={i} className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex flex-col justify-between">
-                    <span className="text-xs font-bold text-slate-800 truncate">{sup.name || `Supplier #${sup.supplierId}`}</span>
-                    <div className="mt-2 flex items-baseline justify-between">
-                      <span className="text-xs font-mono font-bold text-blue-600">₹{Number(sup.total).toFixed(2)}</span>
-                      <span className="text-[11px] text-slate-400">{sup.count} POs</span>
-                    </div>
-                  </div>
-                ))}
+            <section className="card">
+              <div className="card-header">
+                <h2 className="card-title text-[14px]">By supplier</h2>
+                <span className="text-[12px] text-slate-400">{reportData.bySupplier.length} suppliers</span>
               </div>
-            </div>
+              <BarList
+                items={reportData.bySupplier.map((sup: any) => ({ label: sup.name || `Supplier #${sup.supplierId}`, value: Number(sup.total) || 0, note: `${sup.count} bill${sup.count === 1 ? "" : "s"}` }))}
+                tone="violet"
+              />
+            </section>
           )}
 
-          {/* Purchases Table */}
-          <div className="card bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800">Purchase Bills & Stock Inward</h2>
-              <span className="text-xs text-slate-400 font-mono">{(reportData.purchases || []).length} bills</span>
-            </div>
-            <div className="table-wrap overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-2.5 px-4">PO / Bill #</th>
-                    <th className="py-2.5 px-4">Date</th>
-                    <th className="py-2.5 px-4">Supplier</th>
-                    <th className="py-2.5 px-4 text-right">Subtotal</th>
-                    <th className="py-2.5 px-4 text-right">Discount</th>
-                    <th className="py-2.5 px-4 text-right">Tax</th>
-                    <th className="py-2.5 px-4 text-right">Total</th>
-                    <th className="py-2.5 px-4 text-right">Paid</th>
-                    <th className="py-2.5 px-4 text-right">Due</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(reportData.purchases || []).map((p: any) => (
-                    <tr key={p.id} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 px-4 font-mono font-medium text-blue-600">{p.purchase_number || `PO-${p.id}`}</td>
-                      <td className="py-2.5 px-4 text-slate-500">
-                        {new Date(p.purchase_date).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="py-2.5 px-4 font-medium text-slate-900">{p.supplier?.name || "General Supplier"}</td>
-                      <td className="py-2.5 px-4 text-right font-mono">₹{Number(p.subtotal).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-amber-600">₹{Number(p.discount_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono">₹{Number(p.tax_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">₹{Number(p.total_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-emerald-600 font-semibold">₹{Number(p.paid_amount).toFixed(2)}</td>
-                      <td className="py-2.5 px-4 text-right font-mono text-rose-600 font-semibold">₹{Number(p.due_amount).toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <ReportTable title="Purchase bills" count={rows.purchases.length} noun="bills">
+            <thead>
+              <tr>
+                <th>Bill</th>
+                <th>Supplier</th>
+                <th className="!text-right">Subtotal</th>
+                <th className="!text-right">Discount</th>
+                <th className="!text-right">Tax</th>
+                <th className="!text-right">Total</th>
+                <th className="!text-right">Paid</th>
+                <th className="!text-right">Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.purchases.map((p) => (
+                <tr key={p.id}>
+                  <td className="whitespace-nowrap">
+                    <Link to={`/app/purchase/${p.id}`} className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline">{p.purchase_number || `PO-${p.id}`}</Link>
+                    <div className="text-[11.5px] text-slate-400">{fmtDate(p.purchase_date)}</div>
+                  </td>
+                  <td className="font-medium text-navy-900 max-w-[200px] truncate">{p.supplier?.name || "General supplier"}</td>
+                  <Money v={p.subtotal} />
+                  <Money v={p.discount_amount} cls="text-amber-600" dashZero />
+                  <Money v={p.tax_amount} dashZero />
+                  <Money v={p.total_amount} cls="font-bold text-navy-900" />
+                  <Money v={p.paid_amount} cls="text-emerald-600 font-semibold" />
+                  <Money v={p.due_amount} cls="text-rose-600 font-semibold" dashZero />
+                </tr>
+              ))}
+            </tbody>
+          </ReportTable>
         </div>
       ) : activeTab === "profit" ? (
-        /* ========================================================================= */
-        /* 3. GROSS PROFIT & MARGINS REPORT                                          */
-        /* ========================================================================= */
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Sales Revenue</div>
-              <div className="text-2xl font-mono font-bold text-slate-900 mt-1">
-                ₹{Number(reportData.summary?.revenue ?? reportData.totalRevenue ?? 0).toFixed(2)}
+        (() => {
+          const revenue = Number(S.revenue ?? reportData.totalRevenue ?? 0);
+          const cogs = Number(S.cogs ?? reportData.totalCost ?? 0);
+          const gp = Number(S.grossProfit ?? reportData.grossProfit ?? 0);
+          const margin = Number(S.marginPercent ?? reportData.profitMarginPercent ?? 0);
+          return (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard label="Revenue" icon="trend" tone="brand" value={inr0(revenue)} hint="Net invoiced sales" />
+                <StatCard label="Cost of goods" icon="truck" tone="amber" value={inr0(cogs)} hint="Purchase cost of items sold" />
+                <StatCard label="Gross profit" icon="rupee" tone="emerald" value={inr0(gp)} valueClass={gp >= 0 ? "text-emerald-600" : "text-rose-600"} hint="Revenue − cost" />
+                <StatCard
+                  label="Gross margin"
+                  icon="sparkle"
+                  tone="sky"
+                  value={`${margin.toFixed(1)}%`}
+                  footer={<Meter value={Math.max(0, margin)} max={100} tone="sky" className="mt-0.5" />}
+                />
               </div>
-              <div className="text-xs text-slate-400 mt-1">Net invoiced sales</div>
-            </div>
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Cost of Goods (COGS)</div>
-              <div className="text-2xl font-mono font-bold text-amber-600 mt-1">
-                ₹{Number(reportData.summary?.cogs ?? reportData.totalCost ?? 0).toFixed(2)}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Purchase cost of sold items</div>
-            </div>
-            <div className="card p-5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
-              <div className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Gross Profit</div>
-              <div className="text-2xl font-mono font-bold text-emerald-700 mt-1">
-                ₹{Number(reportData.summary?.grossProfit ?? reportData.grossProfit ?? 0).toFixed(2)}
-              </div>
-              <div className="text-xs text-emerald-600 mt-1">Net gross earnings</div>
-            </div>
-            <div className="card p-5 bg-blue-50/70 border border-blue-200 rounded-xl">
-              <div className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Gross Margin %</div>
-              <div className="text-2xl font-mono font-bold text-blue-700 mt-1">
-                {Number(reportData.summary?.marginPercent ?? reportData.profitMarginPercent ?? 0).toFixed(1)}%
-              </div>
-              <div className="text-xs text-blue-600 mt-1">Average profit margin</div>
-            </div>
-          </div>
-
-          {/* Product-wise Profit Breakdown */}
-          {reportData.byProduct && reportData.byProduct.length > 0 && (
-            <div className="card bg-white border border-slate-200 rounded-xl overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-800">Product Profitability & Margins</h2>
-                <span className="text-xs text-slate-400 font-mono">{reportData.byProduct.length} products</span>
-              </div>
-              <div className="table-wrap overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
+              {rows.profit.length > 0 ? (
+                <ReportTable title="Profit by product" count={rows.profit.length} noun="products">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                      <th className="py-2.5 px-4">Product Name</th>
-                      <th className="py-2.5 px-4 text-right">Revenue</th>
-                      <th className="py-2.5 px-4 text-right">COGS (Cost)</th>
-                      <th className="py-2.5 px-4 text-right">Gross Profit</th>
-                      <th className="py-2.5 px-4 text-right">Margin %</th>
+                    <tr>
+                      <th>Product</th>
+                      <th className="!text-right">Revenue</th>
+                      <th className="!text-right">Cost</th>
+                      <th className="!text-right">Gross profit</th>
+                      <th>Margin</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {reportData.byProduct.map((p: any, idx: number) => {
-                      const margin = p.revenue > 0 ? ((p.profit / p.revenue) * 100).toFixed(1) : "0.0";
+                  <tbody>
+                    {rows.profit.map((p, idx) => {
+                      const m = p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0;
                       return (
-                        <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="py-2.5 px-4 font-semibold text-slate-900">{p.name || `Product #${p.productId}`}</td>
-                          <td className="py-2.5 px-4 text-right font-mono">₹{Number(p.revenue).toFixed(2)}</td>
-                          <td className="py-2.5 px-4 text-right font-mono text-amber-600">₹{Number(p.cogs).toFixed(2)}</td>
-                          <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-600">₹{Number(p.profit).toFixed(2)}</td>
-                          <td className="py-2.5 px-4 text-right font-mono font-bold text-blue-600">{margin}%</td>
+                        <tr key={idx}>
+                          <td className="font-semibold text-navy-900 max-w-[260px] truncate">{p.name || `Product #${p.productId}`}</td>
+                          <Money v={p.revenue} />
+                          <Money v={p.cogs} cls="text-amber-600" />
+                          <Money v={p.profit} cls={`font-bold ${Number(p.profit) >= 0 ? "text-emerald-600" : "text-rose-600"}`} />
+                          <td>
+                            <div className="w-[120px]">
+                              <div className={`text-[12.5px] font-bold tabular ${m >= 0 ? "text-navy-900" : "text-rose-600"}`}>{m.toFixed(1)}%</div>
+                              <Meter value={Math.max(0, m)} max={100} tone={m >= 25 ? "emerald" : m >= 10 ? "amber" : "rose"} className="mt-1" />
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
-                </table>
-              </div>
+                </ReportTable>
+              ) : (
+                <div className="card"><EmptyState icon="rupee" title="No product sales in this range" /></div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()
       ) : activeTab === "inventory" ? (
-        /* ========================================================================= */
-        /* 4. INVENTORY VALUATION REPORT                                             */
-        /* ========================================================================= */
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">In-Stock Units</div>
-              <div className="text-2xl font-mono font-bold text-blue-600 mt-1">
-                {reportData.summary?.totalUnits ?? reportData.totalUnits ?? 0}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Total physical inventory</div>
-            </div>
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Cost Valuation</div>
-              <div className="text-2xl font-mono font-bold text-emerald-600 mt-1">
-                ₹{Number(reportData.summary?.totalCostValue ?? reportData.valuationCost ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Purchase asset value</div>
-            </div>
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Retail Valuation</div>
-              <div className="text-2xl font-mono font-bold text-slate-900 mt-1">
-                ₹{Number(reportData.summary?.totalSellValue ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Estimated sales value</div>
-            </div>
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Low Stock Warnings</div>
-              <div className="text-2xl font-mono font-bold text-rose-600 mt-1">
-                {reportData.summary?.lowStockCount ?? 0}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Below minimum threshold</div>
-            </div>
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+            <StatCard label="Units in stock" icon="box" tone="sky" value={Number(S.totalUnits ?? reportData.totalUnits ?? 0).toLocaleString("en-IN")} hint="Total physical inventory" />
+            <StatCard label="Value at cost" icon="rupee" tone="violet" value={inr0(S.totalCostValue ?? reportData.valuationCost)} hint="What you paid" />
+            <StatCard label="Value at selling price" icon="trend" tone="emerald" value={inr0(S.totalSellValue)} hint={Number(S.totalSellValue) && Number(S.totalCostValue) ? `${inr0(Number(S.totalSellValue) - Number(S.totalCostValue))} potential margin` : "Estimated sales value"} />
+            <StatCard label="Low stock" icon="alert" tone="rose" value={String(S.lowStockCount ?? 0)} valueClass={Number(S.lowStockCount) ? "text-rose-600" : undefined} to="/app/inventory?tab=low" hint="Below minimum level" />
           </div>
-
-          <div className="card bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800">Inventory Items & Valuation</h2>
-              <span className="text-xs text-slate-400 font-mono">{(reportData.lines || reportData.items || []).length} items</span>
-            </div>
-            <div className="table-wrap overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-2.5 px-4">Product</th>
-                    <th className="py-2.5 px-4">SKU</th>
-                    {allShopsToggle && <th className="py-2.5 px-4">Shop</th>}
-                    <th className="py-2.5 px-4 text-right">Stock</th>
-                    <th className="py-2.5 px-4 text-right">Unit Cost</th>
-                    <th className="py-2.5 px-4 text-right">Selling Price</th>
-                    <th className="py-2.5 px-4 text-right">Valuation (Cost)</th>
+          <ReportTable title="Stock valuation" count={rows.inventory.length} noun="items">
+            <thead>
+              <tr>
+                <th>Product</th>
+                {allShopsToggle && <th>Shop</th>}
+                <th className="!text-right">Stock</th>
+                <th className="!text-right">Unit cost</th>
+                <th className="!text-right">Selling price</th>
+                <th className="!text-right">Value (cost)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.inventory.map((item, idx) => {
+                const stock = item.currentStock ?? item.stock ?? 0;
+                const cost = Number(item.product?.purchase_price ?? item.purchase_price ?? 0);
+                const sell = Number(item.product?.selling_price ?? item.selling_price ?? 0);
+                const valCost = Number(item.costValue ?? stock * cost);
+                return (
+                  <tr key={idx}>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-navy-900 truncate max-w-[240px]">{item.product?.name || item.product_name || "Item"}</span>
+                        {item.isLowStock && <span className="badge-danger">Low</span>}
+                      </div>
+                      <div className="font-mono text-[11.5px] text-slate-400">{item.product?.sku || item.sku || "—"}</div>
+                    </td>
+                    {allShopsToggle && <td><span className="badge-inactive">{item.shop?.name || item.shop_name || "Shop"}</span></td>}
+                    <td className={`text-right font-bold tabular ${item.isLowStock ? "text-rose-600" : "text-navy-900"}`}>{stock}</td>
+                    <Money v={cost} cls="text-slate-600" />
+                    <Money v={sell} cls="text-slate-600" />
+                    <Money v={valCost} cls="font-bold text-navy-900" />
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(reportData.lines || reportData.items || []).map((item: any, idx: number) => {
-                    const name = item.product?.name || item.product_name || "Item";
-                    const sku = item.product?.sku || item.sku || "—";
-                    const stock = item.currentStock ?? item.stock ?? 0;
-                    const cost = Number(item.product?.purchase_price ?? item.purchase_price ?? 0);
-                    const sell = Number(item.product?.selling_price ?? item.selling_price ?? 0);
-                    const valCost = Number(item.costValue ?? stock * cost);
-                    const isLow = item.isLowStock;
-
-                    return (
-                      <tr key={idx} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-4 font-medium text-slate-900">
-                          {name}
-                          {isLow && <span className="ml-2 badge bg-rose-50 text-rose-600 text-[10px] px-1.5 py-0.5 rounded font-bold">Low</span>}
-                        </td>
-                        <td className="py-2.5 px-4 font-mono text-slate-500">{sku}</td>
-                        {allShopsToggle && (
-                          <td className="py-2.5 px-4">
-                            <span className="badge bg-slate-100 text-slate-700 font-mono text-[11px] px-2 py-0.5 rounded">
-                              {item.shop?.name || item.shop_name || "Shop"}
-                            </span>
-                          </td>
-                        )}
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">{stock}</td>
-                        <td className="py-2.5 px-4 text-right font-mono text-slate-600">₹{cost.toFixed(2)}</td>
-                        <td className="py-2.5 px-4 text-right font-mono text-slate-600">₹{sell.toFixed(2)}</td>
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-700">₹{valCost.toFixed(2)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                );
+              })}
+            </tbody>
+          </ReportTable>
         </div>
       ) : activeTab === "outstanding" ? (
-        /* ========================================================================= */
-        /* 5. CUSTOMER OUTSTANDING REPORT                                            */
-        /* ========================================================================= */
-        <div className="space-y-6">
+        <div className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Receivable</div>
-              <div className="text-2xl font-mono font-bold text-emerald-600 mt-1">
-                ₹{Number(reportData.summary?.totalReceivable || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Amount you will receive (You Get)</div>
-            </div>
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Store Credit</div>
-              <div className="text-2xl font-mono font-bold text-amber-600 mt-1">
-                ₹{Math.abs(Number(reportData.summary?.totalCredit || 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Customer advance balance (You Owe)</div>
-            </div>
-            <div className="card p-5 bg-white border border-slate-200 rounded-xl">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Accounts with Balance</div>
-              <div className="text-2xl font-mono font-bold text-blue-600 mt-1">
-                {reportData.summary?.customerCount || (reportData.customers || []).length}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">Active ledger accounts</div>
-            </div>
+            <StatCard label="To receive" icon="wallet" tone="rose" value={inr0(S.totalReceivable)} valueClass={Number(S.totalReceivable) ? "text-rose-600" : undefined} hint="Customers owe you" />
+            <StatCard label="Advances held" icon="rupee" tone="emerald" value={inr0(Math.abs(Number(S.totalCredit || 0)))} hint="You owe customers" />
+            <StatCard label="Accounts with balance" icon="users" tone="brand" value={String(S.customerCount || rows.outstanding.length)} to="/app/ledger" hint="Open customer ledger" />
           </div>
-
-          <div className="card bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800">Customer Balances & Dues</h2>
-              <Link to="/app/ledger" className="text-xs text-blue-600 hover:underline font-semibold">
-                Open Customer Ledger →
-              </Link>
-            </div>
-            <div className="table-wrap overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-2.5 px-4">Customer Name</th>
-                    <th className="py-2.5 px-4">Phone</th>
-                    <th className="py-2.5 px-4 text-right">Balance</th>
-                    <th className="py-2.5 px-4">Status</th>
-                    <th className="py-2.5 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(reportData.customers || []).map((c: any, idx: number) => {
-                    const custObj = c.customer || c;
+          {rows.outstanding.length === 0 ? (
+            <div className="card"><EmptyState icon="checkCircle" tone="emerald" title="All settled" text="No customer has a balance." /></div>
+          ) : (
+            <ReportTable title="Customer balances" count={rows.outstanding.length} noun="customers">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Balance</th>
+                  <th className="!text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const maxBal = Math.max(1, ...rows.outstanding.map((c) => Math.abs(Number(c.balance ?? c.current_balance ?? 0))));
+                  return rows.outstanding.map((c, idx) => {
+                    const o = c.customer || c;
                     const bal = Number(c.balance ?? c.current_balance ?? 0);
-                    const isDue = bal > 0;
-
+                    const due = bal > 0;
                     return (
-                      <tr key={idx} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-4 font-bold text-slate-900">{custObj.name || "Customer"}</td>
-                        <td className="py-2.5 px-4 font-mono text-slate-500">{custObj.phone || "—"}</td>
-                        <td className={`py-2.5 px-4 text-right font-mono font-bold ${isDue ? "text-rose-600" : "text-emerald-600"}`}>
-                          ₹{Math.abs(bal).toFixed(2)}
+                      <tr key={idx}>
+                        <td>
+                          <div className="flex items-center gap-2.5">
+                            <Avatar name={o.name || "Customer"} size="sm" />
+                            <div className="min-w-0">
+                              <div className="font-semibold text-navy-900 truncate max-w-[240px]">{o.name || "Customer"}</div>
+                              <div className="text-[11.5px] text-slate-400 tabular">{o.phone || "—"}</div>
+                            </div>
+                          </div>
                         </td>
-                        <td className="py-2.5 px-4">
-                          <span
-                            className={`badge px-2 py-0.5 rounded text-[11px] font-bold ${
-                              isDue ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"
-                            }`}
-                          >
-                            {isDue ? "Due (Receivable)" : "Advance (Credit)"}
-                          </span>
+                        <td>
+                          <div className="w-[180px]">
+                            <div className="flex items-baseline justify-between">
+                              <span className={`font-bold tabular ${due ? "text-rose-600" : "text-emerald-600"}`}>{inr2(Math.abs(bal))}</span>
+                              <span className="text-[10.5px] font-semibold uppercase text-slate-400">{due ? "Due" : "Advance"}</span>
+                            </div>
+                            <Meter value={Math.abs(bal)} max={maxBal} tone={due ? "rose" : "emerald"} className="mt-1" />
+                          </div>
                         </td>
-                        <td className="py-2.5 px-4 text-right">
-                          <Link
-                            to={`/app/ledger?customerId=${custObj.id}`}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline"
-                          >
-                            View Ledger
+                        <td className="text-right">
+                          <Link to={`/app/ledger?customerId=${o.id}`} className="btn-soft btn-sm">
+                            <Icon name="file" className="w-3.5 h-3.5" /> Ledger
                           </Link>
                         </td>
                       </tr>
                     );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  });
+                })()}
+              </tbody>
+            </ReportTable>
+          )}
         </div>
       ) : activeTab === "performance" ? (
-        /* ========================================================================= */
-        /* 6. SHOP PERFORMANCE REPORT                                                */
-        /* ========================================================================= */
-        <div className="space-y-6">
-          <div className="card bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-800">Multi-Shop Performance Benchmarks</h2>
-              <span className="text-xs text-slate-400 font-mono">{(reportData.shops || []).length} branches</span>
-            </div>
-            <div className="table-wrap overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-2.5 px-4">Shop Branch</th>
-                    <th className="py-2.5 px-4">Branch Code</th>
-                    <th className="py-2.5 px-4 text-right">Orders / Bills</th>
-                    <th className="py-2.5 px-4 text-right">Gross Revenue</th>
-                    <th className="py-2.5 px-4 text-right">Collected</th>
-                    <th className="py-2.5 px-4 text-right">Outstanding Due</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(reportData.shops || []).map((s: any, idx: number) => {
-                    const shopName = s.shop?.name || s.name || `Shop #${s.shop_id || idx + 1}`;
-                    const shopCode = s.shop?.code || s.code || "—";
-                    const revenue = Number(s.revenue || 0);
-                    const paid = Number(s.paid || (revenue - Number(s.due || 0)));
-                    const due = Number(s.due || 0);
-
-                    return (
-                      <tr key={idx} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-4 font-bold text-slate-900">{shopName}</td>
-                        <td className="py-2.5 px-4 font-mono text-slate-500">{shopCode}</td>
-                        <td className="py-2.5 px-4 text-right font-mono font-medium text-slate-700">{s.salesCount || 0}</td>
-                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">₹{revenue.toFixed(2)}</td>
-                        <td className="py-2.5 px-4 text-right font-mono text-emerald-600 font-semibold">₹{paid.toFixed(2)}</td>
-                        <td className="py-2.5 px-4 text-right font-mono text-rose-600 font-semibold">₹{due.toFixed(2)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+        rows.performance.length === 0 ? (
+          <div className="card"><EmptyState icon="box" title="No shop data in this range" /></div>
+        ) : (
+          <div className="space-y-5">
+            <section className="card">
+              <div className="card-header">
+                <h2 className="card-title text-[14px]">Revenue by shop</h2>
+                <span className="text-[12px] text-slate-400">{rows.performance.length} shops</span>
+              </div>
+              <BarList
+                tone="brand"
+                items={rows.performance.map((s, idx) => ({
+                  label: s.shop?.name || s.name || `Shop #${s.shop_id || idx + 1}`,
+                  value: Number(s.revenue || 0),
+                  note: `${s.salesCount || 0} bills · ${inr0(Number(s.due || 0))} due`,
+                }))}
+              />
+            </section>
+            <ReportTable title="Shop comparison" count={rows.performance.length} noun="shops">
+              <thead>
+                <tr>
+                  <th>Shop</th>
+                  <th className="!text-right">Bills</th>
+                  <th className="!text-right">Revenue</th>
+                  <th className="!text-right">Collected</th>
+                  <th className="!text-right">Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.performance.map((s, idx) => {
+                  const revenue = Number(s.revenue || 0);
+                  const due = Number(s.due || 0);
+                  const paid = Number(s.paid || revenue - due);
+                  return (
+                    <tr key={idx}>
+                      <td>
+                        <div className="font-semibold text-navy-900">{s.shop?.name || s.name || `Shop #${s.shop_id || idx + 1}`}</div>
+                        <div className="font-mono text-[11.5px] text-slate-400">{s.shop?.code || s.code || "—"}</div>
+                      </td>
+                      <td className="text-right tabular text-slate-700">{s.salesCount || 0}</td>
+                      <Money v={revenue} cls="font-bold text-navy-900" />
+                      <Money v={paid} cls="text-emerald-600 font-semibold" />
+                      <Money v={due} cls="text-rose-600 font-semibold" dashZero />
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </ReportTable>
           </div>
-        </div>
+        )
       ) : null}
     </div>
   );
 }
+
+/* ───────────────────────── helpers ───────────────────────── */
+
+type TabId = "sales" | "purchases" | "profit" | "inventory" | "outstanding" | "performance";
+
+const inr0 = (n: unknown) => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+const inr2 = (n: unknown) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDate = (d: string) => (d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—");
+
+function Money({ v, cls = "text-slate-700", dashZero }: { v: unknown; cls?: string; dashZero?: boolean }) {
+  const n = Number(v) || 0;
+  return <td className={`text-right whitespace-nowrap tabular ${cls}`}>{dashZero && n === 0 ? <span className="text-slate-300 font-normal">—</span> : inr2(n)}</td>;
+}
+
+function CollectBar({ paid, total }: { paid: unknown; total: unknown }) {
+  const p = Number(paid) || 0;
+  const t = Number(total) || 0;
+  return (
+    <div className="flex items-center gap-2">
+      <Meter value={p} max={t} tone="emerald" className="flex-1" />
+      <span className="tabular text-slate-500">{t > 0 ? Math.round((p / t) * 100) : 0}%</span>
+    </div>
+  );
+}
+
+function ReportTable({ title, count, noun, children }: { title: string; count: number; noun: string; children: ReactNode }) {
+  return (
+    <section className="card overflow-hidden">
+      <div className="card-header">
+        <h2 className="card-title text-[14px]">{title}</h2>
+        <span className="text-[12px] text-slate-400 tabular">{count.toLocaleString("en-IN")} {noun}</span>
+      </div>
+      {count === 0 ? (
+        <EmptyState compact icon="file" title={`No ${noun} in this range`} text="Try a wider date range." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table>{children}</table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BarList({ items, tone }: { items: { label: string; value: number; note?: string }[]; tone: Tone }) {
+  const sorted = [...items].sort((a, b) => b.value - a.value).slice(0, 8);
+  const max = Math.max(1, ...sorted.map((i) => i.value));
+  return (
+    <ul className="p-4 sm:p-5 space-y-3">
+      {sorted.map((i, idx) => (
+        <li key={idx}>
+          <div className="flex items-baseline justify-between gap-3 text-[13px]">
+            <span className="font-semibold text-navy-900 truncate">{i.label}</span>
+            <span className="font-bold text-navy-900 tabular whitespace-nowrap">{inr0(i.value)}</span>
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <Meter value={i.value} max={max} tone={tone} className="flex-1 !h-2" />
+            {i.note && <span className="text-[11.5px] text-slate-400 whitespace-nowrap">{i.note}</span>}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 
 export default function Reports() {
   return (

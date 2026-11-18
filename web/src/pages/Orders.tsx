@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import clsx from "clsx";
 import {
   getOrders,
   getOrderStats,
   createOrder,
   updateOrderStatus,
   convertOrderToBill,
+  getOrderById,
   type OrderRecord,
   type OrderStats,
 } from "../api/orders";
@@ -16,6 +16,8 @@ import { apiErrorMessage } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import type { Customer, Product } from "../types";
+import { Avatar, ChoiceGroup, EmptyState, Icon, IconButton, Modal, PageHeader, Pagination, SearchInput, Segmented, StatCard } from "../components/ui";
+import { listNotificationsApi, type AppNotification } from "../api/notifications";
 
 type WorkflowStep =
   | "list"
@@ -49,7 +51,8 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
-  const [dateRange] = useState("01 Oct 2026 - 31 Oct 2026");
+  const [listPage, setListPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Step 2 Form State
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -99,6 +102,42 @@ export default function Orders() {
   const [convertPaidAmount, setConvertPaidAmount] = useState<string>("");
   const [convertPaymentMethod, setConvertPaymentMethod] = useState<string>("cash");
   const [convertNotes, setConvertNotes] = useState<string>("");
+
+  // Real data for the tracking / alerts steps (fetched only when shown).
+  const [orderDetail, setOrderDetail] = useState<(OrderRecord & { statusHistory?: HistoryRow[] }) | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [orderNotifs, setOrderNotifs] = useState<AppNotification[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  useEffect(() => {
+    if ((step !== "tracking" && step !== "view") || !selectedOrder) return;
+    let gone = false;
+    setDetailLoading(true);
+    getOrderById(selectedOrder.id)
+      .then((r) => !gone && setOrderDetail((r.data.data as any) ?? null))
+      .catch(() => !gone && setOrderDetail(null))
+      .finally(() => !gone && setDetailLoading(false));
+    return () => {
+      gone = true;
+    };
+  }, [step, selectedOrder?.id]);
+
+  useEffect(() => {
+    if (step !== "notifications" || !selectedOrder) return;
+    let gone = false;
+    setNotifLoading(true);
+    listNotificationsApi(false, 200)
+      .then((list) => {
+        if (gone) return;
+        const rows = list?.notifications ?? [];
+        setOrderNotifs(rows.filter((n) => String(n.reference_type).toLowerCase() === "order" && Number(n.reference_id) === Number(selectedOrder.id)));
+      })
+      .catch(() => !gone && setOrderNotifs([]))
+      .finally(() => !gone && setNotifLoading(false));
+    return () => {
+      gone = true;
+    };
+  }, [step, selectedOrder?.id]);
 
   function openConvertModal(ord: OrderRecord) {
     const isDelivered = (ord.status || "").toLowerCase() === "delivered";
@@ -342,1931 +381,1058 @@ export default function Orders() {
   return (
     <RequireModule module="orders">
       <div className="space-y-6">
-        {/* Step Indicator Header (matches 9-step blueprint in Image 2) */}
-        <div className="card p-3 bg-white border border-border shadow-xs">
-          <div className="flex items-center justify-between flex-wrap gap-2 mb-2 pb-2 border-b border-border">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🛒</span>
-              <div>
-                <h1 className="text-base font-bold text-slate-900 leading-tight">
-                  NSY Business 9-Step Order Workflow
-                </h1>
-                <p className="text-[11px] text-slate-500">
-                  Integrated Order Management, Lifecycle Tracking, Invoicing, and Customer Notifications
-                </p>
-              </div>
-            </div>
-
-            {/* Quick Step Switcher */}
-            <div className="flex items-center gap-1.5 overflow-x-auto text-xs py-1">
-              {[
-                { key: "list", num: "1", label: "Order List" },
-                { key: "create", num: "2", label: "Create Order" },
-                { key: "confirmation", num: "3", label: "Confirmation" },
-                { key: "view", num: "4", label: "Order View" },
-                { key: "update_status", num: "5", label: "Update Status" },
-                { key: "invoice", num: "6", label: "Invoice" },
-                { key: "tracking", num: "7", label: "Customer Tracking" },
-                { key: "history", num: "8", label: "Customer History" },
-                { key: "notifications", num: "9", label: "Notifications" },
-              ].map((s) => (
-                <button
-                  key={s.key}
-                  onClick={() => setStep(s.key as WorkflowStep)}
-                  className={clsx(
-                    "px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap transition-all flex items-center gap-1",
-                    step === s.key
-                      ? "bg-blue-600 text-white shadow-xs"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200/80"
-                  )}
-                >
-                  <span
-                    className={clsx(
-                      "w-4 h-4 rounded-full flex items-center justify-center text-[10px]",
-                      step === s.key ? "bg-white text-blue-700" : "bg-slate-300 text-slate-800"
-                    )}
-                  >
-                    {s.num}
-                  </span>
-                  <span>{s.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ------------------------------------------------------------------ */}
-        {/* STEP 1: ORDER LIST (View, search and filter all orders)            */}
-        {/* Matches Image 1 & Image 2 (Step 1)                                */}
-        {/* ------------------------------------------------------------------ */}
-        {step === "list" && (
-          <div className="space-y-5">
-            {/* Top Bar with Breadcrumbs & Create Order Button */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">Orders</h2>
-                <div className="text-xs text-slate-500 mt-0.5">Dashboard &gt; Orders</div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setStep("create")}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-xs shadow-sm flex items-center gap-1.5 transition-colors"
-                >
-                  <span>🛒</span>
-                  <span>Create New Order</span>
-                  <span className="text-[10px]">▼</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 5 KPI Metric Cards (Image 1 top row) */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-              {/* Total Orders */}
-              <div className="card p-4 bg-white border border-border shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-medium">Total Orders</span>
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-sm">
-                    🛒
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-extrabold text-slate-900">
-                    {stats.totalOrders.toLocaleString()}
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
-                    All-time orders
-                  </div>
-                </div>
-              </div>
-
-              {/* Pending Orders */}
-              <div className="card p-4 bg-white border border-border shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-medium">Pending Orders</span>
-                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-sm">
-                    ⏱️
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-extrabold text-slate-900">{stats.pendingOrders}</div>
-                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
-                    Needs action
-                  </div>
-                </div>
-              </div>
-
-              {/* Processing Orders */}
-              <div className="card p-4 bg-white border border-border shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-medium">Processing Orders</span>
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm">
-                    📦
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-extrabold text-slate-900">{stats.processingOrders}</div>
-                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
-                    In fulfillment
-                  </div>
-                </div>
-              </div>
-
-              {/* Delivered Orders */}
-              <div className="card p-4 bg-white border border-border shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-medium">Delivered Orders</span>
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
-                    🚚
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-extrabold text-slate-900">
-                    {stats.deliveredOrders.toLocaleString()}
-                  </div>
-                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
-                    Successfully delivered
-                  </div>
-                </div>
-              </div>
-
-              {/* Cancelled Orders */}
-              <div className="card p-4 bg-white border border-border shadow-xs flex flex-col justify-between">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-medium">Cancelled Orders</span>
-                  <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-sm">
-                    🚫
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="text-2xl font-extrabold text-slate-900">{stats.cancelledOrders}</div>
-                  <div className="text-[11px] text-slate-400 font-medium mt-0.5">
-                    Voided orders
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Filters Row (Image 1) */}
-            <div className="card p-3.5 bg-white border border-border shadow-xs flex flex-col md:flex-row md:items-center gap-3">
-              <div className="flex-1 relative">
-                <span className="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
-                <input
-                  className="input !pl-8 !py-1.5 text-xs w-full"
-                  placeholder="Search by Order No, Customer, Phone, Email..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && loadOrdersData()}
-                />
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="input !py-1.5 text-xs text-slate-700 bg-white"
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="BILLED">Billed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-
-                <select
-                  value={paymentFilter}
-                  onChange={(e) => setPaymentFilter(e.target.value)}
-                  className="input !py-1.5 text-xs text-slate-700 bg-white"
-                >
-                  <option value="all">All Payment Status</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Failed">Failed</option>
-                </select>
-
-                <select
-                  value={sourceFilter}
-                  onChange={(e) => setSourceFilter(e.target.value)}
-                  className="input !py-1.5 text-xs text-slate-700 bg-white"
-                >
-                  <option value="all">All Sources</option>
-                  <option value="customer">Customer Portal</option>
-                  <option value="staff">Staff / Counter</option>
-                </select>
-
-                <div className="flex items-center gap-1.5 border border-border rounded-md px-3 py-1.5 text-xs text-slate-600 bg-slate-50">
-                  <span>📅</span>
-                  <span className="font-medium">{dateRange}</span>
-                </div>
-
-                <button
-                  onClick={() => loadOrdersData()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1"
-                >
-                  <span>⚡</span>
-                  <span>Filters</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Pending Customer Orders Notification Banner */}
-            {orders.filter((o) => (o as any).placed_by === "customer" && (o.status === "pending" || o.status === "Pending")).length > 0 && (
-              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
-                  <span className="font-bold">
-                    {orders.filter((o) => (o as any).placed_by === "customer" && (o.status === "pending" || o.status === "Pending")).length} new pending customer portal order(s) waiting for review!
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatusFilter("pending");
-                    setSourceFilter("customer");
-                  }}
-                  className="text-xs font-bold text-emerald-700 hover:text-emerald-900 underline"
-                >
-                  View Portal Orders &rarr;
-                </button>
-              </div>
-            )}
-
-            {/* Orders Table (Exact layout from Image 1) */}
-            <div className="card overflow-hidden border border-border bg-white shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-border text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                    <tr>
-                      <th className="py-3 px-3 w-8">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </th>
-                      <th className="py-3 px-2 w-8">#</th>
-                      <th className="py-3 px-3">ORDER NO.</th>
-                      <th className="py-3 px-3">DATE ↓</th>
-                      <th className="py-3 px-3">CUSTOMER</th>
-                      <th className="py-3 px-3">ITEMS</th>
-                      <th className="py-3 px-3">AMOUNT ↓</th>
-                      <th className="py-3 px-3">PAYMENT ↓</th>
-                      <th className="py-3 px-3">STATUS ↓</th>
-                      <th className="py-3 px-3 text-center">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {loading && (
-                      <tr>
-                        <td colSpan={10} className="py-8 text-center text-slate-400">
-                          Loading orders...
-                        </td>
-                      </tr>
-                    )}
-                    {!loading && orders.length === 0 && (
-                      <tr>
-                        <td colSpan={10} className="py-8 text-center text-slate-400">
-                          No orders found matching the filter criteria.
-                        </td>
-                      </tr>
-                    )}
-                    {!loading &&
-                      orders
-                        .filter((ord) => {
-                          if (sourceFilter === "customer") return (ord as any).placed_by === "customer";
-                          if (sourceFilter === "staff") return (ord as any).placed_by !== "customer";
-                          return true;
-                        })
-                        .map((ord, idx) => {
-                        const isBilled =
-                          String(ord.status || "").toUpperCase() === "BILLED" ||
-                          String(ord.status || "").toLowerCase() === "converted_to_bill" ||
-                          Boolean(ord.converted_sale_id || ord.billed_bill_id);
-
-                        const statusColor =
-                          isBilled
-                            ? "bg-indigo-100 text-indigo-800 border-indigo-200"
-                            : ord.status === "delivered" || ord.status === "Delivered"
-                            ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                            : ord.status === "processing" || ord.status === "Processing"
-                            ? "bg-blue-100 text-blue-800 border-blue-200"
-                            : ord.status === "shipped" || ord.status === "Shipped"
-                            ? "bg-purple-100 text-purple-800 border-purple-200"
-                            : ord.status === "pending" || ord.status === "Pending"
-                            ? "bg-amber-100 text-amber-800 border-amber-200"
-                            : "bg-red-100 text-red-800 border-red-200";
-
-                        const payColor =
-                          ord.payment_status === "Paid"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : ord.payment_status === "Pending"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-red-100 text-red-800";
-
-                        const itemCount = ord.items?.length || 1;
-
-                        return (
-                          <tr key={ord.id} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="py-3 px-3">
-                              <input type="checkbox" className="rounded border-gray-300" />
-                            </td>
-                            <td className="py-3 px-2 text-slate-400 font-mono">{idx + 1}</td>
-                            <td className="py-3 px-3">
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setSelectedOrder(ord);
-                                    setStep("view");
-                                  }}
-                                  className="font-bold text-blue-600 hover:underline"
-                                >
-                                  {ord.order_number}
-                                </button>
-                                {(ord as any).placed_by === "customer" && (
-                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
-                                    Portal
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <div className="font-medium text-slate-800">
-                                {new Date(ord.order_date).toLocaleDateString("en-IN", {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                })}
-                              </div>
-                              <div className="text-[10px] text-slate-400">
-                                {new Date(ord.order_date).toLocaleTimeString("en-IN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="font-semibold text-slate-900">
-                                {ord.customer?.name || "Walk-in Customer"}
-                              </div>
-                              <div className="text-[11px] text-slate-400">
-                                {ord.customer?.phone || "+91 98765 00000"}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm">📦</span>
-                                {itemCount > 1 && (
-                                  <span className="text-[10px] bg-slate-100 text-slate-600 px-1 rounded font-semibold">
-                                    +{itemCount - 1}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="font-bold text-slate-900">
-                                ₹ {Number(ord.total_amount).toLocaleString("en-IN")}
-                              </div>
-                              <div className="text-[10px] text-slate-400">
-                                {itemCount} item{itemCount > 1 ? "s" : ""}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <span
-                                className={clsx(
-                                  "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                  payColor
-                                )}
-                              >
-                                {ord.payment_status || "Pending"}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3">
-                              <span
-                                className={clsx(
-                                  "px-2.5 py-0.5 rounded-md text-[10px] font-bold border capitalize",
-                                  statusColor
-                                )}
-                              >
-                                {ord.status}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button
-                                  title="View Order Details"
-                                  onClick={() => {
-                                    setSelectedOrder(ord);
-                                    setStep("view");
-                                  }}
-                                  className="text-slate-500 hover:text-blue-600 text-sm"
-                                >
-                                  👁️
-                                </button>
-                                {!isBilled && ord.status !== "cancelled" && (
-                                  <>
-                                    <button
-                                      title="Update Status"
-                                      onClick={() => {
-                                        setSelectedOrder(ord);
-                                        setStatusUpdateForm({
-                                          status:
-                                            ord.status.charAt(0).toUpperCase() + ord.status.slice(1),
-                                          payment_status: ord.payment_status || "Paid",
-                                          remarks: ord.remarks || "Status updated.",
-                                        });
-                                        setStep("update_status");
-                                      }}
-                                      className="text-slate-500 hover:text-indigo-600 text-sm"
-                                    >
-                                      ✏️
-                                    </button>
-                                    {ord.status.toLowerCase() === "delivered" ? (
-                                      <button
-                                        title="Convert to Official Bill (Order Delivered)"
-                                        disabled={convertingToBill}
-                                        onClick={() => openConvertModal(ord)}
-                                        className="text-emerald-600 hover:text-emerald-700 font-bold text-sm disabled:opacity-40"
-                                      >
-                                        🧾
-                                      </button>
-                                    ) : (
-                                      <button
-                                        title={`Status: ${ord.status}. Mark as Delivered to convert to bill.`}
-                                        onClick={() => {
-                                          setSelectedOrder(ord);
-                                          setStatusUpdateForm({
-                                            status: "Delivered",
-                                            payment_status: ord.payment_status || "Paid",
-                                            remarks: "Marking as Delivered for bill conversion.",
-                                          });
-                                          setStep("update_status");
-                                        }}
-                                        className="text-slate-300 hover:text-amber-600 text-sm"
-                                      >
-                                        🧾
-                                      </button>
-                                    )}
-                                  </>
-                                )}
-                                <button
-                                  title="Print Invoice"
-                                  onClick={() => {
-                                    setSelectedOrder(ord);
-                                    setStep("invoice");
-                                  }}
-                                  className="text-slate-500 hover:text-emerald-600 text-sm"
-                                >
-                                  🖨️
-                                </button>
-                                <button
-                                  title="Notifications"
-                                  onClick={() => {
-                                    setSelectedOrder(ord);
-                                    setStep("notifications");
-                                  }}
-                                  className="text-slate-400 hover:text-slate-700 text-sm"
-                                >
-                                  🔔
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Table Footer */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border-t border-border text-xs text-slate-500 gap-2 bg-slate-50/50">
-                <div>
-                  Showing 1 to {orders.length} of {stats.totalOrders.toLocaleString()} orders
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <span>Rows per page:</span>
-                    <select className="border border-border rounded px-1.5 py-0.5 bg-white text-xs">
-                      <option>10</option>
-                      <option>25</option>
-                      <option>50</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button className="px-2 py-0.5 rounded border border-border bg-white text-slate-500">
-                      «
-                    </button>
-                    <button className="px-2 py-0.5 rounded bg-blue-600 text-white font-bold">1</button>
-                    <button className="px-2 py-0.5 rounded border border-border bg-white text-slate-700">
-                      2
-                    </button>
-                    <button className="px-2 py-0.5 rounded border border-border bg-white text-slate-700">
-                      3
-                    </button>
-                    <span>...</span>
-                    <button className="px-2 py-0.5 rounded border border-border bg-white text-slate-700">
-                      125
-                    </button>
-                    <button className="px-2 py-0.5 rounded border border-border bg-white text-slate-500">
-                      »
-                    </button>
-                  </div>
-                </div>
-              </div>
+        {/* Step bar (only while inside the order workflow) */}
+        {step !== "list" && (
+          <div className="card px-3 py-2.5 flex items-center gap-3">
+            <button type="button" onClick={() => setStep("list")} className="btn-ghost btn-sm shrink-0">
+              <Icon name="left" className="w-3.5 h-3.5" /> All orders
+            </button>
+            <div className="h-5 w-px bg-slate-200 shrink-0" />
+            <div className="min-w-0 overflow-x-auto">
+              <Segmented
+                size="sm"
+                value={step}
+                onChange={(k) => setStep(k as WorkflowStep)}
+                options={[
+                  { key: "create", label: "Create" },
+                  { key: "confirmation", label: "Confirmation" },
+                  { key: "view", label: "Order view" },
+                  { key: "update_status", label: "Update status" },
+                  { key: "invoice", label: "Invoice" },
+                  { key: "tracking", label: "Tracking" },
+                  { key: "history", label: "History" },
+                  { key: "notifications", label: "Notifications" },
+                ]}
+              />
             </div>
           </div>
         )}
 
         {/* ------------------------------------------------------------------ */}
-        {/* STEP 2: CREATE NEW ORDER                                           */}
-        {/* Matches Image 2 (Step 2)                                           */}
+        {/* STEP 1: ORDER LIST                                                 */}
         {/* ------------------------------------------------------------------ */}
-        {step === "create" && (
-          <form onSubmit={handleCreateOrder} className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Create New Order</h2>
-                <div className="text-xs text-slate-500">Orders &gt; Create New Order</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStep("list")}
-                className="btn-secondary !py-1.5 !px-3 text-xs"
-              >
-                Back to Orders
-              </button>
-            </div>
+        {step === "list" && (() => {
+          const isBilledOrder = (o: OrderRecord) =>
+            String(o.status || "").toUpperCase() === "BILLED" || String(o.status || "").toLowerCase() === "converted_to_bill" || Boolean(o.converted_sale_id || o.billed_bill_id);
+          const portalPending = orders.filter((o) => (o as any).placed_by === "customer" && String(o.status).toLowerCase() === "pending").length;
+          const sourced = orders.filter((ord) => {
+            if (sourceFilter === "customer") return (ord as any).placed_by === "customer";
+            if (sourceFilter === "staff") return (ord as any).placed_by !== "customer";
+            return true;
+          });
+          const pages = Math.max(1, Math.ceil(sourced.length / pageSize));
+          const page = Math.min(listPage, pages);
+          const pageRows = sourced.slice((page - 1) * pageSize, page * pageSize);
+          const statusChip = (o: OrderRecord) => {
+            if (isBilledOrder(o)) return { label: "Billed", cls: "badge-brand" };
+            const s = String(o.status || "").toLowerCase();
+            return (
+              {
+                pending: { label: "Pending", cls: "badge-warn" },
+                confirmed: { label: "Confirmed", cls: "badge-brand" },
+                processing: { label: "Processing", cls: "badge bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/15" },
+                shipped: { label: "Shipped", cls: "badge bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-600/15" },
+                delivered: { label: "Delivered", cls: "badge-active" },
+                completed: { label: "Completed", cls: "badge-active" },
+                cancelled: { label: "Cancelled", cls: "badge-inactive" },
+              } as Record<string, { label: string; cls: string }>
+            )[s] || { label: o.status, cls: "badge-inactive" };
+          };
+          const payChip = (p?: string) =>
+            p === "Paid" ? "badge-active" : p === "Pending" || !p ? "badge-warn" : "badge-danger";
 
-            {/* Customer Information & Order Details (2 Columns) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Customer Information */}
-              <div className="card p-4 space-y-3 bg-white border border-border shadow-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-border">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>👤</span> Customer Information
-                  </h3>
-                  <div className="flex text-xs bg-slate-100 p-0.5 rounded border border-border">
-                    <button
-                      type="button"
-                      onClick={() => setCustType("existing")}
-                      className={clsx(
-                        "px-2 py-0.5 rounded font-medium",
-                        custType === "existing" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600"
-                      )}
-                    >
-                      Existing
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCustType("new")}
-                      className={clsx(
-                        "px-2 py-0.5 rounded font-medium",
-                        custType === "new" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600"
-                      )}
-                    >
-                      + Add New
-                    </button>
-                  </div>
-                </div>
+          return (
+            <div className="space-y-6 pb-10">
+              <PageHeader
+                eyebrow="Selling"
+                title="Orders"
+                subtitle="Online and counter orders — move each one from new to delivered, then bill it."
+                actions={
+                  <button type="button" onClick={() => setStep("create")} className="btn-primary">
+                    <Icon name="plus" /> New order
+                  </button>
+                }
+              />
 
-                {custType === "existing" ? (
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">
-                      Customer *
-                    </label>
-                    <select
-                      value={selectedCustId || ""}
-                      onChange={(e) => setSelectedCustId(Number(e.target.value))}
-                      className="input !py-2 text-xs w-full bg-white"
-                    >
-                      {availableCustomers.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {c.phone ? `(${c.phone})` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">
-                      Customer Name *
-                    </label>
-                    <input
-                      className="input !py-1.5 text-xs w-full"
-                      value={newCustName}
-                      placeholder="e.g. Rajesh Kumar"
-                      onChange={(e) => setNewCustName(e.target.value)}
-                      required
-                    />
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Phone</label>
-                    <input
-                      className="input !py-1.5 text-xs w-full"
-                      value={newCustPhone}
-                      onChange={(e) => setNewCustPhone(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Email</label>
-                    <input
-                      className="input !py-1.5 text-xs w-full"
-                      value={newCustEmail}
-                      onChange={(e) => setNewCustEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 block mb-1">Address</label>
-                  <input
-                    className="input !py-1.5 text-xs w-full"
-                    value={newCustAddress}
-                    onChange={(e) => setNewCustAddress(e.target.value)}
-                  />
-                </div>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <StatCard label="Total" icon="cart" tone="brand" value={stats.totalOrders.toLocaleString("en-IN")} loading={loading} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} hint="All-time orders" />
+                <StatCard label="Pending" icon="clock" tone="amber" value={stats.pendingOrders.toLocaleString("en-IN")} valueClass={stats.pendingOrders ? "text-amber-600" : undefined} loading={loading} active={statusFilter === "pending"} onClick={() => setStatusFilter(statusFilter === "pending" ? "all" : "pending")} hint="Needs action" />
+                <StatCard label="Processing" icon="box" tone="sky" value={stats.processingOrders.toLocaleString("en-IN")} loading={loading} active={statusFilter === "processing"} onClick={() => setStatusFilter(statusFilter === "processing" ? "all" : "processing")} hint="Being packed" />
+                <StatCard label="Delivered" icon="truck" tone="emerald" value={stats.deliveredOrders.toLocaleString("en-IN")} loading={loading} active={statusFilter === "delivered"} onClick={() => setStatusFilter(statusFilter === "delivered" ? "all" : "delivered")} hint="Ready to bill" />
+                <StatCard label="Cancelled" icon="ban" tone="rose" value={stats.cancelledOrders.toLocaleString("en-IN")} loading={loading} active={statusFilter === "cancelled"} onClick={() => setStatusFilter(statusFilter === "cancelled" ? "all" : "cancelled")} hint="Voided" />
               </div>
 
-              {/* Order Details */}
-              <div className="card p-4 space-y-3 bg-white border border-border shadow-xs">
-                <div className="pb-2 border-b border-border">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>📋</span> Order Details
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Order Date</label>
-                    <input
-                      type="date"
-                      value={orderDate}
-                      onChange={(e) => setOrderDate(e.target.value)}
-                      className="input !py-1.5 text-xs w-full bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Order Type</label>
-                    <div className="flex gap-2">
-                      {["Walk-in", "Online"].map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setOrderType(t)}
-                          className={clsx(
-                            "flex-1 py-1.5 rounded-md text-xs font-semibold border transition-all",
-                            orderType === t
-                              ? "bg-blue-50 border-blue-600 text-blue-700"
-                              : "border-border text-slate-600 hover:bg-slate-50"
-                          )}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Payment Method</label>
-                    <select
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                      className="input !py-1.5 text-xs w-full bg-white"
-                    >
-                      <option>Cash</option>
-                      <option>Online / UPI</option>
-                      <option>Card</option>
-                      <option>Credit</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">Payment Status</label>
-                    <select
-                      value={paymentStatus}
-                      onChange={(e) => setPaymentStatus(e.target.value)}
-                      className="input !py-1.5 text-xs w-full bg-white font-medium"
-                    >
-                      <option>Paid</option>
-                      <option>Pending</option>
-                      <option>Failed</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold text-slate-600 block mb-1">
-                      Expected Delivery
-                    </label>
-                    <input
-                      type="date"
-                      value={expectedDeliveryDate}
-                      onChange={(e) => setExpectedDeliveryDate(e.target.value)}
-                      className="input !py-1.5 text-xs w-full bg-white"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Add Products Section */}
-            <div className="card p-4 space-y-4 bg-white border border-border shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 border-b border-border">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <span>📦</span> Add Products
-                </h3>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <input
-                      className="input !py-1.5 text-xs w-64"
-                      placeholder="Search product by name, SKU or barcode..."
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                    />
-                    {productSearch.length > 1 && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-lg shadow-lg z-20 max-h-48 overflow-y-auto">
-                        {availableProducts
-                          .filter((p) =>
-                            p.name.toLowerCase().includes(productSearch.toLowerCase())
-                          )
-                          .map((p) => (
-                            <div
-                              key={p.id}
-                              onClick={() => addProductToCart(p)}
-                              className="px-3 py-2 text-xs hover:bg-slate-50 cursor-pointer flex justify-between border-b border-border last:border-0"
-                            >
-                              <span className="font-medium text-slate-900">{p.name}</span>
-                              <span className="text-slate-500">₹{p.selling_price}</span>
-                            </div>
-                          ))}
-                      </div>
-                    )}
+              {portalPending > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
+                    <span className="font-semibold">
+                      {portalPending} new customer portal order{portalPending > 1 ? "s" : ""} waiting for review
+                    </span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => addProductToCart()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-xs font-semibold"
+                    onClick={() => {
+                      setStatusFilter("pending");
+                      setSourceFilter("customer");
+                    }}
+                    className="btn-soft btn-sm self-start sm:self-auto"
                   >
-                    + Add Product
+                    Review <Icon name="arrowRight" className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </div>
+              )}
 
-              {/* Product Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-border text-slate-600 font-semibold text-[11px] uppercase">
-                    <tr>
-                      <th className="py-2.5 px-3 w-8">#</th>
-                      <th className="py-2.5 px-3">PRODUCT</th>
-                      <th className="py-2.5 px-3">SKU</th>
-                      <th className="py-2.5 px-3 text-center w-24">QTY</th>
-                      <th className="py-2.5 px-3 text-right">PRICE</th>
-                      <th className="py-2.5 px-3 text-center">GST %</th>
-                      <th className="py-2.5 px-3 text-right">DISC.</th>
-                      <th className="py-2.5 px-3 text-right font-bold">TOTAL</th>
-                      <th className="py-2.5 px-3 text-center w-12">ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {cartItems.length === 0 && (
-                      <tr>
-                        <td colSpan={9} className="py-8 text-center text-slate-400">
-                          Cart is empty (0 items). Search products above or select from the database to add items.
-                        </td>
-                      </tr>
-                    )}
-                    {cartItems.map((item, idx) => {
-                      const lineTotal = item.price * item.qty - (item.discountPercent || 0);
-                      return (
-                        <tr key={idx} className="hover:bg-slate-50/50">
-                          <td className="py-2.5 px-3 text-slate-400">{idx + 1}</td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-900">
-                            {item.productName}
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
-                            {item.sku}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <input
-                              type="number"
-                              min="1"
-                              value={item.qty}
-                              onChange={(e) => {
-                                const val = Math.max(1, Number(e.target.value));
-                                setCartItems((prev) =>
-                                  prev.map((it, i) => (i === idx ? { ...it, qty: val } : it))
-                                );
-                              }}
-                              className="input !py-1 !px-2 text-center text-xs w-16"
-                            />
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono">₹ {item.price}</td>
-                          <td className="py-2.5 px-3 text-center text-slate-500">
-                            {item.gstPercent}%
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-slate-500">
-                            ₹ {item.discountPercent || 0}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-bold text-slate-900 font-mono">
-                            ₹ {lineTotal}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => removeCartItem(idx)}
-                              className="text-red-500 hover:text-red-700 font-bold"
-                            >
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Summary Bottom Right */}
-              <div className="flex flex-col sm:flex-row justify-between items-start border-t border-border pt-4">
-                <div className="text-xs text-slate-500 max-w-sm">
-                  Orders will be created in <strong className="text-slate-800">Processing</strong> state.
-                  Stock is preserved until delivered or billed.
-                </div>
-
-                <div className="w-64 space-y-1.5 text-xs bg-slate-50 p-3 rounded-lg border border-border">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Subtotal</span>
-                    <span className="font-mono">₹ {calcSubtotal}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Discount</span>
-                    <span className="font-mono text-red-600">- ₹ {calcDiscount}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>GST ({defaultGstRate}%)</span>
-                    <span className="font-mono">₹ {calcGst}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-900 font-bold text-sm pt-2 border-t border-border">
-                    <span>Total Amount</span>
-                    <span className="font-mono text-blue-700">₹ {calcGrandTotal}</span>
+              <section className="card overflow-hidden">
+                <div className="p-4 sm:px-5 border-b border-slate-100 space-y-3">
+                  <Segmented
+                    size="sm"
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    options={[
+                      { key: "all", label: "All" },
+                      { key: "pending", label: "Pending" },
+                      { key: "confirmed", label: "Confirmed" },
+                      { key: "processing", label: "Processing" },
+                      { key: "shipped", label: "Shipped" },
+                      { key: "delivered", label: "Delivered" },
+                      { key: "BILLED", label: "Billed" },
+                      { key: "cancelled", label: "Cancelled" },
+                    ]}
+                  />
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <form
+                      className="flex-1 flex gap-2"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        setListPage(1);
+                        loadOrdersData();
+                      }}
+                    >
+                      <SearchInput className="flex-1" value={search} onChange={setSearch} placeholder="Order no, customer, phone or email…" />
+                      <button type="submit" className="btn-secondary">Search</button>
+                    </form>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${paymentFilter !== "all" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
+                        <option value="all">Any payment</option>
+                        <option value="Paid">Paid</option>
+                        <option value="Pending">Payment pending</option>
+                        <option value="Failed">Failed</option>
+                      </select>
+                      <select value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setListPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${sourceFilter !== "all" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
+                        <option value="all">Any source</option>
+                        <option value="customer">Customer portal</option>
+                        <option value="staff">Staff / counter</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {error && <div className="text-xs text-red-600 font-semibold">{error}</div>}
+                {error && (
+                  <div className="m-4 flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+                    <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
+                  </div>
+                )}
 
-              {/* Form Buttons */}
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setStep("list")}
-                  className="btn-secondary !py-2 !px-4 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingOrder}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-sm"
-                >
-                  {savingOrder ? "Saving..." : "Save Order"}
-                </button>
-              </div>
+                {loading ? (
+                  <div className="p-5 space-y-3">
+                    {Array.from({ length: 6 }, (_, i) => (
+                      <div key={i} className="flex items-center gap-3 animate-pulse">
+                        <div className="w-20 h-3 rounded bg-slate-100" />
+                        <div className="w-7 h-7 rounded-full bg-slate-100" />
+                        <div className="flex-1 h-3 rounded bg-slate-100" />
+                        <div className="w-16 h-3 rounded bg-slate-100" />
+                      </div>
+                    ))}
+                  </div>
+                ) : sourced.length === 0 ? (
+                  orders.length === 0 && statusFilter === "all" && paymentFilter === "all" && !search ? (
+                    <EmptyState
+                      icon="cart"
+                      tone="brand"
+                      title="No orders yet"
+                      text="Orders from your online store and counter appear here."
+                      action={<button type="button" onClick={() => setStep("create")} className="btn-primary btn-sm"><Icon name="plus" className="w-3.5 h-3.5" /> New order</button>}
+                    />
+                  ) : (
+                    <EmptyState icon="search" title="No orders match" text="Try another status, source or search." />
+                  )
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Order</th>
+                            <th>Customer</th>
+                            <th className="!text-right">Amount</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th className="!text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageRows.map((ord) => {
+                            const billed = isBilledOrder(ord);
+                            const st = statusChip(ord);
+                            const itemCount = ord.items?.length || 0;
+                            const delivered = String(ord.status).toLowerCase() === "delivered";
+                            const open = !billed && String(ord.status).toLowerCase() !== "cancelled";
+                            return (
+                              <tr key={ord.id} className={String(ord.status).toLowerCase() === "cancelled" ? "opacity-60" : ""}>
+                                <td className="whitespace-nowrap">
+                                  <div className="flex items-center gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedOrder(ord);
+                                        setStep("view");
+                                      }}
+                                      className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline"
+                                    >
+                                      {ord.order_number}
+                                    </button>
+                                    {(ord as any).placed_by === "customer" && <span className="badge-brand !text-[10px] uppercase">Portal</span>}
+                                  </div>
+                                  <div className="text-[11.5px] text-slate-400">
+                                    {new Date(ord.order_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                    {" · "}
+                                    {new Date(ord.order_date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="flex items-center gap-2.5 min-w-[160px]">
+                                    <Avatar name={ord.customer?.name || "Walk in"} size="sm" />
+                                    <div className="min-w-0">
+                                      <div className="font-semibold text-navy-900 truncate max-w-[200px]">{ord.customer?.name || "Walk-in customer"}</div>
+                                      {ord.customer?.phone && <div className="text-[11.5px] text-slate-400 tabular">{ord.customer.phone}</div>}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="text-right whitespace-nowrap">
+                                  <div className="font-bold text-navy-900 tabular">₹{Number(ord.total_amount).toLocaleString("en-IN")}</div>
+                                  {itemCount > 0 && <div className="text-[11px] text-slate-400">{itemCount} item{itemCount > 1 ? "s" : ""}</div>}
+                                </td>
+                                <td><span className={payChip(ord.payment_status)}>{ord.payment_status || "Pending"}</span></td>
+                                <td><span className={st.cls}>{st.label}</span></td>
+                                <td className="text-right whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1">
+                                    {open && delivered && (
+                                      <button type="button" disabled={convertingToBill} onClick={() => openConvertModal(ord)} className="btn-soft btn-sm">
+                                        <Icon name="receipt" className="w-3.5 h-3.5" /> Bill it
+                                      </button>
+                                    )}
+                                    {open && !delivered && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedOrder(ord);
+                                          setStatusUpdateForm({
+                                            status: ord.status.charAt(0).toUpperCase() + ord.status.slice(1),
+                                            payment_status: ord.payment_status || "Paid",
+                                            remarks: ord.remarks || "Status updated.",
+                                          });
+                                          setStep("update_status");
+                                        }}
+                                        className="btn-secondary btn-sm"
+                                      >
+                                        <Icon name="edit" className="w-3.5 h-3.5" /> Update
+                                      </button>
+                                    )}
+                                    <IconButton title="View order" icon="eye" onClick={() => { setSelectedOrder(ord); setStep("view"); }} />
+                                    <IconButton title="Invoice / print" icon="file" onClick={() => { setSelectedOrder(ord); setStep("invoice"); }} />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <Pagination
+                      page={page}
+                      pages={pages}
+                      total={sourced.length}
+                      pageSize={pageSize}
+                      onPage={(p) => setListPage(Math.min(pages, Math.max(1, p)))}
+                      noun="orders"
+                      left={
+                        <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setListPage(1); }} className="input w-auto py-1 pr-7 text-[12px]" aria-label="Rows per page">
+                          <option value={10}>10 / page</option>
+                          <option value={25}>25 / page</option>
+                          <option value={50}>50 / page</option>
+                        </select>
+                      }
+                    />
+                  </>
+                )}
+              </section>
             </div>
-          </form>
-        )}
+          );
+        })()}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* STEP 2: CREATE NEW ORDER                                           */}
+        {/* ------------------------------------------------------------------ */}
+        {step === "create" && (() => {
+          const pickedCust = availableCustomers.find((c) => c.id === selectedCustId);
+          const q = productSearch.trim().toLowerCase();
+          const matches = q.length > 1 ? availableProducts.filter((p) => p.name.toLowerCase().includes(q) || String(p.sku || "").toLowerCase().includes(q)).slice(0, 8) : [];
+          const money = (n: number) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          return (
+            <form onSubmit={handleCreateOrder} className="space-y-5 pb-10">
+              <PageHeader eyebrow="Order" title="New order" subtitle="Orders start as Processing. Stock is reduced when the order is billed." />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <section className="card">
+                  <div className="card-header">
+                    <h2 className="card-title text-[14px]">Customer</h2>
+                    <Segmented
+                      size="sm"
+                      value={custType}
+                      onChange={setCustType}
+                      options={[
+                        { key: "existing", label: "Existing" },
+                        { key: "new", label: "New" },
+                      ]}
+                    />
+                  </div>
+                  <div className="p-5 space-y-3">
+                    {custType === "existing" ? (
+                      <>
+                        <div>
+                          <label className="label">Customer *</label>
+                          <select value={selectedCustId || ""} onChange={(e) => setSelectedCustId(Number(e.target.value))} className="input">
+                            {availableCustomers.length === 0 && <option value="">No customers yet — add a new one</option>}
+                            {availableCustomers.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} {c.phone ? `(${c.phone})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {pickedCust && (
+                          <div className="flex items-center gap-3 rounded-xl bg-slate-50 border border-slate-100 p-3 text-[12.5px]">
+                            <Avatar name={pickedCust.name} />
+                            <div className="min-w-0">
+                              <div className="font-semibold text-navy-900">{pickedCust.name}</div>
+                              <div className="text-slate-500 truncate">{[pickedCust.phone, pickedCust.address].filter(Boolean).join(" · ") || "No contact details"}</div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="label">Name *</label>
+                          <input className="input" value={newCustName} placeholder="e.g. Rajesh Kumar" onChange={(e) => setNewCustName(e.target.value)} required />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="label">Phone</label>
+                            <input className="input tabular" value={newCustPhone} onChange={(e) => setNewCustPhone(e.target.value)} />
+                          </div>
+                          <div>
+                            <label className="label">Email</label>
+                            <input type="email" className="input" value={newCustEmail} onChange={(e) => setNewCustEmail(e.target.value)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="label">Delivery address</label>
+                          <input className="input" value={newCustAddress} onChange={(e) => setNewCustAddress(e.target.value)} />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </section>
+
+                <section className="card">
+                  <div className="card-header">
+                    <h2 className="card-title text-[14px]">Order details</h2>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="label">Order date</label>
+                        <input type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="input" />
+                      </div>
+                      <div>
+                        <label className="label">Expected delivery</label>
+                        <input type="date" value={expectedDeliveryDate} min={orderDate} onChange={(e) => setExpectedDeliveryDate(e.target.value)} className="input" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Order type</label>
+                      <ChoiceGroup cols={2} value={orderType} onChange={setOrderType} options={[["Walk-in", "Walk-in"], ["Online", "Online"]]} />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="label">Payment method</label>
+                        <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="input">
+                          <option>Cash</option>
+                          <option>Online / UPI</option>
+                          <option>Card</option>
+                          <option>Credit</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label">Payment status</label>
+                        <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className="input">
+                          <option>Paid</option>
+                          <option>Pending</option>
+                          <option>Failed</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <section className="card overflow-visible">
+                <div className="p-4 sm:px-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <h2 className="card-title text-[14px]">Items</h2>
+                  <div className="relative md:w-[360px]">
+                    <SearchInput
+                      value={productSearch}
+                      onChange={setProductSearch}
+                      placeholder="Search product by name or SKU…"
+                    />
+                    {matches.length > 0 && (
+                      <ul className="absolute left-0 right-0 top-full mt-1 z-30 max-h-64 overflow-auto rounded-xl bg-white border border-border shadow-lift py-1">
+                        {matches.map((p) => (
+                          <li key={p.id}>
+                            <button type="button" onClick={() => addProductToCart(p)} className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left hover:bg-brand-50">
+                              <span className="min-w-0">
+                                <span className="block text-[12.5px] font-medium text-navy-900 truncate">{p.name}</span>
+                                <span className="block text-[11px] text-slate-400 font-mono">{p.sku} · stock {Number((p as any).stocks?.[0]?.current_stock ?? 0)}</span>
+                              </span>
+                              <span className="text-[12.5px] font-semibold tabular text-navy-900">₹{Number(p.selling_price || 0).toLocaleString("en-IN")}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {q.length > 1 && matches.length === 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-xl bg-white border border-border shadow-lift px-3 py-2 text-[12.5px] text-slate-500">No product matches “{productSearch}”.</div>
+                    )}
+                  </div>
+                </div>
+
+                {cartItems.length === 0 ? (
+                  <EmptyState compact icon="cart" title="No items yet" text="Search above and pick products to add them." />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Item</th>
+                          <th className="!text-center w-28">Qty</th>
+                          <th className="!text-right">Rate</th>
+                          <th className="!text-right">GST</th>
+                          <th className="!text-right">Amount</th>
+                          <th className="w-10" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cartItems.map((item, idx) => {
+                          const lineTotal = item.price * item.qty - (item.discountPercent || 0);
+                          return (
+                            <tr key={idx}>
+                              <td>
+                                <div className="font-semibold text-navy-900">{item.productName}</div>
+                                <div className="font-mono text-[11px] text-slate-400">{item.sku}</div>
+                              </td>
+                              <td className="text-center">
+                                <div className="inline-flex items-center rounded-lg border border-border overflow-hidden">
+                                  <button type="button" onClick={() => setCartItems((prev) => prev.map((it, i) => (i === idx ? { ...it, qty: Math.max(1, it.qty - 1) } : it)))} className="w-8 h-8 text-slate-500 hover:bg-slate-50" aria-label="Decrease quantity">−</button>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={item.qty}
+                                    onChange={(e) => {
+                                      const val = Math.max(1, Number(e.target.value));
+                                      setCartItems((prev) => prev.map((it, i) => (i === idx ? { ...it, qty: val } : it)));
+                                    }}
+                                    className="w-12 h-8 text-center text-[13px] font-semibold tabular border-x border-border outline-none"
+                                    aria-label="Quantity"
+                                  />
+                                  <button type="button" onClick={() => setCartItems((prev) => prev.map((it, i) => (i === idx ? { ...it, qty: it.qty + 1 } : it)))} className="w-8 h-8 text-slate-500 hover:bg-slate-50" aria-label="Increase quantity">+</button>
+                                </div>
+                              </td>
+                              <td className="text-right tabular">{money(item.price)}</td>
+                              <td className="text-right tabular text-slate-500">{item.gstPercent ? `${item.gstPercent}%` : "—"}</td>
+                              <td className="text-right font-bold tabular">{money(lineTotal)}</td>
+                              <td className="text-right">
+                                <IconButton title="Remove item" icon="trash" tone="rose" onClick={() => removeCartItem(idx)} />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div className="p-4 sm:p-5 border-t border-slate-100 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                  <dl className="w-full md:w-72 md:order-2 space-y-1.5 text-[13px] rounded-xl bg-slate-50 border border-slate-100 p-3">
+                    <div className="flex justify-between text-slate-600"><dt>Subtotal</dt><dd className="tabular">{money(calcSubtotal)}</dd></div>
+                    {calcDiscount > 0 && <div className="flex justify-between text-slate-600"><dt>Discount</dt><dd className="tabular text-rose-600">− {money(calcDiscount)}</dd></div>}
+                    <div className="flex justify-between text-slate-600"><dt>GST{defaultGstRate ? ` (${defaultGstRate}%)` : ""}</dt><dd className="tabular">{money(calcGst)}</dd></div>
+                    <div className="flex justify-between font-bold text-[15px] text-navy-900 pt-1.5 border-t border-slate-200"><dt>Total</dt><dd className="tabular">{money(calcGrandTotal)}</dd></div>
+                  </dl>
+                  <div className="md:order-1 space-y-3">
+                    {error && (
+                      <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {error}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setStep("list")} className="btn-secondary">Cancel</button>
+                      <button type="submit" disabled={savingOrder || cartItems.length === 0} className="btn-primary">
+                        {savingOrder ? "Saving…" : "Save order"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </form>
+          );
+        })()}
+
 
         {/* ------------------------------------------------------------------ */}
         {/* STEP 3: ORDER CONFIRMATION                                         */}
-        {/* Matches Image 2 (Step 3)                                           */}
         {/* ------------------------------------------------------------------ */}
         {step === "confirmation" && selectedOrder && (
-          <div className="card p-8 bg-white border border-border shadow-xs text-center max-w-xl mx-auto space-y-6">
-            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-4xl mx-auto shadow-sm">
-              ✓
+          <div className="card max-w-xl mx-auto overflow-hidden">
+            <div className="hero-brand !rounded-none !shadow-none px-6 py-8 text-center">
+              <span className="relative mx-auto w-16 h-16 rounded-full bg-white/15 ring-1 ring-inset ring-white/25 flex items-center justify-center">
+                <Icon name="check" className="w-8 h-8 text-white" strokeWidth={3} />
+              </span>
+              <h2 className="relative mt-4 text-[22px] font-bold text-white">Order created</h2>
+              <p className="relative text-[13px] text-emerald-50/80 mt-1">#{selectedOrder.order_number} is saved and in Processing.</p>
             </div>
-
-            <div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                Order Created Successfully!
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Order has been created and saved to the database.
-              </p>
-            </div>
-
-            <div className="bg-slate-50 rounded-xl p-5 border border-border text-left space-y-2.5 text-xs">
-              <div className="flex justify-between py-1 border-b border-border/60">
-                <span className="text-slate-500">Order No.</span>
-                <span className="font-bold font-mono text-slate-900">
-                  {selectedOrder.order_number}
-                </span>
+            <div className="p-6 space-y-5">
+              <dl className="space-y-2 text-[13px]">
+                <InfoRow k="Customer" v={<b>{selectedOrder.customer?.name || "Walk-in customer"}</b>} />
+                <InfoRow k="Placed" v={fmtDateTime(selectedOrder.order_date)} />
+                <InfoRow k="Payment" v={<span className={selectedOrder.payment_status === "Paid" ? "badge-active" : "badge-warn"}>{selectedOrder.payment_status || "Pending"}</span>} />
+                <InfoRow k="Status" v={<span className="badge-brand capitalize">{selectedOrder.status}</span>} />
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <span className="font-semibold text-navy-900">Total</span>
+                  <span className="text-[18px] font-bold text-navy-900 tabular">₹{Number(selectedOrder.total_amount).toLocaleString("en-IN")}</span>
+                </div>
+              </dl>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <button type="button" onClick={() => setStep("view")} className="btn-primary">
+                  <Icon name="eye" /> View order
+                </button>
+                <button type="button" onClick={() => setStep("invoice")} className="btn-secondary">
+                  <Icon name="file" className="w-4 h-4 text-slate-500" /> Invoice
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCartItems([]);
+                    setStep("create");
+                  }}
+                  className="btn-ghost"
+                >
+                  <Icon name="plus" /> Another order
+                </button>
               </div>
-              <div className="flex justify-between py-1 border-b border-border/60">
-                <span className="text-slate-500">Customer</span>
-                <span className="font-bold text-slate-900">
-                  {selectedOrder.customer?.name || "Walk-in Customer"}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-border/60">
-                <span className="text-slate-500">Total Amount</span>
-                <span className="font-extrabold text-blue-700 font-mono text-sm">
-                  ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-border/60">
-                <span className="text-slate-500">Payment Status</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                  {selectedOrder.payment_status || "Paid"}
-                </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-border/60">
-                <span className="text-slate-500">Order Status</span>
-                <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold capitalize">
-                  {selectedOrder.status}
-                </span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-slate-500">Date & Time</span>
-                <span className="font-medium text-slate-700">
-                  {new Date(selectedOrder.order_date).toLocaleString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex justify-center gap-3 pt-2">
-              <button
-                onClick={() => setStep("view")}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-sm"
-              >
-                View Order
-              </button>
-              <button
-                onClick={() => {
-                  setCartItems([]);
-                  setStep("create");
-                }}
-                className="btn-secondary !py-2 !px-5 text-xs font-semibold"
-              >
-                Create Another Order
-              </button>
-              <button
-                onClick={() => setStep("invoice")}
-                className="border border-emerald-600 text-emerald-700 hover:bg-emerald-50 px-4 py-2 rounded-lg text-xs font-bold"
-              >
-                Print Invoice
-              </button>
             </div>
           </div>
         )}
+
 
         {/* ------------------------------------------------------------------ */}
         {/* STEP 4: ORDER VIEW / DETAILS                                       */}
-        {/* Matches Image 2 (Step 4)                                           */}
         {/* ------------------------------------------------------------------ */}
-        {step === "view" && selectedOrder && (
-          <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">
-                  View Order #{selectedOrder.order_number}
-                </h2>
-                <div className="text-xs text-slate-500">Orders &gt; View Order</div>
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => setStep("list")}
-                  className="btn-secondary !py-1.5 !px-3 text-xs"
-                >
-                  ← Back
-                </button>
-                <button
-                  onClick={() => setStep("invoice")}
-                  className="bg-white hover:bg-slate-50 border border-border px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-800 shadow-xs flex items-center gap-1.5"
-                >
-                  <span>🖨️</span> Print Invoice
-                </button>
-                {(() => {
-                  const selBilled =
-                    String(selectedOrder.status || "").toUpperCase() === "BILLED" ||
-                    String(selectedOrder.status || "").toLowerCase() === "converted_to_bill" ||
-                    Boolean(selectedOrder.converted_sale_id || selectedOrder.billed_bill_id);
-                  const linkedSaleId = selectedOrder.billed_bill_id || selectedOrder.converted_sale_id;
-                  if (selBilled) {
-                    return (
-                      <div className="flex items-center gap-2">
-                        <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
-                          BILLED {selectedOrder.billed_at ? `(${new Date(selectedOrder.billed_at).toLocaleDateString("en-IN")})` : ""}
-                        </span>
-                        {linkedSaleId && (
-                          <Link
-                            to={`/app/sales/${linkedSaleId}`}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs"
-                          >
-                            View Bill →
-                          </Link>
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <>
-                      {selectedOrder.status.toLowerCase() === "delivered" ? (
-                        <button
-                          onClick={() => openConvertModal(selectedOrder)}
-                          disabled={convertingToBill}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 disabled:opacity-50"
-                        >
-                          <span>🧾</span>
-                          <span>{convertingToBill ? "Converting..." : "Convert to Official Bill"}</span>
-                        </button>
-                      ) : selectedOrder.status !== "cancelled" ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg font-medium flex items-center gap-1">
-                            <span>ℹ️</span> Status: {selectedOrder.status}. Mark as Delivered to convert to bill.
-                          </span>
-                          <button
-                            onClick={() => {
-                              setStatusUpdateForm({
-                                status: "Delivered",
-                                payment_status: selectedOrder.payment_status || "Paid",
-                                remarks: "Order marked Delivered.",
-                              });
-                              setStep("update_status");
-                            }}
-                            className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1"
-                          >
-                            <span>📦</span> Mark Delivered
-                          </button>
-                        </div>
-                      ) : null}
-                      <button
-                        onClick={() => {
-                          setStatusUpdateForm({
-                            status:
-                              selectedOrder.status.charAt(0).toUpperCase() +
-                              selectedOrder.status.slice(1),
-                            payment_status: selectedOrder.payment_status || "Paid",
-                            remarks: selectedOrder.remarks || "Processing order delivery.",
-                          });
-                          setStep("update_status");
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5"
-                      >
-                        <span>✏️</span> Edit Order Status
+        {step === "view" && selectedOrder && (() => {
+          const o = selectedOrder;
+          const s = String(o.status || "").toLowerCase();
+          const billed = s === "billed" || s === "converted_to_bill" || Boolean(o.converted_sale_id || o.billed_bill_id);
+          const linkedSaleId = o.billed_bill_id || o.converted_sale_id;
+          const money = (n: unknown) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          const openUpdate = (status?: string, remarks?: string) => {
+            setStatusUpdateForm({
+              status: status || o.status.charAt(0).toUpperCase() + o.status.slice(1),
+              payment_status: o.payment_status || "Pending",
+              remarks: remarks || o.remarks || "Status updated.",
+            });
+            setStep("update_status");
+          };
+          return (
+            <div className="space-y-5 pb-10">
+              <PageHeader
+                eyebrow="Order"
+                title={`#${o.order_number}`}
+                subtitle={`${o.customer?.name || "Walk-in customer"} · placed ${fmtDateTime(o.order_date)}`}
+                actions={
+                  <>
+                    <button type="button" onClick={() => setStep("invoice")} className="btn-secondary">
+                      <Icon name="file" className="w-4 h-4 text-slate-500" /> Invoice
+                    </button>
+                    <button type="button" onClick={() => setStep("tracking")} className="btn-secondary">
+                      <Icon name="truck" className="w-4 h-4 text-slate-500" /> Tracking
+                    </button>
+                    {!billed && s !== "cancelled" && (
+                      <button type="button" onClick={() => openUpdate()} className="btn-secondary">
+                        <Icon name="edit" className="w-4 h-4 text-slate-500" /> Update status
                       </button>
-                    </>
-                  );
-                })()}
-                <button
-                  onClick={() => setStep("tracking")}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5"
-                >
-                  <span>🚚</span> Live Tracking
-                </button>
+                    )}
+                  </>
+                }
+              />
+
+              {/* Next step */}
+              {billed ? (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+                  <span className="flex items-center gap-2 text-[13px] font-medium text-brand-800">
+                    <Icon name="checkCircle" className="w-4 h-4" /> Billed{o.billed_at ? ` on ${fmtDateTime(o.billed_at, false)}` : ""}{o.convertedSale?.invoice_number ? ` as ${o.convertedSale.invoice_number}` : ""}.
+                  </span>
+                  {linkedSaleId && (
+                    <Link to={`/app/sales/${linkedSaleId}`} className="btn-primary btn-sm self-start sm:self-auto">
+                      View bill <Icon name="arrowRight" className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              ) : s === "delivered" ? (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <span className="flex items-center gap-2 text-[13px] font-medium text-emerald-800">
+                    <Icon name="truck" className="w-4 h-4" /> Delivered — ready to bill.
+                  </span>
+                  <button type="button" onClick={() => openConvertModal(o)} disabled={convertingToBill} className="btn-primary btn-sm self-start sm:self-auto">
+                    <Icon name="receipt" className="w-3.5 h-3.5" /> {convertingToBill ? "Converting…" : "Convert to bill"}
+                  </button>
+                </div>
+              ) : s !== "cancelled" ? (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <span className="flex items-center gap-2 text-[13px] font-medium text-amber-800">
+                    <Icon name="clock" className="w-4 h-4" /> Currently <b className="capitalize">{s}</b>. Mark it delivered to bill it.
+                  </span>
+                  <button type="button" onClick={() => openUpdate("Delivered", "Order marked Delivered.")} className="btn-secondary btn-sm self-start sm:self-auto">
+                    <Icon name="truck" className="w-3.5 h-3.5" /> Mark delivered
+                  </button>
+                </div>
+              ) : null}
+
+              <section className="card p-5 sm:p-6">
+                <OrderTimeline order={o} history={orderDetail?.id === o.id ? orderDetail.statusHistory : undefined} loading={detailLoading} />
+              </section>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <InfoCard title="Order">
+                  <InfoRow k="Type" v={o.order_type || "—"} />
+                  <InfoRow k="Payment method" v={o.payment_method || "—"} />
+                  <InfoRow k="Payment" v={<span className={o.payment_status === "Paid" ? "badge-active" : "badge-warn"}>{o.payment_status || "Pending"}</span>} />
+                  {o.expected_delivery_date && <InfoRow k="Expected" v={fmtDateTime(o.expected_delivery_date, false)} />}
+                  {o.remarks && <div className="pt-2 border-t border-slate-100 text-slate-500">{o.remarks}</div>}
+                </InfoCard>
+                <InfoCard title="Customer">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={o.customer?.name || "Walk in"} size="sm" />
+                    <div className="font-semibold text-navy-900">{o.customer?.name || "Walk-in customer"}</div>
+                  </div>
+                  {o.customer?.phone && <div className="text-slate-600 tabular">{o.customer.phone}</div>}
+                  {o.customer?.email && <div className="text-slate-600 truncate">{o.customer.email}</div>}
+                  <div className="text-slate-600">{o.shipping_address || o.customer?.address || "Store pickup"}</div>
+                </InfoCard>
+                <InfoCard title="Amount">
+                  <InfoRow k="Subtotal" v={<span className="tabular">{money(o.subtotal)}</span>} />
+                  {Number(o.discount_amount) > 0 && <InfoRow k="Discount" v={<span className="tabular text-rose-600">− {money(o.discount_amount)}</span>} />}
+                  <InfoRow k="GST" v={<span className="tabular">{money(o.tax_amount)}</span>} />
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span className="font-semibold text-navy-900">Total</span>
+                    <span className="text-[16px] font-bold text-navy-900 tabular">{money(o.total_amount)}</span>
+                  </div>
+                </InfoCard>
               </div>
+
+              <section className="card overflow-hidden">
+                <div className="card-header">
+                  <h2 className="card-title text-[14px]">Items</h2>
+                  <span className="text-[12px] text-slate-400">{o.items?.length || 0}</span>
+                </div>
+                {!o.items?.length ? (
+                  <EmptyState compact icon="box" title="No items on this order" />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Item</th>
+                          <th className="!text-right">Qty</th>
+                          <th className="!text-right">Rate</th>
+                          <th className="!text-right">Disc.</th>
+                          <th className="!text-right">GST</th>
+                          <th className="!text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {o.items.map((it, idx) => (
+                          <tr key={it.id || idx}>
+                            <td>
+                              <div className="font-semibold text-navy-900">{it.product_name}</div>
+                              {it.sku && <div className="font-mono text-[11px] text-slate-400">{it.sku}</div>}
+                            </td>
+                            <td className="text-right font-semibold tabular">{it.quantity}</td>
+                            <td className="text-right tabular">{money(it.rate)}</td>
+                            <td className="text-right tabular text-slate-500">{Number(it.discount_percent) ? `${Number(it.discount_percent)}%` : "—"}</td>
+                            <td className="text-right tabular text-slate-500">{Number(it.gst_percent) ? `${Number(it.gst_percent)}%` : "—"}</td>
+                            <td className="text-right font-bold tabular">{money(it.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
             </div>
+          );
+        })()}
 
-            {/* 3 Overview Information Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Card 1: Order Information */}
-              <div className="card p-4 bg-white border border-border shadow-xs space-y-2 text-xs">
-                <h3 className="font-bold text-slate-900 pb-2 border-b border-border">
-                  Order Information
-                </h3>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Order No:</span>
-                  <span className="font-mono font-bold text-slate-900">
-                    {selectedOrder.order_number}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Order Date:</span>
-                  <span className="font-medium text-slate-700">
-                    {new Date(selectedOrder.order_date).toLocaleString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Order Type:</span>
-                  <span className="font-medium text-slate-800">
-                    {selectedOrder.order_type || "Walk-in"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Payment Method:</span>
-                  <span className="font-medium text-slate-800">
-                    {selectedOrder.payment_method || "Cash"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-1 border-t border-border">
-                  <span className="text-slate-500">Order Status:</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px] capitalize">
-                    {selectedOrder.status}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500">Payment Status:</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                    {selectedOrder.payment_status || "Paid"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Card 2: Customer Information */}
-              <div className="card p-4 bg-white border border-border shadow-xs space-y-2 text-xs">
-                <h3 className="font-bold text-slate-900 pb-2 border-b border-border">
-                  Customer Information
-                </h3>
-                <div className="font-bold text-slate-900 text-sm">
-                  {selectedOrder.customer?.name || "Walk-in Customer"}
-                </div>
-                <div className="text-slate-600 flex items-center gap-1.5">
-                  <span>📞</span>
-                  <span>{selectedOrder.customer?.phone || "—"}</span>
-                </div>
-                <div className="text-slate-600 flex items-center gap-1.5">
-                  <span>✉️</span>
-                  <span>{selectedOrder.customer?.email || "—"}</span>
-                </div>
-                <div className="text-slate-600 flex items-center gap-1.5">
-                  <span>📍</span>
-                  <span>{selectedOrder.shipping_address || selectedOrder.customer?.address || "Store Pickup"}</span>
-                </div>
-              </div>
-
-              {/* Card 3: Amount Summary */}
-              <div className="card p-4 bg-white border border-border shadow-xs space-y-2 text-xs">
-                <h3 className="font-bold text-slate-900 pb-2 border-b border-border">
-                  Amount Summary
-                </h3>
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal</span>
-                  <span className="font-mono">
-                    ₹ {Number(selectedOrder.subtotal).toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>Discount (-)</span>
-                  <span className="font-mono text-red-600">
-                    ₹ {Number(selectedOrder.discount_amount || 0).toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>GST</span>
-                  <span className="font-mono">
-                    ₹ {Number(selectedOrder.tax_amount || 0).toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-border font-bold text-slate-900 text-sm">
-                  <span>Total Amount</span>
-                  <span className="font-mono text-blue-700 text-base">
-                    ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Items Table */}
-            <div className="card overflow-hidden border border-border bg-white shadow-xs">
-              <div className="p-3 bg-slate-50 border-b border-border font-bold text-xs text-slate-800">
-                Items ({selectedOrder.items?.length || 0})
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50/50 border-b border-border text-slate-500 font-semibold text-[11px] uppercase">
-                    <tr>
-                      <th className="py-2.5 px-3 w-8">#</th>
-                      <th className="py-2.5 px-3">PRODUCT</th>
-                      <th className="py-2.5 px-3">SKU</th>
-                      <th className="py-2.5 px-3 text-center">QTY</th>
-                      <th className="py-2.5 px-3 text-right">PRICE</th>
-                      <th className="py-2.5 px-3 text-center">GST</th>
-                      <th className="py-2.5 px-3 text-right">DISC.</th>
-                      <th className="py-2.5 px-3 text-right font-bold">TOTAL</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {selectedOrder.items?.map((it, idx) => (
-                      <tr key={it.id || idx}>
-                        <td className="py-2.5 px-3 text-slate-400">{idx + 1}</td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-900 flex items-center gap-2">
-                          <span>📦</span>
-                          <span>{it.product_name}</span>
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-500">{it.sku}</td>
-                        <td className="py-2.5 px-3 text-center font-bold text-slate-800">{it.quantity}</td>
-                        <td className="py-2.5 px-3 text-right font-mono">
-                          ₹ {Number(it.rate).toLocaleString("en-IN")}
-                        </td>
-                        <td className="py-2.5 px-3 text-center text-slate-500">
-                          {it.gst_percent || 18}%
-                        </td>
-                        <td className="py-2.5 px-3 text-right text-slate-500">
-                          ₹ {it.discount_percent || 0}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-bold font-mono text-slate-900">
-                          ₹ {Number(it.amount).toLocaleString("en-IN")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ------------------------------------------------------------------ */}
         {/* STEP 5: UPDATE ORDER STATUS                                        */}
-        {/* Matches Image 2 (Step 5)                                           */}
         {/* ------------------------------------------------------------------ */}
         {step === "update_status" && selectedOrder && (
-          <form onSubmit={handleUpdateStatusSubmit} className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Update Order Status</h2>
-                <div className="text-xs text-slate-500">Orders &gt; Update Status</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStep("view")}
-                className="btn-secondary !py-1.5 !px-3 text-xs"
-              >
-                Back to View
-              </button>
-            </div>
+          <form onSubmit={handleUpdateStatusSubmit} className="space-y-5 pb-10 max-w-3xl">
+            <PageHeader eyebrow="Order" title={`Update #${selectedOrder.order_number}`} subtitle={`${selectedOrder.customer?.name || "Walk-in customer"} · ₹${Number(selectedOrder.total_amount).toLocaleString("en-IN")}`} />
 
-            {/* Order Summary Strip */}
-            <div className="card p-4 bg-white border border-border shadow-xs flex flex-wrap items-center justify-between gap-4 text-xs">
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Order No</span>
-                <span className="font-bold font-mono text-blue-600 text-sm">
-                  {selectedOrder.order_number}
+            <section className="card">
+              <div className="card-header">
+                <h2 className="card-title text-[14px]">New status</h2>
+                <span className="text-[12px] text-slate-500">
+                  Now: <span className="badge-inactive capitalize">{selectedOrder.status}</span>
                 </span>
               </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Customer</span>
-                <span className="font-bold text-slate-900">
-                  {selectedOrder.customer?.name || "Walk-in Customer"}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Amount</span>
-                <span className="font-bold font-mono text-slate-900 text-sm">
-                  ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Status</span>
-                <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold capitalize">
-                  {selectedOrder.status}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Payment Status</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
-                  {selectedOrder.payment_status || "Paid"}
-                </span>
-              </div>
-            </div>
-
-            {/* Visual Stepper */}
-            <div className="card p-6 bg-white border border-border shadow-xs space-y-6">
-              <h3 className="text-sm font-bold text-slate-800">Update Status</h3>
-
-              {/* Progress Stepper Bar */}
-              <div className="relative flex items-center justify-between max-w-2xl mx-auto py-4">
-                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-slate-200 z-0" />
-                {["Pending", "Confirmed", "Delivered", "Cancelled"].map((st) => {
-                  const isActive =
-                    statusUpdateForm.status.toLowerCase() === st.toLowerCase();
-                  return (
-                    <div
-                      key={st}
-                      onClick={() =>
-                        setStatusUpdateForm((prev) => ({ ...prev, status: st }))
-                      }
-                      className="relative z-10 flex flex-col items-center cursor-pointer group"
-                    >
-                      <div
-                        className={clsx(
-                          "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all",
-                          isActive
-                            ? "bg-blue-600 text-white ring-4 ring-blue-100 shadow-md"
-                            : "bg-white border-2 border-slate-300 text-slate-500 group-hover:border-slate-400"
-                        )}
-                      >
-                        {isActive ? "●" : "○"}
-                      </div>
-                      <span
-                        className={clsx(
-                          "text-xs mt-2 font-semibold",
-                          isActive ? "text-blue-700" : "text-slate-500"
-                        )}
-                      >
-                        {st}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Form Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4 border-t border-border">
+              <div className="p-5 space-y-5">
+                <ChoiceGroup
+                  cols={3}
+                  value={statusUpdateForm.status}
+                  onChange={(k) => setStatusUpdateForm((prev) => ({ ...prev, status: k }))}
+                  options={[
+                    ["Pending", "Pending"],
+                    ["Confirmed", "Accepted"],
+                    ["Processing", "Packed"],
+                    ["Shipped", "Shipped"],
+                    ["Delivered", "Delivered"],
+                    ["Cancelled", "Cancelled"],
+                  ]}
+                />
+                {statusUpdateForm.status === "Cancelled" && (
+                  <p className="flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+                    <Icon name="alert" className="w-4 h-4 shrink-0" /> Cancelling stops this order. The customer sees it as cancelled in their portal.
+                  </p>
+                )}
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 block mb-1">
-                    Status *
-                  </label>
-                  <select
-                    value={statusUpdateForm.status}
-                    onChange={(e) =>
-                      setStatusUpdateForm((prev) => ({ ...prev, status: e.target.value }))
-                    }
-                    className="input !py-2 text-xs w-full bg-white font-medium"
-                  >
-                    <option>Pending</option>
-                    <option>Confirmed</option>
-                    <option>Processing</option>
-                    <option>Shipped</option>
-                    <option>Delivered</option>
-                    <option>Cancelled</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 block mb-1">
-                    Payment Status
-                  </label>
-                  <select
+                  <label className="label">Payment status</label>
+                  <ChoiceGroup
+                    cols={3}
                     value={statusUpdateForm.payment_status}
-                    onChange={(e) =>
-                      setStatusUpdateForm((prev) => ({ ...prev, payment_status: e.target.value }))
-                    }
-                    className="input !py-2 text-xs w-full bg-white font-medium"
-                  >
-                    <option>Paid</option>
-                    <option>Pending</option>
-                    <option>Failed</option>
-                  </select>
+                    onChange={(k) => setStatusUpdateForm((prev) => ({ ...prev, payment_status: k }))}
+                    options={[
+                      ["Paid", "Paid"],
+                      ["Pending", "Pending"],
+                      ["Failed", "Failed"],
+                    ]}
+                  />
                 </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-xs font-semibold text-slate-600 block mb-1">
-                    Remarks / Tracking Details
-                  </label>
+                <div>
+                  <label className="label">Note / tracking details</label>
                   <textarea
                     rows={3}
                     value={statusUpdateForm.remarks}
-                    onChange={(e) =>
-                      setStatusUpdateForm((prev) => ({ ...prev, remarks: e.target.value }))
-                    }
-                    placeholder="Enter order update note or courier tracking ID..."
-                    className="input !py-2 text-xs w-full"
+                    onChange={(e) => setStatusUpdateForm((prev) => ({ ...prev, remarks: e.target.value }))}
+                    placeholder="Update note or courier tracking ID…"
+                    className="input"
                   />
                 </div>
+                {error && (
+                  <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {error}</p>
+                )}
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 max-w-2xl mx-auto pt-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setStep("view")}
-                  className="btn-secondary !py-2 !px-4 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={updatingStatus}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-sm"
-                >
-                  {updatingStatus ? "Updating..." : "Update Status"}
-                </button>
+              <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50/60 rounded-b-card flex justify-end gap-2">
+                <button type="button" onClick={() => setStep("view")} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={updatingStatus} className="btn-primary">{updatingStatus ? "Updating…" : "Save status"}</button>
               </div>
-            </div>
+            </section>
           </form>
         )}
 
+
         {/* ------------------------------------------------------------------ */}
         {/* STEP 6: ORDER INVOICE (Print or download PDF)                      */}
-        {/* Matches Image 2 (Step 6)                                           */}
         {/* ------------------------------------------------------------------ */}
-        {step === "invoice" && selectedOrder && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between no-print">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Order Invoice</h2>
-                <div className="text-xs text-slate-500">Orders &gt; Invoice &gt; {selectedOrder.order_number}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setStep("view")}
-                  className="btn-secondary !py-1.5 !px-3 text-xs"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={() => window.print()}
-                  className="bg-white hover:bg-slate-50 border border-border px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-800 shadow-xs flex items-center gap-1.5"
-                >
-                  <span>🖨️</span> Print
-                </button>
-                <button
-                  onClick={() => window.print()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5"
-                >
-                  <span>⬇️</span> Download PDF
-                </button>
-              </div>
-            </div>
-
-            {/* Printable Invoice Sheet */}
-            <div className="card p-8 bg-white border border-border shadow-md max-w-3xl mx-auto space-y-6 text-slate-900 print:shadow-none print:border-none print:p-0">
-              {/* Header */}
-              <div className="flex justify-between items-start pb-6 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-slate-900 text-white rounded-lg flex items-center justify-center text-2xl font-bold">
-                    🏬
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black tracking-tight text-slate-900">NSY Business</h3>
-                    <p className="text-[11px] text-slate-500">Multi-Shop Management</p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <h4 className="text-xl font-black text-slate-900 tracking-wider">INVOICE</h4>
-                  <div className="text-xs text-slate-600 font-mono mt-1">
-                    Order No: <strong>{selectedOrder.order_number}</strong>
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Date:{" "}
-                    {new Date(selectedOrder.order_date).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </div>
-                  <div className="text-xs mt-1">
-                    Payment Status: <strong className="text-emerald-600 font-bold">{selectedOrder.payment_status || "Paid"}</strong>
-                  </div>
-                  <div className="text-xs">
-                    Order Status: <strong className="text-emerald-700 font-bold capitalize">{selectedOrder.status}</strong>
-                  </div>
-                </div>
+        {step === "invoice" && selectedOrder && (() => {
+          const shop = selectedOrder.shop || (activeShop as any) || {};
+          const money = (n: unknown) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          return (
+            <div className="space-y-5 pb-10">
+              <div className="no-print">
+                <PageHeader
+                  eyebrow="Order"
+                  title={`Invoice for #${selectedOrder.order_number}`}
+                  subtitle="Order summary for the customer. Converting the order to a bill creates the official tax invoice."
+                  actions={
+                    <>
+                      <button type="button" onClick={() => setStep("view")} className="btn-secondary">
+                        <Icon name="left" className="w-4 h-4" /> Back
+                      </button>
+                      <button type="button" onClick={() => window.print()} className="btn-primary">
+                        <Icon name="download" /> Print / save PDF
+                      </button>
+                    </>
+                  }
+                />
               </div>
 
-              {/* Bill To */}
-              <div className="text-xs space-y-1">
-                <div className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                  Bill To:
-                </div>
-                <div className="font-bold text-sm text-slate-900">
-                  {selectedOrder.customer?.name || "Walk-in Customer"}
-                </div>
-                <div className="text-slate-600">
-                  {selectedOrder.shipping_address || selectedOrder.customer?.address || "Store Pickup"}
-                </div>
-                <div className="text-slate-600 font-mono">
-                  {selectedOrder.customer?.phone || "—"}
-                </div>
-                <div className="text-slate-600">
-                  {selectedOrder.customer?.email || "—"}
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50 border-y border-border text-slate-600 font-semibold text-[11px]">
-                  <tr>
-                    <th className="py-2.5 px-3 w-8">#</th>
-                    <th className="py-2.5 px-3">PRODUCT</th>
-                    <th className="py-2.5 px-3">SKU</th>
-                    <th className="py-2.5 px-3 text-center">QTY</th>
-                    <th className="py-2.5 px-3 text-right">PRICE</th>
-                    <th className="py-2.5 px-3 text-center">GST</th>
-                    <th className="py-2.5 px-3 text-right">DISC.</th>
-                    <th className="py-2.5 px-3 text-right font-bold">TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {selectedOrder.items?.map((it, idx) => (
-                    <tr key={it.id || idx}>
-                      <td className="py-2 px-3 text-slate-400">{idx + 1}</td>
-                      <td className="py-2 px-3 font-semibold text-slate-900">{it.product_name}</td>
-                      <td className="py-2 px-3 font-mono text-[11px] text-slate-500">{it.sku}</td>
-                      <td className="py-2 px-3 text-center font-bold">{it.quantity}</td>
-                      <td className="py-2 px-3 text-right font-mono">₹ {it.rate}</td>
-                      <td className="py-2 px-3 text-center text-slate-500">{it.gst_percent || 18}%</td>
-                      <td className="py-2 px-3 text-right text-slate-500">₹ {it.discount_percent || 0}</td>
-                      <td className="py-2 px-3 text-right font-bold font-mono">₹ {it.amount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Totals */}
-              <div className="flex justify-end pt-2">
-                <div className="w-64 space-y-1.5 text-xs">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Subtotal</span>
-                    <span className="font-mono">₹ {selectedOrder.subtotal}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Discount</span>
-                    <span className="font-mono text-red-600">- ₹ {selectedOrder.discount_amount || 0}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>GST</span>
-                    <span className="font-mono">₹ {selectedOrder.tax_amount || 0}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-sm text-slate-900 pt-2 border-t border-border">
-                    <span>Total Amount</span>
-                    <span className="font-mono text-base text-blue-700">
-                      ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
+              <div className="card p-6 sm:p-8 max-w-3xl mx-auto space-y-6 text-slate-900 print:shadow-none print:border-none print:p-0">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 pb-6 border-b border-border">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-12 h-12 rounded-xl bg-brand-600 text-white flex items-center justify-center text-[15px] font-bold shrink-0">
+                      {String(shop.name || "S").trim().split(/\s+/).slice(0, 2).map((w: string) => w[0]?.toUpperCase()).join("")}
                     </span>
+                    <div className="min-w-0">
+                      <h3 className="text-[18px] font-bold text-navy-900 truncate">{shop.name || "Your shop"}</h3>
+                      {shop.address && <p className="text-[12px] text-slate-500">{shop.address}</p>}
+                      <p className="text-[12px] text-slate-500">{[shop.phone, shop.email].filter(Boolean).join(" · ")}</p>
+                    </div>
+                  </div>
+                  <div className="sm:text-right text-[12.5px] space-y-0.5">
+                    <div className="text-[18px] font-bold tracking-[0.12em] text-navy-900">ORDER</div>
+                    <div className="font-mono">#{selectedOrder.order_number}</div>
+                    <div className="text-slate-500">{fmtDateTime(selectedOrder.order_date, false)}</div>
+                    <div className="pt-1 flex sm:justify-end gap-1.5">
+                      <span className={selectedOrder.payment_status === "Paid" ? "badge-active" : "badge-warn"}>{selectedOrder.payment_status || "Payment pending"}</span>
+                      <span className="badge-inactive capitalize">{String(selectedOrder.status).replace(/_/g, " ")}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Footer with barcode */}
-              <div className="pt-6 border-t border-border text-center space-y-2">
-                <div className="text-xs font-semibold text-slate-700">Thank you for your purchase!</div>
-                <div className="font-mono text-[11px] tracking-widest text-slate-400">
-                  ||||| | |||||| ||| ||||||| | ||||| ||||
+                <div className="text-[12.5px] space-y-0.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400 mb-1">Bill to</div>
+                  <div className="font-bold text-[14px] text-navy-900">{selectedOrder.customer?.name || "Walk-in customer"}</div>
+                  {(selectedOrder.shipping_address || selectedOrder.customer?.address) && <div className="text-slate-600">{selectedOrder.shipping_address || selectedOrder.customer?.address}</div>}
+                  {selectedOrder.customer?.phone && <div className="text-slate-600 tabular">{selectedOrder.customer.phone}</div>}
+                  {selectedOrder.customer?.email && <div className="text-slate-600">{selectedOrder.customer.email}</div>}
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono">
-                  {selectedOrder.order_number}
+
+                <div className="overflow-x-auto">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="w-8">#</th>
+                        <th>Item</th>
+                        <th className="!text-right">Qty</th>
+                        <th className="!text-right">Rate</th>
+                        <th className="!text-right">Disc.</th>
+                        <th className="!text-right">GST</th>
+                        <th className="!text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedOrder.items || []).map((it, idx) => (
+                        <tr key={it.id || idx}>
+                          <td className="text-slate-400">{idx + 1}</td>
+                          <td>
+                            <div className="font-semibold text-navy-900">{it.product_name}</div>
+                            {it.sku && <div className="font-mono text-[11px] text-slate-400">{it.sku}</div>}
+                          </td>
+                          <td className="text-right font-semibold tabular">{it.quantity}</td>
+                          <td className="text-right tabular">{money(it.rate)}</td>
+                          <td className="text-right tabular text-slate-500">{Number(it.discount_percent) ? `${Number(it.discount_percent)}%` : "—"}</td>
+                          <td className="text-right tabular text-slate-500">{Number(it.gst_percent) ? `${Number(it.gst_percent)}%` : "—"}</td>
+                          <td className="text-right font-bold tabular">{money(it.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+
+                <div className="flex justify-end">
+                  <dl className="w-full sm:w-72 space-y-1.5 text-[13px]">
+                    <div className="flex justify-between text-slate-600"><dt>Subtotal</dt><dd className="tabular">{money(selectedOrder.subtotal)}</dd></div>
+                    {Number(selectedOrder.discount_amount) > 0 && (
+                      <div className="flex justify-between text-slate-600"><dt>Discount</dt><dd className="tabular text-rose-600">− {money(selectedOrder.discount_amount)}</dd></div>
+                    )}
+                    <div className="flex justify-between text-slate-600"><dt>GST</dt><dd className="tabular">{money(selectedOrder.tax_amount)}</dd></div>
+                    <div className="flex justify-between font-bold text-[15px] text-navy-900 pt-2 border-t border-border"><dt>Total</dt><dd className="tabular">{money(selectedOrder.total_amount)}</dd></div>
+                  </dl>
+                </div>
+
+                <div className="pt-5 border-t border-border text-center text-[12px] text-slate-500">Thank you for your order!</div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
+
 
         {/* ------------------------------------------------------------------ */}
         {/* STEP 7: CUSTOMER ORDER TRACKING                                    */}
-        {/* Matches Image 2 (Step 7)                                           */}
         {/* ------------------------------------------------------------------ */}
         {step === "tracking" && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Order Tracking (Customer)</h2>
-                <div className="text-xs text-slate-500">Dashboard &gt; My Orders &gt; Tracking</div>
-              </div>
-              <button onClick={() => setStep("list")} className="btn-secondary !py-1.5 !px-3 text-xs">
-                Back to Orders
-              </button>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-1 text-xs">
-              {["All Orders", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"].map((t) => (
-                <button
-                  key={t}
-                  className={clsx(
-                    "px-3 py-1.5 rounded-lg font-semibold border whitespace-nowrap",
-                    t === "Shipped" || t === "Processing"
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-slate-700 border-border hover:bg-slate-50"
-                  )}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-
-            {/* Horizontal Timeline Tracker */}
-            <div className="card p-6 bg-white border border-border shadow-xs space-y-6">
-              <div className="relative flex items-center justify-between max-w-3xl mx-auto py-2">
-                <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-emerald-500 z-0" />
-                {[
-                  { label: "Order Placed", time: "29 Oct, 10:45 AM", done: true },
-                  { label: "Processing", time: "29 Oct, 12:00 PM", done: true },
-                  { label: "Shipped", time: "In Transit", done: true },
-                  { label: "Out for Delivery", time: "Expected 31 Oct", done: false },
-                  { label: "Delivered", time: "Pending", done: false },
-                ].map((s, idx) => (
-                  <div key={idx} className="relative z-10 flex flex-col items-center">
-                    <div
-                      className={clsx(
-                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs",
-                        s.done
-                          ? "bg-emerald-600 text-white ring-4 ring-emerald-100"
-                          : "bg-white border-2 border-slate-300 text-slate-400"
-                      )}
-                    >
-                      {s.done ? "✓" : idx + 1}
-                    </div>
-                    <span className="text-xs font-bold text-slate-900 mt-2">{s.label}</span>
-                    <span className="text-[10px] text-slate-500">{s.time}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Order Info & Delivery Address & Items */}
-              {selectedOrder ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border text-xs">
-                  {/* Details */}
-                  <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
-                    <h4 className="font-bold text-slate-800">Order Details</h4>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Order No:</span>
-                      <span className="font-mono font-bold text-blue-600">
-                        {selectedOrder.order_number}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Order Date:</span>
-                      <span>
-                        {new Date(selectedOrder.order_date).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Total Amount:</span>
-                      <span className="font-bold text-blue-700 font-mono">
-                        ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Payment Status:</span>
-                      <span className="text-emerald-600 font-bold">{selectedOrder.payment_status || "Paid"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Order Status:</span>
-                      <span className="text-blue-600 font-bold capitalize">{selectedOrder.status}</span>
-                    </div>
-                  </div>
-
-                  {/* Delivery Address */}
-                  <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
-                    <h4 className="font-bold text-slate-800">Delivery Address</h4>
-                    <div className="font-semibold text-slate-900">
-                      {selectedOrder.customer?.name || "Walk-in Customer"}
-                    </div>
-                    <div className="text-slate-600">
-                      {selectedOrder.shipping_address || selectedOrder.customer?.address || "Store Pickup"}
-                    </div>
-                    <div className="text-slate-600 font-mono">
-                      {selectedOrder.customer?.phone || "—"}
-                    </div>
-                  </div>
-
-                  {/* Items */}
-                  <div className="p-3 bg-slate-50 rounded-lg space-y-1.5 border border-border">
-                    <h4 className="font-bold text-slate-800">
-                      Items Ordered ({selectedOrder.items?.length || 0})
-                    </h4>
-                    {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                      selectedOrder.items.map((it, idx) => (
-                        <div key={it.id || idx} className="flex justify-between py-1 border-b border-border/50 last:border-0">
-                          <span className="text-slate-700">{it.product_name}</span>
-                          <span className="font-bold font-mono">x{it.quantity}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-slate-400 py-2">No items in this order.</div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="p-6 text-center text-slate-400 text-xs">
-                  No order selected. Please select an order from the Order List to view tracking details.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ------------------------------------------------------------------ */}
-        {/* STEP 8: CUSTOMER ORDER HISTORY                                     */}
-        {/* Matches Image 2 (Step 8)                                           */}
-        {/* ------------------------------------------------------------------ */}
-        {step === "history" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Customer Order History</h2>
-                <div className="text-xs text-slate-500">Dashboard &gt; My Orders</div>
-              </div>
-              <button onClick={() => setStep("list")} className="btn-secondary !py-1.5 !px-3 text-xs">
-                Back to Orders
-              </button>
-            </div>
-
-            <div className="card overflow-hidden border border-border bg-white shadow-xs">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-border text-slate-600 font-semibold uppercase text-[11px]">
-                  <tr>
-                    <th className="py-3 px-4">ORDER NO.</th>
-                    <th className="py-3 px-4">DATE</th>
-                    <th className="py-3 px-4">ITEMS</th>
-                    <th className="py-3 px-4">AMOUNT</th>
-                    <th className="py-3 px-4">STATUS</th>
-                    <th className="py-3 px-4 text-center">ACTION</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {orders.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-slate-50/70">
-                      <td className="py-3 px-4 font-bold font-mono text-blue-600">
-                        {ord.order_number}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600">
-                        {new Date(ord.order_date).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <span>📦</span>
-                          <span>{ord.items?.length || 1} items</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-bold font-mono text-slate-900">
-                        ₹ {Number(ord.total_amount).toLocaleString("en-IN")}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold capitalize">
-                          {ord.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedOrder(ord);
-                            setStep("tracking");
-                          }}
-                          className="btn-primary !py-1 !px-3 text-xs font-semibold"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ------------------------------------------------------------------ */}
-        {/* STEP 9: ORDER NOTIFICATIONS (In-app, Push, Email & SMS)            */}
-        {/* Matches Image 2 (Step 9)                                           */}
-        {/* ------------------------------------------------------------------ */}
-        {step === "notifications" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Order Notifications</h2>
-                <div className="text-xs text-slate-500">
-                  Customer & Staff Real-time Order Alerts (In-App, Push, Email, SMS)
-                </div>
-              </div>
-              <button onClick={() => setStep("list")} className="btn-secondary !py-1.5 !px-3 text-xs">
-                Back to Orders
-              </button>
-            </div>
-
-            {selectedOrder ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                {/* Mobile Push Notification Mock */}
-                <div className="card p-5 bg-slate-900 text-white rounded-3xl border-4 border-slate-700 shadow-xl space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-slate-800 text-xs border-b">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">📱</span>
-                      <span className="font-bold">In-App & Mobile Push Alerts</span>
-                    </div>
-                    <span className="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded-full font-mono">
-                      Live Active
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
-                          <span>✓</span> Order Confirmed
-                        </span>
-                        <span className="text-[10px] text-slate-400">Live</span>
-                      </div>
-                      <p className="text-[11px] text-slate-300">
-                        Your order #{selectedOrder.order_number} has been confirmed.
-                      </p>
-                    </div>
-
-                    <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-blue-400 flex items-center gap-1.5">
-                          <span>📦</span> Order Processing
-                        </span>
-                        <span className="text-[10px] text-slate-400">Status: {selectedOrder.status}</span>
-                      </div>
-                      <p className="text-[11px] text-slate-300">
-                        Your order is being processed for {selectedOrder.customer?.name || "customer"}.
-                      </p>
-                    </div>
-
-                    <div className="p-3 bg-slate-800/90 rounded-xl border border-slate-700 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-purple-400 flex items-center gap-1.5">
-                          <span>🚚</span> Order Status Alert
-                        </span>
-                        <span className="text-[10px] text-slate-400">Current</span>
-                      </div>
-                      <p className="text-[11px] text-slate-300">
-                        Order #{selectedOrder.order_number} is currently <span className="text-white font-bold">{selectedOrder.status}</span>.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email / SMS Notification Card (Image 2 Step 9) */}
-                <div className="card p-6 bg-white border border-border shadow-md rounded-2xl space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-border">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                        ✉️
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs text-slate-900">Email & SMS Notification</div>
-                        <div className="text-[10px] text-slate-400">
-                          From: NSY Business &lt;noreply@nsyu.com&gt;
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">
-                      Customer Copy
-                    </span>
-                  </div>
-
-                  <div className="text-xs space-y-3 leading-relaxed text-slate-700">
-                    <p>
-                      Hi <strong className="text-slate-900">{selectedOrder.customer?.name || "Customer"}</strong>,
-                    </p>
-                    <p>
-                      Your order <strong className="text-blue-600 font-mono">#{selectedOrder.order_number}</strong> status is now <span className="font-bold text-slate-900">{selectedOrder.status}</span>!
-                    </p>
-
-                    <div className="bg-slate-50 p-4 rounded-xl border border-border space-y-2">
-                      <div className="font-bold text-slate-900 text-xs">Order Details:</div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Items:</span>
-                        <span className="font-bold">{selectedOrder.items?.length || 0} items</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Amount:</span>
-                        <span className="font-bold text-blue-700 font-mono">
-                          ₹ {Number(selectedOrder.total_amount).toLocaleString("en-IN")}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Payment Status:</span>
-                        <span className="font-semibold text-emerald-600">{selectedOrder.payment_status || "Paid"}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-center pt-2">
-                      <button
-                        onClick={() => setStep("tracking")}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-lg text-xs shadow-sm"
-                      >
-                        Track Your Order
-                      </button>
-                    </div>
-
-                    <p className="text-[11px] text-slate-400 pt-3 border-t border-border">
-                      Thank you,<br />
-                      <strong className="text-slate-700">NSY Business Multi-Shop Management</strong>
-                    </p>
-                  </div>
-                </div>
+          <div className="space-y-5 pb-10">
+            <PageHeader
+              eyebrow="Order"
+              title={selectedOrder ? `Tracking #${selectedOrder.order_number}` : "Order tracking"}
+              subtitle="Where this order is right now — the same timeline the customer sees in their portal."
+            />
+            {!selectedOrder ? (
+              <div className="card">
+                <EmptyState icon="truck" title="No order selected" text="Pick an order from the list to see its timeline." action={<button type="button" onClick={() => setStep("list")} className="btn-secondary btn-sm">All orders</button>} />
               </div>
             ) : (
-              <div className="p-8 text-center text-slate-400 text-xs">
-                No order selected. Please select an order from the Order List to view notifications.
+              <>
+                <section className="card p-5 sm:p-6">
+                  <OrderTimeline order={selectedOrder} history={orderDetail?.id === selectedOrder.id ? orderDetail.statusHistory : undefined} loading={detailLoading} />
+                </section>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <InfoCard title="Order">
+                    <InfoRow k="Order no." v={<span className="font-mono font-semibold text-brand-700">{selectedOrder.order_number}</span>} />
+                    <InfoRow k="Placed" v={fmtDateTime(selectedOrder.order_date)} />
+                    {selectedOrder.expected_delivery_date && <InfoRow k="Expected" v={fmtDateTime(selectedOrder.expected_delivery_date, false)} />}
+                    <InfoRow k="Amount" v={<b className="tabular">₹{Number(selectedOrder.total_amount).toLocaleString("en-IN")}</b>} />
+                    <InfoRow k="Payment" v={<span className={selectedOrder.payment_status === "Paid" ? "badge-active" : "badge-warn"}>{selectedOrder.payment_status || "Pending"}</span>} />
+                  </InfoCard>
+                  <InfoCard title="Deliver to">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar name={selectedOrder.customer?.name || "Walk in"} size="sm" />
+                      <div className="font-semibold text-navy-900">{selectedOrder.customer?.name || "Walk-in customer"}</div>
+                    </div>
+                    <div className="text-slate-600 mt-2">{selectedOrder.shipping_address || selectedOrder.customer?.address || "Store pickup"}</div>
+                    {selectedOrder.customer?.phone && <div className="text-slate-500 tabular mt-1">{selectedOrder.customer.phone}</div>}
+                  </InfoCard>
+                  <InfoCard title={`Items (${selectedOrder.items?.length || 0})`}>
+                    {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                      <ul className="divide-y divide-slate-100">
+                        {selectedOrder.items.map((it, idx) => (
+                          <li key={it.id || idx} className="flex justify-between gap-3 py-1.5">
+                            <span className="text-slate-700 truncate">{it.product_name}</span>
+                            <span className="font-semibold tabular">×{it.quantity}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-slate-400">No items on this order.</div>
+                    )}
+                  </InfoCard>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* STEP 8: THIS CUSTOMER'S ORDERS                                     */}
+        {/* ------------------------------------------------------------------ */}
+        {step === "history" && (() => {
+          const custId = selectedOrder?.customer_id ?? selectedOrder?.customer?.id;
+          const mine = custId ? orders.filter((o) => (o.customer_id ?? o.customer?.id) === custId) : [];
+          const spent = mine.filter((o) => String(o.status).toLowerCase() !== "cancelled").reduce((a, o) => a + Number(o.total_amount || 0), 0);
+          return (
+            <div className="space-y-5 pb-10">
+              <PageHeader
+                eyebrow="Customer"
+                title={selectedOrder?.customer?.name ? `${selectedOrder.customer.name}'s orders` : "Customer orders"}
+                subtitle={custId ? `${mine.length} order${mine.length === 1 ? "" : "s"} in the current list · ₹${Math.round(spent).toLocaleString("en-IN")} ordered (excluding cancelled)` : "Pick an order first to see that customer's other orders."}
+                actions={
+                  custId ? (
+                    <Link to={`/app/ledger?customerId=${custId}`} className="btn-secondary">
+                      <Icon name="file" className="w-4 h-4 text-slate-500" /> Ledger
+                    </Link>
+                  ) : undefined
+                }
+              />
+              <section className="card overflow-hidden">
+                {!custId ? (
+                  <EmptyState icon="users" title="No customer selected" text="Open an order from the list, then come back here." action={<button type="button" onClick={() => setStep("list")} className="btn-secondary btn-sm">All orders</button>} />
+                ) : mine.length === 0 ? (
+                  <EmptyState icon="cart" title="No other orders" text="Only orders in the current list filters are shown." />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Order</th>
+                          <th>Items</th>
+                          <th className="!text-right">Amount</th>
+                          <th>Status</th>
+                          <th className="!text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mine.map((ord) => (
+                          <tr key={ord.id} className={ord.id === selectedOrder?.id ? "!bg-brand-50/60" : ""}>
+                            <td className="whitespace-nowrap">
+                              <div className="font-mono text-[12.5px] font-semibold text-brand-700">{ord.order_number}</div>
+                              <div className="text-[11.5px] text-slate-400">{fmtDateTime(ord.order_date, false)}</div>
+                            </td>
+                            <td className="text-slate-600">{ord.items?.length ? `${ord.items.length} item${ord.items.length > 1 ? "s" : ""}` : "—"}</td>
+                            <td className="text-right font-bold text-navy-900 tabular whitespace-nowrap">₹{Number(ord.total_amount).toLocaleString("en-IN")}</td>
+                            <td><span className="badge-inactive capitalize">{String(ord.status).replace(/_/g, " ")}</span></td>
+                            <td className="text-right">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedOrder(ord);
+                                  setStep("tracking");
+                                }}
+                                className="btn-soft btn-sm"
+                              >
+                                <Icon name="truck" className="w-3.5 h-3.5" /> Track
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </div>
+          );
+        })()}
+
+        {/* ------------------------------------------------------------------ */}
+        {/* STEP 9: NOTIFICATIONS RECORDED FOR THIS ORDER                       */}
+        {/* ------------------------------------------------------------------ */}
+        {step === "notifications" && (
+          <div className="space-y-5 pb-10">
+            <PageHeader
+              eyebrow="Order"
+              title={selectedOrder ? `Alerts for #${selectedOrder.order_number}` : "Order alerts"}
+              subtitle="In-app notifications recorded for this order in your inbox. NSYU does not send email or SMS."
+            />
+            {!selectedOrder ? (
+              <div className="card">
+                <EmptyState icon="clock" title="No order selected" text="Pick an order from the list to see its alerts." action={<button type="button" onClick={() => setStep("list")} className="btn-secondary btn-sm">All orders</button>} />
               </div>
+            ) : (
+              <section className="card overflow-hidden">
+                {notifLoading ? (
+                  <div className="py-12 text-center text-[13px] text-slate-500">Loading alerts…</div>
+                ) : orderNotifs.length === 0 ? (
+                  <EmptyState icon="clock" title="No alerts for this order" text="New orders and status changes create alerts; none were recorded in your inbox for this one." />
+                ) : (
+                  <ul className="divide-y divide-slate-100">
+                    {orderNotifs.map((n) => (
+                      <li key={n.id} className="px-5 py-3.5 flex gap-3">
+                        <span className={`w-9 h-9 rounded-xl ring-1 ring-inset flex items-center justify-center shrink-0 ${n.is_read ? "bg-slate-50 text-slate-400 ring-slate-500/10" : "bg-brand-50 text-brand-600 ring-brand-600/10"}`}>
+                          <Icon name="cart" className="w-4 h-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className={`text-[13px] font-semibold ${n.is_read ? "text-slate-700" : "text-navy-900"}`}>{n.title}</span>
+                            <span className="text-[11.5px] text-slate-400 whitespace-nowrap">{fmtDateTime(n.created_at)}</span>
+                          </div>
+                          <p className="text-[12.5px] text-slate-500 mt-0.5">{n.message}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             )}
           </div>
         )}
@@ -2275,151 +1441,186 @@ export default function Orders() {
         {/* CONVERT TO BILL MODAL                                            */}
         {/* ================================================================ */}
         {orderToConvert && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="p-4 bg-emerald-700 text-white flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🧾</span>
-                  <div>
-                    <h3 className="font-bold text-sm">Convert Order to Bill</h3>
-                    <p className="text-[11px] text-emerald-100">Order #{orderToConvert.order_number} (Delivered)</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOrderToConvert(null)}
-                  className="text-emerald-200 hover:text-white text-lg font-bold"
-                >
-                  ✕
+          <Modal
+            size="sm"
+            icon="receipt"
+            title="Convert order to bill"
+            subtitle={`#${orderToConvert.order_number} · ${orderToConvert.customer?.name || "Walk-in customer"}`}
+            onClose={() => setOrderToConvert(null)}
+            footer={
+              <>
+                <button type="button" onClick={() => setOrderToConvert(null)} className="btn-secondary">Cancel</button>
+                <button type="submit" form="convert-order-form" disabled={convertingToBill} className="btn-primary">
+                  {convertingToBill ? "Creating bill…" : "Create bill & post to ledger"}
                 </button>
+              </>
+            }
+          >
+            <form id="convert-order-form" onSubmit={handleConvertSubmit} className="space-y-4">
+              <div className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3">
+                <span className="text-[12.5px] font-medium text-emerald-800">Order total</span>
+                <span className="text-[16px] font-bold text-emerald-800 tabular">₹{Number(orderToConvert.total_amount).toLocaleString("en-IN")}</span>
               </div>
-
-              <form onSubmit={handleConvertSubmit} className="p-5 space-y-4">
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Customer:</span>
-                    <span className="font-bold text-slate-800">{orderToConvert.customer?.name || "Walk-in Customer"}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Order Total:</span>
-                    <span className="font-extrabold text-emerald-700 text-sm">₹ {Number(orderToConvert.total_amount).toLocaleString("en-IN")}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>Status:</span>
-                    <span className="font-bold text-emerald-700 uppercase tracking-wider">{orderToConvert.status}</span>
-                  </div>
-                </div>
-
+              <div>
+                <label className="label">Payment received on delivery</label>
+                <ChoiceGroup
+                  cols={3}
+                  value={convertPaymentMode}
+                  onChange={(k) => {
+                    setConvertPaymentMode(k);
+                    if (k === "full") setConvertPaidAmount(String(Number(orderToConvert.total_amount || 0)));
+                    if (k === "unpaid") setConvertPaidAmount("0");
+                  }}
+                  options={[
+                    ["full", "Full"],
+                    ["unpaid", "Nothing yet"],
+                    ["custom", "Part"],
+                  ]}
+                />
+              </div>
+              {convertPaymentMode === "custom" && (
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                    Payment Received on Delivery:
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setConvertPaymentMode("full");
-                        setConvertPaidAmount(String(Number(orderToConvert.total_amount || 0)));
-                      }}
-                      className={clsx(
-                        "py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center",
-                        convertPaymentMode === "full"
-                          ? "bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-200"
-                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      Full (₹{Number(orderToConvert.total_amount).toLocaleString("en-IN")})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setConvertPaymentMode("unpaid");
-                        setConvertPaidAmount("0");
-                      }}
-                      className={clsx(
-                        "py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center",
-                        convertPaymentMode === "unpaid"
-                          ? "bg-amber-50 border-amber-500 text-amber-800 ring-2 ring-amber-200"
-                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      Unpaid (₹0 Due)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConvertPaymentMode("custom")}
-                      className={clsx(
-                        "py-2 px-3 rounded-lg text-xs font-bold border transition-all text-center",
-                        convertPaymentMode === "custom"
-                          ? "bg-blue-50 border-blue-500 text-blue-800 ring-2 ring-blue-200"
-                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      Custom Partial
-                    </button>
-                  </div>
+                  <label className="label">Amount received (₹)</label>
+                  <input type="number" step="any" min="0" max={Number(orderToConvert.total_amount)} value={convertPaidAmount} onChange={(e) => setConvertPaidAmount(e.target.value)} placeholder="Amount collected" className="input text-[15px] font-semibold tabular" required autoFocus />
                 </div>
-
-                {convertPaymentMode === "custom" && (
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Amount Received (₹):</label>
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      max={Number(orderToConvert.total_amount)}
-                      value={convertPaidAmount}
-                      onChange={(e) => setConvertPaidAmount(e.target.value)}
-                      placeholder="Enter amount collected..."
-                      className="input !py-1.5 text-xs w-full font-bold"
-                      required
-                    />
-                  </div>
-                )}
-
-                {convertPaymentMode !== "unpaid" && (
-                  <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">Payment Method:</label>
-                    <select
-                      value={convertPaymentMethod}
-                      onChange={(e) => setConvertPaymentMethod(e.target.value)}
-                      className="input !py-1.5 text-xs w-full bg-white font-medium"
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="upi">UPI / Online</option>
-                      <option value="bank_transfer">Bank Transfer</option>
-                      <option value="card">Card</option>
-                      <option value="cheque">Cheque</option>
-                    </select>
-                  </div>
-                )}
-
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-[11px] text-blue-900 leading-relaxed">
-                  ℹ️ <strong>Strictly One-Time Conversion:</strong> Converts Order #{orderToConvert.order_number} to an official tax bill, deducts warehouse stock, and posts accurate debit & payment credit entries to the customer ledger.
+              )}
+              {convertPaymentMode !== "unpaid" && (
+                <div>
+                  <label className="label">Method</label>
+                  <ChoiceGroup
+                    cols={5}
+                    value={convertPaymentMethod}
+                    onChange={setConvertPaymentMethod}
+                    options={[
+                      ["cash", "Cash"],
+                      ["upi", "UPI"],
+                      ["bank_transfer", "Bank"],
+                      ["card", "Card"],
+                      ["cheque", "Cheque"],
+                    ]}
+                  />
                 </div>
-
-                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
-                  <button
-                    type="button"
-                    onClick={() => setOrderToConvert(null)}
-                    className="btn-secondary !py-1.5 !px-3 text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={convertingToBill}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    <span>🧾</span>
-                    <span>{convertingToBill ? "Converting & Posting..." : "Convert to Bill & Post to Ledger"}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+              )}
+              <p className="flex gap-2 rounded-xl bg-slate-50 border border-slate-100 p-3 text-[12px] text-slate-600 leading-relaxed">
+                <Icon name="alert" className="w-4 h-4 shrink-0 text-slate-400 mt-0.5" />
+                One time only: creates the tax bill, reduces stock, and posts the bill (and any payment) to the customer's ledger.
+              </p>
+            </form>
+          </Modal>
         )}
       </div>
     </RequireModule>
+  );
+}
+
+/* ───────────────────────── tracking helpers ───────────────────────── */
+
+type HistoryRow = { id?: number; from_status: string; to_status: string; note?: string | null; created_at?: string };
+
+const TRACK_STAGES: { key: string; label: string }[] = [
+  { key: "pending", label: "Placed" },
+  { key: "confirmed", label: "Accepted" },
+  { key: "processing", label: "Packed" },
+  { key: "shipped", label: "Shipped" },
+  { key: "delivered", label: "Delivered" },
+];
+
+function fmtDateTime(d?: string | null, withTime = true) {
+  if (!d) return "—";
+  const dt = new Date(d);
+  return withTime
+    ? `${dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}, ${dt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+    : dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+/**
+ * Timeline built only from real data: the order's current status decides how
+ * far it got; times come from the status history when the API returns it, and
+ * "Placed" uses the order date. Nothing is invented.
+ */
+function OrderTimeline({ order, history, loading }: { order: OrderRecord; history?: HistoryRow[]; loading: boolean }) {
+  const s = String(order.status || "").toLowerCase();
+  const billed = s === "billed" || s === "converted_to_bill" || s === "completed" || Boolean(order.converted_sale_id || order.billed_bill_id);
+  const cancelled = s === "cancelled";
+  const reached = billed ? TRACK_STAGES.length - 1 : Math.max(0, TRACK_STAGES.findIndex((st) => st.key === s));
+  const timeOf = (key: string) => {
+    if (key === "pending") return order.order_date;
+    const row = [...(history || [])].reverse().find((h) => String(h.to_status).toLowerCase() === key);
+    return row?.created_at;
+  };
+  const pct = cancelled ? 0 : (reached / (TRACK_STAGES.length - 1)) * 100;
+
+  return (
+    <div>
+      {cancelled && (
+        <div className="mb-5 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-[13px] text-rose-700">
+          <Icon name="ban" className="w-4 h-4" /> This order was cancelled{timeOf("cancelled") ? ` on ${fmtDateTime(timeOf("cancelled"))}` : ""}.
+        </div>
+      )}
+      <div className="relative">
+        <div className="absolute left-[10%] right-[10%] top-4 h-1 rounded-full bg-slate-100" />
+        <div className="absolute left-[10%] top-4 h-1 rounded-full bg-emerald-500 transition-all duration-700" style={{ width: `${pct * 0.8}%` }} />
+        <ol className="relative grid grid-cols-5">
+          {TRACK_STAGES.map((st, idx) => {
+            const done = !cancelled && idx <= reached;
+            const current = !cancelled && idx === reached && !billed;
+            const t = done ? timeOf(st.key) : undefined;
+            return (
+              <li key={st.key} className="flex flex-col items-center text-center px-1">
+                <span
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold ring-4 ${
+                    done ? "bg-emerald-600 text-white ring-emerald-100" : "bg-white text-slate-400 border-2 border-slate-200 ring-transparent"
+                  } ${current ? "animate-pulse" : ""}`}
+                >
+                  {done ? <Icon name="check" className="w-4 h-4" strokeWidth={3} /> : idx + 1}
+                </span>
+                <span className={`mt-2 text-[12px] font-semibold ${done ? "text-navy-900" : "text-slate-400"}`}>{st.label}</span>
+                <span className="text-[10.5px] text-slate-400 min-h-[14px]">{loading && done && st.key !== "pending" ? "…" : t ? fmtDateTime(t) : done ? "" : ""}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+      {billed && (
+        <div className="mt-5 flex items-center gap-2 rounded-xl bg-brand-50 border border-brand-100 px-4 py-3 text-[13px] text-brand-800">
+          <Icon name="receipt" className="w-4 h-4" /> Billed{order.convertedSale?.invoice_number ? ` as ${order.convertedSale.invoice_number}` : ""}{order.billed_at ? ` on ${fmtDateTime(order.billed_at)}` : ""}.
+        </div>
+      )}
+      {history && history.length > 0 && (
+        <div className="mt-6 pt-5 border-t border-slate-100">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.07em] text-slate-400 mb-2.5">Status changes</div>
+          <ul className="space-y-2">
+            {[...history].reverse().map((h, i) => (
+              <li key={h.id ?? i} className="flex items-start gap-3 text-[12.5px]">
+                <span className="w-2 h-2 rounded-full bg-brand-500 mt-1.5 shrink-0" />
+                <span className="flex-1 text-slate-700">
+                  <span className="capitalize">{String(h.from_status).replace(/_/g, " ")}</span> → <b className="capitalize text-navy-900">{String(h.to_status).replace(/_/g, " ")}</b>
+                  {h.note ? <span className="text-slate-500"> · {h.note}</span> : null}
+                </span>
+                <span className="text-slate-400 whitespace-nowrap">{fmtDateTime(h.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="card p-4 text-[13px]">
+      <h3 className="text-[11.5px] font-semibold uppercase tracking-[0.07em] text-slate-400 mb-3">{title}</h3>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
+function InfoRow({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-slate-500">{k}</span>
+      <span className="text-navy-900 text-right">{v}</span>
+    </div>
   );
 }

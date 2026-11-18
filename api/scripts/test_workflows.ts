@@ -111,6 +111,14 @@ async function main() {
     const track = await call("GET", `/customer-portal/orders/${order.id}`, tokC);
     ok(track.status === 200 && /shipped/i.test(JSON.stringify(track.json?.data?.status ?? track.json?.data)), "customer tracks status = shipped", track.json?.data?.status);
     ok(/history|timeline|statusHistory/i.test(track.text), "tracking includes status history");
+    const ownerView = await call("GET", `/orders/${order.id}`, tokA);
+    const ownerHist: any[] = ownerView.json?.data?.statusHistory || [];
+    ok(
+      ownerView.status === 200 && ownerHist.map((h) => h.to_status).join(">").endsWith("confirmed>processing>shipped"),
+      "owner order view returns the real status timeline, oldest first",
+      ownerHist.map((h) => h.to_status)
+    );
+    ok((await call("GET", `/orders/${order.id}`, tokB)).status === 404, "other owner can't read the order timeline");
 
     // ── B: order → bill without duplicates ──────────────────────────────
     console.log("\nWorkflow B — order to bill");

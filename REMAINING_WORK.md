@@ -36,7 +36,9 @@ Data isolation is enforced **in the API** (every query is scoped by the token's 
 
 **Staff accounts (added 2026-11-18, owner-approved schema change):** migration `07_employee_accounts.sql` adds `employees` and ensures the existing `user_roles` table (assignments: one role per staff member per shop). Owners manage staff at **Staff** (`/app/staff`): create login, choose shop + role, change role, add/remove shops, reset password, deactivate. Every staff request re-checks the account and its *current* assignment, so role changes, removals and deactivation apply immediately. Platform/owner/customer roles (Super Admin, Owner, User) can't be given to staff.
 
-**Still pending:** supplier self-service login (suppliers remain shop-owned records); a shop picker in the mobile app for staff assigned to several shops (single-shop staff work today).
+**Mobile shop picker (added 2026-11-18):** staff assigned to several shops now get a **Choose a shop** screen after signing in to the mobile app (each shop shows their role there; inactive/suspended shops can't be picked), and a **Switch shop** item in the drawer. The app no longer falls back to a saved/default shop id when the staff token has no shop, and it reloads role + field permissions after every switch. Covered by `App/test/staff_shop_picker_test.dart` (5 widget tests) on top of the API's `test:staff` ("two shops → picker").
+
+**Still pending:** supplier self-service login (suppliers remain shop-owned records).
 
 ## 3. Permission matrix — `npm run test:roles` → **103 passed, 0 failed**
 
@@ -109,14 +111,15 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 ## 8. Other results
 
 - **Web:** `tsc -b` ✓, `vite build` ✓, `oxlint` 0 errors / 26 warnings (all `react-hooks/exhaustive-deps`, pre-existing; left as-is to avoid behaviour changes).
-- **Flutter:** `flutter pub get` ✓, `flutter analyze` → *No issues found*, `flutter test` → 6 / 6 (first tests in the app: `App/test/models_test.dart`), `flutter build apk --release` ✓ (65.9 MB).
+- **Flutter:** `flutter pub get` ✓, `flutter analyze` → *No issues found*, `flutter test` → 11 / 11 (`models_test.dart` 6, `staff_shop_picker_test.dart` 5 — 2026-11-18), `flutter build apk --release` ✓.
+- **Web redesign (2026-11-18):** Dashboard, Products, Inventory, Sales, Purchases, Orders (list), Customers, Ledger and Reports rebuilt on a shared UI kit (`web/src/components/ui.tsx`); presentation only, same API calls. Fixed along the way: Products pagination (always said "1 to N", only pages 1–5); Orders list had a hard-coded "01 Oct – 31 Oct 2026" date chip, a placeholder phone "+91 98765 00000", dead checkboxes and a fake "…125" pager — replaced with real pagination; Reports gained date presets and a working CSV export. Ledger now has a searchable customer list with balances. Checked with mock data at 1366px and 375px — no horizontal overflow.
+- **Orders screens (2026-11-18):** all order steps redesigned. Removed invented content: the tracking timeline was hard-coded ("29 Oct, 10:45 AM", "Expected 31 Oct", same steps ticked for every order) and had dead filter tabs; "Customer order history" listed every order; the notifications step showed a mock phone/email ("Live Active", `noreply@nsyu.com`) though no email/SMS is sent. Now: timeline from the order's real status + `statusHistory`, history filtered to the selected customer, and alerts are the real in-app notifications for that order. Correctness fixes: order view/invoice showed **18% GST when an item's GST was 0/missing** and printed the discount *percent* as rupees; missing payment status displayed as **"Paid"** (now "Pending"); the invoice header was hard-coded "NSY Business" (now the order's shop). Create order no longer shows phone/email/address inputs that were ignored for existing customers. API: `GET /orders/:id` now includes `statusHistory` (read-only, owner-scoped) — covered by 2 new checks in `test:workflows` (56/56). **Needs a Render deploy** for times to appear on the timeline; until then it shows the real stages without times.
 
 ## 9. Blocked / not tested (and what's needed)
 
 | Item | Why blocked | Needed |
 |---|---|---|
 | Supplier **login** | Not implemented (suppliers are shop-owned records) | Product decision |
-| Mobile shop picker for multi-shop staff | Not built in the Flutter app yet | Small app change |
 | Supabase **RLS** policies | Requires the live database; tests never touch production | A staging Supabase project + its credentials |
 | Android **emulator** run | No emulator session in this environment | Run on a device/emulator; APK builds |
 | Testing against **production data** | Deliberately avoided | — |

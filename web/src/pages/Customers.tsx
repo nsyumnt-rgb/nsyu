@@ -6,12 +6,14 @@ import { usePermission } from "../hooks/usePermission";
 import RequireModule from "../components/RequireModule";
 import ReferenceLink from "../components/ReferenceLink";
 import type { Customer } from "../types";
+import { Avatar, EmptyState, Icon, IconButton, Meter, Modal, PageHeader, SearchInput, Segmented, StatCard } from "../components/ui";
 
 function CustomersInner() {
   const { can } = usePermission();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [balanceFilter, setBalanceFilter] = useState<"all" | "due" | "advance" | "settled">("all");
   const [showForm, setShowForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
@@ -153,193 +155,84 @@ function CustomersInner() {
     }
   }
 
+  const dueTotal = customers.reduce((acc, c) => acc + Math.max(0, Number(c.current_balance) || 0), 0);
+  const advanceTotal = customers.reduce((acc, c) => acc + Math.max(0, -(Number(c.current_balance) || 0)), 0);
+  const dueCount = customers.filter((c) => Number(c.current_balance) > 0).length;
+  const advCount = customers.filter((c) => Number(c.current_balance) < 0).length;
+  const maxDue = Math.max(1, ...customers.map((c) => Number(c.current_balance) || 0));
+  const visible = customers.filter((c) => {
+    const b = Number(c.current_balance) || 0;
+    return balanceFilter === "due" ? b > 0 : balanceFilter === "advance" ? b < 0 : balanceFilter === "settled" ? b === 0 : true;
+  });
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Customers</h1>
-          <p className="page-subtitle">
-            Contacts, balances and customer portal access in one place.
-          </p>
-        </div>
-        {can("customers", "create") && (
-          <button className="btn-primary" onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "Cancel" : "+ New Customer"}
-          </button>
-        )}
+    <div className="space-y-6 pb-10">
+      <PageHeader
+        eyebrow="People"
+        title="Customers"
+        subtitle="Contacts, balances and customer portal access in one place."
+        actions={
+          can("customers", "create") && (
+            <button type="button" className="btn-primary" onClick={() => { setError(null); setShowForm(true); }}>
+              <Icon name="plus" /> New customer
+            </button>
+          )
+        }
+      />
+
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="Customers" icon="users" tone="brand" value={customers.length.toLocaleString("en-IN")} loading={loading} active={balanceFilter === "all"} onClick={() => setBalanceFilter("all")} hint={search ? `Matching “${search}”` : "All customers"} />
+        <StatCard label="Total outstanding" icon="wallet" tone="rose" value={inr0(dueTotal)} valueClass={dueTotal ? "text-rose-600" : undefined} loading={loading} hint="Customers owe you" />
+        <StatCard label="With dues" icon="clock" tone="amber" value={String(dueCount)} loading={loading} active={balanceFilter === "due"} onClick={() => setBalanceFilter(balanceFilter === "due" ? "all" : "due")} hint="Tap to list them" />
+        <StatCard label="Advances held" icon="rupee" tone="emerald" value={inr0(advanceTotal)} valueClass={advanceTotal ? "text-emerald-600" : undefined} loading={loading} active={balanceFilter === "advance"} onClick={() => setBalanceFilter(balanceFilter === "advance" ? "all" : "advance")} hint={`${advCount} customer${advCount === 1 ? "" : "s"} paid ahead`} />
       </div>
 
-      {showForm && (
-        <form onSubmit={handleCreate} className="card p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="label">Customer Name *</label>
-            <input
-              required
-              className="input"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Rahul Sharma"
-            />
-          </div>
-          <div>
-            <label className="label">Shop Name (Optional)</label>
-            <input
-              className="input"
-              value={form.shopName}
-              onChange={(e) => setForm({ ...form, shopName: e.target.value })}
-              placeholder="e.g. Sharma General Store"
-            />
-          </div>
-          <div>
-            <label className="label">Mobile Number * (10 Digits)</label>
-            <input
-              required
-              type="tel"
-              maxLength={10}
-              className="input font-mono"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "") })}
-              placeholder="e.g. 9876543210"
-            />
-          </div>
-          <div>
-            <label className="label">Email Address * (For Portal Login)</label>
-            <input
-              required
-              type="email"
-              className="input"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="e.g. customer@example.com"
-            />
-          </div>
-          <div>
-            <label className="label">Address *</label>
-            <input
-              required
-              className="input"
-              value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
-              placeholder="e.g. Shop 4, Sector 12, Noida"
-            />
-          </div>
-          <div>
-            <label className="label">
-              Opening Balance (₹) <span className="text-xs text-muted">(+ Due, - Advance)</span>
-            </label>
-            <input
-              type="number"
-              step="any"
-              className="input font-mono"
-              value={form.openingBalance}
-              onChange={(e) => setForm({ ...form, openingBalance: e.target.value })}
-              placeholder="0.00"
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="label">Portal Login Password * (Min 6 Characters)</label>
-            <div className="relative">
-              <input
-                required
-                type={showPassword ? "text" : "password"}
-                minLength={6}
-                className="input pr-10"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Enter secure password for customer login"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-800"
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-            <p className="text-xs text-muted mt-1">
-              Customer can log in to Customer Portal on Web & Mobile App using their email and this password.
-            </p>
-          </div>
-
-          {error && <p className="sm:col-span-2 text-sm text-danger">{error}</p>}
-          <div className="sm:col-span-2 flex justify-end gap-2">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-              Cancel
-            </button>
-            <button disabled={saving} className="btn-primary">
-              {saving ? "Saving…" : "Save Customer"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* ── Summary + search ─────────────────────────────────── */}
-      {(() => {
-        const dueTotal = customers.reduce((acc, c) => acc + Math.max(0, Number(c.current_balance) || 0), 0);
-        const dueCount = customers.filter((c) => Number(c.current_balance) > 0).length;
-        return (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="card p-4 flex items-center gap-3">
-              <div className="icon-tile bg-brand-50 text-brand-600">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-              </div>
-              <div>
-                <div className="stat-label">Customers</div>
-                <div className="text-[20px] font-bold text-navy-900 tabular">{customers.length}</div>
-              </div>
-            </div>
-            <div className="card p-4 flex items-center gap-3">
-              <div className="icon-tile bg-rose-50 text-rose-600">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-              </div>
-              <div>
-                <div className="stat-label">Total outstanding</div>
-                <div className="text-[20px] font-bold text-rose-600 tabular">
-                  ₹{dueTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              </div>
-            </div>
-            <div className="card p-4 flex items-center gap-3">
-              <div className="icon-tile bg-amber-50 text-amber-600">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-              </div>
-              <div>
-                <div className="stat-label">Customers with dues</div>
-                <div className="text-[20px] font-bold text-navy-900 tabular">{dueCount}</div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       <section className="card overflow-hidden">
-        <div className="card-header flex-col sm:flex-row items-stretch sm:items-center">
-          <div className="relative w-full sm:max-w-sm">
-            <svg className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-            <input
-              type="text"
-              className="input pl-9"
-              placeholder="Search by name, phone or email…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <span className="text-[12px] text-slate-500">{customers.length} customer{customers.length === 1 ? "" : "s"}</span>
+        <div className="p-4 sm:px-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <Segmented
+            value={balanceFilter}
+            onChange={setBalanceFilter}
+            options={[
+              { key: "all", label: "All", count: customers.length },
+              { key: "due", label: "With dues", count: dueCount, tone: "rose" },
+              { key: "advance", label: "Advance", count: advCount, tone: "emerald" },
+              { key: "settled", label: "Settled", count: customers.length - dueCount - advCount },
+            ]}
+          />
+          <SearchInput className="md:w-[300px]" value={search} onChange={setSearch} placeholder="Search name, phone or email…" />
         </div>
 
+        {error && !showForm && (
+          <div className="m-4 flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+            <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
+          </div>
+        )}
+
         {loading ? (
-          <div className="py-14 text-center text-[13px] text-slate-500">
-            <div className="w-6 h-6 mx-auto mb-3 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
-            Loading customers…
+          <div className="p-5 space-y-3">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-9 h-9 rounded-full bg-slate-100" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 rounded bg-slate-100 w-1/3" />
+                  <div className="h-2.5 rounded bg-slate-100 w-1/5" />
+                </div>
+                <div className="w-20 h-3 rounded bg-slate-100" />
+              </div>
+            ))}
           </div>
-        ) : customers.length === 0 ? (
-          <div className="py-14 text-center">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-brand-50 text-brand-500 flex items-center justify-center mb-3">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><path d="M20 8v6M23 11h-6" /></svg>
-            </div>
-            <div className="text-[13.5px] font-semibold text-navy-900">No customers found</div>
-            <p className="text-[12.5px] text-slate-500 mt-1">Click “New Customer” to add your first customer.</p>
-          </div>
+        ) : visible.length === 0 ? (
+          customers.length === 0 && !search ? (
+            <EmptyState
+              icon="users"
+              tone="brand"
+              title="No customers yet"
+              text="Add your first customer to start billing on credit and tracking dues."
+              action={can("customers", "create") && <button type="button" onClick={() => setShowForm(true)} className="btn-primary btn-sm"><Icon name="plus" className="w-3.5 h-3.5" /> New customer</button>}
+            />
+          ) : (
+            <EmptyState icon="search" title="No customers match" text="Try a different name, phone number or filter." />
+          )
         ) : (
           <>
             {/* Desktop table */}
@@ -349,26 +242,24 @@ function CustomersInner() {
                   <tr>
                     <th>Customer</th>
                     <th>Contact</th>
-                    <th className="!text-right">Balance</th>
+                    <th>Balance</th>
                     <th>Status</th>
                     <th className="!text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.map((c) => {
-                    const bal = Number(c.current_balance);
+                  {visible.map((c) => {
+                    const bal = Number(c.current_balance) || 0;
                     return (
                       <tr key={c.id}>
                         <td>
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-navy-800 text-white flex items-center justify-center text-[13px] font-semibold shrink-0">
-                              {(c.name || "C").charAt(0).toUpperCase()}
-                            </div>
+                            <Avatar name={c.name} />
                             <div className="min-w-0">
-                              <ReferenceLink type="customer" id={c.id} className="!font-sans !no-underline text-[13.5px] font-semibold text-navy-900 hover:text-brand-600">
+                              <ReferenceLink type="customer" id={c.id} className="!font-sans !no-underline block truncate max-w-[220px] text-[13.5px] font-semibold text-navy-900 hover:text-brand-600">
                                 {c.name}
                               </ReferenceLink>
-                              <div className="text-[12px] text-slate-500 truncate">{c.shop_name || "—"}</div>
+                              <div className="text-[12px] text-slate-500 truncate">{c.shop_name || "Individual"}</div>
                             </div>
                           </div>
                         </td>
@@ -376,34 +267,24 @@ function CustomersInner() {
                           <div className="text-[13px] text-slate-700 tabular">{c.phone}</div>
                           <div className="text-[12px] text-slate-500 truncate max-w-[220px]">{c.email || "—"}</div>
                         </td>
-                        <td className="text-right whitespace-nowrap">
-                          <div className={`text-[14px] font-bold tabular ${bal > 0 ? "text-rose-600" : bal < 0 ? "text-emerald-600" : "text-slate-500"}`}>
-                            ₹{Math.abs(bal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          </div>
-                          <div className="text-[11px] text-slate-400">{bal > 0 ? "Due" : bal < 0 ? "Advance" : "Settled"}</div>
+                        <td>
+                          <BalanceCell bal={bal} max={maxDue} />
                         </td>
                         <td>
-                          <div className="flex flex-col items-start gap-1">
+                          <div className="flex flex-wrap items-center gap-1">
                             <span className={`capitalize ${c.status === "active" ? "badge-active" : "badge-inactive"}`}>{c.status}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePortal(c.id)}
-                              className="badge-brand hover:bg-brand-100 transition-colors"
-                              title="Customer Portal login enabled"
-                            >
-                              Portal active
+                            <button type="button" onClick={() => handleTogglePortal(c.id)} className="badge-brand hover:bg-brand-100 transition-colors" title="Enable Customer Portal login">
+                              Portal
                             </button>
                           </div>
                         </td>
                         <td className="text-right whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1.5">
-                            {can("customers", "edit") && (
-                              <button type="button" onClick={() => openPasswordDialog(c)} className="btn-ghost btn-sm" title="Set customer portal login password">
-                                Set password
-                              </button>
-                            )}
-                            <Link to={`/app/customers/${c.id}`} className="btn-secondary btn-sm">Profile</Link>
-                            <Link to={`/app/ledger?customerId=${c.id}`} className="btn-soft btn-sm">Ledger</Link>
+                          <div className="inline-flex items-center gap-1">
+                            <Link to={`/app/ledger?customerId=${c.id}`} className="btn-soft btn-sm">
+                              <Icon name="file" className="w-3.5 h-3.5" /> Ledger
+                            </Link>
+                            <IconButton title="Open profile" icon="eye" to={`/app/customers/${c.id}`} />
+                            {can("customers", "edit") && <IconButton title="Set portal password" icon="sliders" onClick={() => openPasswordDialog(c)} />}
                           </div>
                         </td>
                       </tr>
@@ -415,33 +296,27 @@ function CustomersInner() {
 
             {/* Mobile cards */}
             <ul className="md:hidden divide-y divide-slate-100">
-              {customers.map((c) => {
-                const bal = Number(c.current_balance);
+              {visible.map((c) => {
+                const bal = Number(c.current_balance) || 0;
                 return (
                   <li key={c.id} className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-navy-800 text-white flex items-center justify-center text-[14px] font-semibold shrink-0">
-                        {(c.name || "C").charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar name={c.name} />
                       <div className="min-w-0 flex-1">
                         <Link to={`/app/customers/${c.id}`} className="text-[14px] font-semibold text-navy-900 truncate block">{c.name}</Link>
                         <div className="text-[12px] text-slate-500 truncate">{c.phone}{c.shop_name ? ` · ${c.shop_name}` : ""}</div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className={`text-[14px] font-bold tabular ${bal > 0 ? "text-rose-600" : bal < 0 ? "text-emerald-600" : "text-slate-500"}`}>
-                          ₹{Math.abs(bal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </div>
+                        <div className={`text-[14px] font-bold tabular ${bal > 0 ? "text-rose-600" : bal < 0 ? "text-emerald-600" : "text-slate-500"}`}>{inr2(Math.abs(bal))}</div>
                         <div className="text-[11px] text-slate-400">{bal > 0 ? "Due" : bal < 0 ? "Advance" : "Settled"}</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-3">
+                    <div className="flex items-center gap-1.5 mt-3">
                       <span className={`capitalize ${c.status === "active" ? "badge-active" : "badge-inactive"}`}>{c.status}</span>
-                      <button type="button" onClick={() => handleTogglePortal(c.id)} className="badge-brand">Portal active</button>
+                      <button type="button" onClick={() => handleTogglePortal(c.id)} className="badge-brand">Portal</button>
                       <div className="flex-1" />
-                      {can("customers", "edit") && (
-                        <button type="button" onClick={() => openPasswordDialog(c)} className="btn-ghost btn-sm">Password</button>
-                      )}
-                      <Link to={`/app/customers/${c.id}`} className="btn-secondary btn-sm">Profile</Link>
+                      {can("customers", "edit") && <IconButton title="Set portal password" icon="sliders" onClick={() => openPasswordDialog(c)} />}
+                      <IconButton title="Open profile" icon="eye" to={`/app/customers/${c.id}`} />
                       <Link to={`/app/ledger?customerId=${c.id}`} className="btn-soft btn-sm">Ledger</Link>
                     </div>
                   </li>
@@ -452,60 +327,126 @@ function CustomersInner() {
         )}
       </section>
 
-      {pwdCustomer && (
-        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4 animate-fade-in">
-          <div className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl animate-scale-up">
-            <div className="px-6 pt-6 pb-2 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-[16px] font-bold">Customer portal login</h2>
-                <p className="text-[12.5px] text-slate-500 mt-0.5">
-                  {pwdCustomer.name} · {pwdCustomer.email || pwdCustomer.phone}
-                </p>
-              </div>
-              <button type="button" onClick={() => setPwdCustomer(null)} className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Close">✕</button>
+      {/* New customer */}
+      {showForm && (
+        <Modal
+          icon="users"
+          title="New customer"
+          subtitle="They can sign in to the Customer Portal with this email and password."
+          onClose={() => setShowForm(false)}
+          footer={
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+              <button type="submit" form="new-customer-form" disabled={saving} className="btn-primary">{saving ? "Saving…" : "Save customer"}</button>
+            </>
+          }
+        >
+          <form id="new-customer-form" onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Customer name *</label>
+              <input required className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Rahul Sharma" autoFocus />
             </div>
-            {pwdDone ? (
-              <div className="px-6 pb-6 pt-2">
-                <div className="rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-4 text-[13px] text-emerald-800">
-                  Password updated. The customer can now sign in to the Customer Portal with
-                  <span className="font-semibold"> {pwdCustomer.email || pwdCustomer.phone}</span> and the new password.
-                </div>
-                <button type="button" onClick={() => setPwdCustomer(null)} className="btn-primary w-full mt-4">Done</button>
+            <div>
+              <label className="label">Shop name <span className="font-normal text-slate-400">(optional)</span></label>
+              <input className="input" value={form.shopName} onChange={(e) => setForm({ ...form, shopName: e.target.value })} placeholder="e.g. Sharma General Store" />
+            </div>
+            <div>
+              <label className="label">Mobile number * <span className="font-normal text-slate-400">(10 digits)</span></label>
+              <input required type="tel" maxLength={10} className="input tabular" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "") })} placeholder="9876543210" />
+            </div>
+            <div>
+              <label className="label">Email * <span className="font-normal text-slate-400">(portal login)</span></label>
+              <input required type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="customer@example.com" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="label">Address *</label>
+              <input required className="input" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="e.g. Shop 4, Sector 12, Noida" />
+            </div>
+            <div>
+              <label className="label">Opening balance (₹) <span className="font-normal text-slate-400">+ due, − advance</span></label>
+              <input type="number" step="any" className="input tabular" value={form.openingBalance} onChange={(e) => setForm({ ...form, openingBalance: e.target.value })} placeholder="0.00" />
+            </div>
+            <div>
+              <label className="label">Portal password * <span className="font-normal text-slate-400">(min 6)</span></label>
+              <div className="relative">
+                <input required type={showPassword ? "text" : "password"} minLength={6} className="input pr-14" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Login password" />
+                <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-slate-500 hover:text-slate-800">
+                  {showPassword ? "Hide" : "Show"}
+                </button>
               </div>
-            ) : (
-              <form onSubmit={handleSetPassword} className="px-6 pb-6 pt-2 space-y-4">
-                <div>
-                  <label className="label">New password (min 6 characters)</label>
-                  <div className="relative">
-                    <input
-                      type={showNewPwd ? "text" : "password"}
-                      minLength={6}
-                      required
-                      autoFocus
-                      className="input pr-14"
-                      value={newPwd}
-                      onChange={(e) => setNewPwd(e.target.value)}
-                      placeholder="Enter a new login password"
-                    />
-                    <button type="button" onClick={() => setShowNewPwd((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-slate-500 hover:text-slate-800">
-                      {showNewPwd ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                  <p className="text-[11.5px] text-slate-500 mt-1.5">Creates the portal account if it doesn&apos;t exist yet, and enables access.</p>
-                </div>
-                {pwdError && <p className="text-[12.5px] text-rose-600">{pwdError}</p>}
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setPwdCustomer(null)} className="btn-secondary flex-1">Cancel</button>
-                  <button type="submit" disabled={pwdSaving} className="btn-primary flex-1">{pwdSaving ? "Saving…" : "Save password"}</button>
-                </div>
-              </form>
+            </div>
+            {error && (
+              <p className="sm:col-span-2 flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {error}</p>
             )}
-          </div>
-        </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Portal password */}
+      {pwdCustomer && (
+        <Modal
+          size="sm"
+          icon="sliders"
+          title="Customer portal login"
+          subtitle={`${pwdCustomer.name} · ${pwdCustomer.email || pwdCustomer.phone}`}
+          onClose={() => setPwdCustomer(null)}
+          footer={
+            pwdDone ? (
+              <button type="button" onClick={() => setPwdCustomer(null)} className="btn-primary">Done</button>
+            ) : (
+              <>
+                <button type="button" onClick={() => setPwdCustomer(null)} className="btn-secondary">Cancel</button>
+                <button type="submit" form="portal-pwd-form" disabled={pwdSaving} className="btn-primary">{pwdSaving ? "Saving…" : "Save password"}</button>
+              </>
+            )
+          }
+        >
+          {pwdDone ? (
+            <div className="flex gap-3 rounded-xl bg-emerald-50 ring-1 ring-emerald-200 p-4 text-[13px] text-emerald-800">
+              <Icon name="checkCircle" className="w-5 h-5 shrink-0" />
+              <span>
+                Password updated. The customer can now sign in to the Customer Portal with
+                <span className="font-semibold"> {pwdCustomer.email || pwdCustomer.phone}</span> and the new password.
+              </span>
+            </div>
+          ) : (
+            <form id="portal-pwd-form" onSubmit={handleSetPassword} className="space-y-3">
+              <div>
+                <label className="label">New password (min 6 characters)</label>
+                <div className="relative">
+                  <input type={showNewPwd ? "text" : "password"} minLength={6} required autoFocus className="input pr-14" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} placeholder="Enter a new login password" />
+                  <button type="button" onClick={() => setShowNewPwd((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-semibold text-slate-500 hover:text-slate-800">
+                    {showNewPwd ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <p className="text-[11.5px] text-slate-500 mt-1.5">Creates the portal account if it doesn&apos;t exist yet, and enables access.</p>
+              </div>
+              {pwdError && (
+                <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {pwdError}</p>
+              )}
+            </form>
+          )}
+        </Modal>
       )}
     </div>
   );
 }
+
+const inr0 = (n: number) => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+const inr2 = (n: number) => "₹" + (Number(n) || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function BalanceCell({ bal, max }: { bal: number; max: number }) {
+  return (
+    <div className="w-[130px]">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={`text-[14px] font-bold tabular ${bal > 0 ? "text-rose-600" : bal < 0 ? "text-emerald-600" : "text-slate-400"}`}>{inr2(Math.abs(bal))}</span>
+        <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">{bal > 0 ? "Due" : bal < 0 ? "Adv." : "Nil"}</span>
+      </div>
+      {bal > 0 && <Meter value={bal} max={max} tone="rose" className="mt-1" />}
+    </div>
+  );
+}
+
 
 export default function Customers() {
   return (

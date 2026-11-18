@@ -9,6 +9,7 @@ import { usePermission } from "../hooks/usePermission";
 import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import type { Purchase, Supplier, Product } from "../types";
+import { Avatar, ChoiceGroup, EmptyState, Icon, IconButton, Modal, PageHeader, SearchInput, Segmented, StatCard, Switch } from "../components/ui";
 
 /* Marketplace wireframe — board 17 (Purchases). */
 
@@ -59,6 +60,7 @@ function PurchaseInner() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [allShopsToggle, setAllShopsToggle] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Record purchase bill (inline form)
   const formRef = useRef<HTMLFormElement>(null);
@@ -221,81 +223,96 @@ function PurchaseInner() {
     }
   }
 
+  const q = search.trim().toLowerCase();
+  const visible = q
+    ? purchases.filter((p) => String(p.purchase_number || "").toLowerCase().includes(q) || String(p.supplier?.name || "").toLowerCase().includes(q))
+    : purchases;
+  const dueTotal = purchases.filter((p) => p.status !== "cancelled").reduce((a, p) => a + Number(p.due_amount || 0), 0);
+
   return (
     <div className="space-y-6 pb-10">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Purchases</h1>
-          <p className="page-subtitle">Supplier bills, stock received and what you owe.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to="/app/suppliers" className="btn-secondary">Suppliers</Link>
-          {can("purchase", "create") && (
-            <button
-              type="button"
-              className="btn-navy"
-              onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            >
-              + Record purchase bill
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Buying"
+        title="Purchases"
+        subtitle="Supplier bills, stock received and what you owe."
+        actions={
+          <>
+            <Link to="/app/suppliers" className="btn-secondary">
+              <Icon name="users" className="w-4 h-4 text-slate-500" /> Suppliers
+            </Link>
+            {can("purchase", "create") && (
+              <button type="button" className="btn-primary" onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}>
+                <Icon name="plus" /> Record purchase bill
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Stat label="Purchases this month" value={inr(monthTotal)} loading={loading} />
-        <Stat label="Payable to suppliers" value={payable === null ? "—" : inr(payable)} tone={payable ? "warn" : undefined} loading={loading} to="/app/suppliers" />
-        <Stat label="Unpaid bills" value={`${unpaidCount} bill${unpaidCount === 1 ? "" : "s"}`} loading={loading} />
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="This month" icon="truck" tone="violet" value={inr0(monthTotal)} loading={loading} hint="Purchases since the 1st" />
+        <StatCard
+          label="Payable to suppliers"
+          icon="wallet"
+          tone="amber"
+          value={payable === null ? "—" : inr0(payable)}
+          valueClass={payable ? "text-amber-600" : undefined}
+          loading={loading}
+          to="/app/suppliers"
+          hint={payable === null ? "No permission" : "Across all suppliers"}
+        />
+        <StatCard
+          label="Unpaid bills"
+          icon="clock"
+          tone="rose"
+          value={String(unpaidCount)}
+          valueClass={unpaidCount ? "text-rose-600" : undefined}
+          loading={loading}
+          hint={`${inr0(dueTotal)} due in this list`}
+          active={statusFilter === "unpaid"}
+          onClick={() => setStatusFilter(statusFilter === "unpaid" ? "" : "unpaid")}
+        />
+        <StatCard label="Bills listed" icon="receipt" tone="brand" value={String(purchases.length)} loading={loading} hint={filterSupplier ? `From ${filterSupplier.name}` : "Latest 200"} />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
-        {/* 1 · Purchase history */}
-        <section className="card overflow-hidden xl:col-span-7">
-          <div className="card-header flex-col sm:flex-row items-stretch sm:items-center">
-            <div className="flex items-center gap-2.5">
-              <Num n={1} />
-              <h2 className="card-title">Purchase history</h2>
-              {filterSupplier && (
-                <button type="button" onClick={() => setParams({})} className="badge-brand hover:bg-brand-100" title="Clear supplier filter">
-                  {filterSupplier.name} ✕
-                </button>
-              )}
+      <div className="grid grid-cols-1 2xl:grid-cols-12 gap-5 items-start">
+        {/* Purchase history */}
+        <section className="card overflow-hidden 2xl:col-span-7">
+          <div className="p-4 sm:px-5 border-b border-slate-100 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-[14.5px]">Purchase history</h2>
+                {filterSupplier && (
+                  <button type="button" onClick={() => setParams({})} className="badge-brand hover:bg-brand-100" title="Clear supplier filter">
+                    {filterSupplier.name} <Icon name="x" className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              {isOwner && <Switch checked={allShopsToggle} onChange={setAllShopsToggle} label="All shops" />}
             </div>
-            {isOwner && (
-              <label className="inline-flex items-center gap-2 text-[12.5px] font-medium text-slate-600 cursor-pointer select-none">
-                <input type="checkbox" checked={allShopsToggle} onChange={(e) => setAllShopsToggle(e.target.checked)} className="rounded border-border text-brand-600" />
-                All shops
-              </label>
-            )}
-          </div>
-          <div className="px-4 pt-3 flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-            {FILTERS.map(([v, l]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setStatusFilter(v)}
-                className={`px-3 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition ${
-                  statusFilter === v ? "bg-navy-900 text-white" : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {l}
-              </button>
-            ))}
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
+              <Segmented size="sm" value={statusFilter} onChange={setStatusFilter} options={FILTERS.map(([key, label]) => ({ key, label }))} />
+              <SearchInput className="md:w-[220px]" value={search} onChange={setSearch} placeholder="Bill # or supplier…" />
+            </div>
           </div>
 
-          {error && <div className="mx-4 mt-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">{error}</div>}
+          {error && (
+            <div className="m-4 flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+              <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
+            </div>
+          )}
 
           {loading ? (
-            <div className="py-14 text-center text-[13px] text-slate-500">Loading purchases…</div>
-          ) : purchases.length === 0 ? (
-            <div className="py-14 px-6 text-center">
-              <div className="text-[14px] font-semibold text-navy-900">No purchase bills yet</div>
-              <p className="text-[12.5px] text-slate-500 mt-1">Record a supplier bill to add stock and track what you owe.</p>
-            </div>
+            <RowsSkeleton />
+          ) : visible.length === 0 ? (
+            purchases.length === 0 ? (
+              <EmptyState icon="truck" tone="violet" title="No purchase bills yet" text="Record a supplier bill to add stock and track what you owe." />
+            ) : (
+              <EmptyState icon="search" title="No bills match" text="Try a different bill number or supplier." />
+            )
           ) : (
-            <div className="overflow-x-auto mt-2">
+            <div className="overflow-x-auto">
               <table>
                 <thead>
                   <tr>
@@ -303,44 +320,45 @@ function PurchaseInner() {
                     <th>Supplier</th>
                     <th>Status</th>
                     <th className="!text-right">Amount</th>
-                    <th className="!text-right">Due</th>
-                    <th className="!text-right">Action</th>
+                    <th className="!text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {purchases.map((p) => {
+                  {visible.map((p) => {
                     const st = STATUS[p.status] || { label: p.status, tone: "badge-inactive" };
                     const due = Number(p.due_amount);
                     const canPay = due > 0 && p.status !== "cancelled" && can("purchase", "edit");
                     const canCancel = p.status !== "cancelled" && Number(p.paid_amount) === 0 && !Number((p as any).returned_amount) && can("purchase", "delete");
                     return (
-                      <tr key={p.id}>
+                      <tr key={p.id} className={p.status === "cancelled" ? "opacity-60" : ""}>
                         <td className="whitespace-nowrap">
-                          <Link to={`/app/purchase/${p.id}`} className="font-mono font-medium text-brand-700 hover:underline">#{p.purchase_number}</Link>
+                          <Link to={`/app/purchase/${p.id}`} className="font-mono text-[12.5px] font-semibold text-brand-700 hover:underline">#{p.purchase_number}</Link>
                           <div className="text-[11.5px] text-slate-400">
                             {new Date(p.purchase_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                             {allShopsToggle && p.shop?.name ? ` · ${p.shop.name}` : ""}
                           </div>
                         </td>
-                        <td className="max-w-[170px] truncate text-slate-800">{p.supplier?.name || "—"}</td>
+                        <td>
+                          <div className="flex items-center gap-2.5 min-w-[140px]">
+                            <Avatar name={p.supplier?.name || "?"} size="sm" />
+                            <span className="truncate max-w-[160px] text-[13px] font-medium text-navy-900">{p.supplier?.name || "—"}</span>
+                          </div>
+                        </td>
                         <td><span className={st.tone}>{st.label}</span></td>
-                        <td className="text-right font-semibold text-navy-900 whitespace-nowrap">{inr(Number(p.total_amount))}</td>
-                        <td className={`text-right whitespace-nowrap font-semibold ${due > 0 && p.status !== "cancelled" ? "text-rose-600" : "text-slate-400"}`}>
-                          {p.status === "cancelled" ? "—" : inr(due)}
+                        <td className="text-right whitespace-nowrap">
+                          <div className="font-semibold text-navy-900 tabular">{inr(Number(p.total_amount))}</div>
+                          {p.status !== "cancelled" && due > 0 && <div className="text-[11.5px] font-semibold text-rose-600 tabular">{inr(due)} due</div>}
                         </td>
                         <td className="text-right whitespace-nowrap">
-                          <div className="inline-flex gap-1">
+                          <div className="inline-flex items-center gap-1">
                             {canPay && (
                               <button type="button" className="btn-soft btn-sm" onClick={() => { setPaying(p); setPayAmount(due.toFixed(2)); setPayMethod("cash"); setPayError(null); }}>
-                                Pay
+                                <Icon name="wallet" className="w-3.5 h-3.5" /> Pay
                               </button>
                             )}
-                            <button type="button" className="btn-ghost btn-sm" onClick={() => handlePdf(p)} title="Download PDF">PDF</button>
-                            {canCancel && (
-                              <button type="button" className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => handleCancel(p)}>
-                                Cancel
-                              </button>
-                            )}
+                            <IconButton title="View bill" icon="eye" to={`/app/purchase/${p.id}`} />
+                            <IconButton title="Download PDF" icon="download" onClick={() => handlePdf(p)} />
+                            {canCancel && <IconButton title="Cancel bill" icon="ban" tone="rose" onClick={() => handleCancel(p)} />}
                           </div>
                         </td>
                       </tr>
@@ -352,15 +370,19 @@ function PurchaseInner() {
           )}
         </section>
 
-        {/* 2 · Record purchase bill */}
+        {/* Record purchase bill */}
         {can("purchase", "create") && (
-          <form ref={formRef} onSubmit={handleSave} className="card xl:col-span-5 xl:sticky xl:top-24 scroll-mt-24">
+          <form ref={formRef} onSubmit={handleSave} className="card overflow-hidden 2xl:col-span-5 2xl:sticky 2xl:top-24 scroll-mt-24">
             <div className="card-header">
               <div className="flex items-center gap-2.5">
-                <Num n={2} />
-                <h2 className="card-title">Record purchase bill</h2>
+                <span className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-600/10 flex items-center justify-center">
+                  <Icon name="receipt" className="w-4 h-4" />
+                </span>
+                <div>
+                  <h2 className="card-title text-[14px]">Record purchase bill</h2>
+                  {activeShop && <p className="text-[11.5px] text-slate-400">Stock goes into {activeShop.name}</p>}
+                </div>
               </div>
-              {activeShop && <span className="text-[11.5px] text-slate-400">into {activeShop.name}</span>}
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -387,8 +409,8 @@ function PurchaseInner() {
               </div>
 
               {/* Lines */}
-              <div>
-                <div className="hidden sm:grid grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400 pb-1.5 border-b border-slate-100">
+              <div className="rounded-xl border border-border overflow-visible">
+                <div className="hidden md:grid grid-cols-[minmax(140px,1fr)_64px_96px_64px_100px_28px] gap-2 px-3 py-2 bg-slate-50 rounded-t-xl text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
                   <span>Product</span>
                   <span className="text-center">Qty</span>
                   <span>Cost ₹</span>
@@ -396,62 +418,78 @@ function PurchaseInner() {
                   <span className="text-right">Amount</span>
                   <span />
                 </div>
-                <div className="divide-y divide-slate-50">
+                <div className="divide-y divide-slate-100">
                   {lines.map((l, i) => (
-                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr_28px] sm:grid-cols-[1fr_56px_80px_56px_84px_24px] gap-2 items-center py-2">
-                      <div className="col-span-4 sm:col-span-1 min-w-0">
+                    <div key={i} className="grid grid-cols-[1fr_1fr_1fr_28px] md:grid-cols-[minmax(140px,1fr)_64px_96px_64px_100px_28px] gap-2 items-center px-3 py-2">
+                      <div className="col-span-4 md:col-span-1 min-w-0">
                         <ProductPicker products={products} value={l.productId} onPick={(p) => pickProduct(i, p)} />
                       </div>
                       <input type="number" min={1} step={1} aria-label="Quantity" placeholder="Qty" className="input px-2 text-center" value={l.quantity} onChange={(e) => setLine(i, { quantity: Math.max(0, Math.floor(Number(e.target.value))) })} />
                       <input type="number" min={0} step="0.01" aria-label="Cost per unit" placeholder="Cost ₹" className="input px-2" value={l.rate} onChange={(e) => setLine(i, { rate: Number(e.target.value) })} />
                       <input type="number" min={0} max={28} step="0.01" aria-label="GST percent" placeholder="GST %" className="input px-2" value={l.taxPercent} onChange={(e) => setLine(i, { taxPercent: Number(e.target.value) })} />
-                      <span className="order-last sm:order-none col-span-4 sm:col-span-1 text-right text-[13px] font-semibold text-navy-900 tabular"><span className="sm:hidden text-slate-400 font-normal mr-1">Amount</span>{inr(lineAmounts[i].total)}</span>
+                      <span className="order-last md:order-none col-span-4 md:col-span-1 text-right text-[13px] font-semibold text-navy-900 tabular"><span className="md:hidden text-slate-400 font-normal mr-1">Amount</span>{inr(lineAmounts[i].total)}</span>
                       <button
                         type="button"
                         disabled={lines.length === 1}
                         onClick={() => setLines((ls) => ls.filter((_, idx) => idx !== i))}
-                        className="w-6 h-6 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30"
                         aria-label="Remove line"
                       >
-                        ✕
+                        <Icon name="trash" className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
                 </div>
-                <button type="button" onClick={() => setLines((ls) => [...ls, blankLine()])} className="btn-secondary btn-sm mt-2">+ Add line</button>
+                <div className="px-3 py-2 border-t border-slate-100">
+                  <button type="button" onClick={() => setLines((ls) => [...ls, blankLine()])} className="btn-ghost btn-sm text-brand-700">
+                    <Icon name="plus" className="w-3.5 h-3.5" /> Add line
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div>
                     <label className="label">Paid now (₹)</label>
                     <input type="number" min={0} step="0.01" className="input tabular" value={paidNow} onChange={(e) => setPaidNow(e.target.value)} placeholder="0.00" />
+                    {total > 0 && (
+                      <div className="mt-1.5 flex gap-1.5">
+                        <button type="button" onClick={() => setPaidNow(total.toFixed(2))} className="text-[11.5px] font-semibold text-brand-700 hover:underline">Full amount</button>
+                        <span className="text-slate-300">·</span>
+                        <button type="button" onClick={() => setPaidNow("")} className="text-[11.5px] font-semibold text-slate-500 hover:underline">On credit</button>
+                      </div>
+                    )}
                   </div>
                   {paid > 0 && (
                     <select className="input" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} aria-label="Payment method">
-                      <option value="cash">Cash</option>
-                      <option value="upi">UPI</option>
-                      <option value="bank_transfer">Bank transfer / NEFT</option>
-                      <option value="cheque">Cheque</option>
-                      <option value="card">Card</option>
+                      {METHODS.map(([k, l]) => (
+                        <option key={k} value={k}>{l}</option>
+                      ))}
                     </select>
                   )}
-                  <p className="text-[11.5px] text-slate-500">Balance goes to the supplier ledger.</p>
                 </div>
-                <dl className="text-[13px] space-y-1.5 self-end">
+                <dl className="text-[13px] space-y-1.5 self-end rounded-xl bg-slate-50 border border-slate-100 p-3">
                   <div className="flex justify-between text-slate-600"><dt>Subtotal</dt><dd className="tabular">{inr(subtotal)}</dd></div>
                   <div className="flex justify-between text-slate-600"><dt>GST (input credit)</dt><dd className="tabular">{inr(gst)}</dd></div>
-                  <div className="flex justify-between font-bold text-navy-900 text-[15px] pt-1.5 border-t border-slate-100"><dt>Total</dt><dd className="tabular">{inr(total)}</dd></div>
+                  <div className="flex justify-between font-bold text-navy-900 text-[15px] pt-1.5 border-t border-slate-200"><dt>Total</dt><dd className="tabular">{inr(total)}</dd></div>
                   {total > 0 && (
-                    <div className="flex justify-between text-[12px] text-rose-600"><dt>Will owe supplier</dt><dd className="tabular">{inr(Math.max(0, total - paid))}</dd></div>
+                    <div className="flex justify-between text-[12px] font-semibold text-rose-600"><dt>Will owe supplier</dt><dd className="tabular">{inr(Math.max(0, total - paid))}</dd></div>
                   )}
                 </dl>
               </div>
 
-              {formError && <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">{formError}</div>}
-              {savedMsg && <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[12.5px] text-emerald-800">{savedMsg}</div>}
+              {formError && (
+                <div className="flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+                  <Icon name="alert" className="w-4 h-4 shrink-0" /> {formError}
+                </div>
+              )}
+              {savedMsg && (
+                <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-[12.5px] text-emerald-800">
+                  <Icon name="checkCircle" className="w-4 h-4 shrink-0" /> {savedMsg}
+                </div>
+              )}
 
-              <button type="submit" disabled={saving} className="btn-navy btn-lg w-full">
+              <button type="submit" disabled={saving} className="btn-primary btn-lg w-full">
                 {saving ? "Saving…" : "Save & receive stock"}
               </button>
             </div>
@@ -461,40 +499,37 @@ function PurchaseInner() {
 
       {/* Payment dialog */}
       {paying && (
-        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4 animate-fade-in">
-          <form onSubmit={handlePay} className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 space-y-4 animate-scale-up">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-[16px] font-bold">Pay supplier</h2>
-                <p className="text-[12.5px] text-slate-500 mt-0.5">#{paying.purchase_number} · {paying.supplier?.name}</p>
-              </div>
-              <button type="button" onClick={() => setPaying(null)} className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100" aria-label="Close">✕</button>
-            </div>
+        <Modal
+          size="sm"
+          icon="wallet"
+          title="Pay supplier"
+          subtitle={`#${paying.purchase_number} · ${paying.supplier?.name || ""}`}
+          onClose={() => setPaying(null)}
+          footer={
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setPaying(null)}>Cancel</button>
+              <button type="submit" form="pay-supplier-form" disabled={paySaving} className="btn-primary">{paySaving ? "Saving…" : "Save payment"}</button>
+            </>
+          }
+        >
+          <form id="pay-supplier-form" onSubmit={handlePay} className="space-y-4">
             <div className="flex items-center justify-between rounded-xl bg-rose-50 border border-rose-100 px-4 py-3">
               <span className="text-[12.5px] font-medium text-rose-700">Due on this bill</span>
               <span className="text-[15px] font-bold text-rose-700 tabular">{inr(Number(paying.due_amount))}</span>
             </div>
             <div>
               <label className="label">Amount (₹)</label>
-              <input type="number" min="0.01" step="0.01" max={Number(paying.due_amount)} required className="input text-[15px] font-semibold tabular" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+              <input type="number" min="0.01" step="0.01" max={Number(paying.due_amount)} required className="input text-[16px] font-semibold tabular" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} autoFocus />
             </div>
             <div>
               <label className="label">Method</label>
-              <select className="input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
-                <option value="cash">Cash</option>
-                <option value="upi">UPI</option>
-                <option value="bank_transfer">Bank transfer / NEFT</option>
-                <option value="cheque">Cheque</option>
-                <option value="card">Card</option>
-              </select>
+              <ChoiceGroup value={payMethod} onChange={setPayMethod} options={METHODS} cols={3} />
             </div>
-            {payError && <p className="text-[12.5px] text-rose-600">{payError}</p>}
-            <div className="flex gap-2">
-              <button type="button" className="btn-secondary flex-1" onClick={() => setPaying(null)}>Cancel</button>
-              <button type="submit" disabled={paySaving} className="btn-primary flex-1">{paySaving ? "Saving…" : "Save payment"}</button>
-            </div>
+            {payError && (
+              <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {payError}</p>
+            )}
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -502,18 +537,29 @@ function PurchaseInner() {
 
 /* ───────────────────────── components ───────────────────────── */
 
-function Num({ n }: { n: number }) {
-  return <span className="w-6 h-6 rounded-full bg-brand-600 text-white text-[11.5px] font-bold flex items-center justify-center shrink-0">{n}</span>;
-}
+const METHODS: [string, string][] = [
+  ["cash", "Cash"],
+  ["upi", "UPI"],
+  ["bank_transfer", "Bank / NEFT"],
+  ["cheque", "Cheque"],
+  ["card", "Card"],
+];
 
-function Stat({ label, value, loading, tone, to }: { label: string; value: string; loading: boolean; tone?: "warn"; to?: string }) {
-  const body = (
-    <>
-      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</div>
-      <div className={`mt-2 text-[24px] font-bold tracking-tight tabular truncate ${tone === "warn" ? "text-amber-600" : "text-navy-900"} ${loading ? "opacity-40 animate-pulse" : ""}`}>{value}</div>
-    </>
+const inr0 = (n: number) => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
+
+function RowsSkeleton() {
+  return (
+    <div className="p-5 space-y-3">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="flex items-center gap-3 animate-pulse">
+          <div className="w-20 h-3 rounded bg-slate-100" />
+          <div className="w-7 h-7 rounded-full bg-slate-100" />
+          <div className="flex-1 h-3 rounded bg-slate-100" />
+          <div className="w-16 h-3 rounded bg-slate-100" />
+        </div>
+      ))}
+    </div>
   );
-  return to ? <Link to={to} className="card card-hover p-5 block">{body}</Link> : <div className="card p-5">{body}</div>;
 }
 
 /** Type-to-search product picker (the catalogue can have thousands of products). */
