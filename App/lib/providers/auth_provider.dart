@@ -43,6 +43,14 @@ class AuthProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _shops = [];
   bool _loadingShops = false;
 
+  /// Shops a staff account is assigned to (from /auth/me). Empty for owners.
+  List<int> _assignedShopIds = [];
+
+  /// True when a staff account is signed in but its token carries no shop —
+  /// it is assigned to several shops (or was removed from the saved one) and
+  /// must pick one before using the app.
+  bool _needsShopPick = false;
+
   String? get registeredMobile => _registeredMobile;
   bool get isLoggedIn => _isLoggedIn;
   bool get isCustomer => _isCustomer;
@@ -64,6 +72,10 @@ class AuthProvider extends ChangeNotifier {
   bool get loadingProfile => _loadingProfile;
   List<Map<String, dynamic>> get shops => _shops;
   bool get loadingShops => _loadingShops;
+  bool get isStaff => _accountType == 'employee';
+  List<int> get assignedShopIds => List.unmodifiable(_assignedShopIds);
+  bool get hasMultipleShops => isStaff && _assignedShopIds.length > 1;
+  bool get needsShopPick => _isLoggedIn && !_isCustomer && _needsShopPick;
 
   BusinessProfile get currentProfile => BusinessProfile(
         businessName: _shopName.isNotEmpty ? _shopName : 'NSYU Traders',
@@ -118,13 +130,16 @@ class AuthProvider extends ChangeNotifier {
       if (me != null) {
         _accountType = me['accountType']?.toString() ?? 'owner';
         _roleName = me['roleName']?.toString() ?? (isOwner ? 'Owner' : 'Staff');
-        _shopId = me['shopId'] ?? SupabaseConfig.shopId;
+        _assignedShopIds = me['assignedShopIds'] is List
+            ? (me['assignedShopIds'] as List)
+                .map((e) => int.tryParse(e.toString()))
+                .whereType<int>()
+                .toList()
+            : <int>[];
 
-        if (me['fieldPermissions'] is Map) {
-          _fieldPermissions = (me['fieldPermissions'] as Map).map(
-            (k, v) => MapEntry(k.toString(), v == true),
-          );
-        }
+        _fieldPermissions = me['fieldPermissions'] is Map
+            ? (me['fieldPermissions'] as Map).map((k, v) => MapEntry(k.toString(), v == true))
+            : <String, bool>{};
 
         final actor = me['owner'] ?? me['employee'];
         if (actor is Map) {
@@ -134,6 +149,18 @@ class AuthProvider extends ChangeNotifier {
             _registeredMobile = actor['phone'].toString();
           }
         }
+
+        final meShopId = me['shopId'] is int ? me['shopId'] as int : int.tryParse('${me['shopId']}');
+        if (isStaff && meShopId == null) {
+          // Staff token without a shop: never guess (the saved/default id may
+          // belong to a shop they can't access) — ask them to choose.
+          _needsShopPick = true;
+          _loadingProfile = false;
+          notifyListeners();
+          return;
+        }
+        _needsShopPick = false;
+        _shopId = meShopId ?? SupabaseConfig.shopId;
 
         // Fetch current shop details
         final shop = await SupabaseService().fetchShopDetails(_shopId);
@@ -277,6 +304,10 @@ class AuthProvider extends ChangeNotifier {
         await prefs.setString(_shopEmailKey, _shopEmail);
         await prefs.setString(_shopLogoKey, _shopLogo);
       }
+      _needsShopPick = false;
+      // Role and field permissions are per shop for staff — reload them for
+      // the new shop before the app shows anything.
+      await refreshProfile();
       await loadShops();
       notifyListeners();
       return null;
@@ -487,6 +518,11 @@ class AuthProvider extends ChangeNotifier {
     await SupabaseConfig.clearAuth();
     await CustomerPortalService().logout();
     _fieldPermissions.clear();
+    _assignedShopIds = [];
+    _needsShopPick = false;
+    _shops = [];
+    _accountType = 'owner';
+    _roleName = 'Owner';
     _userName = '';
     _userEmail = '';
     _shopName = '';

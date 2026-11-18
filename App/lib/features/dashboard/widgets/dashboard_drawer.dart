@@ -11,6 +11,7 @@ import '../../../screens/inventory_screen.dart';
 import '../../../screens/login_screen.dart';
 import '../../../screens/reports_screen.dart';
 import '../../../screens/shop_management_screen.dart';
+import '../../../screens/staff_shop_picker_screen.dart';
 import '../../../screens/visibility_settings_screen.dart';
 
 class DashboardDrawer extends StatelessWidget {
@@ -183,6 +184,19 @@ class DashboardDrawer extends StatelessWidget {
             },
           ),
 
+
+          if (auth.hasMultipleShops)
+            _drawerItem(
+              icon: Icons.swap_horiz_rounded,
+              title: 'Switch shop',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const StaffShopPickerScreen(asSwitcher: true)),
+                );
+              },
+            ),
 
           _drawerSectionHeader('ADMIN & SETTINGS'),
           _drawerItem(

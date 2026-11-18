@@ -15,6 +15,7 @@ import 'providers/visibility_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/portal/customer_portal_shell.dart';
 import 'screens/root_shell.dart';
+import 'screens/staff_shop_picker_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -83,6 +84,12 @@ class _AuthGateState extends State<AuthGate> {
         return const CustomerPortalShell();
       }
 
+      // Staff assigned to several shops sign in without a shop: they must
+      // pick one before any shop-scoped screen loads.
+      if (auth.needsShopPick) {
+        return const StaffShopPickerScreen();
+      }
+
       final visibility = context.read<VisibilityProvider>();
       if (!visibility.loaded) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -91,7 +98,9 @@ class _AuthGateState extends State<AuthGate> {
           }
         });
       }
-      return const RootShell();
+      // Keyed by shop so every screen re-initialises (and reloads its data)
+      // after switching shops.
+      return RootShell(key: ValueKey('shop-${auth.shopId}'));
     }
 
     return const LoginScreen();
