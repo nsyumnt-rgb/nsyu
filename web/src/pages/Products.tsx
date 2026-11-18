@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   createProduct,
   deleteProduct,
@@ -548,6 +549,15 @@ function ProductsInner() {
     setModalError(null);
     setShowAddModal(true);
   }
+
+  // "Add Product" from the Sales screen links here with ?add=1: open the form once the catalog has loaded.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (loading || searchParams.get("add") !== "1") return;
+    openCreate();
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, searchParams]);
 
   // Save Create
   async function handleSaveCreate(e: React.FormEvent) {

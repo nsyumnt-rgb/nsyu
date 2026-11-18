@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { usePosStore } from "../store/posStore";
 import { listShops } from "../api/shops";
 import { logout as logoutApi } from "../api/auth";
 import { resolveReferenceApi, type ResolvedReference } from "../api/reference";
@@ -109,6 +110,8 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
   const roleName = useAuthStore((s) => s.roleName);
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
+  const posCount = usePosStore((s) => s.count);
+  const setPosOpen = usePosStore((s) => s.setOpen);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const storeLogout = useAuthStore((s) => s.logout);
@@ -403,6 +406,28 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
             <span className="text-[11px] font-mono text-slate-400">({activeShop?.code || "NSYU-01"})</span>
           </div>
         </div>
+
+        {/* Current bill (only while the Sales screen is open) */}
+        {posCount !== null && (
+          <button
+            type="button"
+            onClick={() => setPosOpen(true)}
+            className={`relative h-10 px-3 rounded-xl transition-colors flex items-center ${posCount > 0 ? "bg-brand-50 text-brand-700 hover:bg-brand-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"}`}
+            title="Current bill"
+            aria-label={`Current bill, ${posCount} item${posCount === 1 ? "" : "s"}`}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
+            </svg>
+            {posCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-xs leading-none">
+                {posCount > 99 ? "99+" : posCount}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Notification Bell with Real Live Dropdown */}
         <div className="relative" ref={notifMenuRef}>

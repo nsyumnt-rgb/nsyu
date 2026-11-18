@@ -7,7 +7,7 @@ import { apiErrorMessage } from "../api/client";
 import { usePermission } from "../hooks/usePermission";
 import { useAuthStore } from "../store/authStore";
 
-/* Marketplace wireframe — board 16 (Sales & POS): POS billing, online orders queue, invoices. */
+/* Sales: new sale (POS billing), online orders queue, invoices. */
 
 type Tab = "pos" | "orders" | "invoices";
 
@@ -23,12 +23,13 @@ const inr = (n: number) => "₹" + Math.round(Number(n) || 0).toLocaleString("en
 
 export default function SalesHub() {
   const { can, isOwner } = usePermission();
+  const activeShop = useAuthStore((st) => st.activeShop);
   const [params, setParams] = useSearchParams();
   const t = params.get("tab") as Tab | null;
   const tab: Tab = t === "orders" || t === "invoices" ? t : "pos";
 
   const tabs: { key: Tab; label: string; show: boolean }[] = [
-    { key: "pos", label: "POS billing", show: isOwner || can("billing", "view") },
+    { key: "pos", label: "New sale", show: isOwner || can("billing", "view") },
     { key: "orders", label: "Online orders", show: isOwner || can("orders", "view") },
     { key: "invoices", label: "Invoices", show: isOwner || can("sales", "view") },
   ];
@@ -37,8 +38,18 @@ export default function SalesHub() {
     <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
-          <h1 className="page-title">Sales & POS</h1>
-          <p className="page-subtitle">Bill walk-in customers, move online orders forward, and find any invoice.</p>
+          <div className="flex items-center gap-3">
+            <svg className="w-8 h-8 text-navy-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
+            </svg>
+            <h1 className="text-[26px] sm:text-[30px] font-bold text-navy-900 tracking-tight leading-none">Sales</h1>
+            {activeShop?.code && <span className="badge-brand !text-[11.5px] !px-3 !py-1">{activeShop.code}</span>}
+          </div>
+          <p className="text-[13.5px] text-slate-500 mt-2">
+            {tab === "pos" ? "Create bill, add products, apply discount & GST, and save sale." : tab === "orders" ? "Move online orders from new to delivered." : "Every invoice, payment and due."}
+          </p>
         </div>
         <div className="inline-flex p-1 rounded-xl bg-white border border-border shadow-xs self-start">
           {tabs.filter((x) => x.show).map((x) => (
@@ -46,7 +57,7 @@ export default function SalesHub() {
               key={x.key}
               type="button"
               onClick={() => setParams(x.key === "pos" ? {} : { tab: x.key })}
-              className={`px-4 py-2 rounded-lg text-[13px] font-semibold transition ${tab === x.key ? "bg-navy-900 text-white shadow-sm" : "text-slate-600 hover:text-navy-900"}`}
+              className={`px-3.5 py-1.5 rounded-lg text-[12.5px] font-semibold transition ${tab === x.key ? "bg-brand-600 text-white shadow-sm" : "text-slate-600 hover:text-navy-900"}`}
             >
               {x.label}
             </button>

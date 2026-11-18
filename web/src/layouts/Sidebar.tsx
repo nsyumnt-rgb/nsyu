@@ -43,7 +43,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/app", label: "Dashboard", module: "dashboard", group: "BUSINESS", icon: ico("M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z") },
   { to: "/app/products", label: "Products", module: "products", group: "BUSINESS", icon: ico("M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z", "M7 7h.01") },
   { to: "/app/inventory", label: "Inventory", module: "inventory", group: "BUSINESS", icon: ico("M12 2L2 7l10 5 10-5-10-5z", "M2 17l10 5 10-5", "M2 12l10 5 10-5") },
-  { to: "/app/billing", label: "Sales & POS", module: "billing", group: "BUSINESS", icon: ico("M4 2h16v20l-3-2-3 2-3-2-3 2-4-2z", "M8 7h8", "M8 11h8", "M8 15h5") },
+  { to: "/app/billing", label: "Sales", module: "billing", group: "BUSINESS", icon: ico("M4 2h16v20l-3-2-3 2-3-2-3 2-4-2z", "M8 7h8", "M8 11h8", "M8 15h5") },
   { to: "/app/orders", label: "Online orders", module: "orders", group: "BUSINESS", icon: ico("M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z", "M3 6h18", "M16 10a4 4 0 0 1-8 0") },
   { to: "/app/purchase", label: "Purchases", module: "purchase", group: "BUSINESS", icon: ico("M1 3h15v13H1z", "M16 8h4l3 3v5h-7z", "M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
   { to: "/app/suppliers", label: "Suppliers", module: "suppliers", group: "BUSINESS", icon: ico("M3 21h18", "M5 21V7l7-4 7 4v14", "M9 21v-6h6v6") },
