@@ -123,7 +123,6 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 
 | Item | Why blocked | Needed |
 |---|---|---|
-| Supplier **login** | Not implemented (suppliers are shop-owned records) | Product decision |
 | Supabase **RLS** policies | Requires the live database; tests never touch production | A staging Supabase project + its credentials |
 | Android **emulator** run | No emulator session in this environment | Run on a device/emulator; APK builds |
 | Testing against **production data** | Deliberately avoided | — |
