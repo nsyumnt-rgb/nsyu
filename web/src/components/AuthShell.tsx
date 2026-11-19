@@ -29,44 +29,40 @@ export default function AuthShell({
   const features = variant === "customer" ? CUSTOMER_FEATURES : FEATURES;
   return (
     <div className="min-h-[100dvh] bg-white text-navy-900 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-      <aside
-        className="hidden lg:flex relative flex-col justify-between overflow-hidden p-10 xl:p-14 text-white"
-        style={{ background: "radial-gradient(120% 90% at 100% 0%, #10B981 0%, rgba(16,185,129,0) 55%), linear-gradient(150deg, #071A2A 0%, #005B43 60%, #00845F 100%)" }}
-      >
-        <div aria-hidden className="absolute right-16 top-24 h-24 w-24 rounded-full bg-emerald-300/10 blur-2xl animate-pulse-glow" />
-        <div aria-hidden className="absolute right-[-8rem] top-[-8rem] h-[28rem] w-[28rem] rounded-full border border-white/10" />
-        <div aria-hidden className="absolute -bottom-40 -left-24 w-[520px] h-[520px] rounded-full border border-white/10" />
-        <div aria-hidden className="absolute -bottom-24 -left-8 w-[360px] h-[360px] rounded-full border border-white/10" />
+      <aside className="hidden lg:flex relative flex-col justify-between overflow-hidden p-10 xl:p-14 bg-white text-navy-900 border-r border-slate-200/80">
+        <div aria-hidden className="absolute right-[-7rem] top-[-7rem] h-[26rem] w-[26rem] rounded-full bg-brand-50" />
+        <div aria-hidden className="absolute -bottom-48 -left-32 h-[30rem] w-[30rem] rounded-full border border-brand-100" />
+        <div aria-hidden className="absolute left-[18%] top-[48%] h-px w-[55%] bg-gradient-to-r from-transparent via-brand-200 to-transparent" />
 
         <Link to="/" className="relative inline-flex items-center gap-3 w-fit">
           <span className="w-11 h-11 rounded-xl bg-white p-1.5 shadow-lg"><img src="./nsyu_logo.png" alt="" className="w-full h-full object-contain" /></span>
-          <span className="text-[19px] font-bold tracking-tight">{variant === "customer" ? "NSYU" : "NSYU Business"}</span>
+          <span className="text-[19px] font-bold tracking-tight text-navy-900">{variant === "customer" ? "NSYU" : "NSYU Business"}</span>
         </Link>
 
         <div className="relative max-w-[460px]">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-emerald-200/90">{variant === "customer" ? "Customer portal" : "Shop management"}</p>
-          <h2 className="mt-3 text-[34px] xl:text-[40px] font-bold leading-[1.12] tracking-tight !text-white">{headline}</h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-emerald-50/80">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-700">{variant === "customer" ? "Customer portal" : "Shop management"}</p>
+          <h2 className="mt-3 max-w-[620px] font-serif text-[44px] xl:text-[58px] font-semibold leading-[0.98] tracking-[-0.04em] text-navy-900">{headline}</h2>
+          <p className="mt-5 max-w-[500px] text-[15px] leading-relaxed text-slate-600">
             {variant === "customer" ? "Order, track deliveries and check your khata with the shops you buy from." : "Billing, stock, suppliers, customer khata and online orders — on the web and on your phone."}
           </p>
-          <ul className="mt-9 space-y-5">
+          <ul className="relative mt-9 grid max-w-[620px] grid-cols-2 gap-3">
             {features.map((f) => (
-              <li key={f.t} className="flex items-start gap-4">
-                <span className="w-10 h-10 rounded-xl bg-white/10 ring-1 ring-white/15 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5 text-emerald-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{f.i}</svg>
+              <li key={f.t} className="flex min-h-[112px] items-start gap-3 rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-[0_12px_30px_-20px_rgba(16,42,67,0.35)] transition hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_18px_36px_-20px_rgba(0,132,95,0.28)]">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{f.i}</svg>
                 </span>
                 <span>
-                  <span className="block text-[15px] font-semibold">{f.t}</span>
-                  <span className="block text-[13px] text-emerald-50/70 mt-0.5">{f.d}</span>
+                  <span className="block text-[14px] font-semibold leading-tight text-navy-900">{f.t}</span>
+                  <span className="block text-[12px] text-slate-500 mt-1 leading-snug">{f.d}</span>
                 </span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="relative flex items-center justify-between gap-4 text-[12.5px] text-emerald-50/70">
+        <div className="relative flex items-center justify-between gap-4 text-[12.5px] text-slate-500">
           <span>© {new Date().getFullYear()} NSYU</span>
-          <Link to="/" className="inline-flex items-center gap-1.5 font-semibold text-white hover:text-emerald-200">
+          <Link to="/" className="inline-flex items-center gap-1.5 font-semibold text-navy-900 hover:text-brand-700">
             Browse the marketplace
             <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><polyline points="9 18 15 12 9 6" /></svg>
           </Link>
