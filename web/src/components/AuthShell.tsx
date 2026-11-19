@@ -31,8 +31,10 @@ export default function AuthShell({
     <div className="min-h-[100dvh] bg-white text-navy-900 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <aside
         className="hidden lg:flex relative flex-col justify-between overflow-hidden p-10 xl:p-14 text-white"
-        style={{ background: "radial-gradient(120% 90% at 100% 0%, #16A06A 0%, rgba(22,160,106,0) 55%), linear-gradient(150deg, #04261D 0%, #064E3B 60%, #047857 100%)" }}
+        style={{ background: "radial-gradient(120% 90% at 100% 0%, #10B981 0%, rgba(16,185,129,0) 55%), linear-gradient(150deg, #071A2A 0%, #005B43 60%, #00845F 100%)" }}
       >
+        <div aria-hidden className="absolute right-16 top-24 h-24 w-24 rounded-full bg-emerald-300/10 blur-2xl animate-pulse-glow" />
+        <div aria-hidden className="absolute right-[-8rem] top-[-8rem] h-[28rem] w-[28rem] rounded-full border border-white/10" />
         <div aria-hidden className="absolute -bottom-40 -left-24 w-[520px] h-[520px] rounded-full border border-white/10" />
         <div aria-hidden className="absolute -bottom-24 -left-8 w-[360px] h-[360px] rounded-full border border-white/10" />
 
