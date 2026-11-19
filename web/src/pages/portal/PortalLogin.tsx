@@ -25,7 +25,6 @@ export default function PortalLogin() {
   const [identifier, setIdentifier] = useState(
     searchParams.get("identifier") || searchParams.get("phone") || searchParams.get("email") || ""
   );
-  const [shopCode, setShopCode] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -333,19 +332,6 @@ export default function PortalLogin() {
                 </div>
               </div>
 
-              <div className="hidden">
-                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                  Shop code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
-                </label>
-                <input
-                  type="text"
-                  value={shopCode}
-                  onChange={(e) => setShopCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SHOP01 or leave blank"
-                  className="w-full h-12 px-3.5 text-[15px] font-mono uppercase placeholder:font-sans bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
-                />
-              </div>
-
               <button
                 type="submit"
                 disabled={loading || !identifier.trim() || !password}
@@ -400,19 +386,6 @@ export default function PortalLogin() {
                   />
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">A 6-digit code will be sent to your registered email only. No SMS OTP is sent.</p>
-              </div>
-
-              <div className="hidden">
-                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                  Shop code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
-                </label>
-                <input
-                  type="text"
-                  value={shopCode}
-                  onChange={(e) => setShopCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SHOP01 or leave blank"
-                  className="w-full h-12 px-3.5 text-[15px] font-mono uppercase placeholder:font-sans bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
-                />
               </div>
 
               <button
@@ -614,20 +587,6 @@ export default function PortalLogin() {
               <div className="pb-1">
                 <h3 className="text-sm font-bold text-gray-800">Register as a New Customer</h3>
                 <p className="text-[11px] text-gray-500">Register with your name, mobile number and email. No shop code is required.</p>
-              </div>
-
-              <div className="hidden">
-                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                  Shop code
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={shopCode}
-                  onChange={(e) => setShopCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SHOP01"
-                  className="w-full h-11 px-3.5 text-[14px] font-mono uppercase placeholder:font-sans bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
-                />
               </div>
 
               <div>
