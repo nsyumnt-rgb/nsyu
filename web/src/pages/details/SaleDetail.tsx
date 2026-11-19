@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getSale, downloadInvoicePdf, updateSale, recordSalePayment } from "../../api/sales";
+import { getSale, downloadInvoicePdf, updateSale, recordSalePayment, returnSale } from "../../api/sales";
 import { apiErrorMessage } from "../../api/client";
 import ReferenceLink from "../../components/ReferenceLink";
 import type { Sale } from "../../types";
@@ -21,6 +21,43 @@ export default function SaleDetail() {
   const [payMethod, setPayMethod] = useState("cash");
   const [payNotes, setPayNotes] = useState("");
   const [paySaving, setPaySaving] = useState(false);
+
+  // Return Modal State
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnItems, setReturnItems] = useState<{ [saleItemId: number]: number }>({});
+  const [returnReason, setReturnReason] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+
+  async function handleRecordReturn(e: React.FormEvent) {
+    e.preventDefault();
+    if (!sale) return;
+    const itemsToReturn = Object.entries(returnItems)
+      .filter(([_, qty]) => Number(qty) > 0)
+      .map(([saleItemId, quantity]) => ({
+        saleItemId: Number(saleItemId),
+        quantity: Number(quantity),
+      }));
+
+    if (itemsToReturn.length === 0) {
+      alert("Please enter a return quantity greater than 0 for at least one item.");
+      return;
+    }
+
+    setReturnSubmitting(true);
+    try {
+      await returnSale(sale.id, itemsToReturn, returnReason.trim() || undefined);
+      const refreshed = await getSale(sale.id);
+      if (refreshed.data.success && refreshed.data.data) {
+        setSale(refreshed.data.data);
+      }
+      setShowReturnModal(false);
+      setStatusMsg("Return processed successfully. Stock restored and customer ledger credited.");
+    } catch (err) {
+      alert(apiErrorMessage(err, "Failed to process sale return"));
+    } finally {
+      setReturnSubmitting(false);
+    }
+  }
 
   async function handleRecordPayment(e: React.FormEvent) {
     e.preventDefault();
@@ -117,7 +154,7 @@ export default function SaleDetail() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3" />
+        <div className="w-10 h-10 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mb-3" />
         <p className="text-sm font-medium text-slate-500">Loading invoice details...</p>
       </div>
     );
@@ -214,6 +251,26 @@ export default function SaleDetail() {
               <span>Receive Payment</span>
             </button>
           )}
+          {sale.status !== "cancelled" && sale.status !== "returned" && (
+            <button
+              onClick={() => {
+                const initial: Record<number, number> = {};
+                (sale.items || []).forEach((it) => {
+                  initial[it.id] = 0;
+                });
+                setReturnItems(initial);
+                setReturnReason("");
+                setShowReturnModal(true);
+              }}
+              className="px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+              </svg>
+              <span>Process Return</span>
+            </button>
+          )}
           <button
             onClick={() => window.print()}
             className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-colors flex items-center gap-1.5"
@@ -228,7 +285,7 @@ export default function SaleDetail() {
           <button
             onClick={handleDownloadPdf}
             disabled={downloading}
-            className="px-3.5 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-2xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            className="px-3.5 py-2 text-xs font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 shadow-2xs transition-colors flex items-center gap-1.5 disabled:opacity-50"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -346,6 +403,7 @@ export default function SaleDetail() {
                 <th className="py-2.5 px-4">Product Name</th>
                 <th className="py-2.5 px-4">SKU</th>
                 <th className="py-2.5 px-4 text-right">Qty</th>
+                <th className="py-2.5 px-4 text-right">Returned</th>
                 <th className="py-2.5 px-4 text-right">Rate</th>
                 <th className="py-2.5 px-4 text-right">Discount</th>
                 <th className="py-2.5 px-4 text-right">Tax</th>
@@ -359,7 +417,7 @@ export default function SaleDetail() {
                     <td className="py-3 px-4 text-slate-400 font-mono">{idx + 1}</td>
                     <td className="py-3 px-4 font-medium text-slate-900">
                       {item.product_id ? (
-                        <ReferenceLink type="product" id={item.product_id} className="text-slate-900 hover:text-blue-600 font-normal">
+                        <ReferenceLink type="product" id={item.product_id} className="text-slate-900 hover:text-emerald-700 font-normal">
                           {item.product_name || `Product #${item.product_id}`}
                         </ReferenceLink>
                       ) : (
@@ -376,6 +434,15 @@ export default function SaleDetail() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-right font-medium">{item.quantity}</td>
+                    <td className="py-3 px-4 text-right">
+                      {item.returned_quantity > 0 ? (
+                        <span className="font-semibold text-amber-700 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-full text-[11px]">
+                          {item.returned_quantity}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-right">₹{Number(item.rate).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</td>
                     <td className="py-3 px-4 text-right text-slate-500">
                       {item.discount_amount > 0 ? `₹${Number(item.discount_amount).toLocaleString("en-IN")}` : "—"}
@@ -390,7 +457,7 @@ export default function SaleDetail() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-6 text-center text-slate-400 italic">No line items in this invoice</td>
+                  <td colSpan={9} className="py-6 text-center text-slate-400 italic">No line items in this invoice</td>
                 </tr>
               )}
             </tbody>
@@ -474,6 +541,79 @@ export default function SaleDetail() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Returns & Refunds History Card */}
+      {sale.returns && sale.returns.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 bg-amber-50/40 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">Returns & Refunds Processed</span>
+            </div>
+            <span className="text-xs font-semibold text-slate-500">{sale.returns.length} return(s)</span>
+          </div>
+          <div className="divide-y divide-slate-100 text-xs">
+            {sale.returns.map((ret: any) => (
+              <div key={ret.id} className="p-4 sm:p-5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded text-[11px]">
+                      {ret.reference_code || `RET${String(ret.id).padStart(6, "0")}`}
+                    </span>
+                    <span className="text-slate-500 text-[11px]">
+                      {new Date(ret.return_date || ret.created_at).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    {ret.reason && (
+                      <span className="text-slate-700 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded text-[11px]">
+                        Reason: {ret.reason}
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-bold text-emerald-700 text-sm">
+                    Refund Credited: ₹{Number(ret.refund_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                {ret.items && ret.items.length > 0 && (
+                  <div className="bg-slate-50/60 rounded-lg p-2.5 border border-slate-100 overflow-x-auto">
+                    <table className="w-full text-left text-[11px]">
+                      <thead>
+                        <tr className="text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-200/50 pb-1">
+                          <th className="pb-1">Product Description</th>
+                          <th className="pb-1 text-right">Return Qty</th>
+                          <th className="pb-1 text-right">Rate</th>
+                          <th className="pb-1 text-right">Refund Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {ret.items.map((ri: any) => {
+                          const matchedLine = (sale.items || []).find((si) => si.id === ri.sale_item_id);
+                          return (
+                            <tr key={ri.id}>
+                              <td className="py-1 font-medium text-slate-800">
+                                {matchedLine?.product_name || `Product #${ri.product_id}`}
+                              </td>
+                              <td className="py-1 text-right font-bold text-slate-700">{ri.quantity}</td>
+                              <td className="py-1 text-right text-slate-600">₹{Number(ri.rate).toFixed(2)}</td>
+                              <td className="py-1 text-right font-bold text-emerald-700">₹{Number(ri.refund_amount).toFixed(2)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -602,6 +742,85 @@ export default function SaleDetail() {
                 </button>
                 <button type="submit" disabled={paySaving} className="btn-primary bg-emerald-600 hover:bg-emerald-700">
                   {paySaving ? "Saving…" : "Confirm Payment"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Process Return Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-bold text-slate-900 text-sm">Process Return — {sale.invoice_number}</h3>
+              <button
+                type="button"
+                onClick={() => setShowReturnModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-xs text-emerald-900 leading-relaxed">
+              Returning items automatically restores stock into inventory, posts an offsetting credit entry in the customer ledger, and updates the bill status.
+            </div>
+
+            <form onSubmit={handleRecordReturn} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-2">Select Items to Return</label>
+                <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden max-h-60 overflow-y-auto">
+                  {(sale.items || []).map((item) => {
+                    const alreadyReturned = item.returned_quantity || 0;
+                    const available = Math.max(0, item.quantity - alreadyReturned);
+                    const currentQty = returnItems[item.id] || 0;
+                    return (
+                      <div key={item.id} className="p-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/60">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-slate-900 truncate">{item.product_name}</p>
+                          <p className="text-[11px] text-slate-500">
+                            Qty: {item.quantity} • Returned: {alreadyReturned} • <span className="text-emerald-700 font-medium">Available: {available}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="0"
+                            max={available}
+                            disabled={available <= 0}
+                            value={currentQty}
+                            onChange={(e) => {
+                              const val = Math.min(available, Math.max(0, parseInt(e.target.value, 10) || 0));
+                              setReturnItems((prev) => ({ ...prev, [item.id]: val }));
+                            }}
+                            className="w-16 input text-center font-mono py-1 px-1.5"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Return Reason (Optional)</label>
+                <input
+                  type="text"
+                  className="input w-full"
+                  placeholder="e.g. Defective, wrong item, customer return"
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowReturnModal(false)} className="btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" disabled={returnSubmitting} className="btn-primary bg-emerald-600 hover:bg-emerald-700">
+                  {returnSubmitting ? "Processing…" : "Confirm Return"}
                 </button>
               </div>
             </form>

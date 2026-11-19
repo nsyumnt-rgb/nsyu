@@ -89,7 +89,7 @@ export async function recordLedgerEntry(params: RecordLedgerEntryParams) {
         owner_id: ownerId,
         shop_id: shopId,
         customer_id: customerId,
-        sale_id: params.saleId ?? (referenceType.startsWith("Sale") && referenceId ? referenceId : null),
+        sale_id: params.saleId ?? ((referenceType === "Sale" || referenceType === "SalePayment" || referenceType === "SaleCancellation") && referenceId ? referenceId : null),
         entry_type: entryType,
         amount,
         running_balance: newBalance,

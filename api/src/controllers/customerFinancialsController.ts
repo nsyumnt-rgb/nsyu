@@ -3,6 +3,8 @@ import { Op } from "sequelize";
 import {
   Sale,
   SaleItem,
+  SaleReturn,
+  SaleReturnItem,
   Customer,
   CustomerLedger,
   Notification,
@@ -81,6 +83,7 @@ export async function getPortalBill(req: Request, res: Response) {
         { model: SaleItem, as: "items" },
         { model: CustomerLedger, as: "payments", required: false },
         { model: Shop, as: "shop", attributes: ["id", "name", "phone", "address", "email"] },
+        { model: SaleReturn, as: "returns", include: [{ model: SaleReturnItem, as: "items" }], required: false },
       ],
     });
 
@@ -91,6 +94,93 @@ export async function getPortalBill(req: Request, res: Response) {
     return res.json({ success: true, data: bill });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Failed to load bill" });
+  }
+}
+
+/**
+ * POST /api/customer-portal/bills/:id/return-request
+ * Allows a customer to submit a return request for one or more items on their invoice.
+ * Body: { items: [{ saleItemId, quantity, reason? }], reason?: string }
+ */
+export async function requestPortalBillReturn(req: Request, res: Response) {
+  try {
+    const customerId = req.customer!.customerId;
+    const shopId = req.customer!.shopId;
+    const billId = Number(req.params.id);
+    const { items, reason } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "Please select at least one item to return" });
+    }
+
+    const bill = await Sale.findOne({
+      where: { id: billId, customer_id: customerId, shop_id: shopId },
+      include: [
+        { model: SaleItem, as: "items" },
+        { model: Customer, as: "customer" },
+      ],
+    });
+
+    if (!bill) {
+      return res.status(404).json({ success: false, message: "Invoice not found" });
+    }
+
+    if (bill.status === "cancelled") {
+      return res.status(400).json({ success: false, message: "Cannot return items on a cancelled invoice" });
+    }
+
+    if (bill.status === "returned") {
+      return res.status(400).json({ success: false, message: "All items on this invoice have already been returned" });
+    }
+
+    const billItems = (bill as any).items as SaleItem[];
+    const validatedItems: Array<{ name: string; quantity: number }> = [];
+
+    for (const reqItem of items) {
+      const line = billItems.find((bi) => bi.id === Number(reqItem.saleItemId));
+      if (!line) {
+        return res.status(400).json({ success: false, message: `Item #${reqItem.saleItemId} does not belong to this invoice` });
+      }
+      const qty = Number(reqItem.quantity);
+      const available = line.quantity - line.returned_quantity;
+      if (!qty || qty <= 0 || qty > available) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid return quantity for ${line.product_name}. Maximum available to return: ${available}`,
+        });
+      }
+      validatedItems.push({ name: line.product_name, quantity: qty });
+    }
+
+    const customerName = (bill as any).customer?.name || "Customer";
+    const itemsSummary = validatedItems.map((vi) => `${vi.name} × ${vi.quantity}`).join(", ");
+    const returnReason = String(reason || "").trim() || "Customer requested return";
+
+    // Notify the shop owner
+    await Notification.create({
+      owner_id: bill.owner_id,
+      shop_id: bill.shop_id,
+      recipient_type: "owner",
+      recipient_id: bill.owner_id,
+      type: "return_requested",
+      title: `Return Request: Invoice #${bill.invoice_number}`,
+      message: `${customerName} requested return for ${itemsSummary}. Reason: ${returnReason}`,
+      reference_type: "Sale",
+      reference_id: bill.id,
+      is_read: false,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Return request submitted successfully. Shop staff will review your request.",
+      data: {
+        invoiceNumber: bill.invoice_number,
+        itemsCount: validatedItems.length,
+        reason: returnReason,
+      },
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message || "Failed to submit return request" });
   }
 }
 

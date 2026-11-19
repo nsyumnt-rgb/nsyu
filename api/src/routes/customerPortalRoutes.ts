@@ -34,6 +34,7 @@ import {
   listPortalBills,
   getPortalBill,
   downloadPortalBillPdf,
+  requestPortalBillReturn,
   listPortalLedger,
   getPortalLedgerSummary,
   listPortalPayments,
@@ -88,6 +89,7 @@ router.post("/orders/:id/cancel", cancelPortalOrder);
 router.get("/bills", listPortalBills);
 router.get("/bills/:id", getPortalBill);
 router.get("/bills/:id/pdf", downloadPortalBillPdf);
+router.post("/bills/:id/return-request", requestPortalBillReturn);
 
 // Ledger & Payments
 router.get("/ledger", listPortalLedger);

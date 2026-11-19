@@ -235,6 +235,15 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                   color: const Color(0xFF64748B),
                   onSelect: () => _updateBillStatus(bill, BillStatus.cancelled),
                 ),
+                _buildBillStatusOption(
+                  ctx,
+                  label: 'Returned (Full Return)',
+                  status: BillStatus.returned,
+                  current: bill.status,
+                  icon: Icons.assignment_return_outlined,
+                  color: const Color(0xFFB45309),
+                  onSelect: () => _updateBillStatus(bill, BillStatus.returned),
+                ),
               ],
             ),
           ),
@@ -530,15 +539,41 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
   }
 
   Widget _buildBillContent(BuildContext context, SavedBill b) {
-    final isPaid = b.status == BillStatus.paid || b.due <= 0;
-    final isPartial = !isPaid && b.paidAmount > 0;
-    final statusColor = isPaid
-        ? const Color(0xFF16A34A)
-        : (isPartial ? const Color(0xFFD97706) : const Color(0xFFDC2626));
-    final statusBg = isPaid
-        ? const Color(0xFFDCFCE7)
-        : (isPartial ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2));
-    final statusText = isPaid ? 'Paid' : (isPartial ? 'Partial' : 'Unpaid');
+    final isCancelled = b.status == BillStatus.cancelled;
+    final isReturned = b.status == BillStatus.returned;
+    final isPartiallyReturned = b.status == BillStatus.partiallyReturned;
+    final isPaid = !isCancelled && !isReturned && (b.status == BillStatus.paid || b.due <= 0);
+    final isPartial = !isCancelled && !isReturned && !isPaid && b.paidAmount > 0;
+
+    final Color statusColor;
+    final Color statusBg;
+    final String statusText;
+
+    if (isCancelled) {
+      statusColor = const Color(0xFF64748B);
+      statusBg = const Color(0xFFF1F5F9);
+      statusText = 'Cancelled';
+    } else if (isReturned) {
+      statusColor = const Color(0xFFB45309);
+      statusBg = const Color(0xFFFEF3C7);
+      statusText = 'Returned';
+    } else if (isPartiallyReturned) {
+      statusColor = const Color(0xFFD97706);
+      statusBg = const Color(0xFFFFFBEB);
+      statusText = 'Partially Returned';
+    } else if (isPaid) {
+      statusColor = const Color(0xFF16A34A);
+      statusBg = const Color(0xFFDCFCE7);
+      statusText = 'Paid';
+    } else if (isPartial) {
+      statusColor = const Color(0xFFD97706);
+      statusBg = const Color(0xFFFEF3C7);
+      statusText = 'Partial';
+    } else {
+      statusColor = const Color(0xFFDC2626);
+      statusBg = const Color(0xFFFEE2E2);
+      statusText = 'Unpaid';
+    }
 
     final phone = b.customerPhone.isNotEmpty ? b.customerPhone : '+91 98765 67890';
     final email = '${b.customerName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '')}@email.com';
@@ -866,6 +901,10 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                 ],
                 const Divider(height: 16, color: Color(0xFFF1F5F9)),
                 _calcRow('Total Bill Amount', '₹${_money.format(b.finalBillTotal)}', isBold: true, fontSize: 13.5),
+                if (b.returnedAmount > 0) ...[
+                  const Divider(height: 14, color: Color(0xFFF8FAFC)),
+                  _calcRow('Returned / Refunded', '-₹${_money.format(b.returnedAmount)}', valueColor: const Color(0xFFD97706), isBold: true),
+                ],
                 const Divider(height: 16, color: Color(0xFFF1F5F9)),
                 _calcRow('Paid Amount', '₹${_money.format(b.paidAmount)}', valueColor: const Color(0xFF16A34A), isBold: true),
                 const Divider(height: 16, color: Color(0xFFF1F5F9)),

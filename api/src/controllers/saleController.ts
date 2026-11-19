@@ -13,6 +13,8 @@ import {
   StatusHistory,
   Notification,
   ProductStock,
+  Order,
+  OrderStatusHistory,
 } from "../models";
 import { PAYMENT_METHODS, PaymentMethod, computeBillPaymentStatus } from "../models/Sale";
 import { recordStockMovement } from "../utils/inventory";
@@ -957,28 +959,100 @@ export async function returnSale(req: Request, res: Response) {
       }
 
       saleReturn.refund_amount = totalRefund;
+      saleReturn.reference_code = `RET${String(saleReturn.id).padStart(6, "0")}`;
       await saleReturn.save({ transaction: t });
 
       await recordLedgerEntry({
         ownerId,
         shopId: targetShopId,
         customerId: sale.customer_id,
+        saleId: sale.id,
         entryType: "credit",
         amount: totalRefund,
         referenceType: "SaleReturn",
         referenceId: saleReturn.id,
+        referenceCode: saleReturn.reference_code,
         description: `Return against ${sale.invoice_number}`,
         actorType,
         actorId,
         externalTransaction: t,
       });
 
+      sale.returned_amount = round2(Number(sale.returned_amount || 0) + totalRefund);
       sale.total_amount = round2(Number(sale.total_amount) - totalRefund);
       sale.due_amount = Math.max(0, round2(Number(sale.due_amount) - totalRefund));
       const allReturned = saleItems.every((si) => si.returned_quantity >= si.quantity);
       sale.status = allReturned ? "returned" : "partially_returned";
       sale.payment_status = computeBillPaymentStatus(sale.total_amount, sale.paid_amount, sale.status);
       await sale.save({ transaction: t });
+
+      if (sale.order_id) {
+        const order = await Order.findByPk(sale.order_id, { transaction: t });
+        if (order) {
+          const oldStatus = order.status;
+          if (allReturned) {
+            order.status = "returned";
+            await order.save({ transaction: t });
+            await OrderStatusHistory.create(
+              {
+                order_id: order.id,
+                from_status: oldStatus,
+                to_status: "returned",
+                note: `All items returned on invoice #${sale.invoice_number}`,
+                changed_by_type: actorType,
+                changed_by_id: actorId,
+              },
+              { transaction: t }
+            );
+          }
+        }
+      }
+
+      // Customer notification
+      if (sale.customer_id) {
+        try {
+          await Notification.create(
+            {
+              owner_id: ownerId,
+              shop_id: targetShopId,
+              recipient_type: "customer",
+              recipient_id: sale.customer_id,
+              type: "return_processed",
+              title: `Return Processed: Invoice #${sale.invoice_number}`,
+              message: `Your return for invoice #${sale.invoice_number} has been processed. ₹${totalRefund.toFixed(2)} has been credited to your ledger account.`,
+              reference_type: "SaleReturn",
+              reference_id: saleReturn.id,
+              is_read: false,
+            },
+            { transaction: t }
+          );
+        } catch (notifErr) {
+          console.warn("Could not create customer return notification:", notifErr);
+        }
+      }
+
+      // Staff audit notification to owner if employee processed
+      if (!req.auth!.isOwner) {
+        try {
+          await Notification.create(
+            {
+              owner_id: ownerId,
+              shop_id: targetShopId,
+              recipient_type: "owner",
+              recipient_id: ownerId,
+              type: "return_processed",
+              title: `Return Recorded: Invoice #${sale.invoice_number}`,
+              message: `Staff processed return of ₹${totalRefund.toFixed(2)} for ${sale.invoice_number}.`,
+              reference_type: "SaleReturn",
+              reference_id: saleReturn.id,
+              is_read: false,
+            },
+            { transaction: t }
+          );
+        } catch (notifErr) {
+          console.warn("Could not create owner return notification:", notifErr);
+        }
+      }
 
       await logAudit({
         req,

@@ -64,7 +64,7 @@ Isolated in-memory DB, real HTTP API. Status codes observed:
 - **D Inventory:** create product, +15 purchase, −3 adjustment, sale −4, history rows, cancelling bill restores stock.
 - **E Suppliers / multi-shop:** create supplier, purchase adds stock, payable ₹2000 after ₹1000 paid, other owner can't read supplier/purchase or bill shop A's product.
 
-## 5. Full regression — `npm run test:all` → **526 checks, 0 failed** (2026-11-19)
+## 5. Full regression — `npm run test:all` → **566 checks, 0 failed** (2026-11-19)
 
 | Suite | Result |
 |---|---|
@@ -79,6 +79,7 @@ Isolated in-memory DB, real HTTP API. Status codes observed:
 | test:shop-approval | 12 / 12 |
 | test:media | 42 / 42 |
 | test:promotions-suppliers | 16 / 16 (promotional announcements + supplier portal) |
+| test:returns | 40 / 40 (B2C sales returns, B2B purchase returns, portal requests, ledger & stock restoration) |
 
 API `tsc --noEmit` ✓, API `npm run build` ✓.
 
@@ -821,28 +822,50 @@ Never hard-delete financial records.
 
 # 18. RETURNS AND CANCELLATIONS
 
-*(Implemented & Verified: Order and bill cancellation with automatic inventory restoration and ledger entry adjustments)*
+*(Implemented & Verified: Complete B2C & B2B return workflow across API, Web, and Mobile with audit-grade accounting integrity — Migration `10_returns_workflow.sql`, `test:returns` 40/40 checks)*
+
+## Implementation Architecture
+
+1. **Database Schema (`api/src/migrations/10_returns_workflow.sql`)**:
+   - `sale_returns`: records return transactions with canonical reference code `RET######`, return date, refund amount, reason, and actor stamps.
+   - `sale_return_items`: line-level return records capturing `sale_item_id`, `product_id`, `quantity`, `unit_price`, and `line_total`.
+   - `sales.returned_amount`: cumulative returned amount tracked directly on the sale record.
+   - Preserves financial integrity per BRD §26: Never hard-deletes original sales, purchases, or ledger records.
+2. **B2C Sales Return Processing (`saleController.ts: returnSale`)**:
+   - Validates return quantities against remaining unreturned item units; rejects zero or excess return quantities with 400.
+   - Restores stock inventory via `product_stocks` and logs inventory movement with signed positive quantity in `inventory_transactions`.
+   - Offsets customer ledger by creating an immutable credit entry (`reference_type: "SaleReturn"`), reducing `customer.current_balance`.
+   - Recalculates sale `returned_amount`, `total_amount`, and `due_amount`; marks sale status as `partially_returned` or `returned`.
+   - Updates linked `Order` status to `returned` if all items are returned; logs `order_status_history`.
+   - Dispatches `return_processed` notification to customer and audit notification to shop owner.
+3. **B2B Purchase Return Processing (`purchaseController.ts: createPurchaseReturn`)**:
+   - Validates purchase return quantities against available purchased quantities.
+   - Decrements shop inventory and logs `purchase_return` inventory movement.
+   - Creates offset debit entry in `supplier_ledger`, reducing shop's payable balance to the supplier.
+   - Updates purchase `returned_amount` and marks status `partially_returned` or `returned`.
+4. **Customer Portal Return Requests (`customerFinancialsController.ts: requestPortalBillReturn`)**:
+   - Authenticated customer portal users can request item-level returns on invoiced bills via `POST /api/customer-portal/bills/:id/return-request`.
+   - Validates ownership and item limits, dispatches `return_requested` notification to shop owner for immediate review.
+5. **Web & Mobile Frontends**:
+   - Web: Added "Process Return" dialogs on Sales (`Sales.tsx`, `SaleDetail.tsx`), Purchase returns on (`Purchase.tsx`, `PurchaseDetail.tsx`), and "Request Return" modal on Customer Portal (`PortalBillDetail.tsx`).
+   - Mobile: Added `BillStatus.returned` and `BillStatus.partiallyReturned` support in `SavedBill`, updated status pickers, and rendered refund adjustments in bill detail breakdown (`bill_detail_screen.dart`).
 
 ## B2B Returns
 
-1. Buyer requests return.
-2. Seller receives notification.
-3. Seller reviews request.
-4. Seller approves/rejects.
-5. Return quantity is validated.
-6. Inventory adjustment occurs.
-7. Buyer payable is adjusted.
-8. Seller receivable is adjusted.
-9. Return history is preserved.
+1. Buyer requests return / records return to supplier.
+2. Seller/Shop receives notification or processes return directly.
+3. Return quantity is validated against purchased units.
+4. Inventory decrement occurs and transaction is logged.
+5. Buyer payable is adjusted (debit in supplier ledger).
+6. Return history is preserved and searchable.
 
 ## B2C Returns
 
-1. Customer requests return where supported.
-2. Shop reviews.
-3. Shop approves/rejects.
-4. Inventory updates.
-5. Customer ledger adjusts.
-6. Return history is preserved.
+1. Customer requests return via Customer Portal (`PortalBillDetail.tsx`) or shop processes return directly (`SaleDetail.tsx`).
+2. Shop reviews and processes return item-by-item.
+3. Inventory is automatically restored into stock.
+4. Customer ledger adjusts via offsetting credit entry.
+5. Return history is preserved with canonical `RET######` references.
 
 # 19. NOTIFICATION SYSTEM
 

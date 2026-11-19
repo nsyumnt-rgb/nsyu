@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { listSales, createSale, recordSalePayment, cancelSale, downloadInvoicePdf } from "../api/sales";
+import { listSales, createSale, recordSalePayment, cancelSale, returnSale, downloadInvoicePdf } from "../api/sales";
 import { listCustomers } from "../api/customers";
 import { listProducts } from "../api/products";
 import { apiErrorMessage } from "../api/client";
@@ -46,6 +46,49 @@ function SalesInner() {
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
   const [paySaving, setPaySaving] = useState(false);
+
+  // Return Modal State
+  const [returningSale, setReturningSale] = useState<Sale | null>(null);
+  const [returnItems, setReturnItems] = useState<{ [saleItemId: number]: number }>({});
+  const [returnReason, setReturnReason] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+
+  function openReturnModal(s: Sale) {
+    setReturningSale(s);
+    setReturnReason("");
+    const initialMap: { [saleItemId: number]: number } = {};
+    (s.items || []).forEach((item) => {
+      initialMap[item.id] = 0;
+    });
+    setReturnItems(initialMap);
+  }
+
+  async function handleReturnSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!returningSale) return;
+    const itemsToReturn = Object.entries(returnItems)
+      .filter(([_, qty]) => Number(qty) > 0)
+      .map(([saleItemId, quantity]) => ({
+        saleItemId: Number(saleItemId),
+        quantity: Number(quantity),
+      }));
+
+    if (itemsToReturn.length === 0) {
+      alert("Please enter a return quantity greater than 0 for at least one item.");
+      return;
+    }
+
+    setReturnSubmitting(true);
+    try {
+      await returnSale(returningSale.id, itemsToReturn, returnReason.trim() || undefined);
+      setReturningSale(null);
+      loadSales();
+    } catch (err) {
+      alert(apiErrorMessage(err, "Failed to process sale return"));
+    } finally {
+      setReturnSubmitting(false);
+    }
+  }
 
   function loadSales() {
     setLoading(true);
@@ -409,6 +452,9 @@ function SalesInner() {
                           )}
                           <RowBtn title="View invoice" icon="eye" to={`/app/sales/${s.id}`} />
                           <RowBtn title="Download PDF" icon="download" onClick={() => handleDownloadPdf(s.id, s.invoice_number)} />
+                          {s.status !== "cancelled" && s.status !== "returned" && can("sales", "edit") && (
+                            <RowBtn title="Process return" icon="refresh" onClick={() => openReturnModal(s)} />
+                          )}
                           {s.status !== "cancelled" && <RowBtn title="Cancel sale" icon="ban" tone="rose" onClick={() => handleCancel(s.id)} />}
                         </div>
                       </td>
@@ -643,6 +689,88 @@ function SalesInner() {
                   </button>
                 ))}
               </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Return Sale Modal */}
+      {returningSale && (
+        <Modal
+          icon="refresh"
+          title={`Process Return — ${returningSale.invoice_number}`}
+          subtitle={`Customer: ${returningSale.customer?.name || "Customer"}`}
+          onClose={() => setReturningSale(null)}
+          footer={
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setReturningSale(null)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="return-sale-form"
+                disabled={returnSubmitting}
+                className="btn-primary"
+              >
+                {returnSubmitting ? "Processing…" : "Confirm Return & Refund"}
+              </button>
+            </>
+          }
+        >
+          <form id="return-sale-form" onSubmit={handleReturnSubmit} className="space-y-4">
+            <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-xs text-emerald-900 leading-relaxed">
+              Returning items automatically restores inventory stock, posts a credit adjustment to the customer ledger reducing their balance, and updates invoice status.
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                Select Items to Return
+              </label>
+              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden text-xs">
+                {(returningSale.items || []).map((item) => {
+                  const alreadyReturned = item.returned_quantity || 0;
+                  const available = Math.max(0, item.quantity - alreadyReturned);
+                  const currentQty = returnItems[item.id] || 0;
+                  return (
+                    <div key={item.id} className="p-3 flex items-center justify-between gap-3 bg-white hover:bg-slate-50/50">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900 truncate">{item.product_name}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Purchased: {item.quantity} • Returned: {alreadyReturned} • <span className="font-medium text-emerald-700">Max returnable: {available}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-400 font-mono">Qty:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={available}
+                          disabled={available <= 0}
+                          value={currentQty}
+                          onChange={(e) => {
+                            const val = Math.min(available, Math.max(0, parseInt(e.target.value, 10) || 0));
+                            setReturnItems((prev) => ({ ...prev, [item.id]: val }));
+                          }}
+                          className="w-16 input text-center font-mono py-1 px-1.5"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Return Reason (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Defective item, customer returned, wrong size"
+                className="input w-full text-xs"
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+              />
             </div>
           </form>
         </Modal>

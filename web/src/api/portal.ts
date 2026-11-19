@@ -214,6 +214,15 @@ export async function getPortalBillApi(id: number) {
   return res.data?.data;
 }
 
+export async function requestPortalBillReturnApi(
+  billId: number,
+  items: Array<{ saleItemId: number; quantity: number }>,
+  reason?: string
+) {
+  const res = await portalApi.post(`/customer-portal/bills/${billId}/return-request`, { items, reason });
+  return res.data;
+}
+
 export async function listPortalLedgerApi(params?: { from?: string; to?: string; page?: number; limit?: number }) {
   const res = await portalApi.get("/customer-portal/ledger", { params });
   return res.data;

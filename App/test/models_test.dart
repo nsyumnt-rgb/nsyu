@@ -3,8 +3,80 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nsyu_catalog_app/models/bill_item.dart';
 import 'package:nsyu_catalog_app/models/customer_ledger_entry.dart';
+import 'package:nsyu_catalog_app/models/saved_bill.dart';
 
 void main() {
+  group('BillStatus and SavedBill Returns', () {
+    test('BillStatusLabel maps returned and partially returned statuses correctly', () {
+      expect(BillStatus.returned.label, 'Returned');
+      expect(BillStatus.partiallyReturned.label, 'Partially Returned');
+
+      expect(BillStatusLabel.fromLabel('returned'), BillStatus.returned);
+      expect(BillStatusLabel.fromLabel('RETURNED'), BillStatus.returned);
+      expect(BillStatusLabel.fromLabel('partially_returned'), BillStatus.partiallyReturned);
+      expect(BillStatusLabel.fromLabel('partial_return'), BillStatus.partiallyReturned);
+    });
+
+    test('SavedBill.fromSupabase correctly marks returned bill with zero due', () {
+      final bill = SavedBill.fromSupabase({
+        'id': 101,
+        'invoice_number': 'INV000101',
+        'customer_name': 'Test Customer',
+        'total_amount': '1500.00',
+        'paid_amount': '0.00',
+        'returned_amount': '1500.00',
+        'status': 'returned',
+        'items': [
+          {'product_name': 'Item A', 'quantity': 2, 'unit_price': '750.00'}
+        ],
+      });
+
+      expect(bill.status, BillStatus.returned);
+      expect(bill.isReturned, isTrue);
+      expect(bill.due, 0.0);
+      expect(bill.returnedAmount, 1500.0);
+    });
+
+    test('SavedBill.fromSupabase correctly marks partially returned bill', () {
+      final bill = SavedBill.fromSupabase({
+        'id': 102,
+        'invoice_number': 'INV000102',
+        'customer_name': 'Test Customer',
+        'total_amount': '1500.00',
+        'paid_amount': '500.00',
+        'returned_amount': '500.00',
+        'status': 'partially_returned',
+        'items': [
+          {'product_name': 'Item A', 'quantity': 2, 'unit_price': '750.00'}
+        ],
+      });
+
+      expect(bill.status, BillStatus.partiallyReturned);
+      expect(bill.isPartiallyReturned, isTrue);
+      expect(bill.returnedAmount, 500.0);
+    });
+
+    test('SavedBill toJson and fromJson round-trips returnedAmount', () {
+      final bill = SavedBill(
+        id: 50,
+        billNumber: 'INV000050',
+        date: DateTime(2026, 11, 19),
+        customerName: 'Ahmad',
+        items: [
+          SavedBillItem(desc: 'Item X', qty: 1, price: 200),
+        ],
+        status: BillStatus.partiallyReturned,
+        returnedAmount: 100.0,
+      );
+
+      final json = bill.toJson();
+      expect(json['returnedAmount'], 100.0);
+
+      final restored = SavedBill.fromJson(json);
+      expect(restored.status, BillStatus.partiallyReturned);
+      expect(restored.returnedAmount, 100.0);
+    });
+  });
   group('BillItem', () {
     test('amount is price × quantity', () {
       final item = BillItem(code: 'CH25', desc: 'Charger', spec: '25W', price: 499.5, qty: 3);

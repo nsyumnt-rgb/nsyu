@@ -1,6 +1,6 @@
 import 'bill_pdf_data.dart';
 
-enum BillStatus { paid, unpaid, partial, cancelled }
+enum BillStatus { paid, unpaid, partial, cancelled, returned, partiallyReturned }
 
 extension BillStatusLabel on BillStatus {
   String get label {
@@ -13,6 +13,10 @@ extension BillStatusLabel on BillStatus {
         return 'Partial';
       case BillStatus.cancelled:
         return 'Cancelled';
+      case BillStatus.returned:
+        return 'Returned';
+      case BillStatus.partiallyReturned:
+        return 'Partially Returned';
     }
   }
 
@@ -25,6 +29,12 @@ extension BillStatusLabel on BillStatus {
         return BillStatus.partial;
       case 'cancelled':
         return BillStatus.cancelled;
+      case 'returned':
+        return BillStatus.returned;
+      case 'partially returned':
+      case 'partially_returned':
+      case 'partial_return':
+        return BillStatus.partiallyReturned;
       default:
         return BillStatus.unpaid;
     }
@@ -113,6 +123,9 @@ class SavedBill {
   /// Previous customer outstanding balance carried forward
   double previousOutstanding;
 
+  /// Total amount returned or refunded
+  double returnedAmount;
+
   /// Where this bill's generated PDF and rendered image were saved on
   /// device, inside the `nsyu_Bill_Photo_Image_pdf` folder.
   String? pdfPath;
@@ -130,6 +143,7 @@ class SavedBill {
     this.discount = 0.0,
     this.tax = 0.0,
     this.previousOutstanding = 0.0,
+    this.returnedAmount = 0.0,
     this.pdfPath,
     this.imagePath,
   });
@@ -147,10 +161,16 @@ class SavedBill {
   double get total => finalBillTotal;
 
   /// Whether this bill has been completely paid
-  bool get isPaid => status == BillStatus.paid || (total > 0 && due <= 0.01);
+  bool get isPaid => status == BillStatus.paid || (total > 0 && due <= 0.01 && status != BillStatus.cancelled && status != BillStatus.returned);
 
   /// Whether this bill has been partially paid
   bool get isPartial => status == BillStatus.partial || (!isPaid && paidAmount > 0);
+
+  /// Whether this bill is fully returned
+  bool get isReturned => status == BillStatus.returned;
+
+  /// Whether this bill has partial returns
+  bool get isPartiallyReturned => status == BillStatus.partiallyReturned || returnedAmount > 0;
 
   /// Due amount remaining
   double get dueAmount => due;
@@ -160,7 +180,11 @@ class SavedBill {
 
   /// What's still owed after payment received
   /// Remaining Outstanding = Total Amount Payable - Payment Received
-  double get due => (totalAmountPayable - paidAmount) <= 0.01 ? 0.0 : (totalAmountPayable - paidAmount);
+  double get due => (status == BillStatus.returned || status == BillStatus.cancelled)
+      ? 0.0
+      : (totalAmountPayable - paidAmount) <= 0.01
+          ? 0.0
+          : (totalAmountPayable - paidAmount);
 
 
   /// Helper to sanitize a customer name into an underscore-separated identifier
@@ -226,6 +250,7 @@ class SavedBill {
         'discount': discount,
         'tax': tax,
         'previousOutstanding': previousOutstanding,
+        'returnedAmount': returnedAmount,
         'pdfPath': pdfPath,
         'imagePath': imagePath,
       };
@@ -252,6 +277,7 @@ class SavedBill {
       discount: double.tryParse(j['discount']?.toString() ?? '0') ?? 0.0,
       tax: double.tryParse(j['tax']?.toString() ?? '0') ?? 0.0,
       previousOutstanding: double.tryParse(j['previousOutstanding']?.toString() ?? '0') ?? 0.0,
+      returnedAmount: double.tryParse(j['returnedAmount']?.toString() ?? j['returned_amount']?.toString() ?? '0') ?? 0.0,
       pdfPath: j['pdfPath'],
       imagePath: j['imagePath'],
     );
@@ -306,10 +332,15 @@ class SavedBill {
             .toLowerCase();
     final paid = double.tryParse(j['paid_amount']?.toString() ?? j['paidAmount']?.toString() ?? '0') ?? 0.0;
     final totalAmt = double.tryParse(j['total_amount']?.toString() ?? j['totalAmount']?.toString() ?? '0') ?? 0.0;
+    final retAmt = double.tryParse(j['returned_amount']?.toString() ?? j['returnedAmount']?.toString() ?? '0') ?? 0.0;
 
     BillStatus st;
     if (mainStatusStr == 'cancelled') {
       st = BillStatus.cancelled;
+    } else if (mainStatusStr == 'returned') {
+      st = BillStatus.returned;
+    } else if (mainStatusStr == 'partially_returned' || mainStatusStr.contains('return') || retAmt > 0) {
+      st = BillStatus.partiallyReturned;
     } else if (payStatusStr == 'paid' ||
         mainStatusStr == 'paid' ||
         (totalAmt > 0 && paid >= totalAmt - 0.01)) {
@@ -346,6 +377,7 @@ class SavedBill {
       paidAmount: paid,
       discount: discount,
       tax: tax,
+      returnedAmount: retAmt,
       pdfPath: j['pdf_url']?.toString() ?? j['pdfPath']?.toString(),
     );
   }

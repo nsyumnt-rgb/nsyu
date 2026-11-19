@@ -112,7 +112,7 @@ export async function getPurchase(req: Request, res: Response) {
 export async function createPurchase(req: Request, res: Response) {
   const ownerId = req.auth!.ownerId;
   const { actorType, actorId } = actorFromReq(req);
-  const { supplierId, items, initialPaid, paymentMethod, transactionId, notes, purchaseDate } = req.body;
+  const { supplierId, items, initialPaid, paidAmount, paymentMethod, transactionId, notes, purchaseDate } = req.body;
 
   if (!supplierId) return res.status(400).json({ success: false, message: "supplierId is required" });
   if (!Array.isArray(items) || items.length === 0) {
@@ -162,7 +162,7 @@ export async function createPurchase(req: Request, res: Response) {
         lines.push({ product, qty, rate, discount, taxPercent, tax, total: round2(taxable + tax) });
       }
       const total = round2(subtotal - discountTotal + taxTotal);
-      const paidNow = round2(Number(initialPaid) || 0);
+      const paidNow = round2(Number(initialPaid ?? paidAmount) || 0);
       if (paidNow < 0) throw Object.assign(new Error("Paid amount cannot be negative"), { status: 400 });
       if (paidNow > total + 0.005) throw Object.assign(new Error(`Paid amount cannot exceed the bill total (₹${total.toFixed(2)})`), { status: 400 });
 

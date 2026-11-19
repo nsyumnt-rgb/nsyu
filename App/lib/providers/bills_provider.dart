@@ -114,7 +114,7 @@ class BillsProvider extends ChangeNotifier {
     target.status = status;
     if (status == BillStatus.paid) {
       target.paidAmount = target.total;
-    } else if (status == BillStatus.unpaid || status == BillStatus.cancelled) {
+    } else if (status == BillStatus.unpaid || status == BillStatus.cancelled || status == BillStatus.returned) {
       target.paidAmount = 0;
     }
 
@@ -221,7 +221,7 @@ class BillsProvider extends ChangeNotifier {
       .fold(0, (s, b) => s + b.total);
 
   double get totalDue => bills
-      .where((b) => b.status != BillStatus.cancelled && b.status != BillStatus.paid)
+      .where((b) => b.status != BillStatus.cancelled && b.status != BillStatus.returned && b.status != BillStatus.paid)
       .fold(0, (s, b) => s + b.due);
 
   int get totalBillsCount => bills.length;
@@ -284,7 +284,7 @@ class BillsProvider extends ChangeNotifier {
         .map((e) => LedgerParty(
               name: e.key,
               totalDue: e.value
-                  .where((b) => b.status != BillStatus.cancelled && b.status != BillStatus.paid)
+                  .where((b) => b.status != BillStatus.cancelled && b.status != BillStatus.returned && b.status != BillStatus.paid)
                   .fold(0.0, (s, b) => s + b.due),
               billCount: e.value.length,
             ))

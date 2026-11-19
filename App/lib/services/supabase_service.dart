@@ -641,7 +641,11 @@ class SupabaseService {
         ? 'paid'
         : (status == BillStatus.cancelled
             ? 'cancelled'
-            : (status == BillStatus.partial ? 'partially_paid' : 'unpaid'));
+            : (status == BillStatus.returned
+                ? 'returned'
+                : (status == BillStatus.partiallyReturned
+                    ? 'partially_returned'
+                    : (status == BillStatus.partial ? 'partially_paid' : 'unpaid'))));
 
     // 1. Try direct PUT using billNumber (backend updateSale supports invoice_number lookup)
     final putUrl = Uri.parse('${SupabaseConfig.apiUrl}/sales/${Uri.encodeComponent(billNumber)}');

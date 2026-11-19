@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { listPurchases, createPurchase, recordPurchasePayment, cancelPurchase, downloadPurchasePdf } from "../api/purchases";
+import { listPurchases, createPurchase, recordPurchasePayment, cancelPurchase, returnPurchase, downloadPurchasePdf } from "../api/purchases";
 import { listSuppliers } from "../api/suppliers";
 import { listProducts } from "../api/products";
 import { getSupplierOutstandingReport } from "../api/reports";
@@ -81,6 +81,49 @@ function PurchaseInner() {
   const [payMethod, setPayMethod] = useState("cash");
   const [paySaving, setPaySaving] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+
+  // Return Modal State
+  const [returningPurchase, setReturningPurchase] = useState<Purchase | null>(null);
+  const [returnItems, setReturnItems] = useState<{ [purchaseItemId: number]: number }>({});
+  const [returnReason, setReturnReason] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+
+  function openReturnModal(p: Purchase) {
+    setReturningPurchase(p);
+    setReturnReason("");
+    const initialMap: { [purchaseItemId: number]: number } = {};
+    (p.items || []).forEach((item) => {
+      initialMap[item.id] = 0;
+    });
+    setReturnItems(initialMap);
+  }
+
+  async function handleReturnSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!returningPurchase) return;
+    const itemsToReturn = Object.entries(returnItems)
+      .filter(([_, qty]) => Number(qty) > 0)
+      .map(([purchaseItemId, quantity]) => ({
+        purchaseItemId: Number(purchaseItemId),
+        quantity: Number(quantity),
+      }));
+
+    if (itemsToReturn.length === 0) {
+      alert("Please enter a return quantity greater than 0 for at least one item.");
+      return;
+    }
+
+    setReturnSubmitting(true);
+    try {
+      await returnPurchase(returningPurchase.id, itemsToReturn, returnReason.trim() || undefined);
+      setReturningPurchase(null);
+      load();
+    } catch (err) {
+      alert(apiErrorMessage(err, "Failed to process purchase return"));
+    } finally {
+      setReturnSubmitting(false);
+    }
+  }
 
   function load() {
     setLoading(true);
@@ -329,6 +372,7 @@ function PurchaseInner() {
                     const due = Number(p.due_amount);
                     const canPay = due > 0 && p.status !== "cancelled" && can("purchase", "edit");
                     const canCancel = p.status !== "cancelled" && Number(p.paid_amount) === 0 && !Number((p as any).returned_amount) && can("purchase", "delete");
+                    const canReturn = p.status !== "cancelled" && p.status !== "returned" && can("purchase", "edit");
                     return (
                       <tr key={p.id} className={p.status === "cancelled" ? "opacity-60" : ""}>
                         <td className="whitespace-nowrap">
@@ -358,6 +402,7 @@ function PurchaseInner() {
                             )}
                             <IconButton title="View bill" icon="eye" to={`/app/purchase/${p.id}`} />
                             <IconButton title="Download PDF" icon="download" onClick={() => handlePdf(p)} />
+                            {canReturn && <IconButton title="Return items to supplier" icon="refresh" onClick={() => openReturnModal(p)} />}
                             {canCancel && <IconButton title="Cancel bill" icon="ban" tone="rose" onClick={() => handleCancel(p)} />}
                           </div>
                         </td>
@@ -528,6 +573,90 @@ function PurchaseInner() {
             {payError && (
               <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {payError}</p>
             )}
+          </form>
+        </Modal>
+      )}
+
+      {/* Return to Supplier Modal */}
+      {returningPurchase && (
+        <Modal
+          icon="refresh"
+          title={`Return Items to Supplier — #${returningPurchase.purchase_number}`}
+          subtitle={`Supplier: ${returningPurchase.supplier?.name || "Supplier"}`}
+          onClose={() => setReturningPurchase(null)}
+          footer={
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setReturningPurchase(null)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="return-purchase-form"
+                disabled={returnSubmitting}
+                className="btn-primary"
+              >
+                {returnSubmitting ? "Processing…" : "Confirm Supplier Return"}
+              </button>
+            </>
+          }
+        >
+          <form id="return-purchase-form" onSubmit={handleReturnSubmit} className="space-y-4">
+            <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 text-xs text-emerald-900 leading-relaxed">
+              Returning items will deduct stock from your inventory, record a debit entry in the supplier ledger (reducing what you owe the supplier), and update this purchase bill.
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                Select Items to Return
+              </label>
+              <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden text-xs">
+                {(returningPurchase.items || []).map((item) => {
+                  const alreadyReturned = (item as any).returned_quantity || 0;
+                  const available = Math.max(0, item.quantity - alreadyReturned);
+                  const currentQty = returnItems[item.id] || 0;
+                  return (
+                    <div key={item.id} className="p-3 flex items-center justify-between gap-3 bg-white hover:bg-slate-50/50">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-slate-900 truncate">
+                          {item.product?.name || `Product #${item.product_id}`}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          Purchased: {item.quantity} • Returned: {alreadyReturned} • <span className="font-medium text-emerald-700">Max returnable: {available}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-400 font-mono">Qty:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={available}
+                          disabled={available <= 0}
+                          value={currentQty}
+                          onChange={(e) => {
+                            const val = Math.min(available, Math.max(0, parseInt(e.target.value, 10) || 0));
+                            setReturnItems((prev) => ({ ...prev, [item.id]: val }));
+                          }}
+                          className="w-16 input text-center font-mono py-1 px-1.5"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Return Reason (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Defective pieces, excess inventory, wrong specification"
+                className="input w-full text-xs"
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+              />
+            </div>
           </form>
         </Modal>
       )}

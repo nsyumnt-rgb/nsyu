@@ -65,6 +65,7 @@ interface SaleAttributes {
   total_amount: number;
   paid_amount: number;
   due_amount: number;
+  returned_amount: number;
   payment_method: PaymentMethod;
   is_emi: boolean;
   status: SaleStatus;
@@ -87,6 +88,7 @@ interface SaleCreationAttributes
     | "tax_amount"
     | "paid_amount"
     | "due_amount"
+    | "returned_amount"
     | "is_emi"
     | "status"
     | "payment_status"
@@ -110,6 +112,7 @@ export class Sale extends Model<SaleAttributes, SaleCreationAttributes> implemen
   public total_amount!: number;
   public paid_amount!: number;
   public due_amount!: number;
+  public returned_amount!: number;
   public payment_method!: PaymentMethod;
   public is_emi!: boolean;
   public status!: SaleStatus;
@@ -139,6 +142,7 @@ Sale.init(
     total_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     paid_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     due_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
+    returned_amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     payment_method: { type: DataTypes.ENUM(...PAYMENT_METHODS), allowNull: false },
     is_emi: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     status: { type: DataTypes.ENUM(...SALE_STATUSES), allowNull: false, defaultValue: "unpaid" },
