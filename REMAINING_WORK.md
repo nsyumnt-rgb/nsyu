@@ -1231,7 +1231,7 @@ Verify unauthorized access is rejected.
 
 | Phase | Work | Verification & Status |
 |---|---|---|
-| 1 | Existing NSYU architecture audit | ✅ Completed (Single ledger schema, 0 data loss, migrations 01–08) |
+| 1 | Existing NSYU architecture audit | ✅ Completed (Single ledger schema, 0 data loss, migrations 01–09) |
 | 2 | Multi-owner/multi-shop foundation | ✅ Completed (Owners, shops, shop settings, admin approval) |
 | 3 | Business types and shop relationships | ✅ Completed (Wholesalers, distributors, retailers, supplier relations) |
 | 4 | Shared customer identity and shop-wise accounts | ✅ Completed (Customer identity groups, migration 05, shop-wise accounts) |
