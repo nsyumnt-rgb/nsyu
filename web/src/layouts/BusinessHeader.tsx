@@ -287,7 +287,7 @@ export default function BusinessHeader() {
   const navItems = rawNavItems.filter((i) => i.visible !== false);
 
   return (
-    <header className="bg-[#064E3B] text-white shadow-md sticky top-0 z-40">
+    <header className="bg-white text-navy-900 border-b border-slate-200/80 shadow-[0_4px_20px_-16px_rgba(16,42,67,0.35)] sticky top-0 z-40">
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
         {/* Left: Brand Logo & Subtitle */}
@@ -295,7 +295,7 @@ export default function BusinessHeader() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((v) => !v)}
-            className="lg:hidden p-1.5 rounded-lg text-emerald-200 hover:text-white hover:bg-emerald-800/60 transition"
+            className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-navy-900 hover:bg-slate-100 transition"
             aria-label="Toggle menu"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -306,15 +306,15 @@ export default function BusinessHeader() {
           </button>
 
           <Link to="/app" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-emerald-700/80 border border-emerald-400/40 flex items-center justify-center text-white shadow-sm group-hover:bg-emerald-600 transition">
-              <svg className="w-5 h-5 text-emerald-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <div className="w-9 h-9 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-700 shadow-sm group-hover:bg-brand-100 transition">
+              <svg className="w-5 h-5 text-brand-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
             </div>
             <div>
-              <div className="text-sm font-extrabold tracking-tight text-white leading-none">NSYU Business</div>
-              <div className="text-[10px] text-emerald-300/90 font-medium tracking-tight mt-0.5">Shop Management System</div>
+              <div className="text-sm font-extrabold tracking-tight text-navy-900 leading-none">NSYU Business</div>
+              <div className="text-[10px] text-slate-500 font-medium tracking-tight mt-0.5">Shop Management System</div>
             </div>
           </Link>
         </div>
@@ -345,7 +345,7 @@ export default function BusinessHeader() {
             <button
               type="button"
               onClick={() => setSearchOpen((v) => !v)}
-              className="p-2 rounded-xl text-emerald-200 hover:text-white hover:bg-emerald-800/50 transition"
+              className="p-2 rounded-xl text-slate-500 hover:text-navy-900 hover:bg-slate-100 transition"
               title="Search reference or products"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -396,7 +396,7 @@ export default function BusinessHeader() {
             <button
               type="button"
               onClick={() => setPosOpen(true)}
-              className="relative p-2 rounded-xl text-emerald-200 hover:text-white hover:bg-emerald-800/50 transition"
+              className="relative p-2 rounded-xl text-slate-500 hover:text-navy-900 hover:bg-slate-100 transition"
               title="Open Bill Drawer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -415,7 +415,7 @@ export default function BusinessHeader() {
             <button
               type="button"
               onClick={handleToggleNotif}
-              className="relative p-2 rounded-xl text-emerald-200 hover:text-white hover:bg-emerald-800/50 transition"
+              className="relative p-2 rounded-xl text-slate-500 hover:text-navy-900 hover:bg-slate-100 transition"
               title="Notifications"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -484,19 +484,19 @@ export default function BusinessHeader() {
             <button
               type="button"
               onClick={() => setUserOpen((v) => !v)}
-              className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-full hover:bg-emerald-800/50 transition group"
+              className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-full hover:bg-slate-100 transition group"
             >
-              <div className="w-7 h-7 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center ring-2 ring-emerald-300/40">
+              <div className="w-7 h-7 rounded-full bg-brand-600 text-white font-black text-xs flex items-center justify-center ring-2 ring-brand-100">
                 {(displayName || "N").charAt(0).toUpperCase()}
               </div>
               <div className="hidden sm:block text-left leading-tight pr-1">
-                <div className="text-xs font-bold text-white flex items-center gap-1">
+                <div className="text-xs font-bold text-navy-900 flex items-center gap-1">
                   <span>{displayName}</span>
-                  <svg className="w-3 h-3 text-emerald-200 group-hover:translate-y-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg className="w-3 h-3 text-slate-400 group-hover:translate-y-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </div>
-                <div className="text-[10px] text-emerald-300/80 font-medium">{displayRole}</div>
+                <div className="text-[10px] text-slate-500 font-medium">{displayRole}</div>
               </div>
             </button>
 
@@ -569,20 +569,20 @@ export default function BusinessHeader() {
 
       {/* Mobile Drawer Slide-Over */}
       {mobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex">
-          <div className="w-64 max-w-xs bg-[#064E3B] h-full shadow-2xl p-5 flex flex-col justify-between text-white animate-fadeIn">
+        <div className="lg:hidden fixed inset-0 z-50 bg-navy-950/20 backdrop-blur-sm flex">
+          <div className="w-64 max-w-xs bg-white h-full shadow-2xl p-5 flex flex-col justify-between text-navy-900 animate-fadeIn">
             <div className="space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-emerald-800">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white">
+                  <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center font-bold">
                     N
                   </div>
-                  <span className="font-bold text-sm">NSYU Business</span>
+                  <span className="font-bold text-sm text-navy-900">NSYU Business</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-1 rounded-lg text-emerald-200 hover:text-white"
+                  className="p-1 rounded-lg text-slate-400 hover:text-navy-900"
                 >
                   ✕
                 </button>
@@ -595,7 +595,7 @@ export default function BusinessHeader() {
                     to={item.to}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2.5 transition ${
-                      item.active ? "bg-[#059669] text-white" : "text-emerald-100 hover:bg-emerald-800/40"
+                      item.active ? "bg-brand-50 text-brand-800" : "text-slate-600 hover:bg-slate-50 hover:text-navy-900"
                     }`}
                   >
                     {item.icon}
@@ -605,14 +605,14 @@ export default function BusinessHeader() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-emerald-800 space-y-2">
-              <div className="text-xs text-emerald-300 font-medium">
+            <div className="pt-4 border-t border-slate-200 space-y-2">
+              <div className="text-xs text-slate-500 font-medium">
                 {displayName} ({displayRole})
               </div>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="w-full text-left py-1.5 text-xs font-bold text-rose-300 hover:text-rose-100 transition"
+                className="w-full text-left py-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 transition"
               >
                 Log Out
               </button>

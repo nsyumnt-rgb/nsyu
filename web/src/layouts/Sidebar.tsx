@@ -20,7 +20,7 @@ export interface NavItem {
 /** Stroke icon from one or more SVG path strings. */
 const ico = (...paths: string[]) => (active: boolean) => (
   <svg
-    className={clsx("w-[18px] h-[18px] shrink-0 transition-colors", active ? "text-white" : "text-slate-400 group-hover:text-white")}
+    className={clsx("w-[18px] h-[18px] shrink-0 transition-colors", active ? "text-brand-700" : "text-slate-400 group-hover:text-navy-900")}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -105,28 +105,28 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
     <>
     {open && (
       <div
-        className="fixed inset-0 z-40 bg-navy-950/50 backdrop-blur-[2px] lg:hidden animate-fade-in"
+        className="fixed inset-0 z-40 bg-navy-950/20 backdrop-blur-[2px] lg:hidden animate-fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
     )}
     <aside
       className={clsx(
-        "w-64 lg:w-60 shrink-0 bg-navy-950 bg-gradient-to-b from-navy-900 to-navy-950 text-white flex flex-col h-screen select-none",
+        "w-64 lg:w-60 shrink-0 bg-white text-navy-900 flex flex-col h-screen select-none border-r border-slate-200/80",
         "fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:z-20 lg:translate-x-0",
         open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
       )}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center gap-3 px-4 border-b border-white/[0.06] shrink-0">
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-900/50 ring-1 ring-white/10">
+      <div className="h-16 flex items-center gap-3 px-4 border-b border-slate-100 shrink-0">
+        <div className="h-9 w-9 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shadow-sm ring-1 ring-inset ring-brand-100">
           <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[14.5px] font-bold text-white tracking-tight leading-none truncate">
+          <div className="text-[14.5px] font-bold text-navy-900 tracking-tight leading-none truncate">
             NSYU Business
           </div>
           <div className="text-[11px] text-slate-400 font-medium leading-none mt-1.5 truncate">
@@ -149,13 +149,13 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
               <button
                 type="button"
                 onClick={() => toggleGroup(group)}
-                className="w-full flex items-center justify-between px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 hover:text-slate-300 transition-colors group/hdr rounded cursor-pointer"
+                className="w-full flex items-center justify-between px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 hover:text-navy-900 transition-colors group/hdr rounded cursor-pointer"
                 title={isCollapsed ? `Expand ${group}` : `Collapse ${group}`}
               >
                 <span>{group}</span>
                 <svg
                   className={clsx(
-                    "w-3 h-3 text-slate-600 group-hover/hdr:text-slate-400 transition-transform duration-200",
+                    "w-3 h-3 text-slate-300 group-hover/hdr:text-slate-500 transition-transform duration-200",
                     isCollapsed ? "-rotate-90" : "rotate-0"
                   )}
                   viewBox="0 0 24 24"
@@ -185,8 +185,8 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
                         className={clsx(
                           "relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all group",
                           isActive
-                            ? "bg-white/[0.09] text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-brand-400"
-                            : "text-slate-300/90 hover:bg-white/[0.05] hover:text-white"
+                            ? "bg-brand-50 text-brand-800 font-semibold shadow-[inset_0_0_0_1px_rgba(0,132,95,0.12)] before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r-full before:bg-brand-600"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-navy-900"
                         )}
                       >
                         {item.icon(isActive)}
@@ -202,11 +202,11 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
       </nav>
 
       {/* Compact Bottom Footer */}
-      <div className="p-3 border-t border-white/[0.06] shrink-0 space-y-2">
+      <div className="p-3 border-t border-slate-100 shrink-0 space-y-2">
         {useAuthStore.getState().isSuperAdmin() && (
           <NavLink
             to="/admin"
-            className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.06] text-violet-200 hover:bg-white/10 text-[11.5px] font-semibold ring-1 ring-white/10 transition"
+            className="flex items-center justify-between px-3 py-2 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 text-[11.5px] font-semibold ring-1 ring-violet-100 transition"
           >
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
@@ -216,8 +216,8 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
           </NavLink>
         )}
         <div className="flex items-center justify-between px-2.5 py-1 text-[11px] text-slate-400">
-          <span className="font-semibold text-slate-200 flex items-center gap-2 truncate">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 ring-4 ring-emerald-400/15" />
+          <span className="font-semibold text-slate-700 flex items-center gap-2 truncate">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0 ring-4 ring-brand-500/15" />
             {activeShop?.code || "NSYU-01"}
           </span>
           <span className="text-[10px] text-slate-500 font-mono">v1.0.0</span>
