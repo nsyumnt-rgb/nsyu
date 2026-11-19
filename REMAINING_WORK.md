@@ -1270,7 +1270,9 @@ Verify unauthorized access is rejected.
 | 15 | Reports and analytics | ✅ Completed (Sales reports, customer outstanding & aging, defaulter tracking, CSV exports) |
 | 16 | Website and mobile integration | ✅ Completed (Shared REST API, real-time sync, 11 Flutter tests pass) |
 | 17 | Security and isolation testing | ✅ Completed (test:isolation, test:roles, test:staff passing 100%) |
-| 18 | Production readiness | ✅ Completed (510/510 test checks pass, clean builds, zero fake data) |
+| 18 | Production readiness | ✅ Completed (566/566 test checks pass across 12 suites, clean builds, zero fake data) |
+| 19 | Architecture audit & startup migration integrity | ✅ Completed (NSYU_PROJECT_AUDIT.md, migration 10 hooked in server.ts) |
+| 20 | Frontend performance & route code-splitting | ✅ Completed (React.lazy + Suspense, main bundle reduced from 1.43 MB to 366 kB) |
 
 Do not attempt uncontrolled implementation of every module simultaneously.
 
