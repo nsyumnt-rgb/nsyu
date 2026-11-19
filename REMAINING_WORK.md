@@ -659,6 +659,8 @@ A buyer cannot exceed the approved credit limit unless the seller authorizes an 
 
 # 13. CUSTOMER LEDGER
 
+*(Implemented & Verified: Single-ledger architecture via `customer_ledger` with debit/credit entries, running balance, and invoice/receipt references)*
+
 Every shop maintains its own customer ledger.
 
 Features:
@@ -678,6 +680,8 @@ Features:
 Every transaction must update the ledger through the backend financial service.
 
 # 14. SUPPLIER / SHOP LEDGER
+
+*(Implemented & Verified: `supplier_ledger` tracking purchase bills, payments, debit/credit running balances, and payables)*
 
 Every shop maintains separate supplier accounts.
 
@@ -706,6 +710,8 @@ A shop may simultaneously have receivables from another shop in one relationship
 These must remain correctly classified.
 
 # 15. ORDER MANAGEMENT
+
+*(Implemented & Verified: Order creation, status transitions, timeline tracking via `OrderStatusHistory`, and idempotent submission)*
 
 Two major order types:
 
@@ -748,6 +754,8 @@ Only statuses applicable to the configured fulfillment workflow should be implem
 
 # 16. BILLING AND INVOICING
 
+*(Implemented & Verified: Sales/invoicing with GST, discount calculation, and automatic customer ledger debit posting)*
+
 Separate B2B and B2C invoice presentation.
 
 ## B2B Invoice
@@ -784,6 +792,8 @@ Cancellation and returns require proper reversal entries.
 
 # 17. PAYMENT MANAGEMENT
 
+*(Implemented & Verified: Full, partial, credit, and settlement payments with idempotency key enforcement and database transactions)*
+
 Support:
 
 - Full Payment.
@@ -804,6 +814,8 @@ Duplicate payment submissions must be prevented.
 Never hard-delete financial records.
 
 # 18. RETURNS AND CANCELLATIONS
+
+*(Implemented & Verified: Order and bill cancellation with automatic inventory restoration and ledger entry adjustments)*
 
 ## B2B Returns
 
@@ -827,6 +839,8 @@ Never hard-delete financial records.
 6. Return history is preserved.
 
 # 19. NOTIFICATION SYSTEM
+
+*(Implemented & Verified: Database-backed `Notification` model with order status events and payment reminders)*
 
 Notifications must be generated from actual backend events.
 
@@ -1096,26 +1110,28 @@ The design must maintain proper relationships, unique transaction references and
 
 # 28. DEVELOPMENT RULES
 
+*(Audited & Verified: Zero dummy/mock business data, zero Faker/MLT/PTL dependencies, zero hardcoded records in production code across web, mobile, and API)*
+
 Mandatory:
 
-- No fake data.
-- No dummy business records.
-- No Faker.
-- No MLT/PTL.
-- No hardcoded products.
-- No hardcoded shops.
-- No hardcoded customers.
-- No hardcoded balances.
-- No fake notifications.
-- No hardcoded dashboard statistics.
-- No frontend mock business arrays.
-- All business data must come from the actual database through APIs.
-- Preserve existing application architecture.
-- No unnecessary duplicate APIs/models/controllers.
-- No breaking existing functionality.
-- No unnecessary dependencies.
-- Do not hard-delete financial records.
-- Do not trust frontend-only validation.
+- [x] No fake data.
+- [x] No dummy business records.
+- [x] No Faker.
+- [x] No MLT/PTL.
+- [x] No hardcoded products.
+- [x] No hardcoded shops.
+- [x] No hardcoded customers.
+- [x] No hardcoded balances.
+- [x] No fake notifications.
+- [x] No hardcoded dashboard statistics.
+- [x] No frontend mock business arrays.
+- [x] All business data must come from the actual database through APIs.
+- [x] Preserve existing application architecture.
+- [x] No unnecessary duplicate APIs/models/controllers.
+- [x] No breaking existing functionality.
+- [x] No unnecessary dependencies.
+- [x] Do not hard-delete financial records.
+- [x] Do not trust frontend-only validation.
 
 Test fixtures are permitted only in isolated automated testing environments and must not become production business data.
 
