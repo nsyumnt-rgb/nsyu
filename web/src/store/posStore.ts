@@ -11,6 +11,7 @@ interface PosState {
   count: number | null;
   open: boolean;
   addItem: (product: any, qty?: number) => void;
+  updateQuantity: (productId: number, qty: number) => void;
   removeItem: (productId: number) => void;
   setItems: (items: PosCartItem[]) => void;
   clearCart: () => void;
@@ -43,6 +44,19 @@ export const usePosStore = create<PosState>((set, get) => ({
         },
       ];
     }
+    const totalCount = next.reduce((sum, item) => sum + item.quantity, 0);
+    set({ items: next, count: totalCount });
+  },
+
+  updateQuantity: (productId, qty) => {
+    if (qty <= 0) {
+      get().removeItem(productId);
+      return;
+    }
+    const current = get().items;
+    const next = current.map((i) =>
+      i.product.id === productId ? { ...i, quantity: qty } : i
+    );
     const totalCount = next.reduce((sum, item) => sum + item.quantity, 0);
     set({ items: next, count: totalCount });
   },

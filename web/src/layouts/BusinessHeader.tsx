@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { usePosStore } from "../store/posStore";
+import { usePermission } from "../hooks/usePermission";
 import { logout as logoutApi } from "../api/auth";
 import { resolveReferenceApi, type ResolvedReference } from "../api/reference";
 import {
@@ -41,6 +42,7 @@ export default function BusinessHeader() {
   const activeShop = useAuthStore((s) => s.activeShop);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const storeLogout = useAuthStore((s) => s.logout);
+  const { isOwner, can } = usePermission();
 
   // Notifications
   const [unreadCount, setUnreadCount] = useState(0);
@@ -161,8 +163,20 @@ export default function BusinessHeader() {
     navigate("/login");
   }
 
-  // Navigation items matching screenshot
-  const navItems = [
+  // Navigation items with role permissions matching user prompt
+  const rawNavItems = [
+    {
+      to: "/app",
+      label: "Home",
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      ),
+      active: currentPath === "/app",
+      visible: true,
+    },
     {
       to: "/app/sales",
       label: "Sales",
@@ -174,6 +188,7 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath.startsWith("/app/sales") || currentPath.startsWith("/app/billing"),
+      visible: isOwner || can("sales", "view"),
     },
     {
       to: "/app/inventory",
@@ -186,6 +201,7 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath === "/app/inventory" || currentPath.startsWith("/app/inventory/"),
+      visible: isOwner || can("inventory", "view"),
     },
     {
       to: "/app/catalog",
@@ -198,6 +214,7 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath === "/app/catalog",
+      visible: isOwner || can("products", "view"),
     },
     {
       to: "/app/products",
@@ -210,6 +227,7 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath === "/app/products" || (currentPath.startsWith("/app/products/") && currentPath !== "/app/products"),
+      visible: isOwner || can("products", "view"),
     },
     {
       to: "/app/orders",
@@ -223,6 +241,7 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath.startsWith("/app/orders"),
+      visible: isOwner || can("orders", "view"),
     },
     {
       to: "/app/customers",
@@ -236,6 +255,7 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath.startsWith("/app/customers"),
+      visible: isOwner || can("customers", "view"),
     },
     {
       to: "/app/reports",
@@ -248,6 +268,7 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath.startsWith("/app/reports"),
+      visible: isOwner || can("reports", "view"),
     },
     {
       to: "/app/settings",
@@ -259,8 +280,11 @@ export default function BusinessHeader() {
         </svg>
       ),
       active: currentPath.startsWith("/app/settings"),
+      visible: isOwner || can("settings", "view"),
     },
   ];
+
+  const navItems = rawNavItems.filter((i) => i.visible !== false);
 
   return (
     <header className="bg-[#064E3B] text-white shadow-md sticky top-0 z-40">
