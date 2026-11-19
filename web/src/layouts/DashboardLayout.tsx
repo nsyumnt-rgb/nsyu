@@ -1,21 +1,20 @@
-import { useCallback, useState } from "react";
 import { Outlet } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
+import BusinessHeader from "./BusinessHeader";
+import BusinessFooter from "./BusinessFooter";
 
 export default function DashboardLayout() {
-  const [navOpen, setNavOpen] = useState(false);
-  const closeNav = useCallback(() => setNavOpen(false), []);
-
   return (
-    <div className="flex min-h-screen bg-canvas">
-      <Sidebar open={navOpen} onClose={closeNav} />
-      <div className="flex-1 min-w-0 flex flex-col">
-        <Topbar onMenuClick={() => setNavOpen(true)} />
-        <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 w-full max-w-[1600px] mx-auto">
-          <Outlet />
-        </main>
-      </div>
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+      {/* Universal Top Header with Brand, Navigation & Profile */}
+      <BusinessHeader />
+
+      {/* Main Page Workspace */}
+      <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 w-full max-w-[1700px] mx-auto">
+        <Outlet />
+      </main>
+
+      {/* Universal Bottom Footer with Brand, Contact Info & Copyright */}
+      <BusinessFooter />
     </div>
   );
 }

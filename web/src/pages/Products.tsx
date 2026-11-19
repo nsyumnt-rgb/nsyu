@@ -13,19 +13,9 @@ import { listCategories } from "../api/categories";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import ProductPhotos from "../components/ProductPhotos";
 import { useAuthStore } from "../store/authStore";
+import { usePosStore } from "../store/posStore";
 import RequireModule from "../components/RequireModule";
-import ReferenceLink from "../components/ReferenceLink";
 import type { Category, Product } from "../types";
-import { EmptyState, Icon, Meter, PageHeader, Pagination, SearchInput, Segmented, StatCard, type IconName } from "../components/ui";
-
-function IconBtn({ title, icon, onClick, tone }: { title: string; icon: IconName; onClick: () => void; tone?: "brand" | "rose" }) {
-  const t = tone === "brand" ? "text-brand-600 hover:bg-brand-50 hover:border-brand-200" : tone === "rose" ? "text-rose-600 hover:bg-rose-50 hover:border-rose-200" : "text-slate-500 hover:bg-slate-50 hover:text-navy-900";
-  return (
-    <button type="button" onClick={onClick} title={title} aria-label={title} className={`w-8 h-8 rounded-lg border border-transparent flex items-center justify-center transition ${t}`}>
-      <Icon name={icon} className="w-4 h-4" />
-    </button>
-  );
-}
 
 // Helper for formatting INR currency without decimals if whole
 /** The product's cover photo (or its first photo), if it has any. */
@@ -155,16 +145,10 @@ function ProductsInner() {
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [brandFilter, setBrandFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
   const [stockStatusFilter, setStockStatusFilter] = useState("All");
 
-  // Selection & Bulk
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [bulkAction, setBulkAction] = useState("");
-
   // Pagination & Sorting
-  const [pageSize, setPageSize] = useState(10);
+  const pageSize = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<string>("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -341,14 +325,41 @@ function ProductsInner() {
     loadData();
   }, [shopId]);
 
-  // Derived Unique Brands
-  const uniqueBrands = useMemo(() => {
-    const brands = new Set<string>();
-    products.forEach((p) => {
-      if (p.brand?.trim()) brands.add(p.brand.trim());
-    });
-    return Array.from(brands);
-  }, [products]);
+  // View mode (grid vs list matching Image 2)
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showScanModal, setShowScanModal] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const addItemToCart = usePosStore((s) => s.addItem);
+
+  useEffect(() => {
+    if (!toastMsg) return;
+    const t = setTimeout(() => setToastMsg(null), 2500);
+    return () => clearTimeout(t);
+  }, [toastMsg]);
+
+  function handleAddToCart(p: Product) {
+    addItemToCart(p, 1);
+    setToastMsg(`✓ Added "${p.name}" to cart`);
+  }
+
+  function handleBarcodeSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!barcodeInput.trim()) return;
+    const target = products.find(
+      (p) =>
+        p.barcode?.toLowerCase() === barcodeInput.trim().toLowerCase() ||
+        p.sku.toLowerCase() === barcodeInput.trim().toLowerCase()
+    );
+    if (target) {
+      setQuickViewProduct(target);
+      setShowScanModal(false);
+      setBarcodeInput("");
+    } else {
+      alert(`No product found with barcode/SKU: ${barcodeInput}`);
+    }
+  }
 
   // Filter & Search Logic
   const filteredProducts = useMemo(() => {
@@ -367,16 +378,6 @@ function ProductsInner() {
         return false;
       }
 
-      // Brand filter
-      if (brandFilter !== "All" && p.brand !== brandFilter) {
-        return false;
-      }
-
-      // Status filter
-      if (statusFilter !== "All" && p.status !== statusFilter.toLowerCase()) {
-        return false;
-      }
-
       // Stock Status filter
       const stock = p.stocks?.[0]?.current_stock ?? 0;
       if (stockStatusFilter === "In Stock" && stock <= 0) return false;
@@ -385,7 +386,7 @@ function ProductsInner() {
 
       return true;
     });
-  }, [products, searchQuery, categoryFilter, brandFilter, statusFilter, stockStatusFilter]);
+  }, [products, searchQuery, categoryFilter, stockStatusFilter]);
 
   // Sorting
   const sortedProducts = useMemo(() => {
@@ -418,35 +419,8 @@ function ProductsInner() {
   const stockOf = (p: (typeof products)[number]) => Number(p.stocks?.[0]?.current_stock ?? 0);
   const minOf = (p: (typeof products)[number]) => Number(p.min_stock ?? 5) || 5;
   const totalCount = products.length;
-  const activeCount = products.filter((p) => p.status === "active").length;
   const lowStockCount = products.filter((p) => stockOf(p) > 0 && stockOf(p) <= minOf(p)).length;
   const outOfStockCount = products.filter((p) => stockOf(p) <= 0).length;
-
-  // Toggle Single Selection
-  function handleSelectRow(id: number) {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  }
-
-  // Toggle Select All
-  function handleSelectAll() {
-    if (selectedIds.length === paginatedProducts.length && paginatedProducts.length > 0) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(paginatedProducts.map((p) => p.id));
-    }
-  }
-
-  // Reset Filters
-  function handleClearFilters() {
-    setSearchQuery("");
-    setCategoryFilter("All");
-    setBrandFilter("All");
-    setStatusFilter("All");
-    setStockStatusFilter("All");
-    setCurrentPage(1);
-  }
 
   // Handle Sort Click
   function handleSort(field: string) {
@@ -601,350 +575,557 @@ function ProductsInner() {
     }
   }
 
-  // Bulk Apply
-  async function handleBulkApply() {
-    if (!bulkAction || selectedIds.length === 0) return;
-    if (bulkAction === "delete") {
-      if (!confirm(`Are you sure you want to deactivate ${selectedIds.length} selected products?`)) return;
-      for (const id of selectedIds) {
-        await deleteProduct(id).catch(() => {});
-      }
-      setSelectedIds([]);
-      loadData();
-    } else if (bulkAction === "active") {
-      for (const id of selectedIds) {
-        await updateProduct(id, { status: "active" }).catch(() => {});
-      }
-      setSelectedIds([]);
-      loadData();
-    } else if (bulkAction === "inactive") {
-      for (const id of selectedIds) {
-        await updateProduct(id, { status: "inactive" }).catch(() => {});
-      }
-      setSelectedIds([]);
-      loadData();
-    }
-  }
 
-  function SortTh({ field, label, right }: { field: string; label: string; right?: boolean }) {
-    const on = sortField === field;
-    return (
-      <th className={right ? "!text-right" : ""}>
-        <button type="button" onClick={() => handleSort(field)} className={`inline-flex items-center gap-1 uppercase tracking-[0.06em] hover:text-navy-900 transition ${on ? "text-navy-900" : ""}`}>
-          {label}
-          <span className={`text-[10px] ${on ? "text-brand-600" : "text-slate-300"}`}>{on ? (sortOrder === "asc" ? "▲" : "▼") : "↕"}</span>
-        </button>
-      </th>
-    );
-  }
 
   return (
     <div className="space-y-6 pb-12">
-      {/* ============================================================== */}
-      {/* 1. HEADER                                                      */}
-      {/* ============================================================== */}
-      <PageHeader
-        eyebrow="Catalog"
-        title="Products"
-        subtitle="Your full catalog — prices, margins and stock levels in one place."
-        actions={
-          <>
-            <button type="button" onClick={() => setShowImportModal(true)} className="btn-secondary">
-              <Icon name="upload" className="w-4 h-4 text-slate-500" /> Import
-            </button>
-            <button type="button" onClick={handleExportCSV} className="btn-secondary">
-              <Icon name="download" className="w-4 h-4 text-slate-500" /> Export
-            </button>
-            <button type="button" onClick={openCreate} className="btn-primary">
-              <Icon name="plus" /> Add product
-            </button>
-          </>
-        }
-      />
+      {/* Toast Alert */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#064E3B] text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+          <span>{toastMsg}</span>
+        </div>
+      )}
 
       {/* ============================================================== */}
-      {/* 2. METRICS                                                     */}
+      {/* 1. HEADER (Matching Image 2)                                   */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          label="Total products"
-          icon="box"
-          tone="brand"
-          value={totalCount.toLocaleString("en-IN")}
-          loading={loading && products.length === 0}
-          hint={`${categories.length} categories · ${uniqueBrands.length} brands`}
-          active={stockStatusFilter === "All" && statusFilter === "All"}
-          onClick={() => { setStockStatusFilter("All"); setStatusFilter("All"); setCurrentPage(1); }}
-        />
-        <StatCard
-          label="Active"
-          icon="checkCircle"
-          tone="emerald"
-          value={activeCount.toLocaleString("en-IN")}
-          loading={loading && products.length === 0}
-          hint={`${(totalCount - activeCount).toLocaleString("en-IN")} inactive`}
-          active={statusFilter === "Active"}
-          onClick={() => { setStatusFilter(statusFilter === "Active" ? "All" : "Active"); setCurrentPage(1); }}
-        />
-        <StatCard
-          label="Low stock"
-          icon="alert"
-          tone="amber"
-          value={lowStockCount.toLocaleString("en-IN")}
-          valueClass={lowStockCount ? "text-amber-600" : undefined}
-          loading={loading && products.length === 0}
-          hint="At or below reorder level"
-          active={stockStatusFilter === "Low Stock"}
-          onClick={() => { setStockStatusFilter(stockStatusFilter === "Low Stock" ? "All" : "Low Stock"); setCurrentPage(1); }}
-        />
-        <StatCard
-          label="Out of stock"
-          icon="archive"
-          tone="rose"
-          value={outOfStockCount.toLocaleString("en-IN")}
-          valueClass={outOfStockCount ? "text-rose-600" : undefined}
-          loading={loading && products.length === 0}
-          hint="Zero units on hand"
-          active={stockStatusFilter === "Out of Stock"}
-          onClick={() => { setStockStatusFilter(stockStatusFilter === "Out of Stock" ? "All" : "Out of Stock"); setCurrentPage(1); }}
-        />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100/80 border border-emerald-300 flex items-center justify-center text-emerald-800">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Products</h1>
+          </div>
+          <p className="text-xs text-gray-500 mt-1 font-medium">
+            Manage your products, update prices and stock, and keep your catalog up to date.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowScanModal(true)}
+            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+              <line x1="7" y1="12" x2="17" y2="12" />
+            </svg>
+            <span>Scan Barcode</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>Import</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Export</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={openCreate}
+            className="px-4 py-2 bg-[#047857] hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
+          >
+            <span className="text-sm font-black">+</span>
+            <span>Add Product</span>
+          </button>
+        </div>
       </div>
 
       {/* ============================================================== */}
-      {/* 3. TABLE CARD (filters, bulk bar, table, pagination)           */}
+      {/* 2. SUMMARY METRICS CARDS (Matching Image 2)                    */}
       {/* ============================================================== */}
-      <section className="card overflow-hidden">
-        {/* Filters */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
-            <Segmented
-              value={stockStatusFilter}
-              onChange={(k) => { setStockStatusFilter(k); setCurrentPage(1); }}
-              options={[
-                { key: "All", label: "All", count: totalCount },
-                { key: "In Stock", label: "In stock", count: totalCount - outOfStockCount, tone: "emerald" },
-                { key: "Low Stock", label: "Low", count: lowStockCount, tone: "amber" },
-                { key: "Out of Stock", label: "Out", count: outOfStockCount, tone: "rose" },
-              ]}
-            />
-            <SearchInput
-              className="md:w-[300px]"
-              value={searchQuery}
-              onChange={(v) => { setSearchQuery(v); setCurrentPage(1); }}
-              placeholder="Search name, SKU or barcode…"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 mr-1">
-              <Icon name="sliders" className="w-3.5 h-3.5" /> Filters
-            </span>
-            <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${categoryFilter !== "All" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
-              <option value="All">All categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.name}>{c.name}</option>
-              ))}
-            </select>
-            <select value={brandFilter} onChange={(e) => { setBrandFilter(e.target.value); setCurrentPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${brandFilter !== "All" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
-              <option value="All">All brands</option>
-              {uniqueBrands.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-            <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${statusFilter !== "All" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
-              <option value="All">Any status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-            {(searchQuery || categoryFilter !== "All" || brandFilter !== "All" || statusFilter !== "All" || stockStatusFilter !== "All") && (
-              <button type="button" onClick={handleClearFilters} className="btn-ghost btn-sm">
-                <Icon name="refresh" className="w-3.5 h-3.5" /> Reset
-              </button>
-            )}
-            <span className="ml-auto text-[12px] text-slate-500">
-              <b className="text-navy-900 tabular">{sortedProducts.length.toLocaleString("en-IN")}</b> {sortedProducts.length === 1 ? "product" : "products"}
-            </span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Products */}
+        <div
+          onClick={() => { setStockStatusFilter("All"); setCurrentPage(1); }}
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+            stockStatusFilter === "All" ? "border-emerald-500 bg-emerald-50/20 ring-1 ring-emerald-500" : "border-gray-200"
+          }`}
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 font-bold">Total Products</div>
+              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{totalCount}</div>
+            </div>
           </div>
         </div>
 
-        {/* Bulk action bar */}
-        {selectedIds.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2.5 px-4 sm:px-5 py-2.5 bg-brand-50/70 border-b border-brand-100 animate-fade-in">
-            <span className="text-[12.5px] font-semibold text-brand-800">{selectedIds.length} selected</span>
-            <select value={bulkAction} onChange={(e) => setBulkAction(e.target.value)} className="input w-auto py-1 pr-8 text-[12.5px]">
-              <option value="">Choose action…</option>
-              <option value="active">Mark as active</option>
-              <option value="inactive">Mark as inactive</option>
-              <option value="delete">Delete selected</option>
-            </select>
-            <button type="button" onClick={handleBulkApply} disabled={!bulkAction} className="btn-primary btn-sm">Apply</button>
-            <button type="button" onClick={() => setSelectedIds([])} className="btn-ghost btn-sm ml-auto">Clear selection</button>
+        {/* In Stock */}
+        <div
+          onClick={() => { setStockStatusFilter("In Stock"); setCurrentPage(1); }}
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+            stockStatusFilter === "In Stock" ? "border-blue-500 bg-blue-50/20 ring-1 ring-blue-500" : "border-gray-200"
+          }`}
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <polyline points="21 8 21 21 3 21 3 8" />
+                <rect x="1" y="3" width="22" height="5" />
+                <line x1="10" y1="12" x2="14" y2="12" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 font-bold">In Stock</div>
+              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{totalCount - outOfStockCount}</div>
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table>
-            <thead>
+        {/* Low Stock */}
+        <div
+          onClick={() => { setStockStatusFilter("Low Stock"); setCurrentPage(1); }}
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+            stockStatusFilter === "Low Stock" ? "border-amber-500 bg-amber-50/20 ring-1 ring-amber-500" : "border-gray-200"
+          }`}
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 font-bold">Low Stock</div>
+              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{lowStockCount}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Out of Stock */}
+        <div
+          onClick={() => { setStockStatusFilter("Out of Stock"); setCurrentPage(1); }}
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+            stockStatusFilter === "Out of Stock" ? "border-rose-500 bg-rose-50/20 ring-1 ring-rose-500" : "border-gray-200"
+          }`}
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            </div>
+            <div>
+              <div className="text-xs text-gray-500 font-bold">Out of Stock</div>
+              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{outOfStockCount}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* 3. SEARCH & FILTERS BAR (Matching Image 2)                     */}
+      {/* ============================================================== */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-gray-200 shadow-xs">
+        {/* Search input */}
+        <div className="relative flex-1 w-full">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            placeholder="Search product by name, SKU or barcode..."
+            className="w-full pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+          />
+          <svg className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </div>
+
+        {/* Filters & View Toggles */}
+        <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap">
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none"
+          >
+            <option value="All">All Categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>{c.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={stockStatusFilter}
+            onChange={(e) => { setStockStatusFilter(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none"
+          >
+            <option value="All">All Status</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
+
+          <div className="flex items-center p-0.5 bg-gray-100 rounded-xl border border-gray-200">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-lg transition ${viewMode === "grid" ? "bg-white text-emerald-800 shadow-xs" : "text-gray-400 hover:text-gray-600"}`}
+              title="Grid View"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`p-1.5 rounded-lg transition ${viewMode === "list" ? "bg-white text-emerald-800 shadow-xs" : "text-gray-400 hover:text-gray-600"}`}
+              title="List View"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================== */}
+      {/* 4. PRODUCTS PRESENTATION (Grid View matching Image 2 vs List)   */}
+      {/* ============================================================== */}
+      {loading && products.length === 0 ? (
+        <div className="py-20 text-center">
+          <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-gray-500 mt-2 font-medium">Loading products...</p>
+        </div>
+      ) : sortedProducts.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto text-xl font-bold">
+            🛍️
+          </div>
+          <h3 className="text-sm font-bold text-gray-900">No products match your filter</h3>
+          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+            Try resetting filters or adding new products to your catalog.
+          </p>
+        </div>
+      ) : viewMode === "grid" ? (
+        /* 5-Column Grid View matching Image 2 */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+          {paginatedProducts.map((p) => {
+            const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
+            const coverImg = coverOf(p);
+            const isOutOfStock = stock <= 0;
+            const isLowStock = stock > 0 && stock <= (Number(p.min_stock ?? 5) || 5);
+
+            return (
+              <div
+                key={p.id}
+                className="bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 shadow-xs hover:shadow-md transition p-3 flex flex-col justify-between group relative"
+              >
+                <div>
+                  {/* Image Container with Top-Right Status Badge */}
+                  <div className="w-full h-32 bg-gray-50/70 rounded-xl mb-2.5 flex items-center justify-center overflow-hidden relative">
+                    {/* Status Badge in top right */}
+                    <div className="absolute top-2 right-2 z-10">
+                      <span
+                        className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full ${
+                          isOutOfStock
+                            ? "bg-rose-100 text-rose-700 border border-rose-200"
+                            : isLowStock
+                            ? "bg-amber-100 text-amber-800 border border-amber-200"
+                            : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                        }`}
+                      >
+                        {isOutOfStock ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock"}
+                      </span>
+                    </div>
+
+                    {coverImg ? (
+                      <img src={resolveAssetUrl(coverImg) || ""} alt={p.name} className="h-full object-contain p-2 group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <ProductThumbnail name={p.name} category={p.category?.name} />
+                    )}
+                  </div>
+
+                  {/* Title & SKU */}
+                  <h3 className="font-bold text-xs text-gray-900 line-clamp-2 min-h-[32px] group-hover:text-emerald-800 transition">
+                    {p.name}
+                  </h3>
+                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                    SKU: {p.sku}
+                  </div>
+
+                  {/* Price & Stock */}
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <div className="text-sm font-black text-gray-900">
+                      ₹{Number(p.selling_price).toFixed(2)}
+                    </div>
+                    <div className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                      <span>📦</span>
+                      <span>Stock: {stock}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Action Bar: Add to Cart + View Eye Button matching Image 2 */}
+                <div className="mt-3 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(p)}
+                    className="flex-1 py-1.5 bg-[#047857] hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="9" cy="21" r="1" />
+                      <circle cx="20" cy="21" r="1" />
+                      <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
+                    </svg>
+                    <span>Add to Cart</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setQuickViewProduct(p)}
+                    className="p-1.5 border border-gray-200 hover:border-gray-300 rounded-xl text-gray-500 hover:text-gray-900 transition hover:bg-gray-50"
+                    title="Quick View / Edit"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* List View (Table) */
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-gray-50 border-b border-gray-200 font-bold text-gray-600 uppercase text-[10px] tracking-wider select-none">
               <tr>
-                <th className="w-10 !pr-0">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.length > 0 && selectedIds.length === paginatedProducts.length}
-                    onChange={handleSelectAll}
-                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer"
-                    aria-label="Select all on this page"
-                  />
-                </th>
-                <SortTh field="name" label="Product" />
-                <SortTh field="category" label="Category" />
-                <SortTh field="purchase_price" label="Cost" right />
-                <SortTh field="selling_price" label="Price" right />
-                <SortTh field="stock" label="Stock" />
-                <SortTh field="status" label="Status" />
-                <th className="!text-right">Actions</th>
+                <th className="p-3 cursor-pointer hover:text-emerald-800" onClick={() => handleSort("name")}>Product</th>
+                <th className="p-3 cursor-pointer hover:text-emerald-800" onClick={() => handleSort("sku")}>SKU</th>
+                <th className="p-3 cursor-pointer hover:text-emerald-800" onClick={() => handleSort("category")}>Category</th>
+                <th className="p-3 text-right cursor-pointer hover:text-emerald-800" onClick={() => handleSort("purchase_price")}>Cost</th>
+                <th className="p-3 text-right cursor-pointer hover:text-emerald-800" onClick={() => handleSort("selling_price")}>Selling Price</th>
+                <th className="p-3 text-center cursor-pointer hover:text-emerald-800" onClick={() => handleSort("stock")}>Stock</th>
+                <th className="p-3 text-center">Status</th>
+                <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {loading && products.length === 0 ? (
-                Array.from({ length: 6 }, (_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td colSpan={8}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100" />
-                        <div className="flex-1 space-y-1.5">
-                          <div className="h-3 rounded bg-slate-100 w-1/3" />
-                          <div className="h-2.5 rounded bg-slate-100 w-1/5" />
-                        </div>
-                      </div>
+            <tbody className="divide-y divide-gray-100">
+              {paginatedProducts.map((p) => {
+                const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
+                const isOutOfStock = stock <= 0;
+                const isLowStock = stock > 0 && stock <= (Number(p.min_stock ?? 5) || 5);
+                return (
+                  <tr key={p.id} className="hover:bg-gray-50 transition">
+                    <td className="p-3">
+                      <div className="font-bold text-gray-900">{p.name}</div>
+                      <div className="text-[10px] text-gray-400 font-mono">{p.brand || "—"}</div>
+                    </td>
+                    <td className="p-3 font-mono text-gray-500">{p.sku}</td>
+                    <td className="p-3 text-gray-600">{p.category?.name || "—"}</td>
+                    <td className="p-3 text-right font-medium text-gray-600">₹{Number(p.purchase_price || 0).toFixed(2)}</td>
+                    <td className="p-3 text-right font-black text-gray-900">₹{Number(p.selling_price).toFixed(2)}</td>
+                    <td className="p-3 text-center">
+                      <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                        isOutOfStock ? "bg-rose-50 text-rose-700" : isLowStock ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+                      }`}>
+                        {stock} units
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        p.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
+                      }`}>
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right space-x-1">
+                      <button
+                        type="button"
+                        onClick={() => handleAddToCart(p)}
+                        className="px-2.5 py-1 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-lg text-xs font-bold transition"
+                      >
+                        Add to Cart
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEdit(p)}
+                        className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-semibold"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
-                ))
-              ) : paginatedProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="!p-0">
-                    {products.length === 0 ? (
-                      <EmptyState
-                        icon="box"
-                        tone="brand"
-                        title="No products yet"
-                        text="Add your first product or import your catalog from a spreadsheet."
-                        action={
-                          <div className="flex gap-2 justify-center">
-                            <button type="button" onClick={() => setShowImportModal(true)} className="btn-secondary btn-sm"><Icon name="upload" className="w-3.5 h-3.5" /> Import</button>
-                            <button type="button" onClick={openCreate} className="btn-primary btn-sm"><Icon name="plus" className="w-3.5 h-3.5" /> Add product</button>
-                          </div>
-                        }
-                      />
-                    ) : (
-                      <EmptyState
-                        icon="search"
-                        title="No products match"
-                        text="Try a different search or reset the filters."
-                        action={<button type="button" onClick={handleClearFilters} className="btn-secondary btn-sm"><Icon name="refresh" className="w-3.5 h-3.5" /> Reset filters</button>}
-                      />
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                paginatedProducts.map((p) => {
-                  const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
-                  const min = Number(p.min_stock ?? 5) || 5;
-                  const isOut = stock <= 0;
-                  const isLow = !isOut && stock <= min;
-                  const isSelected = selectedIds.includes(p.id);
-                  const cost = Number(p.purchase_price) || 0;
-                  const price = Number(p.selling_price) || 0;
-                  const margin = price > 0 && cost > 0 ? Math.round(((price - cost) / price) * 100) : null;
-
-                  return (
-                    <tr key={p.id} className={isSelected ? "!bg-brand-50/60" : ""}>
-                      <td className="w-10 !pr-0">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleSelectRow(p.id)}
-                          className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer"
-                          aria-label={`Select ${p.name}`}
-                        />
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-3 min-w-[220px]">
-                          <ProductThumbnail name={p.name} category={p.category?.name} imageUrl={coverOf(p)} />
-                          <div className="min-w-0">
-                            <ReferenceLink type="product" id={p.id} refNumber={p.sku} className="!font-sans block max-w-[280px] truncate text-[13.5px] font-semibold text-navy-900 hover:text-brand-700">
-                              {p.name}
-                            </ReferenceLink>
-                            <div className="text-[11.5px] text-slate-400 font-mono truncate">{p.sku}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="text-[13px] text-slate-700 whitespace-nowrap">{p.category?.name || "—"}</div>
-                        {p.brand && <div className="text-[11.5px] text-slate-400 truncate max-w-[160px]">{p.brand}</div>}
-                      </td>
-                      <td className="text-right whitespace-nowrap tabular text-slate-600">{formatINR(p.purchase_price)}</td>
-                      <td className="text-right whitespace-nowrap">
-                        <div className="font-semibold text-navy-900 tabular">{formatINR(p.selling_price)}</div>
-                        {margin !== null && (
-                          <div className={`text-[11px] font-semibold ${margin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{margin}% margin</div>
-                        )}
-                      </td>
-                      <td>
-                        <div className="w-[110px]">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className={`text-[13.5px] font-bold tabular ${isOut ? "text-rose-600" : isLow ? "text-amber-600" : "text-navy-900"}`}>{stock}</span>
-                            <span className={`text-[10.5px] font-semibold uppercase tracking-wide ${isOut ? "text-rose-500" : isLow ? "text-amber-600" : "text-emerald-600"}`}>
-                              {isOut ? "Out" : isLow ? "Low" : "In stock"}
-                            </span>
-                          </div>
-                          <Meter value={stock} max={Math.max(min * 3, stock, 1)} tone={isOut ? "rose" : isLow ? "amber" : "emerald"} className="mt-1" />
-                        </div>
-                      </td>
-                      <td>
-                        {p.status === "active" ? (
-                          <span className="badge-active"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active</span>
-                        ) : (
-                          <span className="badge-inactive"><span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Inactive</span>
-                        )}
-                      </td>
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <IconBtn title="View details" icon="eye" onClick={() => { setActiveProduct(p); setShowViewModal(true); }} />
-                          <IconBtn title="Edit product" icon="edit" tone="brand" onClick={() => openEdit(p)} />
-                          <IconBtn title="Delete product" icon="trash" tone="rose" onClick={() => { setActiveProduct(p); setShowDeleteModal(true); }} />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>
+      )}
 
-        <Pagination
-          page={currentPage}
-          pages={totalPages}
-          total={sortedProducts.length}
-          pageSize={pageSize}
-          onPage={(pg) => setCurrentPage(Math.min(totalPages, Math.max(1, pg)))}
-          noun="products"
-          left={
-            <select
-              value={pageSize}
-              onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="input w-auto py-1 pr-7 text-[12px]"
-              aria-label="Rows per page"
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <div className="text-xs text-gray-500">
+            Showing {startIndex + 1} to {Math.min(startIndex + pageSize, totalItems)} of {totalItems} products
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 disabled:opacity-40"
             >
-              <option value={10}>10 / page</option>
-              <option value={25}>25 / page</option>
-              <option value={50}>50 / page</option>
-              <option value={100}>100 / page</option>
-            </select>
-          }
-        />
-      </section>
+              Previous
+            </button>
+            <span className="px-2 text-xs font-bold text-gray-700">{currentPage} / {totalPages}</span>
+            <button
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
+      {/* Quick View Product Modal */}
+      {quickViewProduct && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <h3 className="font-black text-gray-900 text-sm">Product Overview</h3>
+              <button onClick={() => setQuickViewProduct(null)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-bold">Name</span>
+                <span className="font-bold text-gray-900 text-sm">{quickViewProduct.name}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="text-gray-400 block text-[10px] uppercase font-bold">SKU</span>
+                  <span className="font-mono font-bold text-gray-800">{quickViewProduct.sku}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Barcode</span>
+                  <span className="font-mono font-bold text-gray-800">{quickViewProduct.barcode || "—"}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Selling Price</span>
+                  <span className="font-black text-emerald-800 text-base">₹{Number(quickViewProduct.selling_price).toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Current Stock</span>
+                  <span className="font-black text-gray-900 text-base">{Number(quickViewProduct.stocks?.[0]?.current_stock ?? 0)} units</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => {
+                  const p = quickViewProduct;
+                  setQuickViewProduct(null);
+                  openEdit(p);
+                }}
+                className="px-3 py-1.5 border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50"
+              >
+                Edit Details
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleAddToCart(quickViewProduct);
+                  setQuickViewProduct(null);
+                }}
+                className="px-4 py-1.5 bg-[#047857] hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-xs"
+              >
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode Scanner Modal */}
+      {showScanModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <h3 className="font-black text-gray-900 text-sm">Scan / Type Barcode or SKU</h3>
+              <button onClick={() => setShowScanModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            <form onSubmit={handleBarcodeSearch} className="space-y-3">
+              <div>
+                <label className="text-[11px] font-bold text-gray-600 block mb-1">Enter Barcode or SKU:</label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
+                  placeholder="e.g. UC-381 or 890123456789"
+                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowScanModal(false)}
+                  className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#047857] hover:bg-emerald-700 rounded-xl shadow-xs"
+                >
+                  Locate Product
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       {/* ============================================================== */}
       {/* 6. MODALS (Add, Edit, View, Delete, Import)                    */}
       {/* ============================================================== */}
