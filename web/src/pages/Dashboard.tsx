@@ -118,7 +118,7 @@ export default function Dashboard() {
       salesQ(chart.range),
       purchQ(chart.range),
       getCustomerOutstandingReport().catch((e) => ({ denied: e?.response?.status === 403 }) as any),
-      listProducts().catch(() => empty),
+      listProducts({ shopId: shopId || undefined } as any).catch(() => empty),
       getOrders().catch(() => empty),
     ]);
 
@@ -182,10 +182,14 @@ export default function Dashboard() {
   const lowStock = useMemo(
     () =>
       products
-        .map((p) => ({ p, stock: Number(p.stocks?.[0]?.current_stock ?? 0), min: Number(p.min_stock ?? 5) }))
+        .map((p) => {
+          const match = shopId ? p.stocks?.find((s: any) => s.shop_id === shopId) : null;
+          const stock = Number(match?.current_stock ?? p.stocks?.[0]?.current_stock ?? 0);
+          return { p, stock, min: Number(p.min_stock ?? 5) };
+        })
         .filter((x) => x.stock <= x.min)
         .sort((a, b) => a.stock - b.stock),
-    [products]
+    [products, shopId]
   );
 
   const recentOrders = useMemo(() => {

@@ -31,6 +31,7 @@ type WorkflowStep =
   | "notifications";
 
 export default function Orders() {
+  const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
   const defaultGstRate = Number(activeShop?.settings?.defaultGstRate ?? 0);
   const [step, setStep] = useState<WorkflowStep>("list");
@@ -225,8 +226,9 @@ export default function Orders() {
         search: search || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
         paymentStatus: paymentFilter !== "all" ? paymentFilter : undefined,
-      }).catch(() => ({ data: { data: [] } })),
-      listProducts().catch(() => ({ data: { data: [] } })),
+        shopId: shopId || undefined,
+      } as any).catch(() => ({ data: { data: [] } })),
+      listProducts({ shopId: shopId || undefined } as any).catch(() => ({ data: { data: [] } })),
       listCustomers().catch(() => ({ data: { data: [] } })),
     ])
       .then(([statsRes, ordersRes, prodsRes, custsRes]) => {
@@ -248,7 +250,7 @@ export default function Orders() {
 
   useEffect(() => {
     loadOrdersData();
-  }, [statusFilter, paymentFilter]);
+  }, [statusFilter, paymentFilter, shopId]);
 
   // Calculations for Step 2
   const calcSubtotal = cartItems.reduce((acc, it) => acc + it.price * it.qty, 0);
