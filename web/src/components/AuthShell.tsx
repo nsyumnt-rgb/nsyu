@@ -69,7 +69,9 @@ export default function AuthShell({
         </div>
       </aside>
 
-      <main className="min-h-[100dvh] flex flex-col bg-white lg:bg-slate-50/60">
+      <main className="relative min-h-[100dvh] flex flex-col overflow-hidden bg-slate-50/70">
+        <div aria-hidden className="pointer-events-none absolute -right-28 top-16 h-72 w-72 rounded-full bg-violet-100/50 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -left-24 bottom-[-6rem] h-72 w-72 rounded-full bg-brand-50/70 blur-3xl" />
         <header className="flex items-center justify-between gap-3 px-4 sm:px-8 py-4">
           <Link to="/" className="lg:invisible inline-flex items-center gap-2.5">
             <span className="w-9 h-9 rounded-lg bg-white p-1 ring-1 ring-slate-200 shadow-xs"><img src="./nsyu_logo.png" alt="" className="w-full h-full object-contain" /></span>
@@ -82,7 +84,7 @@ export default function AuthShell({
         </header>
         <div className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-8 pb-8 pt-2 sm:pt-0">
           <div className="w-full max-w-[420px]">
-            <div className="lg:bg-white lg:rounded-2xl lg:ring-1 lg:ring-slate-200/80 lg:shadow-[0_24px_60px_-28px_rgba(4,38,29,0.25)] lg:p-8">{children}</div>
+            <div className="auth-panel relative lg:p-9">{children}</div>
             {extra}
           </div>
         </div>

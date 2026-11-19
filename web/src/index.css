@@ -171,6 +171,9 @@
   .market-accent-button {
     @apply inline-flex items-center justify-center gap-2 rounded-xl bg-navy-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-navy-800 hover:shadow-lift active:scale-[.98];
   }
+  .auth-panel {
+    @apply rounded-[26px] border border-slate-200/80 bg-white shadow-[0_28px_80px_-36px_rgba(16,42,67,0.38)];
+  }
   table {
     @apply w-full text-[13px];
   }

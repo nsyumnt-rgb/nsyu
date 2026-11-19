@@ -302,7 +302,11 @@ export default function Login() {
             </div>
       }
     >
-              <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight leading-tight">Welcome back</h1>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-700 ring-1 ring-inset ring-brand-100">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+                Secure workspace access
+              </div>
+              <h1 className="font-serif text-[32px] sm:text-[36px] font-semibold tracking-[-0.035em] leading-tight text-navy-900">Welcome back</h1>
               <p className="mt-1.5 text-[14px] text-slate-500">
                 {isCustomer ? "Sign in with a one-time code to see your bills, orders and khata." : "Sign in to manage your shop."}
               </p>
