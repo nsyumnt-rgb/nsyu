@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import AdminFooter from "./AdminFooter";
 
 export default function AdminLayout() {
   const { owner, logout } = useAuthStore();
@@ -134,7 +135,8 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="flex min-h-[100dvh] bg-slate-900 text-slate-100">
+    <div className="flex min-h-[100dvh] flex-col bg-slate-50 text-navy-900">
+      <div className="flex min-h-0 flex-1">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-64 bg-[#04261D] flex-col shrink-0 sticky top-0 h-[100dvh]">{sidebar}</aside>
 
@@ -146,14 +148,14 @@ export default function AdminLayout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 sm:h-16 border-b border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-3 bg-slate-950/70 backdrop-blur sticky top-0 z-30">
+        <header className="h-14 sm:h-16 border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between gap-3 bg-white/90 backdrop-blur sticky top-0 z-30">
           <div className="flex items-center gap-3 min-w-0">
-            <button type="button" onClick={() => setOpen(true)} className="lg:hidden w-10 h-10 -ml-1 rounded-lg text-slate-300 hover:bg-white/10 flex items-center justify-center" aria-label="Open menu">
+            <button type="button" onClick={() => setOpen(true)} className="lg:hidden w-10 h-10 -ml-1 rounded-lg text-slate-500 hover:bg-slate-100 flex items-center justify-center" aria-label="Open menu">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
-            <span className="text-[14px] font-semibold text-white truncate">{current?.label || "Platform"}</span>
+            <span className="text-[14px] font-semibold text-navy-900 truncate">{current?.label || "Platform"}</span>
           </div>
-          <span className="shrink-0 px-2.5 py-1 bg-amber-950/50 text-amber-300 border border-amber-800/60 rounded-full text-[11.5px] font-medium">
+          <span className="shrink-0 px-2.5 py-1 bg-violet-50 text-violet-700 border border-violet-200 rounded-full text-[11.5px] font-semibold">
             <span className="hidden sm:inline">Shop data is </span>read-only
           </span>
         </header>
@@ -161,7 +163,9 @@ export default function AdminLayout() {
         <main className="flex-1 p-4 sm:p-6 min-w-0">
           <Outlet />
         </main>
+        </div>
       </div>
+        <AdminFooter />
     </div>
   );
 }
