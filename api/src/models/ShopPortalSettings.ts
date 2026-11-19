@@ -12,6 +12,8 @@ export interface ShopPortalSettingsAttributes {
   privacy_policy?: string | null;
   terms_conditions?: string | null;
   return_policy?: string | null;
+  announcement_banner?: string | null;
+  announcement_active?: boolean;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -28,6 +30,8 @@ export interface ShopPortalSettingsCreationAttributes
     | "privacy_policy"
     | "terms_conditions"
     | "return_policy"
+    | "announcement_banner"
+    | "announcement_active"
     | "created_at"
     | "updated_at"
   > {}
@@ -46,6 +50,8 @@ export class ShopPortalSettings
   public privacy_policy?: string | null;
   public terms_conditions?: string | null;
   public return_policy?: string | null;
+  public announcement_banner?: string | null;
+  public announcement_active!: boolean;
   public readonly created_at!: Date;
   public readonly updated_at!: Date;
 }
@@ -62,6 +68,8 @@ ShopPortalSettings.init(
     privacy_policy: { type: DataTypes.TEXT, allowNull: true },
     terms_conditions: { type: DataTypes.TEXT, allowNull: true },
     return_policy: { type: DataTypes.TEXT, allowNull: true },
+    announcement_banner: { type: DataTypes.TEXT, allowNull: true },
+    announcement_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
   },
   {
     sequelize,

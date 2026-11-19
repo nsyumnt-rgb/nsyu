@@ -135,6 +135,7 @@ export async function getPortalShopPoliciesApi() {
     privacyPolicy: string;
     termsConditions: string;
     returnPolicy: string;
+    announcement?: string | null;
   };
 }
 

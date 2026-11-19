@@ -224,6 +224,7 @@ export async function getMarketShop(req: Request, res: Response) {
           privacyPolicy: settings?.privacy_policy || null,
           termsConditions: settings?.terms_conditions || null,
           returnPolicy: settings?.return_policy || null,
+          announcement: settings?.announcement_active ? settings.announcement_banner || null : null,
         },
         categories: (cats as any[]).map((c) => ({ name: c.name, count: Number(c.count) })),
       },

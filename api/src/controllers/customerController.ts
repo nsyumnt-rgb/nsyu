@@ -5,6 +5,7 @@ import { Customer, Sale, CustomerLedger, CustomerAccount, CustomerRefreshToken, 
 import { logAudit } from "../utils/audit";
 import { syncCustomerToSupabaseAuth, updateSupabaseAuthPassword } from "../utils/supabaseAuth";
 import { sendOutstandingReminderEmail } from "../utils/mailer";
+import { sendSmsNotification } from "../utils/smsProvider";
 
 function normalizePhone(raw: string): string {
   return raw.replace(/[^0-9]/g, "").slice(-10);
@@ -592,6 +593,18 @@ export async function sendCustomerPaymentReminder(req: Request, res: Response) {
       });
     }
 
+    // Send SMS / WhatsApp reminder if phone is available
+    let smsResult = null;
+    if (customer.phone) {
+      smsResult = await sendSmsNotification({
+        toPhone: customer.phone,
+        customerName: customer.name,
+        shopName: "Our Shop",
+        message: `Dear ${customer.name}, gentle reminder: your pending balance with our shop is ₹${currentBalance.toFixed(2)}. Please clear at your convenience. Thank you!`,
+        type: "payment_reminder",
+      });
+    }
+
     return res.json({
       success: true,
       message: emailResult?.success
@@ -601,6 +614,8 @@ export async function sendCustomerPaymentReminder(req: Request, res: Response) {
         : "Payment reminder processed",
       inAppNotification: inAppCreated,
       emailNotificationId: emailResult?.emailNotificationId,
+      smsSent: smsResult?.success || false,
+      smsProvider: smsResult?.provider || "disabled",
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Failed to send payment reminder" });

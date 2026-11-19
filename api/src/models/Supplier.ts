@@ -21,6 +21,8 @@ export class Supplier extends Model<InferAttributes<Supplier>, InferCreationAttr
   declare current_balance: CreationOptional<number>;
   declare reference_code: CreationOptional<string | null>;
   declare notes: CreationOptional<string | null>;
+  declare password_hash: CreationOptional<string | null>;
+  declare last_login_at: CreationOptional<Date | null>;
   declare readonly created_at: CreationOptional<Date>;
   declare readonly updated_at: CreationOptional<Date>;
 }
@@ -39,6 +41,8 @@ Supplier.init(
     current_balance: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     reference_code: { type: DataTypes.STRING(30), allowNull: true },
     notes: { type: DataTypes.TEXT, allowNull: true },
+    password_hash: { type: DataTypes.STRING(255), allowNull: true },
+    last_login_at: { type: DataTypes.DATE, allowNull: true },
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,
   },

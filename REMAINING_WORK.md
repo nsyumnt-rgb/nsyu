@@ -32,13 +32,13 @@ Data isolation is enforced **in the API** (every query is scoped by the token's 
 | Manager | **Yes (added 2026-11-18)** — staff account with the Manager role in a shop | `test:staff` (real logins) + role matrix |
 | Staff (Sales / Billing / Inventory / Accountant / Staff) | **Yes (added 2026-11-18)** — same staff account, role chosen per shop | `test:staff` (real logins) + role matrix |
 | Customer | Yes (portal password / OTP) | API matrix, workflows, UI sweep |
-| Supplier | **No login** — suppliers are records owned by a shop (purchases, payables, supplier ledger) | Supplier workflows tested from the owner side |
+| Supplier | **Yes (added 2026-11-19)** — dedicated supplier self-service portal (`/api/supplier-portal`) | `test:promotions-suppliers` + role checks |
 
 **Staff accounts (added 2026-11-18, owner-approved schema change):** migration `07_employee_accounts.sql` adds `employees` and ensures the existing `user_roles` table (assignments: one role per staff member per shop). Owners manage staff at **Staff** (`/app/staff`): create login, choose shop + role, change role, add/remove shops, reset password, deactivate. Every staff request re-checks the account and its *current* assignment, so role changes, removals and deactivation apply immediately. Platform/owner/customer roles (Super Admin, Owner, User) can't be given to staff.
 
-**Mobile shop picker (added 2026-11-18):** staff assigned to several shops now get a **Choose a shop** screen after signing in to the mobile app (each shop shows their role there; inactive/suspended shops can't be picked), and a **Switch shop** item in the drawer. The app no longer falls back to a saved/default shop id when the staff token has no shop, and it reloads role + field permissions after every switch. Covered by `App/test/staff_shop_picker_test.dart` (5 widget tests) on top of the API's `test:staff` ("two shops → picker").
+**Supplier self-service portal (added 2026-11-19, migration 09):** migration `09_promotions_and_suppliers.sql` adds portal authentication (`password_hash`, `last_login_at`) to `suppliers`. Suppliers can sign in at `/api/supplier-portal/auth/login` to inspect purchase orders issued by shops (`/api/supplier-portal/purchases`), view order line items and status, and review their complete ledger statement and running payable balances (`/api/supplier-portal/ledger`). Covered by `test:promotions-suppliers` (16 checks).
 
-**Still pending:** supplier self-service login (suppliers remain shop-owned records).
+**Mobile shop picker (added 2026-11-18):** staff assigned to several shops now get a **Choose a shop** screen after signing in to the mobile app (each shop shows their role there; inactive/suspended shops can't be picked), and a **Switch shop** item in the drawer. The app no longer falls back to a saved/default shop id when the staff token has no shop, and it reloads role + field permissions after every switch. Covered by `App/test/staff_shop_picker_test.dart` (5 widget tests) on top of the API's `test:staff` ("two shops → picker").
 
 ## 3. Permission matrix — `npm run test:roles` → **103 passed, 0 failed**
 
@@ -64,7 +64,7 @@ Isolated in-memory DB, real HTTP API. Status codes observed:
 - **D Inventory:** create product, +15 purchase, −3 adjustment, sale −4, history rows, cancelling bill restores stock.
 - **E Suppliers / multi-shop:** create supplier, purchase adds stock, payable ₹2000 after ₹1000 paid, other owner can't read supplier/purchase or bill shop A's product.
 
-## 5. Full regression — `npm run test:all` → **510 checks, 0 failed** (2026-11-19)
+## 5. Full regression — `npm run test:all` → **526 checks, 0 failed** (2026-11-19)
 
 | Suite | Result |
 |---|---|
@@ -78,6 +78,7 @@ Isolated in-memory DB, real HTTP API. Status codes observed:
 | test:market-cart (multi-shop cart + checkout) | 42 / 42 |
 | test:shop-approval | 12 / 12 |
 | test:media | 42 / 42 |
+| test:promotions-suppliers | 16 / 16 (promotional announcements + supplier portal) |
 
 API `tsc --noEmit` ✓, API `npm run build` ✓.
 
@@ -170,10 +171,15 @@ Widths: 1920, 1600, 1440, 1366, 1280, 1024, 768, 430, 414, 390, 375, 360. Check 
 - Header was 7px too wide on 375px phones (brand couldn't shrink).
 - Add to Cart was disabled when stock was masked server-side (`availableStock: null` evaluated to `<= 0`); fixed to check `isAvailable` boolean while cart validates limits.
 
-**Tests:** `test:all` green (461 checks passed across 9 suites: `test:roles` 104, `test:workflows` 75, `test:staff` 55, `test:isolation` 57, `test:phase-a` 51, `test:marketplace` 23, `test:market-cart` 42, `test:shop-approval` 12, `test:media` 42). Both frontend (`vite build`) and backend (`tsc`) compile with 0 errors.
+**Tests:** `test:all` green (526 checks passed across 11 suites: `test:roles` 104, `test:workflows` 75, `test:e2e` 49, `test:staff` 55, `test:isolation` 57, `test:phase-a` 51, `test:marketplace` 23, `test:market-cart` 42, `test:shop-approval` 12, `test:media` 42, `test:promotions-suppliers` 16). Both frontend (`vite build`) and backend (`tsc`) compile with 0 errors.
+
+**Recently added:**
+- **Store Promotional & Announcement Bar (added 2026-11-19, migration 09):** Owners can configure an announcement bar with custom promo/discount text in Settings → Shop; active announcements render at the top of the customer portal header with one-click dismiss.
+- **Supplier Self-Service Portal (added 2026-11-19, migration 09):** Dedicated supplier portal (`/api/supplier-portal`) allowing vendors to log in with phone/email, inspect purchase orders and line items, and view complete ledger statements with running payable balances.
+- **SMS / WhatsApp Payment Reminders:** Pluggable notification service supporting Twilio, MSG91, and generic webhooks for customer payment reminders.
+- **Security Credentials Rotation Script:** `api/scripts/rotate_secrets.ts` to generate high-entropy JWT secrets and bcrypt hashes.
 
 **Pending / known issues**
-- Promotional banners: no "promotions" data model exists, so none are shown.
 - RLS: unchanged — the portal still goes through the API, which scopes every query to the signed-in customer.
 
 ## 11. Required follow-up actions for the owner

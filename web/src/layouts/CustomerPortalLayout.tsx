@@ -36,7 +36,8 @@ export default function CustomerPortalLayout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [bumping, setBumping] = useState(false);
-  const [policies, setPolicies] = useState<{ privacyPolicy: string; termsConditions: string; returnPolicy: string } | null>(null);
+  const [policies, setPolicies] = useState<{ privacyPolicy: string; termsConditions: string; returnPolicy: string; announcement?: string | null } | null>(null);
+  const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
   const [policyModal, setPolicyModal] = useState<{ title: string; text: string } | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const catsRef = useRef<HTMLDivElement>(null);
@@ -139,6 +140,23 @@ export default function CustomerPortalLayout() {
 
   return (
     <div className="min-h-screen bg-[#F6F8F7] flex flex-col font-sans">
+      {/* ───────────── Top Announcement / Promotional Bar ───────────── */}
+      {policies?.announcement && !dismissedAnnouncement && (
+        <div className="bg-brand-900 text-brand-50 text-[12px] sm:text-[13px] py-2 px-4 text-center font-semibold border-b border-brand-700/50 flex items-center justify-between relative shadow-xs z-50">
+          <div className="flex-1 max-w-4xl mx-auto truncate px-6 text-center">
+            {policies.announcement}
+          </div>
+          <button
+            type="button"
+            onClick={() => setDismissedAnnouncement(true)}
+            className="text-brand-300 hover:text-white p-1 text-xs shrink-0 rounded transition hover:bg-brand-800/60"
+            aria-label="Dismiss announcement"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* ───────────── Header ───────────── */}
       <header className="sticky top-0 z-40 bg-navy-900 text-white shadow-[0_2px_12px_-4px_rgba(2,26,19,0.5)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center gap-3 lg:gap-6">

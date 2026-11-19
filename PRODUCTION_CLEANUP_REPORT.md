@@ -23,7 +23,7 @@ All automated regression suites, compilation checks, database migrations, and bu
 
 ## 2. Test & Verification Matrix (November 19, 2026)
 
-### A. Backend Test Matrix (`npm run test:all`) — 510 Checks, 0 Failures
+### A. Backend Test Matrix (`npm run test:all`) — 526 Checks, 0 Failures
 
 Executed against real HTTP endpoints with isolated database instances:
 
@@ -39,7 +39,8 @@ Executed against real HTTP endpoints with isolated database instances:
 | **Market Cart** | `npm run test:market-cart` | 42 | ✅ Pass | Multi-shop grouped cart, split checkout (`ORD` numbering), independent order generation |
 | **Shop Approval** | `npm run test:shop-approval` | 12 | ✅ Pass | Super-admin shop pending approval, approval notifications, status toggling |
 | **Media Storage** | `npm run test:media` | 42 | ✅ Pass | Supabase storage integration, format checks (JPG/PNG/WEBP/GIF), size limits, cover photos, shop banners |
-| **Total** | `npm run test:all` | **510** | **✅ 100%** | **Comprehensive Full-Stack Regression Suite** |
+| **Promotions & Suppliers** | `npm run test:promotions-suppliers` | 16 | ✅ Pass | Store announcement banners, supplier self-service login, purchase order tracking, supplier ledger |
+| **Total** | `npm run test:all` | **526** | **✅ 100%** | **Comprehensive Full-Stack Regression Suite** |
 
 ### B. Mobile Application Test Suite (`flutter test`) — 11 Checks, 0 Failures
 
@@ -71,6 +72,7 @@ flowchart TD
         M5 --> M6["06: Super-Admin Shop Approval"]
         M6 --> M7["07: Staff Accounts & User Roles"]
         M7 --> M8["08: Shop Legal Policies"]
+        M8 --> M9["09: Promotions & Supplier Auth"]
     end
 ```
 

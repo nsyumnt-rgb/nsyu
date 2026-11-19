@@ -317,6 +317,8 @@ export async function updateShopPortalSettings(req: Request, res: Response) {
     const privPol = req.body.privacyPolicy !== undefined ? req.body.privacyPolicy : req.body.privacy_policy;
     const terms = req.body.termsConditions !== undefined ? req.body.termsConditions : req.body.terms_conditions;
     const retPol = req.body.returnPolicy !== undefined ? req.body.returnPolicy : req.body.return_policy;
+    const announceBanner = req.body.announcementBanner !== undefined ? req.body.announcementBanner : req.body.announcement_banner;
+    const announceActive = req.body.announcementActive !== undefined ? req.body.announcementActive : req.body.announcement_active;
 
     if (showStock !== undefined) settings.show_stock_qty = Boolean(showStock);
     if (allowSelfReg !== undefined) settings.allow_self_registration = Boolean(allowSelfReg);
@@ -326,6 +328,8 @@ export async function updateShopPortalSettings(req: Request, res: Response) {
     if (privPol !== undefined) settings.privacy_policy = privPol ? String(privPol).trim() : null;
     if (terms !== undefined) settings.terms_conditions = terms ? String(terms).trim() : null;
     if (retPol !== undefined) settings.return_policy = retPol ? String(retPol).trim() : null;
+    if (announceBanner !== undefined) settings.announcement_banner = announceBanner ? String(announceBanner).trim() : null;
+    if (announceActive !== undefined) settings.announcement_active = Boolean(announceActive);
 
     await settings.save();
     return res.json({ success: true, message: "Portal settings updated", data: settings });

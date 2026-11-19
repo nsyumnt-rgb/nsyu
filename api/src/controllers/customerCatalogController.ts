@@ -355,6 +355,7 @@ export async function getPortalShopPolicies(req: Request, res: Response) {
         privacyPolicy: settings?.privacy_policy || null,
         termsConditions: settings?.terms_conditions || null,
         returnPolicy: settings?.return_policy || null,
+        announcement: settings?.announcement_active ? settings.announcement_banner || null : null,
       },
     });
   } catch (err: any) {

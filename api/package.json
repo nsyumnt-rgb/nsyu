@@ -18,7 +18,8 @@
     "test:roles": "ts-node-dev --transpile-only --exit-child scripts/test_role_matrix.ts",
     "test:workflows": "ts-node-dev --transpile-only --exit-child scripts/test_workflows.ts",
     "test:e2e": "ts-node-dev --transpile-only --exit-child scripts/test_acceptance_e2e.ts",
-    "test:all": "npm run -s test:roles && npm run -s test:workflows && npm run -s test:e2e && npm run -s test:staff && npm run -s test:isolation && npm run -s test:phase-a && npm run -s test:marketplace && npm run -s test:market-cart && npm run -s test:shop-approval && npm run -s test:media",
+    "test:promotions-suppliers": "ts-node-dev --transpile-only --exit-child scripts/test_promotions_and_suppliers.ts",
+    "test:all": "npm run -s test:roles && npm run -s test:workflows && npm run -s test:e2e && npm run -s test:staff && npm run -s test:isolation && npm run -s test:phase-a && npm run -s test:marketplace && npm run -s test:market-cart && npm run -s test:shop-approval && npm run -s test:media && npm run -s test:promotions-suppliers",
     "test:staff": "ts-node-dev --transpile-only --exit-child scripts/test_staff_accounts.ts",
     "test:media": "ts-node-dev --transpile-only --exit-child scripts/test_media.ts"
   },

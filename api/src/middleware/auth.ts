@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/jwt";
-import { Shop, CustomerAccount } from "../models";
+import { Shop, CustomerAccount, Supplier } from "../models";
 import { resolveEmployeeAccess } from "../utils/employeeAccess";
 
 /**
@@ -21,6 +21,9 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const payload = verifyAccessToken(token);
     if (payload.isCustomer) {
       return res.status(403).json({ success: false, message: "Customer tokens cannot access staff endpoints" });
+    }
+    if (payload.isSupplier) {
+      return res.status(403).json({ success: false, message: "Supplier tokens cannot access staff endpoints" });
     }
     req.auth = payload;
   } catch (err) {
@@ -83,6 +86,42 @@ export async function requireCustomer(req: Request, res: Response, next: NextFun
       ownerId: account.owner_id,
       accountId: account.id,
       phone: account.phone,
+    };
+
+    return next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
+}
+
+/**
+ * Verifies supplier access token, verifies supplier record is Active in DB,
+ * and attaches req.supplier. Rejects other token types with 403.
+ */
+export async function requireSupplier(req: Request, res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+
+  const token = header.split(" ")[1];
+  try {
+    const payload = verifyAccessToken(token);
+    if (!payload.isSupplier || !payload.supplierId) {
+      return res.status(403).json({ success: false, message: "Supplier authentication required" });
+    }
+
+    const supplier = await Supplier.findByPk(payload.supplierId);
+    if (!supplier || supplier.status !== "active") {
+      return res.status(401).json({ success: false, message: "Supplier account not found or inactive" });
+    }
+
+    req.supplier = {
+      supplierId: supplier.id,
+      ownerId: supplier.owner_id,
+      name: supplier.name,
+      phone: supplier.phone || "",
+      email: supplier.email || null,
     };
 
     return next();

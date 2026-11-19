@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+import bcrypt from "bcryptjs";
 import { sequelize, Supplier, Purchase, SupplierLedger, Shop } from "../models";
 import { logAudit } from "../utils/audit";
 import { nextEntityReferenceCode } from "../utils/referenceCode";
@@ -83,6 +84,9 @@ export async function createSupplier(req: Request, res: Response) {
           opening_balance: opening,
           current_balance: 0,
           reference_code: referenceCode,
+          password_hash: req.body.password && String(req.body.password).trim().length >= 6
+            ? await bcrypt.hash(String(req.body.password).trim(), 10)
+            : null,
         },
         { transaction: t }
       );
@@ -186,6 +190,9 @@ export async function updateSupplier(req: Request, res: Response) {
         return res.status(400).json({ success: false, message: "status must be active or inactive" });
       }
       supplier.status = req.body.status;
+    }
+    if (req.body.password && String(req.body.password).trim().length >= 6) {
+      supplier.password_hash = await bcrypt.hash(String(req.body.password).trim(), 10);
     }
     await supplier.save();
     await logAudit({ req, module: "suppliers", action: "update", entityType: "Supplier", entityId: supplier.id });

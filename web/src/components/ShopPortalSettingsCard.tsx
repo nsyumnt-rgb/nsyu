@@ -23,6 +23,8 @@ export default function ShopPortalSettingsCard() {
   const [privacyPolicy, setPrivacyPolicy] = useState("");
   const [termsConditions, setTermsConditions] = useState("");
   const [returnPolicy, setReturnPolicy] = useState("");
+  const [announcementBanner, setAnnouncementBanner] = useState("");
+  const [announcementActive, setAnnouncementActive] = useState(false);
 
   useEffect(() => {
     if (!shopId) return;
@@ -40,6 +42,8 @@ export default function ShopPortalSettingsCard() {
           setPrivacyPolicy(d.privacy_policy || d.privacyPolicy || "");
           setTermsConditions(d.terms_conditions || d.termsConditions || "");
           setReturnPolicy(d.return_policy || d.returnPolicy || "");
+          setAnnouncementBanner(d.announcement_banner || d.announcementBanner || "");
+          setAnnouncementActive(Boolean(d.announcement_active ?? d.announcementActive));
         }
       })
       .catch((err) => {
@@ -65,8 +69,10 @@ export default function ShopPortalSettingsCard() {
         privacy_policy: privacyPolicy.trim() || null,
         terms_conditions: termsConditions.trim() || null,
         return_policy: returnPolicy.trim() || null,
+        announcement_banner: announcementBanner.trim() || null,
+        announcement_active: announcementActive,
       });
-      setSuccess("Store portal settings and legal policies saved successfully.");
+      setSuccess("Store portal settings, announcements, and legal policies saved successfully.");
       setTimeout(() => setSuccess(null), 4000);
     } catch (err) {
       setError(apiErrorMessage(err, "Failed to save settings"));
@@ -190,6 +196,48 @@ export default function ShopPortalSettingsCard() {
                 placeholder="0"
               />
               <span className="text-[11px] text-slate-400 mt-1 block">Set 0 for no minimum cart requirement.</span>
+            </div>
+          </div>
+
+          {/* Section: Promotional & Store Announcement Bar */}
+          <div className="border-t border-slate-100 pt-5">
+            <div className="mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Store Announcement & Offers Bar</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Displays a prominent promotional notification bar across the top of your online store and customer portal.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/20 cursor-pointer transition">
+                <input
+                  type="checkbox"
+                  checked={announcementActive}
+                  onChange={(e) => setAnnouncementActive(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                />
+                <div className="text-xs">
+                  <div className="font-bold text-slate-800">Enable Announcement Bar on Store</div>
+                  <div className="text-slate-500 mt-0.5 leading-relaxed">
+                    Turn on to broadcast festival greetings, discount offers, delivery updates, or branch announcements to visiting customers.
+                  </div>
+                </div>
+              </label>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1.5">
+                  Announcement / Offer Text
+                </label>
+                <input
+                  type="text"
+                  value={announcementBanner}
+                  onChange={(e) => setAnnouncementBanner(e.target.value)}
+                  placeholder="e.g. 📢 Special Offer: Flat 5% off on bulk orders above ₹10,000! Call for trade discount."
+                  maxLength={250}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-1 focus:ring-emerald-500 text-slate-700"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">Visible to all customers at the top of your shop portal.</span>
+              </div>
             </div>
           </div>
 

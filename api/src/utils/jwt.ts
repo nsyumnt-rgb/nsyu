@@ -35,9 +35,11 @@ export interface AccessTokenPayload {
   employeeId?: number;
   customerId?: number;
   accountId?: number;
+  supplierId?: number;
   phone?: string;
   isSuperAdmin?: boolean;
   isCustomer?: boolean;
+  isSupplier?: boolean;
   shopId?: number | null; // null until a shop is selected
   roleId?: number | null;
   roleCode?: string | null;

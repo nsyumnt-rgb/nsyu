@@ -53,6 +53,10 @@ export interface ShopPortalSettingsData {
   termsConditions?: string | null;
   return_policy?: string | null;
   returnPolicy?: string | null;
+  announcement_banner?: string | null;
+  announcementBanner?: string | null;
+  announcement_active?: boolean;
+  announcementActive?: boolean;
 }
 
 export function getShopPortalSettings(shopId: number) {
