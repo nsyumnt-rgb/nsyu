@@ -41,7 +41,13 @@ export default function MarketCart() {
         <h1 className="text-[20px] font-bold">Your cart</h1>
         <p className="text-[13.5px] text-slate-500 mt-2">Log in to add products from any shop to one cart.</p>
         <div className="mt-5 flex justify-center gap-2">
-          <Link to="/portal/login?next=/market/cart" className="btn-primary">Log in</Link>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }))}
+            className="btn-primary"
+          >
+            Log in
+          </button>
           <Link to="/market/search" className="btn-secondary">Browse products</Link>
         </div>
       </div>

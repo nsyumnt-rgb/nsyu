@@ -88,7 +88,13 @@ export default function MarketCheckout() {
     return (
       <div className="card p-10 text-center max-w-lg mx-auto">
         <h1 className="text-[20px] font-bold">Log in to check out</h1>
-        <Link to="/portal/login?next=/market/checkout" className="btn-primary mt-5">Log in</Link>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }))}
+          className="btn-primary mt-5"
+        >
+          Log in
+        </button>
       </div>
     );
   }

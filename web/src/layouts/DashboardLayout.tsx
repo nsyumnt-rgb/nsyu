@@ -5,11 +5,12 @@ import Sidebar from "./Sidebar";
 
 export default function DashboardLayout() {
   const location = useLocation();
-  // Pages with dedicated full-website layout (Category Sidebar, Product Grid, Inventory Table)
+  // Pages with dedicated full-website layout (Category Sidebar, Product Grid, Inventory Table, Staff Grid)
   const isFullWidthPage = [
     "/app/catalog",
     "/app/products",
     "/app/inventory",
+    "/app/staff",
   ].some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
 
   return (

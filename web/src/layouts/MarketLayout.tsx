@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useSearchParams } from
 import { usePortalStore } from "../store/portalStore";
 import { useWishlistStore } from "../store/wishlistStore";
 import { getMarketCart, getMarketCategories } from "../api/marketplace";
+import LoginModal from "../components/LoginModal";
 
 export default function MarketLayout() {
   const navigate = useNavigate();
@@ -16,6 +17,19 @@ export default function MarketLayout() {
   const [cartCount, setCartCount] = useState(0);
   const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
   const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginModalTab, setLoginModalTab] = useState<"customer" | "staff">("customer");
+
+  // Global listener so any component (MarketCard, MarketProduct, MarketCart) can trigger the centered login popup
+  useEffect(() => {
+    const handleOpenLogin = (e: any) => {
+      const tab = e?.detail?.tab === "staff" ? "staff" : "customer";
+      setLoginModalTab(tab);
+      setLoginModalOpen(true);
+    };
+    window.addEventListener("open-login-modal", handleOpenLogin);
+    return () => window.removeEventListener("open-login-modal", handleOpenLogin);
+  }, []);
 
   // Cart badge across all shops; refreshed on navigation and when cart changes
   useEffect(() => {
@@ -209,12 +223,16 @@ export default function MarketLayout() {
                 <span className="truncate max-w-[100px]">{customer.name}</span>
               </Link>
             ) : (
-              <Link
-                to="/portal/login"
-                className="hidden lg:inline-flex text-xs font-bold text-gray-700 hover:text-emerald-700 px-2.5 py-1.5 rounded-xl hover:bg-gray-50 transition"
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginModalTab("customer");
+                  setLoginModalOpen(true);
+                }}
+                className="hidden lg:inline-flex text-xs font-bold text-gray-700 hover:text-emerald-700 px-2.5 py-1.5 rounded-xl hover:bg-gray-50 transition cursor-pointer"
               >
                 Login
-              </Link>
+              </button>
             )}
 
             {/* Mobile Hamburger Button */}
@@ -354,7 +372,21 @@ export default function MarketLayout() {
             ))}
             <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs font-bold px-2">
               <Link to="/portal/orders" className="text-emerald-800">My Orders</Link>
-              <Link to="/portal/login" className="text-gray-600">Customer Login</Link>
+              {customer ? (
+                <span className="text-gray-600 truncate max-w-[120px]">{customer.name}</span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setLoginModalTab("customer");
+                    setLoginModalOpen(true);
+                  }}
+                  className="text-gray-600 hover:text-emerald-700 cursor-pointer"
+                >
+                  Customer Login
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -454,9 +486,16 @@ export default function MarketLayout() {
                 </Link>
               </li>
               <li>
-                <Link to="/login" className="hover:text-emerald-700 transition">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginModalTab("staff");
+                    setLoginModalOpen(true);
+                  }}
+                  className="hover:text-emerald-700 transition cursor-pointer text-left"
+                >
                   Shop owner login
-                </Link>
+                </button>
               </li>
             </ul>
           </div>
@@ -473,9 +512,16 @@ export default function MarketLayout() {
                 </Link>
               </li>
               <li>
-                <Link to="/portal/login" className="hover:text-emerald-700 transition">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginModalTab("customer");
+                    setLoginModalOpen(true);
+                  }}
+                  className="hover:text-emerald-700 transition cursor-pointer text-left"
+                >
                   Customer login
-                </Link>
+                </button>
               </li>
             </ul>
           </div>
@@ -495,6 +541,13 @@ export default function MarketLayout() {
           <div>© 2026 NSYU Market. All rights reserved.</div>
         </div>
       </footer>
+
+      {/* Centered Login Popup Modal */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        initialTab={loginModalTab}
+      />
     </div>
   );
 }

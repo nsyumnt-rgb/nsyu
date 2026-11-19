@@ -75,7 +75,7 @@ export default function MarketProduct() {
   async function add(buyNow: boolean) {
     if (!item) return;
     if (!signedIn) {
-      navigate(`/portal/login?next=${encodeURIComponent(`/market/p/${item.shop.id}/${item.productId}`)}`);
+      window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
       return;
     }
     setBusy(true);

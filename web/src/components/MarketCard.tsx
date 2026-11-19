@@ -54,11 +54,7 @@ export default function MarketCard({
     e.stopPropagation();
 
     if (!customer) {
-      navigate(
-        `/portal/login?next=${encodeURIComponent(
-          `/market/p/${listing.shop.id}/${listing.productId}`
-        )}`
-      );
+      window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
       return;
     }
 
