@@ -320,7 +320,7 @@ export default function BusinessHeader() {
         </div>
 
         {/* Center: Desktop Navigation Bar */}
-        <nav className="hidden lg:flex items-center gap-1.5 xl:gap-2">
+        <nav className="hidden" aria-hidden="true">
           {navItems.map((item) => (
             <Link
               key={item.label}

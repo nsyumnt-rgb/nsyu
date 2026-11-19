@@ -113,7 +113,7 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
     <aside
       className={clsx(
         "w-64 lg:w-60 shrink-0 bg-navy-950 bg-gradient-to-b from-navy-900 to-navy-950 text-white flex flex-col h-screen select-none",
-        "fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 transition-transform duration-300 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:z-20 lg:translate-x-0",
         open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
       )}
     >
