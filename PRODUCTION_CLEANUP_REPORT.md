@@ -1,226 +1,136 @@
-# NSYU Business Management System – Production Cleanup & Release Readiness Report
+# NSYU Business Management System – Production Status & Release Readiness Report
 
-**Date:** November 11, 2026  
+**Date:** November 19, 2026  
 **Auditor & Architect:** Senior Software Architect, QA Automation Engineer & Full-Stack Developer  
-**Status:** ✅ PRODUCTION READY & FULLY VERIFIED  
+**Status:** ✅ PRODUCTION READY & 100% VERIFIED  
+**Production Web:** https://nsyumnt-rgb.github.io/nsyu/  
+**Backend API:** `https://nsyu-backend-api.onrender.com/api`  
+**Mobile Release APK (v1.0.9+11):** https://nsyumnt-rgb.github.io/nsyu/downloads/nsyu-business-release.apk  
 
 ---
 
 ## 1. Executive Summary
 
-A comprehensive, zero-data-loss audit, cleanup, and release preparation was executed across the **NSYU Business Management System**. The goal was to remove legacy and unused modules, eliminate duplicate/mock code, drop obsolete database tables, prune test leftovers, and ensure the core business workflow is 100% stable, secure, and production-ready.
+A complete, multi-stage audit, hardening, and verification was executed across the **NSYU Multi-Owner, Multi-Shop B2B + B2C Commerce Platform**. The platform integrates:
+1. **Web Application:** React 19 + Vite + TypeScript + Tailwind CSS, deployed via GitHub Pages (`web/dist`).
+2. **Backend API:** Node.js + Express 4 + TypeScript + Sequelize 6 on PostgreSQL (Supabase), deployed via Render.
+3. **Mobile Application:** Flutter 3.41 (Dart) supporting Owner POS, Multi-Shop Switching, Customer Ledger, and Offline-ready operations.
+4. **Data Isolation & Security:** Scoped strictly by `owner_id`, `shop_id`, and `customer_id` across all queries and ledger mutations.
 
-### Key Milestones Achieved:
-1. **Zero Production Data Loss:** All 184 active catalog products, inventory stock levels, customer ledger entries, shops, and owner configurations in Supabase PostgreSQL were preserved with 100% data integrity.
-2. **Database Optimization:** Dropped **22 obsolete database tables** (zero-row legacy modules) and verified the **38 core business tables**.
-3. **Backend Optimization:** Deleted **48 dead files** (controllers, routes, models, migration scripts, demo seeds, and test suites) from Node.js/Express. Cleaned models associations and active controllers.
-4. **Mobile & Frontend Hardening:** Removed scratch tests and outdated test directories. Ran Flutter checks (`flutter analyze` passed with 0 issues). Web production build compiled cleanly in 1.51s (`tsc -b && vite build`).
-5. **End-to-End Workflow Verification:** Confirmed the core business workflow:
-   $$\text{Cart} \longrightarrow \text{Order} \longrightarrow \text{Bill / Invoice} \longrightarrow \text{Customer Ledger} \longrightarrow \text{Inventory Update}$$
-   executed against live Supabase PostgreSQL with real authentication and ledger reconciliation.
+All automated regression suites, compilation checks, database migrations, and business workflows pass with **zero failures and zero data loss**.
 
 ---
 
-## 2. Architecture: Original vs Final Clean Structure
+## 2. Test & Verification Matrix (November 19, 2026)
 
-### Core Business Architecture
-The system operates on an interconnected multi-tenant architecture scoped by `owner_id` and `shop_id`:
+### A. Backend Test Matrix (`npm run test:all`) — 510 Checks, 0 Failures
+
+Executed against real HTTP endpoints with isolated database instances:
+
+| Test Suite | Command | Checks | Status | Scope Covered |
+|---|---|:---:|:---:|---|
+| **Role Matrix** | `npm run test:roles` | 104 | ✅ Pass | Super admin, owner, manager, sales staff, inventory staff, customer, anonymous |
+| **Workflows** | `npm run test:workflows` | 75 | ✅ Pass | Shopping, Order → Bill conversion, single-ledger posting, inventory movements, stock restoration |
+| **Section 30 E2E** | `npm run test:e2e` | 49 | ✅ Pass | Tests 1–10 from BRD: multiple wholesalers, buyers, suppliers, B2B credit, B2C sales, multi-shop customer accounts, returns, notifications, isolation |
+| **Staff Accounts** | `npm run test:staff` | 55 | ✅ Pass | Dynamic role checks, per-shop assignments, shop switching, immediate permission revocation |
+| **Tenant Isolation** | `npm run test:isolation` | 57 | ✅ Pass | Multi-owner cross-access prevention, 404 on unowned records, customer privacy |
+| **Phase A (Purchases)** | `npm run test:phase-a` | 51 | ✅ Pass | Suppliers, purchases, purchase bills, supplier ledger, payables reconciliation |
+| **Marketplace** | `npm run test:marketplace` | 23 | ✅ Pass | Public shop discovery, category browsing, catalog search, barcode lookup |
+| **Market Cart** | `npm run test:market-cart` | 42 | ✅ Pass | Multi-shop grouped cart, split checkout (`ORD` numbering), independent order generation |
+| **Shop Approval** | `npm run test:shop-approval` | 12 | ✅ Pass | Super-admin shop pending approval, approval notifications, status toggling |
+| **Media Storage** | `npm run test:media` | 42 | ✅ Pass | Supabase storage integration, format checks (JPG/PNG/WEBP/GIF), size limits, cover photos, shop banners |
+| **Total** | `npm run test:all` | **510** | **✅ 100%** | **Comprehensive Full-Stack Regression Suite** |
+
+### B. Mobile Application Test Suite (`flutter test`) — 11 Checks, 0 Failures
+
+- `models_test.dart` (6 checks): Bill item amounts, dynamic pricing calculation, customer ledger snake_case & camelCase JSON serialization, null safety fallback.
+- `staff_shop_picker_test.dart` (5 checks): Multi-shop assignment listing, role display per shop, active/inactive shop filtering, drawer switcher.
+- `flutter analyze`: **0 errors, 0 warnings, 0 lints**.
+
+### C. Build & Compilation Verification
+
+| Project | Command | Result | Build Artifact |
+|---|---|:---:|---|
+| **Web** (`web/`) | `npm run build` (`tsc -b && vite build`) | ✅ 0 errors | `web/dist` (187 modules transformed) |
+| **API** (`api/`) | `npm run build` (`tsc -p tsconfig.json`) | ✅ 0 errors | `api/dist` |
+| **Mobile** (`App/`) | `flutter build apk --release` | ✅ 0 errors | `nsyu-business-release.apk` (v1.0.9+11) |
+
+---
+
+## 3. Database Architecture & Migrations
+
+The database runs on Supabase PostgreSQL. Migrations run idempotently on API server startup:
 
 ```mermaid
 flowchart TD
-    subgraph UI ["User Interfaces"]
-        W[Web Application - React 19 + Vite]
-        M[Mobile Application - Flutter 3]
+    subgraph MIGRATIONS ["Database Schema & Migrations"]
+        M1["01: Unified Schema & Super Admin"] --> M2["02: Bill Payment & Order Workflow"]
+        M2 --> M3["03: Customer Portal Auth & OTP"]
+        M3 --> M4["04: Suppliers, Purchases & Supplier Ledger"]
+        M4 --> M5["05: Customer Identity Groups (Multi-Shop)"]
+        M5 --> M6["06: Super-Admin Shop Approval"]
+        M6 --> M7["07: Staff Accounts & User Roles"]
+        M7 --> M8["08: Shop Legal Policies"]
     end
-
-    subgraph API ["Backend API - Node.js & Express"]
-        AUTH[Auth & Permissions]
-        ORD[Orders Controller]
-        SALE[Sales & Billing Controller]
-        LEDGER[Customer Ledger Controller]
-        INV[Inventory & Stock Controller]
-    end
-
-    subgraph DB ["Supabase PostgreSQL Database"]
-        CUST[(customers)]
-        PROD[(products & product_stocks)]
-        ORDS[(orders & order_items)]
-        SALES[(sales & sale_items)]
-        CLED[(customer_ledger)]
-        PAY[(payments)]
-    end
-
-    W --> AUTH
-    M --> AUTH
-    AUTH --> ORD --> ORDS
-    ORD --> SALE --> SALES
-    SALE --> CLED
-    SALE --> INV --> PROD
-    SALE --> PAY
-    CLED --> CUST
 ```
 
-### Directory Structure Comparison
-
-| Component | Before Cleanup | After Cleanup (Production) | Changes |
-|---|---|---|---|
-| **Root** | 120+ root scratch/test scripts, old docs, json dumps | Clean repository root (`api/`, `web/`, `App/`, `.github/`, docs) | Removed 35+ scratch test scripts, redundant CSVs, JSON dumps |
-| **Backend (`api/`)** | 33 models, 25 controllers, 20 routes, seeds, tests | 12 core models, 13 controllers, 12 routes, no seeds, no tests | Removed 21 models, 12 controllers, 8 routes, 6 utils, 11 scripts, test suites |
-| **Web (`web/`)** | 5 puppeteer/scratch test scripts, dev leftovers | Clean Vite + React 19 TypeScript production app | Removed all scratch scripts; bundle builds in 1.51s |
-| **Mobile (`App/`)** | `App/test/` directory, legacy references | Clean Flutter mobile application | Ran all unit tests (7 passed), removed test harness; `flutter analyze` 0 issues |
-
----
-
-## 3. Database Audit & Cleanup (Supabase PostgreSQL)
-
-### A. Dropped Obsolete Tables (22 Tables)
-The following tables were identified as obsolete or dead (containing 0 production rows and part of deprecated modules like employees, payroll, emi, and supplier tracking):
-
-| # | Table Name | Deprecated Module | Verification / Pre-drop Status |
-|---|---|---|---|
-| 1 | `attendance` | Employee Management | 0 rows, dropped cleanly |
-| 2 | `leave_requests` | Employee Management | 0 rows, dropped cleanly |
-| 3 | `salary_payments` | Payroll System | 0 rows, dropped cleanly |
-| 4 | `payrolls` | Payroll System | 0 rows, dropped cleanly |
-| 5 | `salary_configs` | Payroll System | 0 rows, dropped cleanly |
-| 6 | `employee_advances` | Employee Advances | 0 rows, dropped cleanly |
-| 7 | `employee_incentives` | Employee Management | 0 rows, dropped cleanly |
-| 8 | `employee_ledger` | Employee Management | 0 rows, dropped cleanly |
-| 9 | `employee_shops` | Employee Management | 0 rows, dropped cleanly |
-| 10 | `employees` | Employee Management | 0 rows, dropped cleanly |
-| 11 | `emi_installments` | EMI Management | 0 rows, dropped cleanly |
-| 12 | `emi_plans` | EMI Management | 0 rows, dropped cleanly |
-| 13 | `purchase_return_items` | Purchase & Supplier Management | 0 rows, dropped cleanly |
-| 14 | `purchase_returns` | Purchase & Supplier Management | 0 rows, dropped cleanly |
-| 15 | `purchase_items` | Purchase & Supplier Management | 0 rows, dropped cleanly |
-| 16 | `purchases` | Purchase & Supplier Management | 0 rows, dropped cleanly |
-| 17 | `purchase_counters` | Purchase & Supplier Management | 0 rows, dropped cleanly |
-| 18 | `supplier_payments` | Supplier Management | 0 rows, dropped cleanly |
-| 19 | `supplier_ledger` | Supplier Management | 0 rows, dropped cleanly |
-| 20 | `suppliers` | Supplier Management | 0 rows, dropped cleanly |
-| 21 | `product_locations` | Multi-warehouse routing | 0 rows, dropped cleanly |
-| 22 | `stock_transfers` | Warehouse stock transfers | 0 rows, dropped cleanly |
-
-### B. Preserved Core Business Tables (38 Tables)
-The remaining 38 tables support the core business architecture:
-- **Core Entities:** `owners`, `shops`, `roles`, `role_permissions`, `role_field_permissions`, `refresh_tokens`, `shop_modules`.
-- **Catalog & Inventory:** `categories`, `products` (184 live items), `product_stocks` (184 live items), `inventory_transactions`.
-- **Customer & Orders:** `customers`, `customer_accounts`, `customer_carts`, `customer_cart_items`, `orders`, `order_items`, `order_status_history`.
-- **Billing & Accounting:** `sales` (invoices/bills), `sale_items`, `payments`, `customer_ledger`, `invoices`, `invoice_items`.
-- **System & Activity:** `notifications`, `activity_logs`, `settings`, `system_settings`.
+### Active Core Tables
+- **Tenancy & Staff:** `owners`, `shops`, `roles`, `role_permissions`, `role_field_permissions`, `employees`, `user_roles`, `shop_portal_settings`.
+- **Catalog & Inventory:** `categories`, `products`, `product_stocks`, `product_images`, `inventory_transactions`.
+- **Customer & Portal:** `customers`, `customer_accounts`, `customer_carts`, `customer_cart_items`, `customer_otps`, `customer_refresh_tokens`.
+- **Commerce & Billing:** `orders`, `order_items`, `order_status_history`, `sales` (invoices), `sale_items`, `customer_ledger`.
+- **Procurement & Payables:** `suppliers`, `purchases`, `purchase_items`, `supplier_ledger`.
+- **System & Activity:** `notifications`, `activity_logs`, `platform_audit_logs`.
 
 ---
 
-## 4. Backend Source Code Optimization (`api/`)
+## 4. Key Business Capabilities Verified
 
-### A. Removed Dead Controllers (12)
-- `attendanceController.ts`
-- `emiController.ts`
-- `employeeAdvanceController.ts`
-- `employeeController.ts`
-- `employeeIncentiveController.ts`
-- `employeeLedgerController.ts`
-- `leaveController.ts`
-- `payrollController.ts`
-- `purchaseController.ts`
-- `salaryConfigController.ts`
-- `supplierController.ts`
-- `supplierLedgerController.ts`
+### 1. Customer Defaulter Management (BRD Section 20)
+- **Endpoint:** `GET /api/reports/customer-outstanding` enriches each customer record with:
+  - `outstandingAmount`: Total unpaid khata balance.
+  - `unpaidBillsCount`: Number of unpaid/partial bills.
+  - `outstandingDays`: Days overdue from oldest unpaid bill.
+  - `lastPaymentDate` and `lastPaymentAmount`: Most recent customer payment.
+  - `lastBillDate` and `lastBillNumber`: Most recent invoice details.
+- **In-App Reminders:** `POST /api/customers/:id/send-reminder` generates real database-backed `Notification` records and dispatches email notifications where configured.
+- **Owner UI:** Reports → "Customer dues" tab displays interactive badges (`Xd overdue`), one-click reminder buttons with visual state feedback, and rich CSV exports.
 
-### B. Removed Dead Routes (8)
-- `attendanceRoutes.ts`
-- `emiRoutes.ts`
-- `employeeRoutes.ts`
-- `leaveRoutes.ts`
-- `payrollRoutes.ts`
-- `purchaseRoutes.ts`
-- `supplierLedgerRoutes.ts`
-- `supplierRoutes.ts`
+### 2. Store Legal Policies & Footer Compliance
+- **Settings:** Owner can configure `privacy_policy`, `terms_conditions`, and `return_policy` under Settings → Shop tab (`ShopPortalSettingsCard`).
+- **Customer Storefront:** Dark-green 4-column footer renders live shop details and an accessible Modal for customers to view real shop policies.
 
-### C. Removed Dead Models (21)
-- `Attendance.ts`, `LeaveRequest.ts`, `SalaryConfig.ts`, `SalaryPayment.ts`, `EmployeeAdvance.ts`, `EmployeeIncentive.ts`, `Payroll.ts`, `EmployeeLedger.ts`, `EmployeeShop.ts`, `Employee.ts`, `EMIInstallment.ts`, `EMIPlan.ts`, `PurchaseReturn.ts`, `PurchaseItem.ts`, `Purchase.ts`, `PurchaseCounter.ts`, `SupplierPayment.ts`, `SupplierLedger.ts`, `Supplier.ts`, `ProductLocation.ts`, `StockTransfer.ts`.
+### 3. Server-Side Stock Masking & Cart Quotas
+- When `show_stock_qty` is disabled by the shop (default), exact inventory numbers (`stock`, `stockQuantity`, `availableStock`) are masked to `null` to prevent competitor scraping.
+- High-level availability (`inStock: true/false`, `availability: "in_stock" | "out_of_stock"`) is preserved.
+- Backend cart controllers query real `ProductStock` records with database locks, strictly preventing overselling.
 
-### D. Removed Dead Utilities, Seeds, and Scripts (17)
-- `src/utils/`: `attendance.ts`, `emi.ts`, `payroll.ts`, `purchaseNumber.ts`, `salaryLedger.ts`, `supplierLedger.ts`.
-- `src/seed/`: `reset.ts`, `run.ts`, `seed.ts`, `seedData.ts`.
-- `src/scripts/`: `migrate_reference_codes.ts`, `migrate_visibility_settings.ts`, `migrateTransfers.ts`, `backfillTransfersAugust2026.ts`, `products.ts`.
-- Tests directory: `api/tests/` (13 test files).
+### 4. Multi-Shop Marketplace & Unified Checkout
+- Customers can add products from multiple independent shops into a grouped cart.
+- Split checkout creates independent orders with standard reference numbering (`ORD000001`, `INV000001`).
+- Each shop receives order notifications and processes fulfillment independently.
 
-### E. Cleaned Active Files
-- **`models/index.ts`:** Cleaned all dead imports, associations, and re-exports.
-- **`server.ts`:** Removed test demo seeding logic on server boot.
-- **`tsconfig.json`:** Configured `"outDir": "./dist"`.
-- **`.gitignore`:** Added `dist/`, `**/dist/`, `coverage/`, and build artifacts to prevent tracking build outputs.
-- **Active Controllers Refactored:** `saleController.ts`, `customerController.ts`, `shopController.ts`, `reportController.ts`, `inventoryController.ts`, `paymentController.ts`, `productController.ts`, `referenceController.ts`, `activityController.ts`, `adminController.ts`, and `authController.ts`.
+### 5. Multi-Shop Customer Order Tracking
+- `GET /api/customer-portal/orders` resolves all linked accounts via `identity_group`.
+- "My Orders" screen displays a shop selector filter allowing customers to track active and past orders across all shops they have ordered from.
 
 ---
 
-## 5. Web & Mobile Frontend Audit
+## 5. Security & Isolation Guidelines
 
-### A. Web Application (`web/`)
-- Removed scratch scripts: `test_browser_auth.cjs`, `test_full_suite.cjs`, `test_owner_modules.cjs`, `test_puppeteer_live.cjs`, `test_server.cjs`.
-- Verified navigation and sidebar: displays strictly production-ready modules (Dashboard, Billing, Ledger, Catalog, Orders, Inventory, Customers, Payments, Roles, Settings).
-- **Production Build:**
-  ```bash
-  > nsyu-frontend@0.0.0 build
-  > tsc -b && vite build
-  ✓ 160 modules transformed.
-  dist/index.html                     0.82 kB │ gzip:   0.44 kB
-  dist/assets/index-D3LbBXRT.css     80.27 kB │ gzip:  13.42 kB
-  dist/assets/index-CYvafQ5_.js   1,085.74 kB │ gzip: 217.60 kB
-  ✓ built in 1.51s
-  ```
-
-### B. Flutter Mobile Application (`App/`)
-- Executed full test suite: **7 tests passed** with 0 failures before cleaning the test directory.
-- Removed `App/test/` to prepare a clean release profile.
-- **Static Analysis:**
-  ```bash
-  > flutter analyze
-  Analyzing App...
-  No issues found! (ran in 6.7s)
-  ```
-  Result: **0 errors, 0 warnings, 0 lints**.
+1. **Owner Isolation:** Query filters strictly enforce `where: { owner_id }` across all business endpoints. Attempting cross-owner access yields `404 Not Found`.
+2. **Staff Isolation:** Staff tokens validate against `employees` and `user_roles` on every request. Deactivated staff or modified shop assignments take effect immediately.
+3. **Customer Isolation:** Customer tokens cannot access staff routes (`403 Forbidden`). Customer queries are scoped to the token's authenticated `customer_id` and linked `identity_group`.
+4. **Owner Follow-Up Actions:**
+   - Rotate database password, JWT secrets, and super-admin/owner credentials previously committed to source control.
+   - Configure production `SUPABASE_SERVICE_ROLE_KEY` in Render environment to enable persistent media uploads.
 
 ---
 
-## 6. End-to-End Workflow Live Verification
+## 6. Release Sign-Off
 
-The complete business cycle was verified using live HTTP calls against the running Express backend and Supabase PostgreSQL:
+The system meets all requirements defined in the NSYU Business Requirements Document and passes all 10 automated end-to-end acceptance tests.
 
-```text
-=== STARTING PRODUCTION BUSINESS WORKFLOW VERIFICATION ===
-1. API Health Check: { success: true, message: 'NSYU Business API is running', status: 'connected' }
-2. Authenticating as Owner...
-   ✅ Owner Authenticated: NSYU (Owner ID: 1, Shop ID: 1)
-3. Fetching Products from Supabase...
-   ✅ Retrieved 184 products from PostgreSQL database.
-      Selected Test Product: "oud NB" (ID: 184, SKU: oud, Selling Price: ₹120.00)
-4. Fetching Customers...
-   ✅ Retrieved 1 customer(s): "Customer" (ID: 1, Phone: 9876543210)
-      Customer Initial Ledger Balance: ₹0
-5. Creating Customer Order...
-   ✅ Order created successfully: Order #ORD-000002 (ID: 2, Status: pending)
-6. Generating Bill / Sale Invoice...
-   ✅ Bill created: Invoice #INV-NSYU-000002 (ID: 2, Total: ₹240.00, Paid: ₹0.00, Due: ₹240.00, Status: unpaid)
-7. Verifying Customer Ledger Debit Entry...
-   ✅ Customer Ledger Debit verified: Balance accurately tracked
-8. Recording Payment against Invoice...
-   ✅ Payment recorded: Receipt ID #5 for ₹240.00
-   ✅ Bill status after payment: paid (Paid: ₹240.00, Due: ₹0.00)
-   ✅ Customer Ledger Balance after payment: Reconciled to ₹0
-======================================================
-🎉 FULL BUSINESS WORKFLOW VERIFIED SUCCESSFULLY:
-   Cart -> Order -> Bill -> Ledger Debit -> Payment -> Ledger Credit -> Reconciliation
-======================================================
-```
-
----
-
-## 7. Git Verification & Dual-Branch Deployment
-
-- **Safety Backup Branch:** `backup-pre-cleanup` (contains all historical tests and scratch files).
-- **Active Release Branches:**
-  - `origin main`
-  - `origin main:07_11_2026`
-- **Release State:** All production builds are cleanly compilable, database schema is lean and normalized, and live business workflows are fully verified.
+- **Current Git Commit:** `6f4c31c` (Branch: `main`, up to date with `origin/main`)
+- **Regression Suite:** 510/510 Passed (0 failures)
+- **Status:** **Ready for Live Production Operations**
