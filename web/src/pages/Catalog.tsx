@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { listProducts, createProduct, importProductsApi } from "../api/products";
-import { listCategories } from "../api/categories";
+import { listCategories, createCategory, setCategoryStatus } from "../api/categories";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { usePosStore } from "../store/posStore";
@@ -91,6 +91,13 @@ export default function Catalog() {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Live Category Management State
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryStatus, setNewCategoryStatus] = useState<"active" | "inactive">("active");
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   // Add Product Form State
   const [newProdName, setNewProdName] = useState("");
@@ -264,6 +271,50 @@ export default function Catalog() {
     }
     addItemToCart(p, qty);
     setToastMsg(`✓ Added ${qty} × "${p.name}" to cart`);
+  }
+
+  // Live Category Creation Action
+  async function handleCreateCategory(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    setCreatingCategory(true);
+    setCategoryError(null);
+    try {
+      const res = await createCategory(newCategoryName.trim(), newCategoryStatus);
+      const created = res.data?.data;
+      if (created) {
+        setCategories((prev) => [...prev, created]);
+        setSelectedCategory(created.name);
+        setToastMsg(`✓ Category "${created.name}" created successfully (${newCategoryStatus === "active" ? "Live" : "Offline"})`);
+      } else {
+        loadData();
+      }
+      setShowAddCategoryModal(false);
+      setNewCategoryName("");
+      setNewCategoryStatus("active");
+    } catch (err: any) {
+      setCategoryError(apiErrorMessage(err, "Failed to create category"));
+    } finally {
+      setCreatingCategory(false);
+    }
+  }
+
+  // Toggle Category Live / Offline status
+  async function handleToggleCategoryStatus(c: Category, e: React.MouseEvent) {
+    e.stopPropagation();
+    const nextStatus = c.status === "active" ? "inactive" : "active";
+    setCategories((prev) =>
+      prev.map((item) => (item.id === c.id ? { ...item, status: nextStatus } : item))
+    );
+    try {
+      await setCategoryStatus(c.id, nextStatus);
+      setToastMsg(`✓ Category "${c.name}" is now ${nextStatus === "active" ? "Live" : "Offline"}`);
+    } catch (err: any) {
+      setCategories((prev) =>
+        prev.map((item) => (item.id === c.id ? { ...item, status: c.status } : item))
+      );
+      alert(apiErrorMessage(err, "Failed to update category status"));
+    }
   }
 
   // Quick Add Product Form Submit
@@ -461,7 +512,7 @@ export default function Catalog() {
           <div className="bg-white rounded-3xl border border-gray-200/90 shadow-sm p-4 sticky top-20 max-h-[calc(100vh-6.5rem)] flex flex-col justify-between">
             <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
               
-              {/* Sidebar Header */}
+              {/* Sidebar Header with Live "+ Add Category" button */}
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-emerald-100/80 text-emerald-800 flex items-center justify-center font-bold">
@@ -474,9 +525,20 @@ export default function Catalog() {
                   </div>
                   <h2 className="font-black text-gray-900 text-sm tracking-tight">Categories</h2>
                 </div>
-                <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                  {categories.length} total
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCategoryModal(true)}
+                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-[#047857] text-[11px] font-bold rounded-lg border border-emerald-200 transition flex items-center gap-1 shadow-2xs"
+                    title="Add a new product category live"
+                  >
+                    <span className="text-xs font-black">+</span>
+                    <span>Add</span>
+                  </button>
+                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                    {categories.length}
+                  </span>
+                </div>
               </div>
 
               {/* Quick Category Filter Input (if many categories) */}
@@ -590,18 +652,43 @@ export default function Catalog() {
                         </div>
                       </div>
 
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
-                          isSelected
-                            ? "bg-emerald-600 text-white"
-                            : "bg-white text-gray-600 border border-gray-200"
-                        }`}
-                      >
-                        {count}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Live Status indicator button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleCategoryStatus(c, e)}
+                          title={c.status === "active" ? "Category is Live — click to set offline" : "Category is Offline — click to set Live"}
+                          className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider transition ${
+                            c.status === "active"
+                              ? isSelected ? "bg-emerald-600 text-white" : "bg-emerald-100 text-emerald-800"
+                              : isSelected ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                          }`}
+                        >
+                          {c.status === "active" ? "Live" : "Off"}
+                        </button>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
+                            isSelected
+                              ? "bg-emerald-600 text-white"
+                              : "bg-white text-gray-600 border border-gray-200"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
+
+                {/* Live "+ Add Category" button in Menu / Sidebar */}
+                <button
+                  type="button"
+                  onClick={() => setShowAddCategoryModal(true)}
+                  className="w-full p-2 rounded-2xl border border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/60 text-xs font-bold text-emerald-800 transition flex items-center justify-center gap-2 mt-2"
+                >
+                  <span className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-xs">+</span>
+                  <span>+ Add Category</span>
+                </button>
               </div>
 
             </div>
@@ -1277,6 +1364,106 @@ export default function Catalog() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* LIVE ADD CATEGORY MODAL                                        */}
+      {/* ============================================================== */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-sm">
+                  +
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-gray-900">Add Product Category</h3>
+                  <p className="text-[11px] text-gray-500 font-medium">Create a category live and manage catalog visibility.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddCategoryModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {categoryError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold">
+                {categoryError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCategory} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="e.g. Wireless Audio, Smart Watches..."
+                  className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-900"
+                />
+              </div>
+
+              {/* Live on Storefront ON / OFF Option */}
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-200">
+                <div>
+                  <div className="text-xs font-bold text-gray-800">Live Status (Visible on Storefront)</div>
+                  <div className="text-[11px] text-gray-500">
+                    {newCategoryStatus === "active" ? "Category is Live & visible immediately" : "Hidden in catalog until turned Live"}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={newCategoryStatus === "active"}
+                  onClick={() => setNewCategoryStatus(newCategoryStatus === "active" ? "inactive" : "active")}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    newCategoryStatus === "active" ? "bg-emerald-600" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      newCategoryStatus === "active" ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCategoryModal(false)}
+                  className="px-4 py-2 font-bold text-gray-600 hover:bg-gray-100 rounded-xl text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingCategory || !newCategoryName.trim()}
+                  className="px-5 py-2 bg-[#047857] hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
+                >
+                  {creatingCategory ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Creating…</span>
+                    </>
+                  ) : (
+                    <span>Add Category</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

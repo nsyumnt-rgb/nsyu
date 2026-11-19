@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function BusinessFooter() {
   return (
-    <footer className="bg-white text-slate-600 border-t border-slate-200 mt-auto">
+    <footer className="bg-[#064E3B] text-emerald-100 border-t border-emerald-900 mt-auto shadow-inner">
       {/* Main Footer Content */}
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
@@ -10,31 +10,31 @@ export default function BusinessFooter() {
           {/* Col 1: Brand & Description */}
           <div className="space-y-3.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-700 shadow-sm">
-                <svg className="w-4.5 h-4.5 text-brand-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <div className="w-8 h-8 rounded-xl bg-emerald-800/80 border border-emerald-600/60 flex items-center justify-center text-white shadow-sm">
+                <svg className="w-4.5 h-4.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                   <polyline points="9 22 9 12 15 12 15 22" />
                 </svg>
               </div>
               <div>
-                <span className="font-black text-navy-900 text-base tracking-tight block">NSYU Business</span>
-                <span className="text-[10.5px] text-brand-700 font-semibold block -mt-0.5">Shop Management System</span>
+                <span className="font-black text-white text-base tracking-tight block">NSYU Business</span>
+                <span className="text-[10.5px] text-emerald-300 font-semibold block -mt-0.5">Shop Management System</span>
               </div>
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed font-normal">
+            <p className="text-xs text-emerald-200/80 leading-relaxed font-normal">
               Unified retail and wholesale commerce platform powering real-time inventory tracking, 
               point-of-sale billing, digital catalogs, and multi-shop ledger control.
             </p>
-            <div className="flex items-center gap-2 text-[11px] text-brand-700 font-semibold pt-1">
-              <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+            <div className="flex items-center gap-2 text-[11px] text-emerald-300 font-semibold pt-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>All systems operational & synced</span>
             </div>
           </div>
 
           {/* Col 2: Quick Links */}
           <div>
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3.5">Quick Links</h3>
-            <ul className="space-y-2 text-xs font-medium text-slate-600">
+            <h3 className="text-xs font-black uppercase tracking-wider text-emerald-300 mb-3.5">Quick Links</h3>
+            <ul className="space-y-2 text-xs font-medium text-emerald-100/90">
               <li>
                 <Link to="/app" className="hover:text-white hover:underline transition">Home Dashboard</Link>
               </li>
@@ -59,7 +59,7 @@ export default function BusinessFooter() {
           {/* Col 3: Customer Care & Info */}
           <div>
             <h3 className="text-xs font-black uppercase tracking-wider text-emerald-300 mb-3.5">Support & Company</h3>
-            <ul className="space-y-2 text-xs font-medium text-emerald-200/90">
+            <ul className="space-y-2 text-xs font-medium text-emerald-100/90">
               <li>
                 <a href="https://www.nsyu.com" target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline transition">About NSYU</a>
               </li>

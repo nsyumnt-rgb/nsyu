@@ -5,8 +5,8 @@ export function listCategories() {
   return api.get<ApiEnvelope<Category[]>>("/categories");
 }
 
-export function createCategory(name: string) {
-  return api.post<ApiEnvelope<Category>>("/categories", { name });
+export function createCategory(name: string, status?: "active" | "inactive") {
+  return api.post<ApiEnvelope<Category>>("/categories", { name, status: status || "active" });
 }
 
 export function updateCategory(categoryId: number, name: string) {

@@ -38,16 +38,36 @@ export default function MarketCategorySidebar({
       .catch(() => {});
   }, []);
 
-  // Merge default showcase categories with database categories
-  const categoriesToDisplay = DEFAULT_CATEGORIES.map((cat) => {
-    const matched = dbCategories.find(
-      (c) => c.name.toLowerCase() === cat.name.toLowerCase()
-    );
-    return {
-      ...cat,
-      count: matched ? matched.count : undefined,
-    };
-  });
+  // Dynamic categories from database merged with default icons
+  const categoriesToDisplay = (function() {
+    const list: CategoryItem[] = [];
+    const addedNames = new Set<string>();
+
+    // 1. Add DB categories first so real created categories always show
+    for (const dbCat of dbCategories) {
+      const def = DEFAULT_CATEGORIES.find(
+        (d) => d.name.toLowerCase() === dbCat.name.toLowerCase()
+      );
+      list.push({
+        name: dbCat.name,
+        count: dbCat.count,
+        icon: def ? def.icon : "📦",
+      });
+      addedNames.add(dbCat.name.toLowerCase());
+    }
+
+    // 2. Add remaining showcase categories
+    for (const def of DEFAULT_CATEGORIES) {
+      if (!addedNames.has(def.name.toLowerCase()) && def.name !== "More Categories") {
+        list.push(def);
+        addedNames.add(def.name.toLowerCase());
+      }
+    }
+
+    // 3. Put "More Categories" at the end
+    list.push({ name: "More Categories", icon: "•••" });
+    return list;
+  })();
 
   return (
     <aside className="w-full bg-white rounded-2xl border border-gray-200/80 p-4 shadow-xs space-y-3">

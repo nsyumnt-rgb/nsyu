@@ -3,13 +3,17 @@ import { Category, Subcategory } from "../models";
 import { logAudit } from "../utils/audit";
 
 export async function createCategory(req: Request, res: Response) {
-  const { name } = req.body;
+  const { name, status } = req.body;
   if (!name) return res.status(400).json({ success: false, message: "name is required" });
 
   const existing = await Category.findOne({ where: { owner_id: req.auth!.ownerId, name } });
   if (existing) return res.status(409).json({ success: false, message: "Category already exists" });
 
-  const category = await Category.create({ owner_id: req.auth!.ownerId, name });
+  const category = await Category.create({
+    owner_id: req.auth!.ownerId,
+    name,
+    status: status === "inactive" ? "inactive" : "active",
+  });
   await logAudit({ req, module: "products", action: "create_category", entityType: "Category", entityId: category.id });
   return res.status(201).json({ success: true, data: category });
 }
