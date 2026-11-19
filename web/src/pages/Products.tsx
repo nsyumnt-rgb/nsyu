@@ -378,7 +378,9 @@ function ProductsInner() {
         return false;
       }
 
-      // Stock Status filter
+      // Status & Stock filter
+      if (stockStatusFilter === "Live" && p.status !== "active") return false;
+      if (stockStatusFilter === "Offline" && p.status === "active") return false;
       const stock = p.stocks?.[0]?.current_stock ?? 0;
       if (stockStatusFilter === "In Stock" && stock <= 0) return false;
       if (stockStatusFilter === "Low Stock" && (stock > (Number(p.min_stock ?? 5) || 5) || stock <= 0)) return false;
@@ -419,6 +421,8 @@ function ProductsInner() {
   const stockOf = (p: (typeof products)[number]) => Number(p.stocks?.[0]?.current_stock ?? 0);
   const minOf = (p: (typeof products)[number]) => Number(p.min_stock ?? 5) || 5;
   const totalCount = products.length;
+  const liveCount = products.filter((p) => p.status === "active").length;
+  const offlineCount = products.filter((p) => p.status !== "active").length;
   const lowStockCount = products.filter((p) => stockOf(p) > 0 && stockOf(p) <= minOf(p)).length;
   const outOfStockCount = products.filter((p) => stockOf(p) <= 0).length;
 
@@ -676,6 +680,14 @@ function ProductsInner() {
             <div>
               <div className="text-xs text-gray-500 font-bold">Total Products</div>
               <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{totalCount}</div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                  {liveCount} Live
+                </span>
+                <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200">
+                  {offlineCount} Offline
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -782,9 +794,11 @@ function ProductsInner() {
           <select
             value={stockStatusFilter}
             onChange={(e) => { setStockStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none"
+            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none cursor-pointer"
           >
             <option value="All">All Status</option>
+            <option value="Live">Live (Active)</option>
+            <option value="Offline">Offline (Inactive)</option>
             <option value="In Stock">In Stock</option>
             <option value="Low Stock">Low Stock</option>
             <option value="Out of Stock">Out of Stock</option>
@@ -855,7 +869,7 @@ function ProductsInner() {
                 key={p.id}
                 className="bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 shadow-xs hover:shadow-md transition p-3 flex flex-col justify-between group relative"
               >
-                <div>
+                <div className="cursor-pointer" onClick={() => setQuickViewProduct(p)}>
                   {/* Image Container with Top-Right Status Badge */}
                   <div className="w-full h-32 bg-gray-50/70 rounded-xl mb-2.5 flex items-center justify-center overflow-hidden relative">
                     {/* Status Badge in top right */}
@@ -900,12 +914,12 @@ function ProductsInner() {
                   </div>
                 </div>
 
-                {/* Bottom Action Bar: Add to Cart + View Eye Button matching Image 2 */}
-                <div className="mt-3 flex items-center gap-1.5">
+                {/* Bottom Action Bar: Full Width Add to Cart (view eye button removed) */}
+                <div className="mt-3">
                   <button
                     type="button"
                     onClick={() => handleAddToCart(p)}
-                    className="flex-1 py-1.5 bg-[#047857] hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5"
+                    className="w-full py-2 bg-[#047857] hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="9" cy="21" r="1" />
@@ -913,18 +927,6 @@ function ProductsInner() {
                       <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
                     </svg>
                     <span>Add to Cart</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setQuickViewProduct(p)}
-                    className="p-1.5 border border-gray-200 hover:border-gray-300 rounded-xl text-gray-500 hover:text-gray-900 transition hover:bg-gray-50"
-                    title="Quick View / Edit"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
                   </button>
                 </div>
               </div>

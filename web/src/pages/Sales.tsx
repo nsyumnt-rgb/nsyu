@@ -24,7 +24,7 @@ function SalesInner() {
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("");
-  const [allShopsToggle, setAllShopsToggle] = useState(false);
+  const [allShopsToggle, setAllShopsToggle] = useState(!shopId);
   const [search, setSearch] = useState("");
 
   // Create Sale Modal State
@@ -530,7 +530,7 @@ function SalesInner() {
                               const pStock = getProductCurrentStock(p.id);
                               return (
                                 <option key={p.id} value={p.id} disabled={pStock <= 0}>
-                                  {p.name} (Stock: {pStock})
+                                  {p.name} {p.status !== "active" ? "(Offline)" : ""} (Stock: {pStock})
                                 </option>
                               );
                             })}

@@ -29,7 +29,7 @@ function rangesFor(period: Period): { cur: Range; prev: Range | null } {
   const today = startOfDay(new Date());
   const days = period === "today" ? 1 : period === "week" ? 7 : 30;
   const from = addDays(today, -(days - 1));
-  const to = new Date(); // now
+  const to = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
   const prevTo = new Date(from.getTime() - 1);
   const prevFrom = addDays(from, -days);
   return { cur: { from, to }, prev: { from: prevFrom, to: prevTo } };
@@ -86,7 +86,7 @@ export default function Dashboard() {
   const owner = useAuthStore((s) => s.owner);
   const employee = useAuthStore((s) => s.employee);
 
-  const [period, setPeriod] = useState<Period>("today");
+  const [period, setPeriod] = useState<Period>("month");
   const [loading, setLoading] = useState(true);
   const [kpi, setKpi] = useState({ sales: 0, prevSales: 0, orders: 0, prevOrders: 0, purchases: 0, prevPurchases: 0 });
   const [hasPrev, setHasPrev] = useState(true);
@@ -104,8 +104,8 @@ export default function Dashboard() {
     setLoading(true);
     const { cur, prev } = rangesFor(period);
     const empty = { data: { data: [] as any[] } };
-    const salesQ = (r: Range) => listSales({ from: iso(r.from), to: iso(r.to), limit: 1000 } as any).catch(() => empty);
-    const purchQ = (r: Range) => listPurchases({ from: iso(r.from), to: iso(r.to), limit: 500 }).catch(() => empty);
+    const salesQ = (r: Range) => listSales({ from: iso(r.from), to: iso(r.to), limit: 1000, allShops: true } as any).catch(() => empty);
+    const purchQ = (r: Range) => listPurchases({ from: iso(r.from), to: iso(r.to), limit: 500, allShops: true } as any).catch(() => empty);
     const ordersQ = (r: Range) => getOrders({ startDate: iso(r.from), endDate: iso(r.to) }).catch(() => empty);
 
     const [s, ps, p, pp, o, po, cs, cp, out, prod, allOrders] = await Promise.all([

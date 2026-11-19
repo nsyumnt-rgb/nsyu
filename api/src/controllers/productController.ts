@@ -163,7 +163,7 @@ export async function updateProduct(req: Request, res: Response) {
 export async function listProductsOwnerView(req: Request, res: Response) {
   const limit = req.query.limit ? Math.min(Math.max(Number(req.query.limit), 1), 500) : undefined;
   const offset = req.query.offset ? Math.max(Number(req.query.offset), 0) : undefined;
-  const statusFilter = req.query.status ? String(req.query.status) : "active";
+  const statusFilter = req.query.status ? String(req.query.status) : "all";
 
   const where: any = { owner_id: req.auth!.ownerId };
   if (statusFilter !== "all") {

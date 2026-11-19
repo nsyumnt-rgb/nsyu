@@ -1,8 +1,10 @@
 import { api } from "./client";
 import type { ApiEnvelope, CustomerProduct, Product, ProductImage, ProductLocation } from "../types";
 
-export function listProducts() {
-  return api.get<ApiEnvelope<Product[]>>("/products");
+export function listProducts(params?: { status?: string; limit?: number; offset?: number }) {
+  return api.get<ApiEnvelope<Product[]>>("/products", {
+    params: { status: "all", ...params },
+  });
 }
 
 export function getProduct(productId: number | string) {

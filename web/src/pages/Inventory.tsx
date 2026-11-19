@@ -49,7 +49,7 @@ export default function Inventory() {
 
   // Filters: All Products, Low Stock, Out of Stock, Stock Movement
   const [activeFilter, setActiveFilter] = useState<
-    "All" | "Low Stock" | "Out of Stock" | "Stock Movement"
+    "All" | "Live" | "Offline" | "Low Stock" | "Out of Stock" | "Stock Movement"
   >("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -133,6 +133,10 @@ export default function Inventory() {
 
   // Real database-calculated summary metrics
   const totalProducts = products.length;
+  const liveProducts = products.filter((p) => p.status === "active");
+  const liveCount = liveProducts.length;
+  const offlineProducts = products.filter((p) => p.status !== "active");
+  const offlineCount = offlineProducts.length;
   const totalStock = products.reduce(
     (sum, p) => sum + Number(p.stocks?.[0]?.current_stock ?? 0),
     0
@@ -164,6 +168,8 @@ export default function Inventory() {
       const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
       const min = Number(p.min_stock ?? 5) || 5;
 
+      if (activeFilter === "Live" && p.status !== "active") return false;
+      if (activeFilter === "Offline" && p.status === "active") return false;
       if (activeFilter === "Low Stock" && (stock <= 0 || stock > min)) return false;
       if (activeFilter === "Out of Stock" && stock > 0) return false;
 
@@ -685,6 +691,14 @@ export default function Inventory() {
               <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
                 {totalProducts}
               </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                  {liveCount} Live
+                </span>
+                <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200">
+                  {offlineCount} Offline
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -851,6 +865,32 @@ export default function Inventory() {
             }`}
           >
             All Products ({totalProducts})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("Live")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+              activeFilter === "Live"
+                ? "bg-white text-emerald-800 shadow-xs ring-1 ring-emerald-500/30"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Live ({liveCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveFilter("Offline")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
+              activeFilter === "Offline"
+                ? "bg-white text-gray-800 shadow-xs ring-1 ring-gray-400/30"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+            <span>Offline ({offlineCount})</span>
           </button>
 
           <button

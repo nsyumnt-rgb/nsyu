@@ -559,7 +559,13 @@ export async function listSales(req: Request, res: Response) {
   if (from || to) {
     where.invoice_date = {};
     if (from) where.invoice_date[Op.gte] = new Date(String(from));
-    if (to) where.invoice_date[Op.lte] = new Date(String(to));
+    if (to) {
+      const toDate = new Date(String(to));
+      if (String(to).length <= 10) {
+        toDate.setHours(23, 59, 59, 999);
+      }
+      where.invoice_date[Op.lte] = toDate;
+    }
   }
 
   const sales = await Sale.findAll({
