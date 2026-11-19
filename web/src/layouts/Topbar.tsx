@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { usePosStore } from "../store/posStore";
-import { listShops } from "../api/shops";
+import { listShops, switchShop } from "../api/shops";
 import { logout as logoutApi } from "../api/auth";
 import { resolveReferenceApi, type ResolvedReference } from "../api/reference";
 import {
@@ -113,10 +113,14 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
   const posCount = usePosStore((s) => s.count);
   const setPosOpen = usePosStore((s) => s.setOpen);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
+  const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const storeLogout = useAuthStore((s) => s.logout);
 
   const [shops, setShops] = useState<Shop[]>([]);
+  const [shopMenuOpen, setShopMenuOpen] = useState(false);
+  const [switchingShopId, setSwitchingShopId] = useState<number | null>(null);
+  const shopMenuRef = useRef<HTMLDivElement>(null);
   const [userOpen, setUserOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState<ResolvedReference | null>(null);
@@ -143,6 +147,25 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shops, shopId]);
 
+  async function handleShopSwitch(s: Shop) {
+    if (s.id === shopId) {
+      setShopMenuOpen(false);
+      return;
+    }
+    setSwitchingShopId(s.id);
+    try {
+      const res = await switchShop(s.id);
+      const { accessToken } = res.data.data!;
+      setAccessToken(accessToken, s.id, s.roleId ?? null, s.roleName ?? null);
+      setActiveShop(s);
+      setShopMenuOpen(false);
+    } catch (err) {
+      console.error("Failed to switch shop:", err);
+    } finally {
+      setSwitchingShopId(null);
+    }
+  }
+
   // Click outside listener for all popovers
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -154,6 +177,9 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
       }
       if (notifMenuRef.current && !notifMenuRef.current.contains(e.target as Node)) {
         setNotifOpen(false);
+      }
+      if (shopMenuRef.current && !shopMenuRef.current.contains(e.target as Node)) {
+        setShopMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", onClick);
@@ -395,16 +421,90 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
 
       {/* Right Controls */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-        {/* Active Shop Badge */}
-        <div className="hidden md:flex items-center gap-2">
-          <div className="flex items-center gap-2 pl-2.5 pr-3 py-1.5 bg-brand-50/70 border border-brand-100 rounded-xl text-[13px] font-semibold text-navy-900">
+        {/* Interactive Active Shop Switcher */}
+        <div className="relative" ref={shopMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShopMenuOpen((v) => !v)}
+            className="flex items-center gap-2 pl-2.5 pr-2 sm:pr-3 py-1.5 bg-brand-50/80 hover:bg-brand-100/90 border border-brand-200/70 rounded-xl text-[12px] sm:text-[13px] font-semibold text-navy-900 transition-colors shadow-2xs cursor-pointer"
+            title="Click to switch shop"
+            aria-expanded={shopMenuOpen}
+          >
             <svg className="w-4 h-4 text-brand-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            <span className="max-w-[160px] truncate">{activeShop?.name || "Main Shop"}</span>
-            <span className="text-[11px] font-mono text-slate-400">({activeShop?.code || "NSYU-01"})</span>
-          </div>
+            <span className="max-w-[100px] sm:max-w-[140px] truncate">{activeShop?.name || "Main Shop"}</span>
+            <span className="hidden sm:inline text-[11px] font-mono text-slate-400">({activeShop?.code || "NSYU-01"})</span>
+            <svg className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${shopMenuOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+
+          {shopMenuOpen && (
+            <div className="absolute right-0 sm:left-0 sm:right-auto mt-2 w-64 bg-white rounded-xl shadow-lift border border-border py-1.5 z-50 animate-fade-in divide-y divide-slate-100">
+              <div className="px-3.5 py-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Assigned Shops</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Switch branch to manage its inventory & billing</div>
+              </div>
+              <div className="max-h-60 overflow-y-auto py-1">
+                {shops.length === 0 ? (
+                  <div className="px-3.5 py-2 text-xs text-slate-400 italic">No shops available</div>
+                ) : (
+                  shops.map((s) => {
+                    const isActive = s.id === shopId;
+                    const isSwitching = switchingShopId === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        disabled={isSwitching}
+                        onClick={() => handleShopSwitch(s)}
+                        className={`w-full text-left px-3.5 py-2 text-xs transition-colors flex items-center justify-between ${
+                          isActive ? "bg-emerald-50/80 text-emerald-900 font-semibold" : "text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate font-medium">{s.name}</span>
+                            {s.roleName && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600 font-normal">
+                                {s.roleName}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] font-mono text-slate-400">{s.code}</div>
+                        </div>
+                        {isSwitching ? (
+                          <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                        ) : isActive ? (
+                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <path d="M20 6 9 17l-5-5" />
+                            </svg>
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {accountType === "owner" && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShopMenuOpen(false);
+                      navigate("/app/shops");
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-brand-600 hover:bg-brand-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <span>+</span> Manage All Shops
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Current bill (only while the Sales screen is open) */}
@@ -611,6 +711,15 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
                 <div className="text-xs font-semibold text-slate-800">{displayName}</div>
                 <div className="text-[11px] text-slate-400">{displayRole}</div>
               </div>
+              <button
+                onClick={() => {
+                  setUserOpen(false);
+                  setShopMenuOpen(true);
+                }}
+                className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+              >
+                <span>🏪</span> Switch Shop
+              </button>
               <button
                 onClick={() => {
                   setUserOpen(false);

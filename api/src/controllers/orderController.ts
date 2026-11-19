@@ -113,11 +113,19 @@ export async function getOrderStats(req: Request, res: Response) {
  */
 export async function getOrders(req: Request, res: Response) {
   const ownerId = req.auth!.ownerId;
-  const shopId = req.auth!.shopId;
-  const { status, paymentStatus, customerId, search, startDate, endDate } = req.query;
+  const { status, paymentStatus, customerId, search, startDate, endDate, shopId: queryShopId, allShops } = req.query;
+
+  let targetShopId: number | undefined = req.auth!.shopId ?? undefined;
+  if (req.auth!.isOwner) {
+    if (allShops === "true") {
+      targetShopId = undefined;
+    } else if (queryShopId) {
+      targetShopId = Number(queryShopId);
+    }
+  }
 
   const where: any = { owner_id: ownerId };
-  if (shopId) where.shop_id = shopId;
+  if (targetShopId) where.shop_id = targetShopId;
 
   // Scoping for customer portal
   if (req.auth?.isCustomer && req.auth.customerId) {

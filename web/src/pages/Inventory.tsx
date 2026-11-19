@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getInventoryHistory,
   recordMovement,
@@ -101,13 +101,26 @@ export default function Inventory() {
   const [editMinStock, setEditMinStock] = useState("5");
   const [editingProduct, setEditingProduct] = useState(false);
 
+  // Helper to reliably read current stock for active shop
+  const getProductStock = useCallback(
+    (p: any) => {
+      if (!p?.stocks || p.stocks.length === 0) return 0;
+      if (shopId) {
+        const match = p.stocks.find((s: any) => s.shop_id === shopId);
+        if (match) return Number(match.current_stock || 0);
+      }
+      return Number(p.stocks[0]?.current_stock || 0);
+    },
+    [shopId]
+  );
+
   // Load centralized inventory data
   async function loadData() {
     setLoading(true);
     setError(null);
     try {
       const [prodRes, catRes, histRes] = await Promise.all([
-        listProducts(),
+        listProducts({ shopId: shopId || undefined } as any),
         listCategories(),
         getInventoryHistory({ limit: 120 }),
       ]);
@@ -138,17 +151,17 @@ export default function Inventory() {
   const offlineProducts = products.filter((p) => p.status !== "active");
   const offlineCount = offlineProducts.length;
   const totalStock = products.reduce(
-    (sum, p) => sum + Number(p.stocks?.[0]?.current_stock ?? 0),
+    (sum, p) => sum + getProductStock(p),
     0
   );
   const lowStockProducts = products.filter((p) => {
-    const s = Number(p.stocks?.[0]?.current_stock ?? 0);
+    const s = getProductStock(p);
     const min = Number(p.min_stock ?? 5) || 5;
     return s > 0 && s <= min;
   });
   const lowStockCount = lowStockProducts.length;
   const outOfStockProducts = products.filter(
-    (p) => Number(p.stocks?.[0]?.current_stock ?? 0) <= 0
+    (p) => getProductStock(p) <= 0
   );
   const outOfStockCount = outOfStockProducts.length;
 
@@ -165,7 +178,7 @@ export default function Inventory() {
   // Filtered Products for Table
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
+      const stock = getProductStock(p);
       const min = Number(p.min_stock ?? 5) || 5;
 
       if (activeFilter === "Live" && p.status !== "active") return false;
@@ -184,7 +197,7 @@ export default function Inventory() {
       }
       return true;
     });
-  }, [products, activeFilter, categoryFilter, searchQuery]);
+  }, [products, activeFilter, categoryFilter, searchQuery, getProductStock]);
 
   // Filtered Movement History
   const filteredMovements = useMemo(() => {
@@ -240,7 +253,7 @@ export default function Inventory() {
   function handleStartInlineEdit(p: Product) {
     const pp = Number(p.purchase_price || 0);
     const sp = Number(p.selling_price || 0);
-    const currentStock = Number(p.stocks?.[0]?.current_stock ?? 0);
+    const currentStock = getProductStock(p);
     const margin = sp > 0 ? (((sp - pp) / sp) * 100).toFixed(1) : "0.0";
 
     setEditingRowId(p.id);
@@ -329,7 +342,7 @@ export default function Inventory() {
       });
 
       // 2. Check if stock quantity was modified inline
-      const oldStock = Number(product.stocks?.[0]?.current_stock ?? 0);
+      const oldStock = getProductStock(product);
       const newStock = Math.max(0, Math.trunc(Number(inlineDraft.stockQuantity) || 0));
       const delta = newStock - oldStock;
 
@@ -510,7 +523,7 @@ export default function Inventory() {
       "Status",
     ];
     const rows = filteredProducts.map((p) => {
-      const s = Number(p.stocks?.[0]?.current_stock ?? 0);
+      const s = getProductStock(p);
       const pp = Number(p.purchase_price || 0);
       const sp = Number(p.selling_price || 0);
       const margin = sp > 0 ? (((sp - pp) / sp) * 100).toFixed(1) : "0.0";
@@ -1108,7 +1121,7 @@ export default function Inventory() {
               ) : (
                 filteredProducts.map((p) => {
                   const isEditing = editingRowId === p.id && inlineDraft !== null;
-                  const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
+                  const stock = getProductStock(p);
                   const purchasePrice = Number(p.purchase_price || 0);
                   const sellingPrice = Number(p.selling_price || 0);
                   const stockValue = Math.max(0, stock) * purchasePrice;
@@ -1622,17 +1635,17 @@ export default function Inventory() {
                     </span>
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
-                        Number(viewProduct.stocks?.[0]?.current_stock ?? 0) <= 0
+                        getProductStock(viewProduct) <= 0
                           ? "bg-rose-100 text-rose-700"
-                          : Number(viewProduct.stocks?.[0]?.current_stock ?? 0) <=
+                          : getProductStock(viewProduct) <=
                             Number(viewProduct.min_stock || 5)
                           ? "bg-amber-100 text-amber-800"
                           : "bg-emerald-100 text-emerald-800"
                       }`}
                     >
-                      {Number(viewProduct.stocks?.[0]?.current_stock ?? 0) <= 0
+                      {getProductStock(viewProduct) <= 0
                         ? "Out of Stock"
-                        : Number(viewProduct.stocks?.[0]?.current_stock ?? 0) <=
+                        : getProductStock(viewProduct) <=
                           Number(viewProduct.min_stock || 5)
                         ? "Low Stock"
                         : "In Stock"}
@@ -1640,7 +1653,7 @@ export default function Inventory() {
                   </div>
                   <div className="flex items-baseline justify-between">
                     <span className="text-2xl font-black text-gray-900">
-                      {Number(viewProduct.stocks?.[0]?.current_stock ?? 0)}{" "}
+                      {getProductStock(viewProduct)}{" "}
                       <span className="text-xs font-normal text-gray-500">
                         units on hand
                       </span>
@@ -1705,7 +1718,7 @@ export default function Inventory() {
                       {formatINR(
                         Math.max(
                           0,
-                          Number(viewProduct.stocks?.[0]?.current_stock ?? 0)
+                          getProductStock(viewProduct)
                         ) * Number(viewProduct.purchase_price || 0)
                       )}
                     </span>
@@ -1911,7 +1924,7 @@ export default function Inventory() {
                   Current Stock on Hand:
                 </span>
                 <span className="font-black text-sm text-gray-900">
-                  {Number(selectedProduct.stocks?.[0]?.current_stock ?? 0)} units
+                  {getProductStock(selectedProduct)} units
                 </span>
               </div>
 

@@ -93,6 +93,7 @@ function SalesInner() {
   function loadSales() {
     setLoading(true);
     listSales({
+      shopId: isOwner && allShopsToggle ? undefined : (shopId || undefined),
       status: statusFilter || undefined,
       allShops: isOwner && allShopsToggle ? true : undefined,
     })

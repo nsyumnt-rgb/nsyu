@@ -164,6 +164,7 @@ export async function listProductsOwnerView(req: Request, res: Response) {
   const limit = req.query.limit ? Math.min(Math.max(Number(req.query.limit), 1), 500) : undefined;
   const offset = req.query.offset ? Math.max(Number(req.query.offset), 0) : undefined;
   const statusFilter = req.query.status ? String(req.query.status) : "all";
+  const targetShopId = req.query.shopId ? Number(req.query.shopId) : req.auth!.shopId;
 
   const where: any = { owner_id: req.auth!.ownerId };
   if (statusFilter !== "all") {
@@ -181,7 +182,7 @@ export async function listProductsOwnerView(req: Request, res: Response) {
       {
         model: ProductStock,
         as: "stocks",
-        where: req.auth!.shopId ? { shop_id: req.auth!.shopId } : undefined,
+        where: targetShopId ? { shop_id: targetShopId } : undefined,
         required: false,
         include: [{ model: Shop, as: "shop", attributes: ["id", "name", "code"] }],
       },
