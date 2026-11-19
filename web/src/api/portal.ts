@@ -97,25 +97,13 @@ export async function resetPasswordApi(identifier: string, otp: string, newPassw
 }
 
 export async function requestOtpApi(identifier: string, shopCode?: string, shopId?: number) {
-  const isEmail = identifier.includes("@");
-  const payload: any = { identifier, shopCode, shopId };
-  if (isEmail) {
-    payload.email = identifier;
-  } else {
-    payload.phone = identifier;
-  }
+  const payload: any = { identifier: identifier.trim().toLowerCase(), email: identifier.trim().toLowerCase(), shopCode, shopId };
   const res = await portalApi.post("/customer-portal/auth/request-otp", payload);
   return res.data;
 }
 
 export async function verifyOtpApi(identifier: string, otp: string, shopCode?: string, shopId?: number) {
-  const isEmail = identifier.includes("@");
-  const payload: any = { identifier, otp, shopCode, shopId };
-  if (isEmail) {
-    payload.email = identifier;
-  } else {
-    payload.phone = identifier;
-  }
+  const payload: any = { identifier: identifier.trim().toLowerCase(), email: identifier.trim().toLowerCase(), otp, shopCode, shopId };
   const res = await portalApi.post("/customer-portal/auth/verify-otp", payload);
   return res.data;
 }

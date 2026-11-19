@@ -40,7 +40,6 @@ export default function Login() {
   const [regName, setRegName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
-  const [regShopCode, setRegShopCode] = useState("");
   const [regAddress, setRegAddress] = useState("");
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
@@ -114,7 +113,7 @@ export default function Login() {
     setError(null);
 
     if (!identifier.trim()) {
-      setError(activeTab === "customer" ? "Please enter your Email or Mobile Number." : "Please enter your Email or Username.");
+      setError(activeTab === "customer" ? "Please enter your registered email address." : "Please enter your Email or Username.");
       return;
     }
 
@@ -164,6 +163,10 @@ export default function Login() {
     // CUSTOMER PORTAL LOGIN FLOW
     // ─────────────────────────────────────────────────────────────
     const cleanId = identifier.trim();
+    if (!cleanId.includes("@")) {
+      setError("Customer OTP login requires your registered email. No SMS OTP is sent.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await requestOtpApi(cleanId);
@@ -187,8 +190,8 @@ export default function Login() {
   async function handleVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     setOtpError(null);
-    if (!otpCode || otpCode.trim().length !== 4) {
-      setOtpError("Please enter the 4-digit code.");
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setOtpError("Please enter the 6-digit code sent to your registered email.");
       return;
     }
 
@@ -212,22 +215,21 @@ export default function Login() {
     setRegError(null);
     setRegSuccess(null);
 
-    if (!regShopCode.trim() || !regName.trim() || !regPhone.trim() || !regEmail.trim()) {
-      setRegError("Shop code, full name, mobile number and email are required.");
+    if (!regName.trim() || !regPhone.trim() || !regEmail.trim()) {
+      setRegError("Full name, mobile number and email are required.");
       return;
     }
 
     setRegLoading(true);
     try {
       const res = await portalApi.post("/customer-portal/auth/register", {
-        shopCode: regShopCode.trim(),
         name: regName.trim(),
         phone: regPhone.trim(),
         email: regEmail.trim(),
         address: regAddress.trim() || undefined,
       });
 
-      setRegSuccess(res.data?.message || "Account registered successfully! A 4-digit verification code was sent to your email.");
+      setRegSuccess(res.data?.message || "Account registered successfully! A 6-digit verification code was sent to your email.");
       setIdentifier(regPhone.trim() || regEmail.trim());
       setTimeout(() => {
         setShowRegisterModal(false);
@@ -236,7 +238,7 @@ export default function Login() {
         setOtpCooldown(60);
       }, 1200);
     } catch (err: any) {
-      setRegError(err.response?.data?.message || "Registration failed. Please check your shop code and phone number.");
+      setRegError(err.response?.data?.message || "Registration failed. Please check your details and try again.");
     } finally {
       setRegLoading(false);
     }
@@ -416,7 +418,7 @@ export default function Login() {
         <Modal
           onClose={() => setShowOtpModal(false)}
           title="Enter your code"
-          subtitle={<>We sent a 4-digit code to {maskedEmail ? <strong className="text-navy-900">{maskedEmail}</strong> : "your registered email"}.</>}
+          subtitle={<>We sent a 6-digit code to {maskedEmail ? <strong className="text-navy-900">{maskedEmail}</strong> : "your registered email"}. OTP is email-only.</>}
         >
           {otpError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 text-center">{otpError}</p>}
           <form onSubmit={handleVerifyOtp} className="space-y-3">
@@ -424,16 +426,16 @@ export default function Login() {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
-              maxLength={4}
+              maxLength={6}
               autoFocus
               required
-              aria-label="4-digit code"
+              aria-label="6-digit code"
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
               placeholder="••••"
               className="w-full h-14 rounded-xl border border-slate-300 text-center text-2xl font-mono tracking-[0.6em] outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
             />
-            <button type="submit" disabled={otpLoading || otpCode.length !== 4} className={`${PRIMARY} w-full h-12 text-[15px]`}>
+            <button type="submit" disabled={otpLoading || otpCode.length !== 6} className={`${PRIMARY} w-full h-12 text-[15px]`}>
               {otpLoading ? "Verifying…" : "Verify & sign in"}
             </button>
             <button
@@ -454,7 +456,6 @@ export default function Login() {
           {regError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700">{regError}</p>}
           {regSuccess && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] text-emerald-800">{regSuccess}</p>}
           <form onSubmit={handleRegister} className="grid sm:grid-cols-2 gap-3.5">
-            <RegField label="Shop code" id="reg-shop" className="sm:col-span-2" value={regShopCode} onChange={(v) => setRegShopCode(v.toUpperCase())} placeholder="Ask your shop for its code" inputClass="font-mono uppercase placeholder:font-sans placeholder:normal-case" />
             <RegField label="Full name" id="reg-name" className="sm:col-span-2" value={regName} onChange={setRegName} autoComplete="name" />
             <RegField label="Mobile number" id="reg-phone" type="tel" value={regPhone} onChange={setRegPhone} autoComplete="tel" inputMode="tel" />
             <RegField label="Email" id="reg-email" type="email" value={regEmail} onChange={setRegEmail} autoComplete="email" />

@@ -148,8 +148,8 @@ async function resolveCustomerAccount(
 
 /**
  * POST /api/customer-portal/auth/request-otp
- * Accepts email OR mobile number.
- * Generates a 4-digit OTP and sends it ONLY to the customer's registered email ID.
+ * Accepts the customer's registered email only.
+ * Generates a 6-digit OTP and sends it ONLY to the customer's registered email ID.
  * Rate-limited (max 3 per 15 min per identifier).
  */
 export async function requestOtp(req: Request, res: Response) {
@@ -158,7 +158,10 @@ export async function requestOtp(req: Request, res: Response) {
     const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
 
     if (!rawInput) {
-      return res.status(400).json({ success: false, message: "Email address or mobile number is required" });
+      return res.status(400).json({ success: false, message: "Registered email address is required" });
+    }
+    if (!rawInput.includes("@")) {
+      return res.status(400).json({ success: false, message: "Email OTP login requires your registered email. No SMS OTP is sent." });
     }
 
     // Resolve shop if explicitly provided
@@ -273,7 +276,7 @@ export async function requestOtp(req: Request, res: Response) {
 
     return res.json({
       success: true,
-      message: "If this account is registered with this shop, a 4-digit OTP has been sent to your registered email.",
+      message: "If this account is registered with this shop, a 6-digit OTP has been sent to your registered email.",
     });
   } catch (err: any) {
     console.error("requestOtp error:", err);
@@ -283,8 +286,8 @@ export async function requestOtp(req: Request, res: Response) {
 
 /**
  * POST /api/customer-portal/auth/verify-otp
- * Accepts email OR mobile number + 4-digit OTP.
- * Verifies the 4-digit OTP within 5 minutes and under 5 wrong attempts.
+ * Accepts registered email + 6-digit OTP.
+ * Verifies the 6-digit OTP within 5 minutes and under 5 wrong attempts.
  */
 export async function verifyOtp(req: Request, res: Response) {
   try {
@@ -292,12 +295,15 @@ export async function verifyOtp(req: Request, res: Response) {
     const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
 
     if (!rawInput || !otp) {
-      return res.status(400).json({ success: false, message: "Email/Mobile and verification code are required" });
+      return res.status(400).json({ success: false, message: "Registered email and verification code are required" });
+    }
+    if (!rawInput.includes("@")) {
+      return res.status(400).json({ success: false, message: "Email OTP login requires your registered email. No SMS OTP is sent." });
     }
 
     const cleanOtp = String(otp).trim();
-    if (cleanOtp.length < 4 || cleanOtp.length > 8) {
-      return res.status(400).json({ success: false, message: "Verification code must be 4 to 6 digits" });
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      return res.status(400).json({ success: false, message: "Verification code must be exactly 6 digits" });
     }
 
     // Resolve shop if explicitly provided
@@ -835,7 +841,7 @@ export async function loginWithPassword(req: Request, res: Response) {
 
 /**
  * POST /api/customer-portal/auth/forgot-password
- * Sends 4-digit OTP to customer's registered email for password reset.
+ * Sends 6-digit OTP to customer's registered email for password reset.
  */
 export async function forgotPassword(req: Request, res: Response) {
   try {
@@ -843,7 +849,10 @@ export async function forgotPassword(req: Request, res: Response) {
     const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
 
     if (!rawInput) {
-      return res.status(400).json({ success: false, message: "Email or mobile number is required" });
+      return res.status(400).json({ success: false, message: "Registered email address is required" });
+    }
+    if (!rawInput.includes("@")) {
+      return res.status(400).json({ success: false, message: "Password reset OTP is sent by email only. Enter your registered email." });
     }
 
     let explicitShop: Shop | null = null;
@@ -938,12 +947,15 @@ export async function resetPasswordWithOtp(req: Request, res: Response) {
     const rawInput = String(rawIdentifier || rawEmail || rawPhone || "").trim();
 
     if (!rawInput || !otp || !newPassword) {
-      return res.status(400).json({ success: false, message: "Email/Mobile, verification code, and new password are required" });
+      return res.status(400).json({ success: false, message: "Registered email, verification code, and new password are required" });
+    }
+    if (!rawInput.includes("@")) {
+      return res.status(400).json({ success: false, message: "Password reset OTP is sent by email only. Enter your registered email." });
     }
 
     const cleanOtp = String(otp).trim();
-    if (cleanOtp.length < 4 || cleanOtp.length > 8) {
-      return res.status(400).json({ success: false, message: "Verification code must be 4 to 6 digits" });
+    if (!/^\d{6}$/.test(cleanOtp)) {
+      return res.status(400).json({ success: false, message: "Verification code must be exactly 6 digits" });
     }
 
     const cleanPassword = String(newPassword).trim();

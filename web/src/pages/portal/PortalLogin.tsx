@@ -19,19 +19,16 @@ export default function PortalLogin() {
   const afterLogin = /^\/market(\/|$)/.test(nextParam) && !nextParam.startsWith("//") ? nextParam : "/portal/home";
   const setCustomerSession = usePortalStore((s) => s.setCustomerSession);
 
-  // Read prefilled shop from query if present (?shop=SHOP01)
-  const queryShop = searchParams.get("shop") || searchParams.get("shopCode") || "";
-
   const [authMode, setAuthMode] = useState<"password" | "otp">("password");
   const [step, setStep] = useState<"login" | "otp" | "forgot" | "reset" | "register">("login");
 
   const [identifier, setIdentifier] = useState(
     searchParams.get("identifier") || searchParams.get("phone") || searchParams.get("email") || ""
   );
+  const [shopCode, setShopCode] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [shopCode, setShopCode] = useState(queryShop);
   const [otp, setOtp] = useState("");
   const [maskedEmail, setMaskedEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -74,7 +71,7 @@ export default function PortalLogin() {
 
     setLoading(true);
     try {
-      const res = await loginCustomerWithPasswordApi(cleanId, password, shopCode.trim() || undefined);
+      const res = await loginCustomerWithPasswordApi(cleanId, password);
       const { accessToken, refreshToken, customer } = res.data;
       setCustomerSession(accessToken, refreshToken, customer);
       navigate(afterLogin, { replace: true });
@@ -92,22 +89,16 @@ export default function PortalLogin() {
     setError(null);
     setSuccessMsg(null);
 
-    const cleanInput = identifier.trim();
-    if (!cleanInput) {
-      setError("Please enter your mobile number or registered email address.");
-      return;
-    }
-
-    const isEmail = cleanInput.includes("@");
-    if (!isEmail && cleanInput.replace(/\D/g, "").length < 10) {
-      setError("Please enter a valid 10-digit mobile number or email address.");
+    const cleanInput = identifier.trim().toLowerCase();
+    if (!cleanInput || !cleanInput.includes("@")) {
+      setError("Enter your registered email address. The 6-digit OTP is sent by email only.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await requestOtpApi(cleanInput, shopCode.trim() || undefined);
-      setSuccessMsg(res.message || "4-digit OTP sent to your registered email.");
+      const res = await requestOtpApi(cleanInput);
+      setSuccessMsg(res.message || "6-digit OTP sent to your registered email.");
       if (res.maskedEmail) {
         setMaskedEmail(res.maskedEmail);
       }
@@ -125,14 +116,14 @@ export default function PortalLogin() {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!otp || otp.trim().length !== 4) {
-      setError("Please enter the 4-digit verification code.");
+    if (!otp || otp.trim().length !== 6) {
+      setError("Please enter the 6-digit verification code sent to your email.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await verifyOtpApi(identifier.trim(), otp.trim(), shopCode.trim() || undefined);
+      const res = await verifyOtpApi(identifier.trim(), otp.trim());
       const { accessToken, refreshToken, customer } = res.data;
       setCustomerSession(accessToken, refreshToken, customer);
       navigate(afterLogin, { replace: true });
@@ -151,14 +142,14 @@ export default function PortalLogin() {
     setSuccessMsg(null);
 
     const cleanInput = identifier.trim();
-    if (!cleanInput) {
-      setError("Please enter your registered email or mobile number.");
+    if (!cleanInput || !cleanInput.includes("@")) {
+      setError("Enter your registered email address. Password reset OTP is sent by email only.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await forgotPasswordApi(cleanInput, shopCode.trim() || undefined);
+      const res = await forgotPasswordApi(cleanInput);
       setSuccessMsg(res.message || "Verification code sent to your registered email.");
       if (res.maskedEmail) {
         setMaskedEmail(res.maskedEmail);
@@ -178,8 +169,8 @@ export default function PortalLogin() {
     e.preventDefault();
     setError(null);
 
-    if (!otp || otp.trim().length !== 4) {
-      setError("Please enter the 4-digit verification code.");
+    if (!otp || otp.trim().length !== 6) {
+      setError("Please enter the 6-digit verification code.");
       return;
     }
 
@@ -190,7 +181,7 @@ export default function PortalLogin() {
 
     setLoading(true);
     try {
-      const res = await resetPasswordApi(identifier.trim(), otp.trim(), newPassword.trim(), shopCode.trim() || undefined);
+      const res = await resetPasswordApi(identifier.trim(), otp.trim(), newPassword.trim());
       setSuccessMsg(res.message || "Password reset successfully! Please log in with your new password.");
       setPassword(newPassword);
       setStep("login");
@@ -206,15 +197,14 @@ export default function PortalLogin() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!regName.trim() || !regPhone.trim() || !regEmail.trim() || !shopCode.trim()) {
-      setError("Name, Mobile, Email, and Shop code are required for registration.");
+    if (!regName.trim() || !regPhone.trim() || !regEmail.trim()) {
+      setError("Name, mobile number and email are required for registration.");
       return;
     }
 
     setLoading(true);
     try {
       const res = await portalApi.post("/customer-portal/auth/register", {
-        shopCode: shopCode.trim(),
         name: regName.trim(),
         phone: regPhone.trim(),
         email: regEmail.trim(),
@@ -224,7 +214,7 @@ export default function PortalLogin() {
       setSuccessMsg(res.data?.message || "Registration submitted successfully! Awaiting shop approval.");
       setStep("login");
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Registration failed. Please check your shop code.";
+      const msg = err.response?.data?.message || "Registration failed. Please check your details and try again.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -343,7 +333,7 @@ export default function PortalLogin() {
                 </div>
               </div>
 
-              <div>
+              <div className="hidden">
                 <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                   Shop code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
                 </label>
@@ -397,7 +387,7 @@ export default function PortalLogin() {
             <form onSubmit={handleRequestOtp} className="space-y-4">
               <div>
                 <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                  Mobile Number or Email
+                  Registered email address
                 </label>
                 <div className="relative">
                   <input
@@ -405,14 +395,14 @@ export default function PortalLogin() {
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="Enter mobile number or email"
+                    placeholder="you@example.com"
                     className="w-full px-3.5 h-12 bg-white border border-slate-300 rounded-xl text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   />
                 </div>
-                <p className="text-[11px] text-gray-400 mt-1">A 4-digit code will be sent to your registered email.</p>
+                <p className="text-[11px] text-gray-400 mt-1">A 6-digit code will be sent to your registered email only. No SMS OTP is sent.</p>
               </div>
 
-              <div>
+              <div className="hidden">
                 <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                   Shop code <span className="text-gray-400 font-normal lowercase">(optional if registered)</span>
                 </label>
@@ -427,10 +417,10 @@ export default function PortalLogin() {
 
               <button
                 type="submit"
-                disabled={loading || identifier.trim().length < 3}
+                disabled={loading || !identifier.includes("@")}
                 className="w-full mt-2 h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
-                {loading ? "Sending 4-Digit OTP..." : "Continue with 4-Digit OTP &rarr;"}
+                {loading ? "Sending 6-digit OTP..." : "Continue with email OTP →"}
               </button>
             </form>
           )}
@@ -439,7 +429,7 @@ export default function PortalLogin() {
           {step === "otp" && (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
               <div className="text-center pb-1">
-                <span className="text-xs text-gray-500">4-digit verification code sent to registered email</span>
+                <span className="text-xs text-gray-500">6-digit verification code sent to registered email</span>
                 <div className="font-bold text-gray-800 text-sm mt-0.5">
                   {maskedEmail ? maskedEmail : identifier}
                 </div>
@@ -447,14 +437,14 @@ export default function PortalLogin() {
 
               <div>
                 <label className="block text-[13px] font-semibold text-slate-700 mb-1.5 text-center">
-                  Enter 4-Digit OTP
+                  Enter 6-Digit OTP
                 </label>
                 <input
                   type="text"
                   required
-                  maxLength={4}
+                  maxLength={6}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="••••"
                   className="w-full text-center tracking-[0.8em] text-2xl font-bold h-14 bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   autoFocus
@@ -463,7 +453,7 @@ export default function PortalLogin() {
 
               <button
                 type="submit"
-                disabled={loading || otp.length !== 4}
+                disabled={loading || otp.length !== 6}
                 className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition flex items-center justify-center gap-2"
               >
                 {loading ? "Verifying..." : "Verify & Enter Portal &rarr;"}
@@ -502,13 +492,13 @@ export default function PortalLogin() {
               <div className="pb-1">
                 <h3 className="text-sm font-bold text-gray-800">Forgot Your Password?</h3>
                 <p className="text-xs text-gray-500">
-                  Enter your registered email address or mobile number. We will send a 4-digit code to reset your password.
+                  Enter your registered email address. We will send a 6-digit code to reset your password.
                 </p>
               </div>
 
               <div>
                 <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                  Email or mobile number Number
+                  Registered email address
                 </label>
                 <input
                   type="text"
@@ -556,14 +546,14 @@ export default function PortalLogin() {
 
               <div>
                 <label className="block text-[13px] font-semibold text-slate-700 mb-1.5 text-center">
-                  4-Digit Verification Code
+                  6-Digit Verification Code
                 </label>
                 <input
                   type="text"
                   required
-                  maxLength={4}
+                  maxLength={6}
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                   placeholder="••••"
                   className="w-full text-center tracking-[0.8em] text-2xl font-bold h-14 bg-white border border-slate-300 rounded-xl text-navy-900 placeholder:text-slate-400 placeholder:normal-case placeholder:tracking-normal outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
                   autoFocus
@@ -587,7 +577,7 @@ export default function PortalLogin() {
 
               <button
                 type="submit"
-                disabled={loading || otp.length !== 4 || newPassword.length < 6}
+                disabled={loading || otp.length !== 6 || newPassword.length < 6}
                 className="w-full h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
                 {loading ? "Resetting..." : "Reset Password & Log In &rarr;"}
@@ -623,10 +613,10 @@ export default function PortalLogin() {
             <form onSubmit={handleRegister} className="space-y-3">
               <div className="pb-1">
                 <h3 className="text-sm font-bold text-gray-800">Register as a New Customer</h3>
-                <p className="text-[11px] text-gray-500">Ask the shop owner for their Shop code if you don't know it.</p>
+                <p className="text-[11px] text-gray-500">Register with your name, mobile number and email. No shop code is required.</p>
               </div>
 
-              <div>
+              <div className="hidden">
                 <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                   Shop code
                 </label>
@@ -703,7 +693,7 @@ export default function PortalLogin() {
 
               <button
                 type="submit"
-                disabled={loading || !regName || regPhone.length < 10 || !regEmail || !shopCode}
+                disabled={loading || !regName || regPhone.length < 10 || !regEmail}
                 className="w-full mt-2 h-12 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 text-white font-semibold text-[15px] shadow-brand transition"
               >
                 {loading ? "Submitting Registration..." : "Submit Registration"}
