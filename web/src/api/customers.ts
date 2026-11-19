@@ -45,3 +45,7 @@ export function updateCustomerPortalAccess(id: number, enabled: boolean) {
   // Backend routes: POST /customers/:customerId/portal/enable | /portal/disable
   return api.post<ApiEnvelope<any>>(`/customers/${id}/portal/${enabled ? "enable" : "disable"}`);
 }
+
+export function sendCustomerReminder(customerId: number) {
+  return api.post<ApiEnvelope<any>>(`/customers/${customerId}/send-reminder`);
+}

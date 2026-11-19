@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
 import bcrypt from "bcryptjs";
-import { Customer, Sale, CustomerLedger, CustomerAccount, CustomerRefreshToken, Shop } from "../models";
+import { Customer, Sale, CustomerLedger, CustomerAccount, CustomerRefreshToken, Shop, Notification } from "../models";
 import { logAudit } from "../utils/audit";
 import { syncCustomerToSupabaseAuth, updateSupabaseAuthPassword } from "../utils/supabaseAuth";
 import { sendOutstandingReminderEmail } from "../utils/mailer";
@@ -558,34 +558,49 @@ export async function sendCustomerPaymentReminder(req: Request, res: Response) {
       dueAmount: Number(s.due_amount),
     }));
 
-    const result = await sendOutstandingReminderEmail({
-      ownerId,
-      shopId,
-      customerId: customer.id,
-      customerEmail: customer.email || (customer as any).account?.email,
-      customerName: customer.name,
-      outstandingBalance: currentBalance,
-      unpaidBills: unpaidBillsSummary,
-    });
-
-    if (result.skipped) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer does not have a registered email address. Cannot send email reminder.",
+    // Always create an in-app Notification for the customer
+    let inAppCreated = false;
+    try {
+      await Notification.create({
+        owner_id: ownerId,
+        shop_id: shopId,
+        recipient_type: "customer",
+        recipient_id: customer.id,
+        type: "payment_reminder",
+        title: "Payment Reminder",
+        message: `Gentle reminder: You have an outstanding balance of ₹${currentBalance.toFixed(2)} with our shop. Please clear at your convenience.`,
+        reference_type: "customer",
+        reference_id: customer.id,
+        is_read: false,
       });
+      inAppCreated = true;
+    } catch (notifErr) {
+      console.error("[sendCustomerPaymentReminder] In-app notification creation error:", notifErr);
     }
 
-    if (!result.success) {
-      return res.status(500).json({
-        success: false,
-        message: result.error || "Failed to dispatch reminder email",
+    const emailTo = customer.email || (customer as any).account?.email;
+    let emailResult = null;
+    if (emailTo) {
+      emailResult = await sendOutstandingReminderEmail({
+        ownerId,
+        shopId,
+        customerId: customer.id,
+        customerEmail: emailTo,
+        customerName: customer.name,
+        outstandingBalance: currentBalance,
+        unpaidBills: unpaidBillsSummary,
       });
     }
 
     return res.json({
       success: true,
-      message: `Outstanding payment reminder sent to ${customer.email || (customer as any).account?.email}`,
-      emailNotificationId: result.emailNotificationId,
+      message: emailResult?.success
+        ? `Payment reminder sent via in-app notification and email to ${emailTo}`
+        : inAppCreated
+        ? `In-app payment reminder created successfully for ${customer.name}`
+        : "Payment reminder processed",
+      inAppNotification: inAppCreated,
+      emailNotificationId: emailResult?.emailNotificationId,
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Failed to send payment reminder" });

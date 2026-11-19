@@ -64,18 +64,20 @@ Isolated in-memory DB, real HTTP API. Status codes observed:
 - **D Inventory:** create product, +15 purchase, −3 adjustment, sale −4, history rows, cancelling bill restores stock.
 - **E Suppliers / multi-shop:** create supplier, purchase adds stock, payable ₹2000 after ₹1000 paid, other owner can't read supplier/purchase or bill shop A's product.
 
-## 5. Full regression — `npm run test:all` → **398 checks, 0 failed** (2026-11-18)
+## 5. Full regression — `npm run test:all` → **510 checks, 0 failed** (2026-11-19)
 
 | Suite | Result |
 |---|---|
 | test:roles | 104 / 104 (real staff accounts; signed token for unknown staff id refused) |
-| test:workflows | 54 / 54 |
+| test:workflows | 75 / 75 |
+| test:e2e (Section 30 Acceptance Tests) | 49 / 49 (Tests 1 to 10 automated) |
 | test:staff (staff logins) | 55 / 55 |
 | test:isolation (tenant isolation) | 57 / 57 |
 | test:phase-a (suppliers, purchases, supplier ledger) | 51 / 51 |
 | test:marketplace | 23 / 23 |
 | test:market-cart (multi-shop cart + checkout) | 42 / 42 |
 | test:shop-approval | 12 / 12 |
+| test:media | 42 / 42 |
 
 API `tsc --noEmit` ✓, API `npm run build` ✓.
 
@@ -869,6 +871,8 @@ External delivery must not be marked successful without provider confirmation.
 
 # 20. CUSTOMER DEFAULTER MANAGEMENT
 
+*(Implemented & Verified: `GET /api/reports/customer-outstanding` enriched with overdue days, unpaid bills count, last payment amount/date, and in-app reminder action under Reports → Customer dues / Defaulters)*
+
 Each shop can see its own customers with outstanding balances.
 
 Display:
@@ -886,7 +890,7 @@ Wholesalers can identify retailers with overdue payments.
 
 Reminder actions:
 
-- In-app reminder.
+- In-app reminder (`POST /api/customers/:id/send-reminder` generates in-app `Notification`).
 - Email where configured.
 - SMS/WhatsApp where integrated and confirmed.
 
@@ -1136,6 +1140,8 @@ Test the same operations across website and mobile:
 Every operation must persist in the shared database.
 
 # 30. END-TO-END ACCEPTANCE TESTS
+
+*(Automated & Verified: `npm run test:e2e` in `api/scripts/test_acceptance_e2e.ts` executes all 10 tests across multiple wholesalers, buyers, digital credit, multi-shop ledgers, returns, notifications and multi-tenant isolation — 49/49 checks pass)*
 
 ## Test 1 — Multiple Wholesalers
 

@@ -240,12 +240,76 @@ export async function customerOutstandingReport(req: Request, res: Response) {
     const outstanding = customers.filter((c) => Number(c.current_balance) !== 0);
     const totalReceivable = round2(outstanding.filter((c) => Number(c.current_balance) > 0).reduce((s, c) => s + Number(c.current_balance), 0));
     const totalCredit = round2(outstanding.filter((c) => Number(c.current_balance) < 0).reduce((s, c) => s + Number(c.current_balance), 0));
-    return res.json({ success: true, data: { summary: { totalReceivable, totalCredit, customerCount: outstanding.length }, customers: outstanding } });
+
+    const customerIds = outstanding.map((c) => c.id);
+    const [unpaidSales, payments, lastSales] = await Promise.all([
+      customerIds.length
+        ? Sale.findAll({
+            where: {
+              customer_id: { [Op.in]: customerIds },
+              owner_id: req.auth!.ownerId,
+              payment_status: { [Op.in]: ["UNPAID", "PARTIAL", "PARTIALLY_PAID"] },
+              due_amount: { [Op.gt]: 0 },
+            },
+            attributes: ["id", "customer_id", "invoice_number", "invoice_date", "total_amount", "due_amount"],
+            order: [["invoice_date", "ASC"]],
+          })
+        : [],
+      customerIds.length
+        ? CustomerLedger.findAll({
+            where: {
+              customer_id: { [Op.in]: customerIds },
+              owner_id: req.auth!.ownerId,
+              entry_type: "credit",
+              status: "active",
+            },
+            attributes: ["id", "customer_id", "amount", "entry_date"],
+            order: [["entry_date", "DESC"], ["id", "DESC"]],
+          })
+        : [],
+      customerIds.length
+        ? Sale.findAll({
+            where: {
+              customer_id: { [Op.in]: customerIds },
+              owner_id: req.auth!.ownerId,
+            },
+            attributes: ["id", "customer_id", "invoice_number", "invoice_date", "total_amount"],
+            order: [["invoice_date", "DESC"], ["id", "DESC"]],
+          })
+        : [],
+    ]);
+
+    const enriched = outstanding.map((c: any) => {
+      const cUnpaid = unpaidSales.filter((s) => s.customer_id === c.id);
+      const cLastPayment = payments.find((p) => p.customer_id === c.id);
+      const cLastSale = lastSales.find((s) => s.customer_id === c.id);
+      const oldestUnpaid = cUnpaid[0];
+      const outstandingDays = oldestUnpaid
+        ? Math.max(0, Math.floor((Date.now() - new Date(oldestUnpaid.invoice_date).getTime()) / (1000 * 60 * 60 * 24)))
+        : cLastSale
+        ? Math.max(0, Math.floor((Date.now() - new Date(cLastSale.invoice_date).getTime()) / (1000 * 60 * 60 * 24)))
+        : 0;
+
+      const plain = c.toJSON ? c.toJSON() : c;
+      return {
+        ...plain,
+        outstandingAmount: round2(Number(plain.current_balance || plain.balance || 0)),
+        unpaidBillsCount: cUnpaid.length,
+        outstandingDays,
+        lastPaymentDate: cLastPayment?.entry_date || null,
+        lastPaymentAmount: cLastPayment ? round2(Number(cLastPayment.amount)) : 0,
+        lastBillDate: cLastSale?.invoice_date || null,
+        lastBillNumber: cLastSale?.invoice_number || null,
+        lastBillAmount: cLastSale ? round2(Number(cLastSale.total_amount)) : 0,
+      };
+    });
+
+    return res.json({ success: true, data: { summary: { totalReceivable, totalCredit, customerCount: outstanding.length }, customers: enriched } });
   }
 
   const entries = await CustomerLedger.findAll({
     where: { owner_id: req.auth!.ownerId, shop_id: req.auth!.shopId!, status: "active" },
-    include: [{ model: Customer, as: "customer", attributes: ["id", "name", "phone"] }],
+    include: [{ model: Customer, as: "customer", attributes: ["id", "name", "phone", "email"] }],
   });
 
   const byCustomer: Record<string, { customer: any; balance: number }> = {};
@@ -254,16 +318,82 @@ export async function customerOutstandingReport(req: Request, res: Response) {
     if (!byCustomer[key]) byCustomer[key] = { customer: e.customer, balance: 0 };
     byCustomer[key].balance = round2(byCustomer[key].balance + (e.entry_type === "debit" ? Number(e.amount) : -Number(e.amount)));
   }
-  const customers = Object.values(byCustomer).filter((c) => c.balance !== 0);
-  const totalReceivable = round2(customers.filter((c) => c.balance > 0).reduce((s, c) => s + c.balance, 0));
-  const totalCredit = round2(customers.filter((c) => c.balance < 0).reduce((s, c) => s + c.balance, 0));
+  const rawCustomers = Object.values(byCustomer).filter((c) => c.balance !== 0);
+  const totalReceivable = round2(rawCustomers.filter((c) => c.balance > 0).reduce((s, c) => s + c.balance, 0));
+  const totalCredit = round2(rawCustomers.filter((c) => c.balance < 0).reduce((s, c) => s + c.balance, 0));
+
+  const staffCustomerIds = rawCustomers.map((c) => c.customer?.id).filter(Boolean);
+  const [staffUnpaid, staffPayments, staffLastSales] = await Promise.all([
+    staffCustomerIds.length
+      ? Sale.findAll({
+          where: {
+            customer_id: { [Op.in]: staffCustomerIds },
+            owner_id: req.auth!.ownerId,
+            shop_id: req.auth!.shopId!,
+            payment_status: { [Op.in]: ["UNPAID", "PARTIAL", "PARTIALLY_PAID"] },
+            due_amount: { [Op.gt]: 0 },
+          },
+          attributes: ["id", "customer_id", "invoice_number", "invoice_date", "total_amount", "due_amount"],
+          order: [["invoice_date", "ASC"]],
+        })
+      : [],
+    staffCustomerIds.length
+      ? CustomerLedger.findAll({
+          where: {
+            customer_id: { [Op.in]: staffCustomerIds },
+            owner_id: req.auth!.ownerId,
+            shop_id: req.auth!.shopId!,
+            entry_type: "credit",
+            status: "active",
+          },
+          attributes: ["id", "customer_id", "amount", "entry_date"],
+          order: [["entry_date", "DESC"], ["id", "DESC"]],
+        })
+      : [],
+    staffCustomerIds.length
+      ? Sale.findAll({
+          where: {
+            customer_id: { [Op.in]: staffCustomerIds },
+            owner_id: req.auth!.ownerId,
+            shop_id: req.auth!.shopId!,
+          },
+          attributes: ["id", "customer_id", "invoice_number", "invoice_date", "total_amount"],
+          order: [["invoice_date", "DESC"], ["id", "DESC"]],
+        })
+      : [],
+  ]);
+
+  const enrichedStaff = rawCustomers.map((c: any) => {
+    const custId = c.customer?.id;
+    const cUnpaid = staffUnpaid.filter((s) => s.customer_id === custId);
+    const cLastPayment = staffPayments.find((p) => p.customer_id === custId);
+    const cLastSale = staffLastSales.find((s) => s.customer_id === custId);
+    const oldestUnpaid = cUnpaid[0];
+    const outstandingDays = oldestUnpaid
+      ? Math.max(0, Math.floor((Date.now() - new Date(oldestUnpaid.invoice_date).getTime()) / (1000 * 60 * 60 * 24)))
+      : cLastSale
+      ? Math.max(0, Math.floor((Date.now() - new Date(cLastSale.invoice_date).getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+    return {
+      ...c,
+      outstandingAmount: c.balance,
+      unpaidBillsCount: cUnpaid.length,
+      outstandingDays,
+      lastPaymentDate: cLastPayment?.entry_date || null,
+      lastPaymentAmount: cLastPayment ? round2(Number(cLastPayment.amount)) : 0,
+      lastBillDate: cLastSale?.invoice_date || null,
+      lastBillNumber: cLastSale?.invoice_number || null,
+      lastBillAmount: cLastSale ? round2(Number(cLastSale.total_amount)) : 0,
+    };
+  });
 
   return res.json({
     success: true,
     data: {
       note: "Balance shown is scoped to this shop's transactions only (you're not an owner, so cross-shop balances are hidden).",
-      summary: { totalReceivable, totalCredit, customerCount: customers.length },
-      customers,
+      summary: { totalReceivable, totalCredit, customerCount: enrichedStaff.length },
+      customers: enrichedStaff,
     },
   });
 }

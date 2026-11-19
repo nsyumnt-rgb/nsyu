@@ -8,6 +8,7 @@ import {
   getCustomerOutstandingReport,
   getShopPerformanceReport,
 } from "../api/reports";
+import { sendCustomerReminder } from "../api/customers";
 import { apiErrorMessage } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { usePermission } from "../hooks/usePermission";
@@ -34,6 +35,27 @@ function ReportsInner() {
   const [reportData, setReportData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [remindingId, setRemindingId] = useState<number | null>(null);
+  const [reminderStatus, setReminderStatus] = useState<{ [id: number]: { ok: boolean; msg: string } }>({});
+
+  const handleSendReminder = async (customerId: number) => {
+    setRemindingId(customerId);
+    try {
+      const res = await sendCustomerReminder(customerId);
+      setReminderStatus((prev) => ({ ...prev, [customerId]: { ok: true, msg: res.data?.message || "Reminder sent" } }));
+      setTimeout(() => {
+        setReminderStatus((prev) => {
+          const next = { ...prev };
+          delete next[customerId];
+          return next;
+        });
+      }, 5000);
+    } catch (err: any) {
+      setReminderStatus((prev) => ({ ...prev, [customerId]: { ok: false, msg: apiErrorMessage(err, "Failed to send reminder") } }));
+    } finally {
+      setRemindingId(null);
+    }
+  };
 
   const handleTabChange = (tabId: string) => {
     setSearchParams((prev) => {
@@ -145,11 +167,20 @@ function ReportsInner() {
         });
         break;
       case "outstanding":
-        head = ["Customer", "Phone", "Balance", "Type"];
+        head = ["Customer", "Phone", "Balance", "Type", "Unpaid bills", "Overdue days", "Last payment date", "Last payment amount"];
         body = rows.outstanding.map((c) => {
           const o = c.customer || c;
-          const bal = Number(c.balance ?? c.current_balance ?? 0);
-          return [o.name || "Customer", o.phone || "", Math.abs(bal), bal > 0 ? "Due" : "Advance"];
+          const bal = Number(c.balance ?? c.current_balance ?? c.outstandingAmount ?? 0);
+          return [
+            o.name || "Customer",
+            o.phone || "",
+            Math.abs(bal),
+            bal > 0 ? "Due" : "Advance",
+            Number(c.unpaidBillsCount || 0),
+            Number(c.outstandingDays || 0),
+            c.lastPaymentDate ? d(c.lastPaymentDate) : "",
+            Number(c.lastPaymentAmount || 0),
+          ];
         });
         break;
       case "performance":
@@ -458,12 +489,14 @@ function ReportsInner() {
           {rows.outstanding.length === 0 ? (
             <div className="card"><EmptyState icon="checkCircle" tone="emerald" title="All settled" text="No customer has a balance." /></div>
           ) : (
-            <ReportTable title="Customer balances" count={rows.outstanding.length} noun="customers">
+            <ReportTable title="Customer balances & defaulters" count={rows.outstanding.length} noun="customers">
               <thead>
                 <tr>
                   <th>Customer</th>
                   <th>Balance</th>
-                  <th className="!text-right">Action</th>
+                  <th>Pending bills & aging</th>
+                  <th>Last payment</th>
+                  <th className="!text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -471,21 +504,24 @@ function ReportsInner() {
                   const maxBal = Math.max(1, ...rows.outstanding.map((c) => Math.abs(Number(c.balance ?? c.current_balance ?? 0))));
                   return rows.outstanding.map((c, idx) => {
                     const o = c.customer || c;
-                    const bal = Number(c.balance ?? c.current_balance ?? 0);
+                    const bal = Number(c.balance ?? c.current_balance ?? c.outstandingAmount ?? 0);
                     const due = bal > 0;
+                    const unpaidCount = Number(c.unpaidBillsCount || 0);
+                    const days = Number(c.outstandingDays || 0);
+                    const status = o.id ? reminderStatus[o.id] : undefined;
                     return (
                       <tr key={idx}>
                         <td>
                           <div className="flex items-center gap-2.5">
                             <Avatar name={o.name || "Customer"} size="sm" />
                             <div className="min-w-0">
-                              <div className="font-semibold text-navy-900 truncate max-w-[240px]">{o.name || "Customer"}</div>
+                              <div className="font-semibold text-navy-900 truncate max-w-[200px]">{o.name || "Customer"}</div>
                               <div className="text-[11.5px] text-slate-400 tabular">{o.phone || "—"}</div>
                             </div>
                           </div>
                         </td>
                         <td>
-                          <div className="w-[180px]">
+                          <div className="w-[160px]">
                             <div className="flex items-baseline justify-between">
                               <span className={`font-bold tabular ${due ? "text-rose-600" : "text-emerald-600"}`}>{inr2(Math.abs(bal))}</span>
                               <span className="text-[10.5px] font-semibold uppercase text-slate-400">{due ? "Due" : "Advance"}</span>
@@ -493,10 +529,66 @@ function ReportsInner() {
                             <Meter value={Math.abs(bal)} max={maxBal} tone={due ? "rose" : "emerald"} className="mt-1" />
                           </div>
                         </td>
+                        <td>
+                          {due ? (
+                            <div className="space-y-1">
+                              <div className="text-xs font-semibold text-slate-800">
+                                {unpaidCount > 0 ? `${unpaidCount} unpaid bill${unpaidCount > 1 ? "s" : ""}` : "Unpaid balance"}
+                              </div>
+                              {days > 0 ? (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold ${days > 30 ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-amber-50 text-amber-800 border border-amber-200"}`}>
+                                  {days}d overdue
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-400">Current</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-emerald-700 font-medium">Customer advance credit</span>
+                          )}
+                        </td>
+                        <td>
+                          {c.lastPaymentDate ? (
+                            <div>
+                              <div className="text-xs font-bold text-navy-900 tabular">{inr2(c.lastPaymentAmount)}</div>
+                              <div className="text-[11px] text-slate-400">{fmtDate(c.lastPaymentDate)}</div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs">—</span>
+                          )}
+                        </td>
                         <td className="text-right">
-                          <Link to={`/app/ledger?customerId=${o.id}`} className="btn-soft btn-sm">
-                            <Icon name="file" className="w-3.5 h-3.5" /> Ledger
-                          </Link>
+                          <div className="flex items-center justify-end gap-2">
+                            <Link to={`/app/ledger?customerId=${o.id}`} className="btn-soft btn-sm">
+                              <Icon name="file" className="w-3.5 h-3.5" /> Ledger
+                            </Link>
+                            {due && o.id && (
+                              <button
+                                type="button"
+                                disabled={remindingId === o.id}
+                                onClick={() => handleSendReminder(o.id)}
+                                className="btn-sm rounded-xl font-semibold inline-flex items-center gap-1.5 transition text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50"
+                                title="Send payment reminder notification & email"
+                              >
+                                {remindingId === o.id ? (
+                                  <>
+                                    <span className="w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                    Sending…
+                                  </>
+                                ) : (
+                                  <>
+                                    <Icon name="bell" className="w-3.5 h-3.5 text-emerald-600" />
+                                    Remind
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {status && (
+                            <div className={`text-[11px] font-medium mt-1.5 ${status.ok ? "text-emerald-700" : "text-rose-600"}`}>
+                              {status.msg}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
