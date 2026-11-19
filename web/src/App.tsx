@@ -43,7 +43,6 @@ import TransferDetail from "./pages/details/TransferDetail";
 import MovementDetail from "./pages/details/MovementDetail";
 
 /* Customer Portal Pages */
-import PortalLogin from "./pages/portal/PortalLogin";
 import PortalHome from "./pages/portal/PortalHome";
 import PortalStore from "./pages/portal/PortalStore";
 import PortalWishlist from "./pages/portal/PortalWishlist";
@@ -81,11 +80,10 @@ export default function App() {
           <Route path="/market/cart" element={<MarketCart />} />
           <Route path="/market/checkout" element={<MarketCheckout />} />
         </Route>
+        {/* Single Unified Login Page */}
         <Route path="/login" element={<Login />} />
+        <Route path="/portal/login" element={<Navigate to="/login?tab=customer" replace />} />
         <Route path="/register" element={<Register />} />
-
-        {/* Customer Portal Auth & App Routes */}
-        <Route path="/portal/login" element={<PortalLogin />} />
         <Route element={<RequireCustomerAuth />}>
           <Route path="/portal" element={<CustomerPortalLayout />}>
             <Route index element={<Navigate to="/portal/home" replace />} />

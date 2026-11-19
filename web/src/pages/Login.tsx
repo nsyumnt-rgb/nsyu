@@ -1,30 +1,61 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { login as loginApi } from "../api/auth";
-import { apiErrorMessage, getApiBaseUrl, setApiBaseUrl, DEFAULT_CLOUD_API_URL, DEFAULT_LOCAL_API_URL } from "../api/client";
-import { requestOtpApi, verifyOtpApi, portalApi } from "../api/portal";
+import {
+  apiErrorMessage,
+  getApiBaseUrl,
+  setApiBaseUrl,
+  DEFAULT_CLOUD_API_URL,
+  DEFAULT_LOCAL_API_URL,
+} from "../api/client";
+import {
+  loginCustomerWithPasswordApi,
+  requestOtpApi,
+  verifyOtpApi,
+  forgotPasswordApi,
+  resetPasswordApi,
+  portalApi,
+} from "../api/portal";
 import { useAuthStore } from "../store/authStore";
 import { usePortalStore } from "../store/portalStore";
 import AuthShell from "../components/AuthShell";
 
-const GITHUB_APK_RAW_URL = "https://github.com/nsyumnt-rgb/nsyu/raw/main/App/downloads/nsyu-business-release.apk";
+const GITHUB_APK_RAW_URL =
+  "https://github.com/nsyumnt-rgb/nsyu/raw/main/App/downloads/nsyu-business-release.apk";
 const LOCAL_APK_URL = "./downloads/nsyu-business-release.apk";
+
+const TABS = [
+  { k: "staff", id: "staff-tab-btn", label: "🏪 Owner & Staff" },
+  { k: "customer", id: "customer-tab-btn", label: "👤 Customer" },
+] as const;
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Tab & Redirect Params
+  const tabParam = searchParams.get("tab");
+  const nextParam = searchParams.get("next") || "";
+  const initialIdentifier =
+    searchParams.get("identifier") || searchParams.get("phone") || searchParams.get("email") || "";
+
   const setSession = useAuthStore((s) => s.setSession);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
   const setCustomerSession = usePortalStore((s) => s.setCustomerSession);
 
   // Tab State: "staff" | "customer"
-  const [activeTab, setActiveTab] = useState<"staff" | "customer">("staff");
+  const [activeTab, setActiveTab] = useState<"staff" | "customer">(
+    tabParam === "customer" ? "customer" : "staff"
+  );
+  // Customer Login Mode: "password" | "otp"
+  const [customerMode, setCustomerMode] = useState<"password" | "otp">("password");
 
   // Form Inputs
-  // Never pre-fill credentials: this page is public.
-  const [identifier, setIdentifier] = useState("");
+  const [identifier, setIdentifier] = useState(initialIdentifier);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Customer OTP Modal State
@@ -34,6 +65,15 @@ export default function Login() {
   const [otpError, setOtpError] = useState<string | null>(null);
   const [maskedEmail, setMaskedEmail] = useState<string | null>(null);
   const [otpCooldown, setOtpCooldown] = useState(0);
+
+  // Customer Forgot & Reset Password Modal State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState<"request" | "reset">("request");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
 
   // Create Account / Registration Modal State
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -45,9 +85,6 @@ export default function Login() {
   const [regError, setRegError] = useState<string | null>(null);
   const [regSuccess, setRegSuccess] = useState<string | null>(null);
 
-  // Forgot Password Modal State
-  const [showForgotModal, setShowForgotModal] = useState(false);
-
   // Backend / Supabase Connection Dialog State
   const [apiUrl, setApiUrl] = useState(getApiBaseUrl());
   const [showApiModal, setShowApiModal] = useState(false);
@@ -56,8 +93,26 @@ export default function Login() {
 
   // APK Download States
   const [isDownloadingApk, setIsDownloadingApk] = useState(false);
-  const [apkSuccessModal, setApkSuccessModal] = useState<{ isAndroid: boolean; filename: string; url: string } | null>(null);
+  const [apkSuccessModal, setApkSuccessModal] = useState<{
+    isAndroid: boolean;
+    filename: string;
+    url: string;
+  } | null>(null);
   const [apkErrorModal, setApkErrorModal] = useState<{ reason: string } | null>(null);
+
+  // Safe redirect helper
+  const resolveCustomerRedirect = () => {
+    if (nextParam && !nextParam.startsWith("//")) return nextParam;
+    return "/portal/home";
+  };
+
+  const resolveStaffRedirect = (data: any) => {
+    if (nextParam && !nextParam.startsWith("//")) return nextParam;
+    if (data.accountType === "super_admin" || (data as any).isSuperAdmin) {
+      return "/admin";
+    }
+    return "/app";
+  };
 
   // Cooldown countdown
   useEffect(() => {
@@ -72,6 +127,7 @@ export default function Login() {
   const handleTabChange = (tab: "staff" | "customer") => {
     setActiveTab(tab);
     setError(null);
+    setSuccessMsg(null);
     setIdentifier("");
     setPassword("");
   };
@@ -111,9 +167,15 @@ export default function Login() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccessMsg(null);
 
-    if (!identifier.trim()) {
-      setError(activeTab === "customer" ? "Please enter your registered email address." : "Please enter your Email or Username.");
+    const cleanId = identifier.trim();
+    if (!cleanId) {
+      setError(
+        activeTab === "customer"
+          ? "Please enter your registered mobile number or email address."
+          : "Please enter your email or username."
+      );
       return;
     }
 
@@ -128,7 +190,7 @@ export default function Login() {
 
       setLoading(true);
       try {
-        const res = await loginApi(identifier.trim(), password);
+        const res = await loginApi(cleanId, password);
         const data = res.data.data!;
         setSession(data.accessToken, data.refreshToken, data.accountType);
 
@@ -136,16 +198,14 @@ export default function Login() {
           setActiveShop((data as any).shop);
         }
 
-        if ((data as any).accountType === "super_admin" || (data as any).isSuperAdmin) {
-          navigate("/admin");
-        } else {
-          navigate("/app");
-        }
+        navigate(resolveStaffRedirect(data));
       } catch (err: any) {
         const baseErr = apiErrorMessage(err, "Invalid email or password. Please try again.");
         if (err.message && err.message.toLowerCase().includes("network error")) {
           if (apiUrl.includes("localhost") || apiUrl.includes("127.0.0.1")) {
-            setError(`Cannot reach the local server at ${apiUrl}. Switch to the cloud server in Server settings.`);
+            setError(
+              `Cannot reach the local server at ${apiUrl}. Switch to the cloud server in Server settings.`
+            );
           } else {
             setError("The server is waking up — this can take 30–40 seconds. Please try again shortly.");
           }
@@ -160,11 +220,34 @@ export default function Login() {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // CUSTOMER PORTAL LOGIN FLOW
+    // CUSTOMER LOGIN FLOW
     // ─────────────────────────────────────────────────────────────
-    const cleanId = identifier.trim();
+    // 1. Password Mode
+    if (customerMode === "password") {
+      if (!password) {
+        setError("Please enter your customer account password.");
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await loginCustomerWithPasswordApi(cleanId, password);
+        const { accessToken, refreshToken, customer } = res.data;
+        setCustomerSession(accessToken, refreshToken, customer);
+        window.dispatchEvent(new Event("market-cart-changed"));
+        navigate(resolveCustomerRedirect(), { replace: true });
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || "Invalid credentials. Please try again.";
+        setError(msg);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // 2. OTP Mode
     if (!cleanId.includes("@")) {
-      setError("Customer OTP login requires your registered email. No SMS OTP is sent.");
+      setError("Customer OTP login requires your registered email address.");
       return;
     }
     setLoading(true);
@@ -177,7 +260,7 @@ export default function Login() {
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || "Failed to find customer account.";
       if (err.response?.status === 404) {
-        setError("Account not found. Click 'Create Account' below to register.");
+        setError("Account not found. Click 'Create an account' below to register.");
       } else {
         setError(msg);
       }
@@ -200,8 +283,9 @@ export default function Login() {
       const res = await verifyOtpApi(identifier.trim(), otpCode.trim());
       const { accessToken, refreshToken, customer } = res.data;
       setCustomerSession(accessToken, refreshToken, customer);
+      window.dispatchEvent(new Event("market-cart-changed"));
       setShowOtpModal(false);
-      navigate("/portal/home", { replace: true });
+      navigate(resolveCustomerRedirect(), { replace: true });
     } catch (err: any) {
       setOtpError(err.response?.data?.message || "Invalid or expired OTP. Please try again.");
     } finally {
@@ -229,18 +313,75 @@ export default function Login() {
         address: regAddress.trim() || undefined,
       });
 
-      setRegSuccess(res.data?.message || "Account registered successfully! A 6-digit verification code was sent to your email.");
-      setIdentifier(regPhone.trim() || regEmail.trim());
+      setRegSuccess(
+        res.data?.message ||
+          "Account registered successfully! A 6-digit verification code was sent to your email."
+      );
+      setIdentifier(regEmail.trim() || regPhone.trim());
       setTimeout(() => {
         setShowRegisterModal(false);
         setActiveTab("customer");
+        setCustomerMode("otp");
         setShowOtpModal(true);
         setOtpCooldown(60);
       }, 1200);
     } catch (err: any) {
-      setRegError(err.response?.data?.message || "Registration failed. Please check your details and try again.");
+      setRegError(
+        err.response?.data?.message || "Registration failed. Please check your details and try again."
+      );
     } finally {
       setRegLoading(false);
+    }
+  }
+
+  // Customer Forgot & Reset Password Flow
+  async function handleForgotRequest(e: React.FormEvent) {
+    e.preventDefault();
+    setForgotError(null);
+    if (!forgotEmail.trim() || !forgotEmail.includes("@")) {
+      setForgotError("Please enter your registered email address.");
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      await forgotPasswordApi(forgotEmail.trim());
+      setForgotStep("reset");
+    } catch (err: any) {
+      setForgotError(
+        err.response?.data?.message || "Could not find customer account with this email."
+      );
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
+  async function handleForgotReset(e: React.FormEvent) {
+    e.preventDefault();
+    setForgotError(null);
+    if (!forgotOtp.trim() || forgotOtp.trim().length !== 6) {
+      setForgotError("Please enter the 6-digit verification code sent to your email.");
+      return;
+    }
+    if (!forgotNewPassword || forgotNewPassword.length < 6) {
+      setForgotError("New password must be at least 6 characters.");
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      await resetPasswordApi(forgotEmail.trim(), forgotOtp.trim(), forgotNewPassword);
+      setShowForgotModal(false);
+      setForgotStep("request");
+      setForgotOtp("");
+      setForgotNewPassword("");
+      setSuccessMsg("Password reset successfully! You can now log in with your new password.");
+      setIdentifier(forgotEmail.trim());
+      setPassword(forgotNewPassword);
+    } catch (err: any) {
+      setForgotError(err.response?.data?.message || "Invalid code or failed to reset password.");
+    } finally {
+      setForgotLoading(false);
     }
   }
 
@@ -275,152 +416,315 @@ export default function Login() {
       });
     } catch (err: any) {
       setApkErrorModal({
-        reason: err?.message || "Failed to download APK. Please check your connection or use the direct link.",
+        reason:
+          err?.message ||
+          "Failed to download APK. Please check your connection or use the direct link.",
       });
     } finally {
       setIsDownloadingApk(false);
     }
   }
 
-
   const isCustomer = activeTab === "customer";
-  const statusDot = apiStatus === "online" ? "bg-emerald-500" : apiStatus === "offline" ? "bg-rose-500" : "bg-amber-400 animate-pulse";
-  const statusText = apiStatus === "online" ? "Server online" : apiStatus === "offline" ? "Server unreachable" : "Checking server…";
+  const statusDot =
+    apiStatus === "online"
+      ? "bg-emerald-500"
+      : apiStatus === "offline"
+      ? "bg-rose-500"
+      : "bg-amber-400 animate-pulse";
+  const statusText =
+    apiStatus === "online"
+      ? "Server online"
+      : apiStatus === "offline"
+      ? "Server unreachable"
+      : "Checking server…";
 
   return (
     <>
-    <AuthShell
-      extra={
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[12.5px] text-slate-500">
-              <button type="button" id="supabase-status-pill" onClick={() => setShowApiModal(true)} className="inline-flex items-center gap-2 min-h-[36px] hover:text-navy-900" title="Server settings">
-                <span className={`w-2 h-2 rounded-full ${statusDot}`} />
-                {statusText}
-              </button>
-              <span className="text-slate-300" aria-hidden>•</span>
-              <button type="button" onClick={handleDownloadApk} disabled={isDownloadingApk} className="inline-flex items-center gap-1.5 min-h-[36px] hover:text-navy-900 disabled:opacity-60">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                {isDownloadingApk ? "Preparing…" : "Get the Android app"}
-              </button>
-            </div>
-      }
-    >
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-700 ring-1 ring-inset ring-brand-100">
-                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-                Secure workspace access
-              </div>
-              <h1 className="font-serif text-[32px] sm:text-[36px] font-semibold tracking-[-0.035em] leading-tight text-navy-900">Welcome back</h1>
-              <p className="mt-1.5 text-[14px] text-slate-500">
-                {isCustomer ? "Sign in with a one-time code to see your bills, orders and khata." : "Sign in to manage your shop."}
-              </p>
+      <AuthShell
+        extra={
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[12.5px] text-slate-500">
+            <button
+              type="button"
+              id="supabase-status-pill"
+              onClick={() => setShowApiModal(true)}
+              className="inline-flex items-center gap-2 min-h-[36px] hover:text-navy-900 cursor-pointer"
+              title="Server settings"
+            >
+              <span className={`w-2 h-2 rounded-full ${statusDot}`} />
+              {statusText}
+            </button>
+            <span className="text-slate-300" aria-hidden>
+              •
+            </span>
+            <button
+              type="button"
+              onClick={handleDownloadApk}
+              disabled={isDownloadingApk}
+              className="inline-flex items-center gap-1.5 min-h-[36px] hover:text-navy-900 disabled:opacity-60 cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              {isDownloadingApk ? "Preparing…" : "Get the Android app"}
+            </button>
+          </div>
+        }
+      >
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-700 ring-1 ring-inset ring-brand-100">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+          Single Unified Sign In
+        </div>
+        <h1 className="font-serif text-[30px] sm:text-[34px] font-semibold tracking-[-0.035em] leading-tight text-navy-900">
+          Welcome to NSYU
+        </h1>
+        <p className="mt-1.5 text-[13.5px] text-slate-500">
+          {isCustomer
+            ? "Sign in to view your orders, bills, khata ledger and shop online."
+            : "Sign in with your owner, manager or staff account to manage your store."}
+        </p>
 
-              <div role="tablist" aria-label="Account type" className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
-                {TABS.map((t) => (
-                  <button
-                    key={t.k}
-                    id={t.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === t.k}
-                    onClick={() => handleTabChange(t.k)}
-                    className={`min-h-[42px] rounded-lg text-[13.5px] font-semibold transition-all ${activeTab === t.k ? "bg-white text-navy-900 shadow-sm ring-1 ring-slate-200" : "text-slate-500 hover:text-navy-900"}`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+        {/* ── Main Role Tabs: Owner & Staff vs Customer ── */}
+        <div
+          role="tablist"
+          aria-label="Account type"
+          className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1"
+        >
+          {TABS.map((t) => (
+            <button
+              key={t.k}
+              id={t.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === t.k}
+              onClick={() => handleTabChange(t.k)}
+              className={`min-h-[42px] rounded-lg text-[13.5px] font-semibold transition-all cursor-pointer ${
+                activeTab === t.k
+                  ? "bg-white text-navy-900 shadow-sm ring-1 ring-slate-200"
+                  : "text-slate-500 hover:text-navy-900"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-              {error && (
-                <div role="alert" className="mt-5 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] text-rose-700">
-                  <svg className="w-4 h-4 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                  <span className="leading-snug">{error}</span>
-                </div>
-              )}
+        {/* ── Customer Sub-tabs: Password Login vs OTP Code ── */}
+        {isCustomer && (
+          <div className="mt-4 flex items-center justify-center gap-2 bg-emerald-50/70 p-1 rounded-xl border border-emerald-100 text-xs font-bold text-gray-600">
+            <button
+              type="button"
+              onClick={() => {
+                setCustomerMode("password");
+                setError(null);
+              }}
+              className={`flex-1 py-1.5 rounded-lg transition text-center cursor-pointer ${
+                customerMode === "password"
+                  ? "bg-[#047857] text-white shadow-xs"
+                  : "text-emerald-900 hover:bg-emerald-100/60"
+              }`}
+            >
+              🔑 Password Login
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomerMode("otp");
+                setError(null);
+              }}
+              className={`flex-1 py-1.5 rounded-lg transition text-center cursor-pointer ${
+                customerMode === "otp"
+                  ? "bg-[#047857] text-white shadow-xs"
+                  : "text-emerald-900 hover:bg-emerald-100/60"
+              }`}
+            >
+              ✉️ Email OTP Code
+            </button>
+          </div>
+        )}
 
-              <form onSubmit={handleSubmit} className="mt-5 space-y-4" noValidate>
-                <div>
-                  <label htmlFor="identifier-input" className="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                    {isCustomer ? "Mobile number or email" : "Email or username"}
-                  </label>
-                  <input
-                    id="identifier-input"
-                    type="text"
-                    required
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    autoComplete={isCustomer ? "tel" : "username"}
-                    placeholder={isCustomer ? "98765 43210 or you@example.com" : "you@business.com"}
-                    className={FIELD}
-                  />
-                </div>
+        {/* Messages */}
+        {error && (
+          <div
+            role="alert"
+            className="mt-4 flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[13px] text-rose-700 animate-fadeIn"
+          >
+            <svg
+              className="w-4 h-4 mt-0.5 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span className="leading-snug">{error}</span>
+          </div>
+        )}
+        {successMsg && (
+          <div
+            role="status"
+            className="mt-4 flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-[13px] text-emerald-800 animate-fadeIn"
+          >
+            <span>✓</span>
+            <span className="leading-snug">{successMsg}</span>
+          </div>
+        )}
 
-                {!isCustomer && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label htmlFor="password-input" className="text-[13px] font-semibold text-slate-700">Password</label>
-                      <button type="button" onClick={() => setShowForgotModal(true)} className="text-[13px] font-semibold text-brand-700 hover:text-brand-800">
-                        Forgot password?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <input
-                        id="password-input"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="current-password"
-                        placeholder="Enter your password"
-                        className={`${FIELD} pr-12`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-slate-400 hover:text-slate-600"
-                      >
-                        {showPassword ? (
-                          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                        ) : (
-                          <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
+        {/* ── Main Form ── */}
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4" noValidate>
+          <div>
+            <label htmlFor="identifier-input" className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+              {isCustomer
+                ? customerMode === "otp"
+                  ? "Registered Email Address"
+                  : "Mobile Number or Email"
+                : "Email or Username"}
+            </label>
+            <input
+              id="identifier-input"
+              type={isCustomer && customerMode === "otp" ? "email" : "text"}
+              required
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete={isCustomer ? "username" : "email"}
+              placeholder={
+                isCustomer
+                  ? customerMode === "otp"
+                    ? "you@example.com"
+                    : "90459 17913 or you@example.com"
+                  : "you@business.com or superadmin@nsyu.com"
+              }
+              className={FIELD}
+            />
+          </div>
 
-                <button type="submit" id="login-submit-btn" disabled={loading} className={`${PRIMARY} w-full h-12 text-[15px]`}>
-                  {loading && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                  {loading ? (isCustomer ? "Sending code…" : "Signing in…") : isCustomer ? "Send login code" : "Sign in"}
+          {/* Password Field (for staff OR customer password mode) */}
+          {(!isCustomer || customerMode === "password") && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="password-input" className="text-[13px] font-semibold text-slate-700">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(true)}
+                  className="text-[12.5px] font-semibold text-brand-700 hover:text-brand-800 cursor-pointer"
+                >
+                  Forgot password?
                 </button>
-              </form>
-
-              <div className="mt-6 pt-5 border-t border-slate-200 text-center text-[13.5px] text-slate-500">
-                {isCustomer ? (
-                  <>
-                    New customer?{" "}
-                    <button type="button" id="create-account-btn" onClick={() => setShowRegisterModal(true)} className="font-semibold text-brand-700 hover:text-brand-800">
-                      Create an account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    New business?{" "}
-                    <Link to="/register" id="create-account-btn" className="font-semibold text-brand-700 hover:text-brand-800">
-                      Register your shop
-                    </Link>
-                  </>
-                )}
               </div>
-    </AuthShell>
+              <div className="relative">
+                <input
+                  id="password-input"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  placeholder="Enter your password"
+                  className={`${FIELD} pr-12`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  {showPassword ? (
+                    <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
-      {/* ── OTP verification ── */}
+          <button
+            type="submit"
+            id="login-submit-btn"
+            disabled={loading}
+            className={`${PRIMARY} w-full h-12 text-[15px] cursor-pointer`}
+          >
+            {loading && (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            )}
+            {loading
+              ? isCustomer && customerMode === "otp"
+                ? "Sending code…"
+                : "Signing in…"
+              : isCustomer
+              ? customerMode === "otp"
+                ? "Send 6-Digit Login Code"
+                : "Sign In as Customer"
+              : "Sign In"}
+          </button>
+        </form>
+
+        <div className="mt-5 pt-4 border-t border-slate-200 text-center text-[13px] text-slate-500">
+          {isCustomer ? (
+            <>
+              New customer?{" "}
+              <button
+                type="button"
+                id="create-account-btn"
+                onClick={() => setShowRegisterModal(true)}
+                className="font-bold text-brand-700 hover:text-brand-800 cursor-pointer"
+              >
+                Create an account
+              </button>
+            </>
+          ) : (
+            <>
+              New business?{" "}
+              <Link
+                to="/register"
+                id="create-account-btn"
+                className="font-bold text-brand-700 hover:text-brand-800"
+              >
+                Register your shop
+              </Link>
+            </>
+          )}
+        </div>
+      </AuthShell>
+
+      {/* ── Customer OTP Verification Modal ── */}
       {showOtpModal && (
         <Modal
           onClose={() => setShowOtpModal(false)}
           title="Enter your code"
-          subtitle={<>We sent a 6-digit code to {maskedEmail ? <strong className="text-navy-900">{maskedEmail}</strong> : "your registered email"}. OTP is email-only.</>}
+          subtitle={
+            <>
+              We sent a 6-digit code to{" "}
+              {maskedEmail ? (
+                <strong className="text-navy-900">{maskedEmail}</strong>
+              ) : (
+                "your registered email"
+              )}
+              . Check your inbox or spam folder.
+            </>
+          }
         >
-          {otpError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 text-center">{otpError}</p>}
+          {otpError && (
+            <p
+              role="alert"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700 text-center"
+            >
+              {otpError}
+            </p>
+          )}
           <form onSubmit={handleVerifyOtp} className="space-y-3">
             <input
               type="text"
@@ -432,17 +736,21 @@ export default function Login() {
               aria-label="6-digit code"
               value={otpCode}
               onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-              placeholder="••••"
-              className="w-full h-14 rounded-xl border border-slate-300 text-center text-2xl font-mono tracking-[0.6em] outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
+              placeholder="••••••"
+              className="w-full h-14 rounded-xl border border-slate-300 text-center text-2xl font-mono tracking-[0.5em] outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15"
             />
-            <button type="submit" disabled={otpLoading || otpCode.length !== 6} className={`${PRIMARY} w-full h-12 text-[15px]`}>
-              {otpLoading ? "Verifying…" : "Verify & sign in"}
+            <button
+              type="submit"
+              disabled={otpLoading || otpCode.length !== 6}
+              className={`${PRIMARY} w-full h-12 text-[15px] cursor-pointer`}
+            >
+              {otpLoading ? "Verifying…" : "Verify & Sign In"}
             </button>
             <button
               type="button"
               disabled={otpCooldown > 0}
               onClick={() => handleSubmit(new Event("submit") as any)}
-              className="w-full min-h-[40px] text-[13px] font-semibold text-brand-700 hover:text-brand-800 disabled:text-slate-400"
+              className="w-full min-h-[40px] text-[13px] font-semibold text-brand-700 hover:text-brand-800 disabled:text-slate-400 cursor-pointer"
             >
               {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : "Didn't get it? Resend code"}
             </button>
@@ -450,30 +758,198 @@ export default function Login() {
         </Modal>
       )}
 
-      {/* ── Customer registration ── */}
+      {/* ── Customer Registration Modal ── */}
       {showRegisterModal && (
-        <Modal onClose={() => setShowRegisterModal(false)} closeId="close-register-modal" title="Create customer account" subtitle="Register with your shop to see bills, orders and khata online." wide>
-          {regError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700">{regError}</p>}
-          {regSuccess && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] text-emerald-800">{regSuccess}</p>}
+        <Modal
+          onClose={() => setShowRegisterModal(false)}
+          closeId="close-register-modal"
+          title="Create customer account"
+          subtitle="Register to see bills, orders, khata ledger and track marketplace orders."
+          wide
+        >
+          {regError && (
+            <p
+              role="alert"
+              className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-[13px] text-rose-700"
+            >
+              {regError}
+            </p>
+          )}
+          {regSuccess && (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] text-emerald-800">
+              {regSuccess}
+            </p>
+          )}
           <form onSubmit={handleRegister} className="grid sm:grid-cols-2 gap-3.5">
-            <RegField label="Full name" id="reg-name" className="sm:col-span-2" value={regName} onChange={setRegName} autoComplete="name" />
-            <RegField label="Mobile number" id="reg-phone" type="tel" value={regPhone} onChange={setRegPhone} autoComplete="tel" inputMode="tel" />
-            <RegField label="Email" id="reg-email" type="email" value={regEmail} onChange={setRegEmail} autoComplete="email" />
-            <RegField label="Address (optional)" id="reg-address" className="sm:col-span-2" value={regAddress} onChange={setRegAddress} required={false} autoComplete="street-address" />
-            <button type="submit" disabled={regLoading} className={`${PRIMARY} sm:col-span-2 mt-1 w-full h-12 text-[15px]`}>
-              {regLoading ? "Registering…" : "Register & send code"}
+            <RegField
+              label="Full name"
+              id="reg-name"
+              className="sm:col-span-2"
+              value={regName}
+              onChange={setRegName}
+              autoComplete="name"
+            />
+            <RegField
+              label="Mobile number"
+              id="reg-phone"
+              type="tel"
+              value={regPhone}
+              onChange={setRegPhone}
+              autoComplete="tel"
+              inputMode="tel"
+            />
+            <RegField
+              label="Email"
+              id="reg-email"
+              type="email"
+              value={regEmail}
+              onChange={setRegEmail}
+              autoComplete="email"
+            />
+            <RegField
+              label="Address (optional)"
+              id="reg-address"
+              className="sm:col-span-2"
+              value={regAddress}
+              onChange={setRegAddress}
+              required={false}
+              autoComplete="street-address"
+            />
+            <button
+              type="submit"
+              disabled={regLoading}
+              className={`${PRIMARY} sm:col-span-2 mt-1 w-full h-12 text-[15px] cursor-pointer`}
+            >
+              {regLoading ? "Registering…" : "Register & Send Verification Code"}
             </button>
           </form>
         </Modal>
       )}
 
-      {/* ── Server settings ── */}
+      {/* ── Forgot Password Modal (Customer Reset & Staff Guidance) ── */}
+      {showForgotModal && (
+        <Modal
+          onClose={() => {
+            setShowForgotModal(false);
+            setForgotStep("request");
+            setForgotError(null);
+          }}
+          title="Forgot password?"
+          subtitle={
+            isCustomer
+              ? "Reset your customer password via your registered email."
+              : "Here's how to recover your staff or owner account."
+          }
+        >
+          {isCustomer ? (
+            forgotStep === "request" ? (
+              <form onSubmit={handleForgotRequest} className="space-y-3.5">
+                {forgotError && (
+                  <p className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700">
+                    {forgotError}
+                  </p>
+                )}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Your Registered Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@example.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-200 text-xs text-gray-900 outline-none focus:border-brand-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className={`${PRIMARY} w-full h-11 text-xs cursor-pointer`}
+                >
+                  {forgotLoading ? "Sending OTP…" : "Send Reset Code"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleForgotReset} className="space-y-3.5">
+                {forgotError && (
+                  <p className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700">
+                    {forgotError}
+                  </p>
+                )}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    6-Digit Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    required
+                    placeholder="123456"
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-200 text-xs font-mono tracking-widest text-center text-gray-900 outline-none focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    New Password (min 6 chars)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="Enter new password"
+                    value={forgotNewPassword}
+                    onChange={(e) => setForgotNewPassword(e.target.value)}
+                    className="w-full h-11 px-3.5 rounded-xl border border-gray-200 text-xs text-gray-900 outline-none focus:border-brand-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className={`${PRIMARY} w-full h-11 text-xs cursor-pointer`}
+                >
+                  {forgotLoading ? "Saving…" : "Set New Password"}
+                </button>
+              </form>
+            )
+          ) : (
+            <div className="space-y-2.5 text-[13px] text-slate-600">
+              <div className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3.5">
+                <strong className="block text-navy-900">Staff Member</strong>
+                Ask your shop owner or manager to reset your password from the Staff management screen.
+              </div>
+              <div className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3.5">
+                <strong className="block text-navy-900">Shop Owner</strong>
+                Contact NSYU Platform Admin to verify your store credentials and reset password.
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(false)}
+                className="btn-primary w-full h-11 mt-2 cursor-pointer"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* ── Server settings Modal ── */}
       {showApiModal && (
-        <Modal onClose={() => setShowApiModal(false)} closeId="close-api-modal" title="Server settings" subtitle="Which NSYU server this app connects to.">
+        <Modal
+          onClose={() => setShowApiModal(false)}
+          closeId="close-api-modal"
+          title="Server settings"
+          subtitle="Which NSYU server this app connects to."
+        >
           <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 ring-1 ring-slate-200 px-3.5 py-3 text-[13px] min-w-0">
             <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDot}`} />
             <span className="font-semibold text-navy-900 shrink-0">{statusText}</span>
-            {statusMsg && apiStatus !== "checking" && <span className="text-slate-500 truncate">· {statusMsg}</span>}
+            {statusMsg && apiStatus !== "checking" && (
+              <span className="text-slate-500 truncate">· {statusMsg}</span>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             {[
@@ -484,56 +960,107 @@ export default function Login() {
                 key={o.u}
                 type="button"
                 onClick={() => handleSaveApiUrl(o.u)}
-                className={`min-h-[44px] rounded-xl text-[13px] font-semibold transition ${apiUrl === o.u ? "bg-brand-50 text-brand-800 ring-2 ring-brand-500" : "bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300"}`}
+                className={`min-h-[44px] rounded-xl text-[13px] font-semibold transition cursor-pointer ${
+                  apiUrl === o.u
+                    ? "bg-brand-50 text-brand-800 ring-2 ring-brand-500"
+                    : "bg-white text-slate-700 ring-1 ring-slate-200 hover:ring-slate-300"
+                }`}
               >
                 {o.l}
               </button>
             ))}
           </div>
           <div>
-            <label htmlFor="api-url" className="block text-[13px] font-semibold text-slate-700 mb-1.5">Server address</label>
+            <label htmlFor="api-url" className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+              Server address
+            </label>
             <div className="flex gap-2">
-              <input id="api-url" type="url" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} className="input h-11 font-mono text-[12.5px] min-w-0" />
-              <button type="button" onClick={() => handleSaveApiUrl(apiUrl)} className="btn-primary h-11 shrink-0">Save</button>
+              <input
+                id="api-url"
+                type="url"
+                value={apiUrl}
+                onChange={(e) => setApiUrl(e.target.value)}
+                className="input h-11 font-mono text-[12.5px] min-w-0"
+              />
+              <button
+                type="button"
+                onClick={() => handleSaveApiUrl(apiUrl)}
+                className="btn-primary h-11 shrink-0 cursor-pointer"
+              >
+                Save
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => checkHealth(apiUrl)} className="btn-secondary h-11">Test connection</button>
-            <button type="button" onClick={() => setShowApiModal(false)} className="btn-primary h-11">Done</button>
+            <button
+              type="button"
+              onClick={() => checkHealth(apiUrl)}
+              className="btn-secondary h-11 cursor-pointer"
+            >
+              Test connection
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowApiModal(false)}
+              className="btn-primary h-11 cursor-pointer"
+            >
+              Done
+            </button>
           </div>
         </Modal>
       )}
 
-      {/* ── Forgot password: there is no self-service owner reset endpoint, so give honest guidance ── */}
-      {showForgotModal && (
-        <Modal onClose={() => setShowForgotModal(false)} title="Forgot your password?" subtitle="Here's how to get back in.">
-          <ul className="space-y-2.5 text-[13.5px] text-slate-600">
-            <li className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3.5"><strong className="block text-navy-900">Staff</strong>Ask your shop owner to set a new password for you.</li>
-            <li className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3.5"><strong className="block text-navy-900">Shop owner</strong>Contact NSYU support to verify your identity and reset it.</li>
-            <li className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3.5"><strong className="block text-navy-900">Customer</strong>No password needed — use the Customer tab to sign in with a one-time code.</li>
-          </ul>
-          <button type="button" onClick={() => setShowForgotModal(false)} className="btn-primary w-full h-11">Back to sign in</button>
-        </Modal>
-      )}
-
-      {/* ── APK download ── */}
+      {/* ── APK Download Modals ── */}
       {apkSuccessModal && (
-        <Modal onClose={() => setApkSuccessModal(null)} title="Download started" subtitle={apkSuccessModal.filename}>
+        <Modal
+          onClose={() => setApkSuccessModal(null)}
+          title="Download started"
+          subtitle={apkSuccessModal.filename}
+        >
           <p className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3.5 text-[13px] text-slate-600">
             {apkSuccessModal.isAndroid ? (
-              <>If your browser warns you, tap <strong>Download anyway</strong>, then open the file to install.</>
+              <>
+                If your browser warns you, tap <strong>Download anyway</strong>, then open the file to
+                install.
+              </>
             ) : (
               "Copy this file to an Android phone and open it there to install the app."
             )}
           </p>
-          <button type="button" onClick={() => setApkSuccessModal(null)} className="btn-primary w-full h-11">Done</button>
+          <button
+            type="button"
+            onClick={() => setApkSuccessModal(null)}
+            className="btn-primary w-full h-11 cursor-pointer"
+          >
+            Done
+          </button>
         </Modal>
       )}
       {apkErrorModal && (
-        <Modal onClose={() => setApkErrorModal(null)} title="Download failed" subtitle={apkErrorModal.reason}>
+        <Modal
+          onClose={() => setApkErrorModal(null)}
+          title="Download failed"
+          subtitle={apkErrorModal.reason}
+        >
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => { setApkErrorModal(null); handleDownloadApk(); }} className="btn-secondary h-11">Try again</button>
-            <a href={GITHUB_APK_RAW_URL} target="_blank" rel="noreferrer" className="btn-primary h-11">Direct link</a>
+            <button
+              type="button"
+              onClick={() => {
+                setApkErrorModal(null);
+                handleDownloadApk();
+              }}
+              className="btn-secondary h-11 cursor-pointer"
+            >
+              Try again
+            </button>
+            <a
+              href={GITHUB_APK_RAW_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-primary h-11 text-center flex items-center justify-center cursor-pointer"
+            >
+              Direct link
+            </a>
           </div>
         </Modal>
       )}
@@ -541,16 +1068,26 @@ export default function Login() {
   );
 }
 
-const FIELD = "w-full h-12 rounded-xl border border-slate-300 bg-white px-3.5 text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15";
-const PRIMARY = "inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100 text-white font-semibold shadow-brand transition";
+const FIELD =
+  "w-full h-12 rounded-xl border border-slate-300 bg-white px-3.5 text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15";
+const PRIMARY =
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100 text-white font-semibold shadow-brand transition";
 
-const TABS = [
-  { k: "staff", id: "staff-tab-btn", label: "Owner / Staff" },
-  { k: "customer", id: "customer-tab-btn", label: "Customer" },
-] as const;
-
-
-function Modal({ title, subtitle, onClose, closeId, wide, children }: { title: string; subtitle?: React.ReactNode; onClose: () => void; closeId?: string; wide?: boolean; children: React.ReactNode }) {
+function Modal({
+  title,
+  subtitle,
+  onClose,
+  closeId,
+  wide,
+  children,
+}: {
+  title: string;
+  subtitle?: React.ReactNode;
+  onClose: () => void;
+  closeId?: string;
+  wide?: boolean;
+  children: React.ReactNode;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -559,16 +1096,30 @@ function Modal({ title, subtitle, onClose, closeId, wide, children }: { title: s
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-navy-950/50 backdrop-blur-[2px] animate-fadeIn" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-navy-950/50 backdrop-blur-[2px] animate-fadeIn"
+      onClick={onClose}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full ${wide ? "sm:max-w-lg" : "sm:max-w-sm"} max-h-[92dvh] overflow-y-auto bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4`}
+        className={`relative w-full ${
+          wide ? "sm:max-w-lg" : "sm:max-w-sm"
+        } max-h-[92dvh] overflow-y-auto bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl p-5 sm:p-6 space-y-4`}
       >
-        <button type="button" id={closeId} onClick={onClose} aria-label="Close" className="absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100">
-          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        <button
+          type="button"
+          id={closeId}
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
         <div className="pr-10">
           <h3 className="text-[18px] font-bold text-navy-900 tracking-tight">{title}</h3>
@@ -589,10 +1140,20 @@ function RegField({
   inputClass = "",
   required = true,
   ...rest
-}: { label: string; id: string; value: string; onChange: (v: string) => void; className?: string; inputClass?: string; required?: boolean } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "className" | "id">) {
+}: {
+  label: string;
+  id: string;
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+  inputClass?: string;
+  required?: boolean;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "className" | "id">) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-[13px] font-semibold text-slate-700 mb-1.5">{label}</label>
+      <label htmlFor={id} className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+        {label}
+      </label>
       <input
         id={id}
         value={value}

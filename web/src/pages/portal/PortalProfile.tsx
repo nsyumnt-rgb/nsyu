@@ -38,7 +38,7 @@ export default function PortalProfile() {
 
   const handleLogout = async () => {
     await logoutCustomerApi();
-    navigate("/portal/login", { replace: true });
+    navigate("/login?tab=customer", { replace: true });
   };
 
   const balance = Number(customer?.currentBalance ?? 0);

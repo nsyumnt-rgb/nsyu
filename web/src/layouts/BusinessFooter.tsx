@@ -67,7 +67,7 @@ export default function BusinessFooter() {
                 <a href="mailto:support@nsyu.com" className="hover:text-white hover:underline transition">Contact Support</a>
               </li>
               <li>
-                <Link to="/portal/login" className="hover:text-white hover:underline transition">Customer Portal</Link>
+                <Link to="/login?tab=customer" className="hover:text-white hover:underline transition">Customer Portal</Link>
               </li>
               <li>
                 <Link to="/app/reports" className="hover:text-white hover:underline transition">Business Analytics</Link>

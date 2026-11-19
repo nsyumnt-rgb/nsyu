@@ -106,7 +106,7 @@ export default function CustomerPortalLayout() {
 
   const logout = async () => {
     await logoutCustomerApi();
-    navigate("/portal/login", { replace: true });
+    navigate("/login?tab=customer", { replace: true });
   };
 
   const submitSearch = (e: React.FormEvent) => {

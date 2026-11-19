@@ -14,7 +14,7 @@ export default function RequireCustomerAuth() {
   }, [accessToken, setCart, setUnreadCount]);
 
   if (!accessToken) {
-    return <Navigate to="/portal/login" replace />;
+    return <Navigate to="/login?tab=customer" replace />;
   }
 
   return <Outlet />;
