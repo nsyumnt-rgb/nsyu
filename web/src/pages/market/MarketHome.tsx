@@ -1,180 +1,280 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getMarketCategories, getMarketShops, searchMarket, type MarketListing, type MarketShop } from "../../api/marketplace";
-import { resolveAssetUrl } from "../../api/client";
-import MarketCard, { rupees, listingHref } from "../../components/MarketCard";
-import { KindIcon, ProductPlaceholder, productKind, tintFor } from "../../components/ProductArt";
-import ShopCard from "./ShopCard";
+import {
+  getMarketCategories,
+  searchMarket,
+  type MarketListing,
+} from "../../api/marketplace";
+import MarketCard from "../../components/MarketCard";
+import MarketCategorySidebar from "../../components/MarketCategorySidebar";
 
-/* MultiShop wireframe 1 — marketplace home. All content comes from the live catalog. */
+// Quick category circle items below hero banner (matching Image 1)
+const CATEGORY_CIRCLES = [
+  { name: "Electronics", icon: "💻", query: "Electronics" },
+  { name: "Accessories", icon: "🎧", query: "Accessories" },
+  { name: "Home & Living", icon: "🛋️", query: "Home & Living" },
+  { name: "Fashion", icon: "👕", query: "Fashion" },
+  { name: "Beauty Care", icon: "💄", query: "Beauty & Personal Care" },
+  { name: "Health Care", icon: "💊", query: "Health & Wellness" },
+  { name: "Sports", icon: "🏀", query: "Sports & Fitness" },
+  { name: "More", icon: "⊞", query: "" },
+];
 
 export default function MarketHome() {
-  const [categories, setCategories] = useState<{ name: string; count: number; imageUrl: string | null }[]>([]);
-  const [products, setProducts] = useState<MarketListing[]>([]);
-  const [shops, setShops] = useState<MarketShop[]>([]);
+  const [newArrivals, setNewArrivals] = useState<MarketListing[]>([]);
+  const [bestSellers, setBestSellers] = useState<MarketListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const heroSlides = [
+    {
+      title: "Premium Quality Products at Best Prices",
+      subtitle: "Shop Smart. Save More.",
+      buttonText: "Shop Now →",
+      buttonLink: "/market/search",
+      badgeText: "Up to 50% OFF",
+      image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+    },
+    {
+      title: "Discover Local Shops & Direct Delivery",
+      subtitle: "Support Verified Neighborhood Stores.",
+      buttonText: "Explore Shops →",
+      buttonLink: "/market/shops",
+      badgeText: "Fast Local Delivery",
+      image: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80",
+    },
+  ];
 
   useEffect(() => {
     Promise.all([
       getMarketCategories().catch(() => []),
-      searchMarket({ sort: "newest", inStock: true, limit: 8 }).catch(() => ({ data: [] as MarketListing[] })),
-      getMarketShops({ limit: 6 }).catch(() => ({ data: [] as MarketShop[] })),
+      searchMarket({ sort: "newest", inStock: true, limit: 12 }).catch(() => ({
+        data: [] as MarketListing[],
+      })),
+      searchMarket({ sort: "relevance", inStock: true, limit: 12 }).catch(() => ({
+        data: [] as MarketListing[],
+      })),
     ])
-      .then(([c, p, s]) => {
-        setCategories(c);
-        setProducts(p.data);
-        setShops(s.data);
+      .then(([, pNew, pBest]) => {
+        setNewArrivals(pNew.data || []);
+        setBestSellers(pBest.data || []);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <div className="space-y-14">
-      {/* Hero */}
-      <section className="hero-brand px-6 py-10 sm:px-12 sm:py-14 grid lg:grid-cols-2 gap-8 items-center">
-        <div className="absolute -right-16 -bottom-24 w-80 h-80 rounded-full bg-white/[0.05]" />
-        <div className="relative">
-          <h1 className="text-[32px] sm:text-[46px] font-bold leading-[1.08] tracking-tight !text-white">Shop from local stores, delivered to your door</h1>
-          <p className="mt-4 text-[15px] sm:text-[17px] text-brand-100/85 max-w-xl">Compare prices across shops, order online and track every order.</p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link to="/market/search" className="px-6 h-12 inline-flex items-center rounded-xl bg-white text-navy-900 font-semibold hover:bg-brand-50">Start shopping</Link>
-            <Link to="/register" className="px-6 h-12 inline-flex items-center rounded-xl ring-1 ring-white/40 text-white font-semibold hover:bg-white/10">Open your shop</Link>
-          </div>
-        </div>
-        <div className="relative hidden lg:block">
-          <div className="rounded-2xl bg-white/10 ring-1 ring-white/15 backdrop-blur-sm p-4">
-            <div className="flex items-center justify-between px-1 pb-3">
-              <span className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-100/80">Just added</span>
-              <Link to="/market/search?sort=newest" className="text-[12.5px] font-semibold text-white/90 hover:text-white">See all →</Link>
-            </div>
-            <ul className="space-y-2">
-              {(loading ? Array.from({ length: 4 }) : products.slice(0, 4)).map((p: any, i) => (
-                <li key={p ? `${p.shop.id}-${p.productId}` : i}>
-                  {p ? (
-                    <Link to={listingHref(p)} className="flex items-center gap-3 rounded-xl bg-white p-2.5 pr-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition">
-                      <span className="relative w-14 h-14 rounded-lg overflow-hidden bg-[#F3F4F2] shrink-0">
-                        {p.imageUrl ? <img src={resolveAssetUrl(p.imageUrl) ?? undefined} alt="" className="absolute inset-0 w-full h-full object-contain p-1.5 mix-blend-multiply" /> : <ProductPlaceholder name={p.name} category={p.category} compact />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[13.5px] font-semibold text-navy-900 truncate">{p.name}</span>
-                        <span className="block text-[12px] text-slate-500 truncate">{p.shop.name}</span>
-                      </span>
-                      <span className="text-right shrink-0">
-                        <span className="block text-[14px] font-bold text-navy-900 tabular">{rupees(p.price)}</span>
-                        {p.discountPercent > 0 && <span className="block text-[11px] font-semibold text-rose-600">{p.discountPercent}% off</span>}
-                      </span>
-                    </Link>
-                  ) : (
-                    <div className="h-[76px] rounded-xl bg-white/15 animate-pulse" />
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
+  // Carousel autoplay timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
 
-      {/* Categories */}
-      <section>
-        <SectionHead title="Shop by category" to="/market/search" />
-        {categories.length === 0 && !loading ? (
-          <p className="text-[13px] text-slate-500">No categories yet.</p>
-        ) : (
-          <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-3 sm:gap-4 overflow-x-auto snap-x pb-2 [scrollbar-width:thin]">
-            {(loading ? Array.from({ length: 6 }) : categories.slice(0, 12)).map((c: any, i) => (
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-6 items-start">
+      
+      {/* ============================================================== */}
+      {/* LEFT SIDEBAR: CATEGORIES (Permanent Left Sidebar in Image 1)   */}
+      {/* ============================================================== */}
+      <div className="hidden lg:block sticky top-28 z-10">
+        <MarketCategorySidebar />
+      </div>
+
+      {/* ============================================================== */}
+      {/* RIGHT MAIN CONTENT AREA                                         */}
+      {/* ============================================================== */}
+      <div className="space-y-8 min-w-0">
+
+        {/* 1. HERO CAROUSEL BANNER (Image 1 Mockup) */}
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-100/90 via-emerald-50 to-teal-50 border border-emerald-100 p-6 sm:p-10 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6 min-h-[280px]">
+          {/* Left Hero Text */}
+          <div className="max-w-md space-y-3 z-10 text-center md:text-left">
+            <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-[#064E3B] leading-tight tracking-tight">
+              {heroSlides[currentSlide].title}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-600 font-medium">
+              {heroSlides[currentSlide].subtitle}
+            </p>
+            <div className="pt-2">
               <Link
-                key={c?.name ?? i}
-                to={c ? `/market/search?category=${encodeURIComponent(c.name)}` : "#"}
-                className="group card card-hover p-4 flex flex-col items-center text-center gap-2.5 snap-start shrink-0 w-[128px] sm:w-[150px]"
+                to={heroSlides[currentSlide].buttonLink}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#047857] hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition shadow-md hover:scale-105 active:scale-95"
               >
-                <span className={`w-16 h-16 rounded-2xl flex items-center justify-center overflow-hidden transition group-hover:scale-105 ${c ? catTint(c.name) : "bg-slate-100"}`}>
-                  {c?.imageUrl ? (
-                    <img src={resolveAssetUrl(c.imageUrl) ?? undefined} alt="" className="w-[72%] h-[72%] object-contain mix-blend-multiply" />
-                  ) : c ? (
-                    <KindIcon kind={productKind(c.name)} className="w-7 h-7" />
-                  ) : null}
-                </span>
-                <span className="text-[13px] font-semibold text-navy-900 line-clamp-2 capitalize">{c?.name?.toLowerCase() ?? <span className="block w-16 h-3 bg-slate-100 rounded" />}</span>
-                {c && <span className="text-[11px] text-slate-400 -mt-1.5">{c.count} items</span>}
+                <span>{heroSlides[currentSlide].buttonText}</span>
               </Link>
+            </div>
+          </div>
+
+          {/* Right Hero Product Collage with 50% Off Badge */}
+          <div className="relative flex items-center justify-center z-10">
+            {/* Visual Circular Product Frame */}
+            <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-white/70 backdrop-blur-xs p-4 flex items-center justify-center shadow-lg border border-white">
+              <img
+                src={heroSlides[currentSlide].image}
+                alt="Featured Products"
+                className="max-h-full max-w-full object-contain rounded-2xl drop-shadow-md hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+
+            {/* "Up to 50% OFF" Badge */}
+            <div className="absolute top-2 -right-2 sm:right-2 bg-emerald-700 text-white px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white flex items-center gap-1.5 text-xs font-black animate-bounce">
+              <span>⭐</span>
+              <span>{heroSlides[currentSlide].badgeText}</span>
+            </div>
+          </div>
+
+          {/* Carousel Arrows */}
+          <button
+            type="button"
+            onClick={() =>
+              setCurrentSlide(
+                (prev) => (prev - 1 + heroSlides.length) % heroSlides.length
+              )
+            }
+            aria-label="Previous slide"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-gray-700 flex items-center justify-center shadow-md transition"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
+            }
+            aria-label="Next slide"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-gray-700 flex items-center justify-center shadow-md transition"
+          >
+            ›
+          </button>
+
+          {/* Carousel Pagination Dots */}
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
+            {heroSlides.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setCurrentSlide(idx)}
+                className={`h-2 rounded-full transition-all ${
+                  currentSlide === idx
+                    ? "w-6 bg-[#047857]"
+                    : "w-2 bg-emerald-300 hover:bg-emerald-400"
+                }`}
+                aria-label={`Slide ${idx + 1}`}
+              />
             ))}
           </div>
-        )}
-      </section>
-
-      {/* New arrivals */}
-      <section>
-        <SectionHead title="New arrivals" to="/market/search?sort=newest" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="card aspect-[3/4] animate-pulse" />)
-            : products.map((p) => <MarketCard key={`${p.shop.id}-${p.productId}`} listing={p} />)}
         </div>
-      </section>
 
-      {/* Shops */}
-      <section>
-        <SectionHead title="Shops" to="/market/shops" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {loading ? Array.from({ length: 3 }).map((_, i) => <div key={i} className="card h-40 animate-pulse" />) : shops.map((s) => <ShopCard key={s.id} shop={s} />)}
+        {/* 2. CIRCULAR CATEGORY STRIP (Image 1 Mockup) */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-xs">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 sm:gap-4 text-center">
+            {CATEGORY_CIRCLES.map((cat) => {
+              const href = cat.query
+                ? `/market/search?category=${encodeURIComponent(cat.query)}`
+                : "/market/search";
+              return (
+                <Link
+                  key={cat.name}
+                  to={href}
+                  className="group flex flex-col items-center gap-2 transition"
+                >
+                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-xl sm:text-2xl shadow-xs group-hover:scale-110 group-hover:border-emerald-400 group-hover:bg-emerald-50 transition">
+                    <span>{cat.icon}</span>
+                  </div>
+                  <span className="text-[11px] sm:text-xs font-bold text-gray-700 group-hover:text-[#047857] transition truncate max-w-full">
+                    {cat.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </section>
 
-      {/* How it works */}
-      <section className="card p-6 sm:p-10">
-        <h2 className="text-[22px] font-semibold text-center">How it works</h2>
-        <div className="mt-8 grid sm:grid-cols-3 gap-6">
-          {[
-            ["1", "Find", "Search across local shops and compare prices for the same product."],
-            ["2", "Order", "Order online from the shop you choose — delivery or pickup."],
-            ["3", "Track", "Follow each order from placed to delivered and keep your bills."],
-          ].map(([n, t, d]) => (
-            <div key={n} className="text-center">
-              <span className="relative w-14 h-14 mx-auto rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{STEP_ICONS[n]}</svg>
-                <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-brand-600 text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white">{n}</span>
-              </span>
-              <div className="mt-3 text-[15px] font-semibold text-navy-900">{t}</div>
-              <p className="mt-1 text-[13px] text-slate-500 max-w-xs mx-auto">{d}</p>
+        {/* 3. NEW ARRIVALS SECTION (6-Column Grid in Image 1) */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-5 rounded-full bg-[#047857] inline-block" />
+              <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                New Arrivals
+              </h2>
             </div>
-          ))}
-        </div>
-      </section>
+            <Link
+              to="/market/search?sort=newest"
+              className="text-xs font-bold text-[#047857] hover:text-emerald-800 flex items-center gap-1 transition"
+            >
+              <span>View All</span>
+              <span>→</span>
+            </Link>
+          </div>
 
-      <section className="hero-brand px-6 py-8 sm:px-10 sm:py-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="relative max-w-xl">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-100/80">For shop owners</p>
-          <h2 className="mt-2 text-[22px] sm:text-[26px] font-bold tracking-tight !text-white">Own a shop? Start selling online today.</h2>
-          <p className="text-[14px] text-brand-50/80 mt-2">Billing, stock, khata and your own online store — in one app, on web and phone.</p>
-        </div>
-        <div className="relative flex flex-wrap gap-3 shrink-0">
-          <Link to="/register" className="px-6 h-12 inline-flex items-center rounded-xl bg-white text-navy-900 font-semibold hover:bg-brand-50">Register your shop</Link>
-          <Link to="/login" className="px-6 h-12 inline-flex items-center rounded-xl ring-1 ring-white/40 text-white font-semibold hover:bg-white/10">Owner login</Link>
-        </div>
-      </section>
-    </div>
-  );
-}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl border border-gray-100 p-3 h-64 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : newArrivals.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-gray-100 text-xs text-gray-400">
+              No products available right now.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+              {newArrivals.slice(0, 12).map((p) => (
+                <MarketCard
+                  key={`${p.shop.id}-${p.productId}`}
+                  listing={p}
+                />
+              ))}
+            </div>
+          )}
+        </section>
 
-const catTint = (name: string) => {
-  const t = tintFor(`${name}|${productKind(name)}`);
-  return `bg-gradient-to-br ${t.bg} ${t.fg}`;
-};
+        {/* 4. BEST SELLERS SECTION (6-Column Grid in Image 1) */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-5 rounded-full bg-[#047857] inline-block" />
+              <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                Best Sellers
+              </h2>
+            </div>
+            <Link
+              to="/market/search?sort=relevance"
+              className="text-xs font-bold text-[#047857] hover:text-emerald-800 flex items-center gap-1 transition"
+            >
+              <span>View All</span>
+              <span>→</span>
+            </Link>
+          </div>
 
-const STEP_ICONS: Record<string, React.ReactNode> = {
-  "1": <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>,
-  "2": <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></>,
-  "3": <><path d="M1 3h15v13H1z" /><path d="M16 8h4l3 3v5h-7z" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></>,
-};
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl border border-gray-100 p-3 h-64 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+              {(bestSellers.length > 0 ? bestSellers : newArrivals)
+                .slice(0, 12)
+                .map((p) => (
+                  <MarketCard
+                    key={`best-${p.shop.id}-${p.productId}`}
+                    listing={p}
+                  />
+                ))}
+            </div>
+          )}
+        </section>
 
-function SectionHead({ title, to }: { title: string; to: string }) {
-  return (
-    <div className="flex items-end justify-between mb-5">
-      <h2 className="text-[22px] sm:text-[26px] font-semibold tracking-tight">{title}</h2>
-      <Link to={to} className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-brand-700 hover:text-brand-800 min-h-[40px]">
-        View all
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-      </Link>
+      </div>
     </div>
   );
 }
