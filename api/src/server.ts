@@ -125,6 +125,11 @@ async function ensurePromotionsAndSuppliersSchema() {
   await runSqlMigration("09_promotions_and_suppliers.sql", "Promotions and supplier auth schema verified");
 }
 
+/** Complete Returns Workflow (B2C & B2B) (additive, idempotent). */
+async function ensureReturnsSchema() {
+  await runSqlMigration("10_returns_workflow.sql", "Returns workflow schema verified");
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -136,6 +141,7 @@ async function start() {
     await ensureEmployeeSchema();
     await ensureShopPoliciesSchema();
     await ensurePromotionsAndSuppliersSchema();
+    await ensureReturnsSchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);
