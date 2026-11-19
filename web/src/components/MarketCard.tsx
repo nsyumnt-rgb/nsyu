@@ -84,10 +84,10 @@ export default function MarketCard({
   }
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 p-3 flex flex-col shadow-xs hover:shadow-md hover:-translate-y-1 transition duration-200 relative">
+    <div className="market-card group p-3 flex flex-col relative [transform-style:preserve-3d]">
       
       {/* Top Media Container */}
-      <div className="relative w-full aspect-square bg-[#F8FAFC] rounded-xl overflow-hidden flex items-center justify-center p-3 mb-2.5">
+      <div className="relative w-full aspect-square bg-gradient-to-br from-slate-50 to-violet-50/60 rounded-xl overflow-hidden flex items-center justify-center p-3 mb-2.5">
         
         {/* Top-Left Discount Badge */}
         {discount > 0 && (
@@ -151,7 +151,7 @@ export default function MarketCard({
           {/* Product Title */}
           <Link
             to={href}
-            className="block text-xs sm:text-[13px] font-bold text-gray-900 leading-snug line-clamp-2 hover:text-[#047857] transition"
+            className="block text-xs sm:text-[13px] font-bold text-navy-900 leading-snug line-clamp-2 hover:text-violet-700 transition"
             title={listing.name}
           >
             {listing.name}
@@ -179,7 +179,7 @@ export default function MarketCard({
             added
               ? "bg-emerald-800 text-white"
               : listing.inStock
-              ? "bg-[#047857] hover:bg-emerald-800 active:scale-98 text-white"
+              ? "bg-navy-900 hover:bg-violet-700 active:scale-98 text-white"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >

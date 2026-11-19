@@ -86,10 +86,10 @@ export default function MarketHome() {
       <div className="space-y-8 min-w-0">
 
         {/* 1. HERO CAROUSEL BANNER (Image 1 Mockup) */}
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-100/90 via-emerald-50 to-teal-50 border border-emerald-100 p-6 sm:p-10 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6 min-h-[280px]">
+        <div className="market-hero p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 min-h-[280px]">
           {/* Left Hero Text */}
           <div className="max-w-md space-y-3 z-10 text-center md:text-left">
-            <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-[#064E3B] leading-tight tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-navy-900 leading-tight tracking-tight">
               {heroSlides[currentSlide].title}
             </h1>
             <p className="text-xs sm:text-sm text-gray-600 font-medium">
@@ -98,7 +98,7 @@ export default function MarketHome() {
             <div className="pt-2">
               <Link
                 to={heroSlides[currentSlide].buttonLink}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#047857] hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition shadow-md hover:scale-105 active:scale-95"
+                className="market-accent-button rounded-full px-6 py-2.5 text-xs sm:text-sm hover:scale-105"
               >
                 <span>{heroSlides[currentSlide].buttonText}</span>
               </Link>
@@ -108,7 +108,7 @@ export default function MarketHome() {
           {/* Right Hero Product Collage with 50% Off Badge */}
           <div className="relative flex items-center justify-center z-10">
             {/* Visual Circular Product Frame */}
-            <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-white/70 backdrop-blur-xs p-4 flex items-center justify-center shadow-lg border border-white">
+            <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-white/80 backdrop-blur-xs p-4 flex items-center justify-center shadow-lg border border-violet-100">
               <img
                 src={heroSlides[currentSlide].image}
                 alt="Featured Products"
@@ -117,7 +117,7 @@ export default function MarketHome() {
             </div>
 
             {/* "Up to 50% OFF" Badge */}
-            <div className="absolute top-2 -right-2 sm:right-2 bg-emerald-700 text-white px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white flex items-center gap-1.5 text-xs font-black animate-bounce">
+            <div className="absolute top-2 -right-2 sm:right-2 bg-violet-700 text-white px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white flex items-center gap-1.5 text-xs font-black animate-bounce">
               <span>⭐</span>
               <span>{heroSlides[currentSlide].badgeText}</span>
             </div>

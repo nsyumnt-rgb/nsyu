@@ -152,6 +152,25 @@
   .surface-glass {
     @apply border border-white/60 bg-white/80 backdrop-blur-xl;
   }
+
+  /* Public marketplace visual language: white canvas, navy ink and restrained royal-purple accents. */
+  .market-shell {
+    background: #fbfbfe;
+    color: #172b3a;
+  }
+  .market-card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_26px_-20px_rgba(16,42,67,0.35)] transition-all duration-300;
+  }
+  .market-card:hover {
+    @apply -translate-y-1 border-violet-200 shadow-[0_22px_42px_-24px_rgba(91,72,170,0.38)];
+  }
+  .market-hero {
+    @apply relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_24px_60px_-40px_rgba(16,42,67,0.45)];
+    background-image: radial-gradient(circle at 88% 12%, rgba(196,181,253,.38), transparent 32%), linear-gradient(135deg, #ffffff 0%, #fbfbff 58%, #f4f1ff 100%);
+  }
+  .market-accent-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-navy-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-navy-800 hover:shadow-lift active:scale-[.98];
+  }
   table {
     @apply w-full text-[13px];
   }

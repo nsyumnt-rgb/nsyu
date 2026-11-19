@@ -60,24 +60,24 @@ export default function MarketLayout() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-gray-800">
+    <div className="market-shell min-h-screen flex flex-col">
       {/* ============================================================== */}
       {/* 1. TOP NOTICE / ANNOUNCEMENT BAR (Emerald Green)                */}
       {/* ============================================================== */}
-      <div className="bg-[#064E3B] text-white text-[11px] sm:text-xs font-semibold py-2 px-4 shadow-xs">
+      <div className="bg-navy-900 text-white text-[11px] sm:text-xs font-semibold py-2 px-4 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-4 text-center sm:text-left">
           {/* Free Shipping */}
-          <div className="flex items-center gap-1.5 text-emerald-100">
+          <div className="flex items-center gap-1.5 text-slate-200">
             <span>🚚</span>
             <span>Free Shipping on Orders Above ₹1,000</span>
           </div>
           {/* Best Quality */}
-          <div className="hidden md:flex items-center gap-1.5 text-amber-200">
+          <div className="hidden md:flex items-center gap-1.5 text-violet-200">
             <span>⭐</span>
             <span>Best Quality Products</span>
           </div>
           {/* Customer Support */}
-          <div className="flex items-center gap-1.5 text-emerald-100">
+          <div className="flex items-center gap-1.5 text-slate-200">
             <span>🎧</span>
             <span>Customer Support: 98765 43210</span>
           </div>
@@ -92,7 +92,7 @@ export default function MarketLayout() {
           
           {/* Logo & Branding */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-[#047857] group-hover:bg-emerald-700 text-white flex items-center justify-center font-black text-xl shadow-sm transition">
+            <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-100 group-hover:bg-violet-100 flex items-center justify-center font-black text-xl shadow-sm transition">
               N
             </div>
             <div className="min-w-0">
@@ -118,12 +118,12 @@ export default function MarketLayout() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search products, shops, brands..."
-                className="w-full h-11 pl-4 pr-12 rounded-xl border border-gray-200 bg-gray-50/80 text-xs sm:text-sm focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none transition"
+                className="w-full h-11 pl-4 pr-12 rounded-xl border border-slate-200 bg-slate-50/80 text-xs sm:text-sm focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-200 outline-none transition"
               />
               <button
                 type="submit"
                 aria-label="Search"
-                className="absolute right-1 top-1 h-9 w-9 rounded-lg bg-[#047857] hover:bg-emerald-700 text-white flex items-center justify-center transition shadow-xs"
+                className="absolute right-1 top-1 h-9 w-9 rounded-lg bg-navy-900 hover:bg-navy-800 text-white flex items-center justify-center transition shadow-xs"
               >
                 <svg
                   className="w-4 h-4"
@@ -144,7 +144,7 @@ export default function MarketLayout() {
             {/* Wishlist */}
             <Link
               to="/portal/wishlist"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-emerald-700 hover:bg-emerald-50/50 transition relative"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-violet-700 hover:bg-violet-50/60 transition relative"
               title="View Wishlist"
             >
               <div className="relative">
@@ -172,7 +172,7 @@ export default function MarketLayout() {
             {/* Cart */}
             <Link
               to="/market/cart"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-emerald-700 hover:bg-emerald-50/50 transition relative"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-violet-700 hover:bg-violet-50/60 transition relative"
               title="View Cart"
             >
               <div className="relative">
