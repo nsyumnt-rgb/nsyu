@@ -5,6 +5,7 @@ import { useAuthStore } from "../store/authStore";
 import { api } from "../api/client";
 import ShopBannerCard from "../components/ShopBannerCard";
 import ShopPortalSettingsCard from "../components/ShopPortalSettingsCard";
+import Inventory from "./Inventory";
 
 interface FullSettingsState {
   // 1. General (Account, Preferences, Theme)
@@ -181,6 +182,7 @@ function SettingsInner() {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [inventorySubTab, setInventorySubTab] = useState<"list" | "rules">("list");
 
   // Change Password Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -1609,70 +1611,125 @@ function SettingsInner() {
       )}
 
       {/* ========================================================================= */}
-      {/* 7. INVENTORY TAB                                                          */}
+      {/* 7. INVENTORY TAB (Live Inventory with View & Edit Details + Rules)         */}
       {/* ========================================================================= */}
       {activeTab === "inventory" && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <span className="text-2xl">📦</span>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Inventory, Stock & Warehouse Rules</h2>
-              <p className="text-xs text-slate-500">Configure stock deductions, barcode scanner behavior, and warehouse shelf locations.</p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              { field: "allowNegativeStock", label: "Allow Negative Stock (Permit billing even if product inventory is 0)" },
-              { field: "autoDeductStockOnBill", label: "Automatically deduct product inventory immediately on saving confirmed invoices" },
-              { field: "enableBarcodeScanner", label: "Enable Instant Barcode Scanning mode (Auto-add product on laser scan)" },
-              { field: "enableBatchTracking", label: "Enable Batch / Lot Number and Expiry Date tracking per purchase batch" },
-              { field: "enableWarehouseLocations", label: "Enable Shelf / Rack Location tags for warehouse inventory items" },
-            ].map((rule) => (
-              <div key={rule.field} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs">
-                <span className="font-medium text-slate-800">{rule.label}</span>
-                <button
-                  type="button"
-                  onClick={() => handleToggle(rule.field as any)}
-                  className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
-                    (settings as any)[rule.field] ? "bg-blue-600" : "bg-slate-200"
-                  }`}
-                >
-                  <span
-                    className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
-                      (settings as any)[rule.field] ? "left-4.5" : "left-0.75"
-                    }`}
-                  />
-                </button>
+        <div className="space-y-6">
+          {/* Sub-tab Navigation Header */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center text-xl shrink-0">
+                📦
               </div>
-            ))}
+              <div>
+                <h2 className="text-base font-black text-slate-900 tracking-tight">
+                  Inventory & Product Management
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Live inventory list, product details, photo upload, margin calculations, and warehouse rules.
+                </p>
+              </div>
+            </div>
+
+            {/* Sub-tab pills */}
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setInventorySubTab("list")}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                  inventorySubTab === "list"
+                    ? "bg-white text-emerald-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>📦</span>
+                <span>Products & Stock List</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInventorySubTab("rules")}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                  inventorySubTab === "rules"
+                    ? "bg-white text-emerald-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>⚙️</span>
+                <span>Stock Rules & Config</span>
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Default Unit of Measurement (UOM)</label>
-              <select
-                value={settings.defaultUnit}
-                onChange={(e) => handleTextChange("defaultUnit", e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
-              >
-                <option value="PCS">PCS (Pieces)</option>
-                <option value="BOX">BOX (Boxes)</option>
-                <option value="KG">KG (Kilograms)</option>
-                <option value="MTR">MTR (Meters)</option>
-                <option value="SET">SET (Sets)</option>
-              </select>
+          {/* Sub-tab 1: Products & Stock List (Live Inventory with View & Edit Details) */}
+          {inventorySubTab === "list" ? (
+            <div className="space-y-4">
+              <Inventory showViewOption={true} embedded={true} />
             </div>
-            <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Stock Adjustment Reasons</label>
-              <input
-                type="text"
-                value={settings.stockAdjustmentReasons}
-                onChange={(e) => handleTextChange("stockAdjustmentReasons", e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-medium"
-              />
+          ) : (
+            /* Sub-tab 2: Stock & Warehouse Rules (Existing Settings) */
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <span className="text-2xl">⚙️</span>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Stock & Warehouse Rules</h2>
+                  <p className="text-xs text-slate-500">Configure stock deductions, barcode scanner behavior, and warehouse shelf locations.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  { field: "allowNegativeStock", label: "Allow Negative Stock (Permit billing even if product inventory is 0)" },
+                  { field: "autoDeductStockOnBill", label: "Automatically deduct product inventory immediately on saving confirmed invoices" },
+                  { field: "enableBarcodeScanner", label: "Enable Instant Barcode Scanning mode (Auto-add product on laser scan)" },
+                  { field: "enableBatchTracking", label: "Enable Batch / Lot Number and Expiry Date tracking per purchase batch" },
+                  { field: "enableWarehouseLocations", label: "Enable Shelf / Rack Location tags for warehouse inventory items" },
+                ].map((rule) => (
+                  <div key={rule.field} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs">
+                    <span className="font-medium text-slate-800">{rule.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggle(rule.field as any)}
+                      className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+                        (settings as any)[rule.field] ? "bg-blue-600" : "bg-slate-200"
+                      }`}
+                    >
+                      <span
+                        className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.75 transition-transform ${
+                          (settings as any)[rule.field] ? "left-4.5" : "left-0.75"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Default Unit of Measurement (UOM)</label>
+                  <select
+                    value={settings.defaultUnit}
+                    onChange={(e) => handleTextChange("defaultUnit", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200"
+                  >
+                    <option value="PCS">PCS (Pieces)</option>
+                    <option value="BOX">BOX (Boxes)</option>
+                    <option value="KG">KG (Kilograms)</option>
+                    <option value="MTR">MTR (Meters)</option>
+                    <option value="SET">SET (Sets)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Stock Adjustment Reasons</label>
+                  <input
+                    type="text"
+                    value={settings.stockAdjustmentReasons}
+                    onChange={(e) => handleTextChange("stockAdjustmentReasons", e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

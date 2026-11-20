@@ -9,6 +9,7 @@ import {
   listProducts,
   createProduct,
   updateProduct,
+  uploadProductImages,
   deleteProduct,
   importProductsApi,
 } from "../api/products";
@@ -39,7 +40,15 @@ interface InlineEditDraft {
   minStock: string;
 }
 
-export default function Inventory() {
+export interface InventoryProps {
+  showViewOption?: boolean;
+  embedded?: boolean;
+}
+
+export default function Inventory({
+  showViewOption = true,
+  embedded = false,
+}: InventoryProps = {}) {
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
 
@@ -66,9 +75,27 @@ export default function Inventory() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState(false);
 
-  // 1. View Detail Modal state (Requirement 1)
+  // 1. View Detail & Full Edit Modal state (Requirement 1)
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [activeDetailImage, setActiveDetailImage] = useState<string | null>(null);
+  const [isEditingView, setIsEditingView] = useState(false);
+  const [viewEditForm, setViewEditForm] = useState({
+    name: "",
+    sku: "",
+    barcode: "",
+    brand: "",
+    category_id: null as number | null,
+    purchase_price: "",
+    selling_price: "",
+    margin_percent: "",
+    mrp: "",
+    min_stock: "5",
+    description: "",
+    status: "active" as "active" | "inactive",
+  });
+  const [viewPhotoFile, setViewPhotoFile] = useState<File | null>(null);
+  const [viewPhotoPreview, setViewPhotoPreview] = useState<string | null>(null);
+  const [savingViewEdit, setSavingViewEdit] = useState(false);
 
   // 2. Live On/Off toggle loading state (Requirement 2)
   const [togglingLiveId, setTogglingLiveId] = useState<number | null>(null);
@@ -585,6 +612,171 @@ export default function Inventory() {
     }
   }
 
+  // View & Full Edit Modal Handlers
+  function handleStartViewEdit(p: Product) {
+    const pp = Number(p.purchase_price ?? 0);
+    const sp = Number(p.selling_price ?? 0);
+    const margin = sp > 0 ? (((sp - pp) / sp) * 100).toFixed(1) : "0.0";
+    setViewEditForm({
+      name: p.name || "",
+      sku: p.sku || "",
+      barcode: p.barcode || "",
+      brand: p.brand || "",
+      category_id: p.category_id ?? p.category?.id ?? null,
+      purchase_price: String(pp),
+      selling_price: String(sp),
+      margin_percent: margin,
+      mrp: p.mrp ? String(p.mrp) : "",
+      min_stock: String(p.min_stock ?? 5),
+      description: p.description || "",
+      status: p.status === "inactive" ? "inactive" : "active",
+    });
+    setViewPhotoFile(null);
+    setViewPhotoPreview(null);
+    setIsEditingView(true);
+  }
+
+  function handleViewEditFieldChange(
+    field:
+      | "name"
+      | "sku"
+      | "barcode"
+      | "brand"
+      | "category_id"
+      | "purchase_price"
+      | "selling_price"
+      | "margin_percent"
+      | "mrp"
+      | "min_stock"
+      | "description"
+      | "status",
+    value: any
+  ) {
+    if (field === "purchase_price") {
+      const newPp = Math.max(0, Number(value) || 0);
+      const sp = Math.max(0, Number(viewEditForm.selling_price) || 0);
+      const newMargin = sp > 0 ? (((sp - newPp) / sp) * 100).toFixed(1) : "0.0";
+      setViewEditForm((prev) => ({
+        ...prev,
+        purchase_price: value,
+        margin_percent: newMargin,
+      }));
+    } else if (field === "selling_price") {
+      const pp = Math.max(0, Number(viewEditForm.purchase_price) || 0);
+      const newSp = Math.max(0, Number(value) || 0);
+      const newMargin = newSp > 0 ? (((newSp - pp) / newSp) * 100).toFixed(1) : "0.0";
+      setViewEditForm((prev) => ({
+        ...prev,
+        selling_price: value,
+        margin_percent: newMargin,
+      }));
+    } else if (field === "margin_percent") {
+      const pp = Math.max(0, Number(viewEditForm.purchase_price) || 0);
+      const targetMargin = Math.min(99.9, Math.max(-100, Number(value) || 0));
+      // Formula: selling_price = purchase_price / (1 - margin / 100)
+      const calculatedSp =
+        targetMargin < 100 && pp > 0
+          ? (pp / (1 - targetMargin / 100)).toFixed(2)
+          : viewEditForm.selling_price;
+      setViewEditForm((prev) => ({
+        ...prev,
+        margin_percent: value,
+        selling_price: calculatedSp,
+      }));
+    } else {
+      setViewEditForm((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    }
+  }
+
+  function handleViewPhotoSelect(file: File | null) {
+    if (!file) {
+      setViewPhotoFile(null);
+      setViewPhotoPreview(null);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Please select an image smaller than 10MB");
+      return;
+    }
+    setViewPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setViewPhotoPreview(url);
+  }
+
+  async function handleSaveViewEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!viewProduct) return;
+    if (!viewEditForm.name.trim()) {
+      alert("Product name is required");
+      return;
+    }
+    setSavingViewEdit(true);
+    try {
+      let updatedImages = viewProduct.images;
+
+      // 1. Upload photo if selected
+      if (viewPhotoFile) {
+        try {
+          const uploadRes = await uploadProductImages(viewProduct.id, [viewPhotoFile]);
+          if (uploadRes.data?.data && uploadRes.data.data.length > 0) {
+            updatedImages = uploadRes.data.data;
+          }
+        } catch (uploadErr: any) {
+          console.warn("Photo upload warning:", uploadErr);
+        }
+      }
+
+      // 2. Update product attributes
+      const payload: Partial<Product> = {
+        name: viewEditForm.name.trim(),
+        sku: viewEditForm.sku.trim(),
+        barcode: viewEditForm.barcode.trim() || undefined,
+        brand: viewEditForm.brand.trim() || undefined,
+        category_id: viewEditForm.category_id || undefined,
+        purchase_price: Number(viewEditForm.purchase_price) || 0,
+        selling_price: Number(viewEditForm.selling_price) || 0,
+        mrp: viewEditForm.mrp ? Number(viewEditForm.mrp) : undefined,
+        min_stock: Number(viewEditForm.min_stock) || 5,
+        description: viewEditForm.description.trim() || undefined,
+        status: viewEditForm.status,
+      };
+
+      const updateRes = await updateProduct(viewProduct.id, payload);
+      const serverProduct = updateRes.data?.data;
+      const finalProduct: Product = {
+        ...viewProduct,
+        ...(serverProduct || payload),
+        images: updatedImages && updatedImages.length > 0 ? updatedImages : viewProduct.images,
+      };
+      if (viewEditForm.category_id) {
+        const cat = categories.find((c) => c.id === viewEditForm.category_id);
+        if (cat) finalProduct.category = cat;
+      }
+
+      setViewProduct(finalProduct);
+      if (finalProduct.images && finalProduct.images.length > 0) {
+        const primary =
+          finalProduct.images.find((i) => i.is_primary)?.url || finalProduct.images[0]?.url;
+        setActiveDetailImage(primary || null);
+      }
+      setProducts((prev) =>
+        prev.map((p) => (p.id === finalProduct.id ? { ...p, ...finalProduct } : p))
+      );
+      setIsEditingView(false);
+      setViewPhotoFile(null);
+      setViewPhotoPreview(null);
+      setToastMsg("✓ Product details, photo & margin updated successfully");
+      loadData();
+    } catch (err: any) {
+      alert(apiErrorMessage(err, "Failed to update product details"));
+    } finally {
+      setSavingViewEdit(false);
+    }
+  }
+
   // Delete Product
   function handleDeleteProduct(p: Product) {
     setProductToDelete(p);
@@ -658,7 +850,7 @@ export default function Inventory() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className={embedded ? "space-y-6" : "space-y-6 pb-12"}>
       {/* Toast Notification */}
       {toastMsg && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#064E3B] text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
@@ -676,81 +868,142 @@ export default function Inventory() {
       {/* ============================================================== */}
       {/* 1. HEADER TITLE & TOP ACTIONS                                   */}
       {/* ============================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100/80 border border-emerald-300 flex items-center justify-center text-emerald-800">
+      {!embedded ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-emerald-100/80 border border-emerald-300 flex items-center justify-center text-emerald-800">
+                <svg
+                  className="w-5 h-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                >
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                  <path d="M2 17l10 5 10-5" />
+                  <path d="M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+                Inventory
+              </h1>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 font-medium">
+              Track stock levels, monitor low stock items, and audit inventory movements.
+            </p>
+          </div>
+
+          {/* Action Buttons: Import, Export, Add Product */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+            >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 text-gray-600"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.2"
+                strokeWidth="2"
               >
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-              Inventory
-            </h1>
+              <span>Import</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+            >
+              <svg
+                className="w-4 h-4 text-gray-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Export</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-[#047857] hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
+            >
+              <span className="text-sm font-black">+</span>
+              <span>Add Product</span>
+            </button>
           </div>
-          <p className="text-xs text-gray-500 mt-1 font-medium">
-            Track stock levels, monitor low stock items, and audit inventory movements.
-          </p>
         </div>
-
-        {/* Action Buttons: Import, Export, Add Product */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setShowImportModal(true)}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
-          >
-            <svg
-              className="w-4 h-4 text-gray-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+      ) : (
+        <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+          <div>
+            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+              Live Product Catalog & Stock List
+            </span>
+            <span className="text-[11px] text-gray-500 font-medium">
+              {totalProducts} products listed • Click Eye icon to view details & upload photo
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setShowImportModal(true)}
+              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
             >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <span>Import</span>
-          </button>
+              <svg
+                className="w-3.5 h-3.5 text-gray-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span>Import</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
-          >
-            <svg
-              className="w-4 h-4 text-gray-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
             >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span>Export</span>
-          </button>
+              <svg
+                className="w-3.5 h-3.5 text-gray-600"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Export</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-[#047857] hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
-          >
-            <span className="text-sm font-black">+</span>
-            <span>Add Product</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="px-3.5 py-1.5 bg-[#047857] hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="text-xs font-black">+</span>
+              <span>Add Product</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ============================================================== */}
       {/* 2. SUMMARY METRIC CARDS                                         */}
@@ -1576,6 +1829,37 @@ export default function Inventory() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                            {/* View Full Product Details (Eye) */}
+                            {showViewOption && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setViewProduct(p);
+                                  setIsEditingView(false);
+                                  setViewPhotoFile(null);
+                                  setViewPhotoPreview(null);
+                                  const primary =
+                                    p.images?.find((i) => i.is_primary)?.url ||
+                                    p.images?.[0]?.url;
+                                  setActiveDetailImage(primary || null);
+                                }}
+                                className="w-8 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
+                                title="View Full Product Details & Photo"
+                                aria-label="View Full Product Details"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                  <circle cx="12" cy="12" r="3" />
+                                </svg>
+                              </button>
+                            )}
+
                             {/* Inline Edit Action Icon (Pencil) */}
                             <button
                               type="button"
@@ -1630,355 +1914,681 @@ export default function Inventory() {
       )}
 
       {/* ============================================================== */}
-      {/* 5. VIEW PRODUCT DETAIL MODAL (Requirement 1)                    */}
+      {/* 5. VIEW & FULL EDIT PRODUCT DETAIL MODAL (With Photo & Margin)  */}
       {/* ============================================================== */}
       {viewProduct &&
         createPortal(
           <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between pb-3 border-b border-gray-100">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
-                    {viewProduct.category?.name || "General Category"}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      viewProduct.status === "active"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-gray-100 text-gray-500 border border-gray-200"
-                    }`}
-                  >
-                    {viewProduct.status === "active" ? "● Live Product" : "○ Offline"}
-                  </span>
-                </div>
-                <h3 className="text-lg font-black text-gray-900 tracking-tight leading-snug">
-                  {viewProduct.name}
-                </h3>
-                <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
-                  <span>SKU: {viewProduct.sku}</span>
-                  {viewProduct.barcode && (
-                    <span>• Barcode: {viewProduct.barcode}</span>
-                  )}
-                  {viewProduct.brand && <span>• Brand: {viewProduct.brand}</span>}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewProduct(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm transition"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Product Image and Pricing / Stock Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Product Image Frame */}
-              <div className="space-y-2">
-                <div className="w-full h-60 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-center p-4 relative overflow-hidden group">
-                  {activeDetailImage ? (
-                    <img
-                      src={resolveAssetUrl(activeDetailImage) || undefined}
-                      alt={viewProduct.name}
-                      className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-gray-300">
-                      <svg
-                        className="w-16 h-16 stroke-current"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        strokeWidth="1.5"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                      <span className="text-xs font-semibold text-gray-400 mt-1">
-                        No Image Available
-                      </span>
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+              {!isEditingView ? (
+                /* =================== VIEW MODE =================== */
+                <>
+                  {/* Modal Header */}
+                  <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
+                          {viewProduct.category?.name || "General Category"}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            viewProduct.status === "active"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-gray-100 text-gray-500 border border-gray-200"
+                          }`}
+                        >
+                          {viewProduct.status === "active" ? "● Live Product" : "○ Offline"}
+                        </span>
+                      </div>
+                      <h3 className="text-lg font-black text-gray-900 tracking-tight leading-snug">
+                        {viewProduct.name}
+                      </h3>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
+                        <span>SKU: {viewProduct.sku}</span>
+                        {viewProduct.barcode && (
+                          <span>• Barcode: {viewProduct.barcode}</span>
+                        )}
+                        {viewProduct.brand && <span>• Brand: {viewProduct.brand}</span>}
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Thumbnail Strip (if multiple images exist) */}
-                {viewProduct.images && viewProduct.images.length > 1 && (
-                  <div className="flex items-center gap-2 overflow-x-auto py-1">
-                    {viewProduct.images.map((img) => (
+                    <div className="flex items-center gap-2">
                       <button
-                        key={img.id}
                         type="button"
-                        onClick={() => setActiveDetailImage(img.url)}
-                        className={`w-12 h-12 rounded-xl border p-1 bg-white shrink-0 transition overflow-hidden ${
-                          activeDetailImage === img.url
-                            ? "border-emerald-600 ring-2 ring-emerald-500/30"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
+                        onClick={() => handleStartViewEdit(viewProduct)}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        title="Edit all product details, photo & margin"
                       >
-                        <img
-                          src={resolveAssetUrl(img.url) || undefined}
-                          alt=""
-                          className="w-full h-full object-contain"
-                        />
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        <span>Edit Details</span>
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Pricing, Margin & Stock Details */}
-              <div className="space-y-3 text-xs">
-                {/* Stock on Hand Card */}
-                <div className="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-600">
-                      Stock Availability:
-                    </span>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
-                        getProductStock(viewProduct) <= 0
-                          ? "bg-rose-100 text-rose-700"
-                          : getProductStock(viewProduct) <=
-                            Number(viewProduct.min_stock || 5)
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-emerald-100 text-emerald-800"
-                      }`}
-                    >
-                      {getProductStock(viewProduct) <= 0
-                        ? "Out of Stock"
-                        : getProductStock(viewProduct) <=
-                          Number(viewProduct.min_stock || 5)
-                        ? "Low Stock"
-                        : "In Stock"}
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-2xl font-black text-gray-900">
-                      {getProductStock(viewProduct)}{" "}
-                      <span className="text-xs font-normal text-gray-500">
-                        units on hand
-                      </span>
-                    </span>
-                    <span className="text-[11px] text-gray-500 font-medium">
-                      Min Alert: {viewProduct.min_stock ?? 5} units
-                    </span>
-                  </div>
-                </div>
-
-                {/* Pricing & Margin Breakdown */}
-                <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 font-semibold">
-                      Purchase Price (Cost):
-                    </span>
-                    <span className="font-bold text-gray-800">
-                      {formatINR(viewProduct.purchase_price)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 font-semibold">
-                      Selling Price (Retail):
-                    </span>
-                    <span className="font-black text-emerald-800 text-sm">
-                      {formatINR(viewProduct.selling_price)}
-                    </span>
-                  </div>
-                  {viewProduct.mrp && viewProduct.mrp > viewProduct.selling_price && (
-                    <div className="flex items-center justify-between text-gray-400">
-                      <span>MRP:</span>
-                      <span className="line-through">
-                        {formatINR(viewProduct.mrp)}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setViewProduct(null)}
+                        className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm transition cursor-pointer"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  )}
-                  <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                    <span className="font-bold text-gray-700">Gross Margin:</span>
-                    <div className="text-right">
-                      {(() => {
-                        const pp = Number(viewProduct.purchase_price || 0);
-                        const sp = Number(viewProduct.selling_price || 0);
-                        const profit = sp - pp;
-                        const pct =
-                          sp > 0 ? ((profit / sp) * 100).toFixed(1) : "0.0";
-                        return (
-                          <div>
-                            <span className="font-black text-emerald-700 text-sm">
-                              {pct}%
+                  </div>
+
+                  {/* Product Image and Pricing / Stock Overview */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Product Image / Icon Frame */}
+                    <div className="space-y-2">
+                      <div className="w-full h-60 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-center p-4 relative overflow-hidden group">
+                        {activeDetailImage ? (
+                          <img
+                            src={resolveAssetUrl(activeDetailImage) || undefined}
+                            alt={viewProduct.name}
+                            className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-gray-300 text-center p-4">
+                            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 mb-2">
+                              <svg className="w-8 h-8 stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                              </svg>
+                            </div>
+                            <span className="text-xs font-bold text-gray-500">
+                              No Photo Uploaded
                             </span>
-                            <span className="text-[11px] text-gray-500 ml-1">
-                              ({formatINR(profit)}/unit)
+                            <span className="text-[11px] text-gray-400 mt-0.5">
+                              Click "Edit Details" to upload a photo / icon
                             </span>
                           </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-gray-600">
-                    <span className="font-semibold">Total Stock Value:</span>
-                    <span className="font-black text-gray-900">
-                      {formatINR(
-                        Math.max(
-                          0,
-                          getProductStock(viewProduct)
-                        ) * Number(viewProduct.purchase_price || 0)
+                        )}
+                      </div>
+
+                      {/* Thumbnail Strip (if multiple images exist) */}
+                      {viewProduct.images && viewProduct.images.length > 1 && (
+                        <div className="flex items-center gap-2 overflow-x-auto py-1">
+                          {viewProduct.images.map((img) => (
+                            <button
+                              key={img.id}
+                              type="button"
+                              onClick={() => setActiveDetailImage(img.url)}
+                              className={`w-12 h-12 rounded-xl border p-1 bg-white shrink-0 transition overflow-hidden cursor-pointer ${
+                                activeDetailImage === img.url
+                                  ? "border-emerald-600 ring-2 ring-emerald-500/30"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                            >
+                              <img
+                                src={resolveAssetUrl(img.url) || undefined}
+                                alt=""
+                                className="w-full h-full object-contain"
+                              />
+                            </button>
+                          ))}
+                        </div>
                       )}
-                    </span>
-                  </div>
-                </div>
+                    </div>
 
-                {/* Live Status Toggle in Modal */}
-                <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-2xl shadow-xs">
-                  <div>
-                    <div className="font-bold text-gray-800">
-                      Catalog Visibility
-                    </div>
-                    <div className="text-[10px] text-gray-500">
-                      {viewProduct.status === "active"
-                        ? "Product is Live in shop & catalog"
-                        : "Product is Offline / Hidden"}
+                    {/* Pricing, Margin & Stock Details */}
+                    <div className="space-y-3 text-xs">
+                      {/* Stock on Hand Card */}
+                      <div className="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-gray-600">Stock Availability:</span>
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
+                              getProductStock(viewProduct) <= 0
+                                ? "bg-rose-100 text-rose-700"
+                                : getProductStock(viewProduct) <= Number(viewProduct.min_stock || 5)
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {getProductStock(viewProduct) <= 0
+                              ? "Out of Stock"
+                              : getProductStock(viewProduct) <= Number(viewProduct.min_stock || 5)
+                              ? "Low Stock"
+                              : "In Stock"}
+                          </span>
+                        </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-2xl font-black text-gray-900">
+                            {getProductStock(viewProduct)}{" "}
+                            <span className="text-xs font-normal text-gray-500">units on hand</span>
+                          </span>
+                          <span className="text-[11px] text-gray-500 font-medium">
+                            Min Alert: {viewProduct.min_stock ?? 5} units
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Pricing & Margin Breakdown */}
+                      <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500 font-semibold">Purchase Price (Cost):</span>
+                          <span className="font-bold text-gray-800">
+                            {formatINR(viewProduct.purchase_price)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500 font-semibold">Selling Price (Retail):</span>
+                          <span className="font-black text-emerald-800 text-sm">
+                            {formatINR(viewProduct.selling_price)}
+                          </span>
+                        </div>
+                        {viewProduct.mrp && viewProduct.mrp > viewProduct.selling_price && (
+                          <div className="flex items-center justify-between text-gray-400">
+                            <span>MRP:</span>
+                            <span className="line-through">{formatINR(viewProduct.mrp)}</span>
+                          </div>
+                        )}
+                        <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
+                          <span className="font-bold text-gray-700">Gross Margin:</span>
+                          <div className="text-right">
+                            {(() => {
+                              const pp = Number(viewProduct.purchase_price || 0);
+                              const sp = Number(viewProduct.selling_price || 0);
+                              const profit = sp - pp;
+                              const pct = sp > 0 ? ((profit / sp) * 100).toFixed(1) : "0.0";
+                              return (
+                                <div>
+                                  <span className="font-black text-emerald-700 text-sm">{pct}%</span>
+                                  <span className="text-[11px] text-gray-500 ml-1">
+                                    ({formatINR(profit)}/unit)
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-gray-600">
+                          <span className="font-semibold">Total Stock Value:</span>
+                          <span className="font-black text-gray-900">
+                            {formatINR(
+                              Math.max(0, getProductStock(viewProduct)) *
+                                Number(viewProduct.purchase_price || 0)
+                            )}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Catalog Visibility Toggle in Modal */}
+                      <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-2xl shadow-xs">
+                        <div>
+                          <div className="font-bold text-gray-800">Catalog Visibility</div>
+                          <div className="text-[10px] text-gray-500">
+                            {viewProduct.status === "active"
+                              ? "Product is Live in shop & catalog"
+                              : "Product is Offline / Hidden"}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={viewProduct.status === "active"}
+                          disabled={togglingLiveId === viewProduct.id}
+                          onClick={() => handleToggleLive(viewProduct)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            viewProduct.status === "active" ? "bg-emerald-600" : "bg-gray-300"
+                          } ${togglingLiveId === viewProduct.id ? "opacity-50" : ""}`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              viewProduct.status === "active" ? "translate-x-5" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={viewProduct.status === "active"}
-                    disabled={togglingLiveId === viewProduct.id}
-                    onClick={() => handleToggleLive(viewProduct)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      viewProduct.status === "active"
-                        ? "bg-emerald-600"
-                        : "bg-gray-300"
-                    } ${togglingLiveId === viewProduct.id ? "opacity-50" : ""}`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        viewProduct.status === "active"
-                          ? "translate-x-5"
-                          : "translate-x-0"
-                      }`}
+
+                  {/* Description (if available) */}
+                  {viewProduct.description && (
+                    <div className="p-3 bg-gray-50/70 border border-gray-200 rounded-2xl text-xs text-gray-600">
+                      <span className="font-bold text-gray-800 block mb-1">Product Description:</span>
+                      <p className="leading-relaxed">{viewProduct.description}</p>
+                    </div>
+                  )}
+
+                  {/* Product Movement Audit History */}
+                  <div className="space-y-2 pt-2 border-t border-gray-100">
+                    <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                      Recent Stock Movements for this Product
+                    </h4>
+                    {(() => {
+                      const prodMovements = history.filter(
+                        (m: any) => m.product_id === viewProduct.id
+                      );
+                      if (prodMovements.length === 0) {
+                        return (
+                          <div className="p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-400">
+                            No recent inventory movements recorded for this item.
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="border border-gray-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase">
+                              <tr>
+                                <th className="p-2">Date</th>
+                                <th className="p-2">Type</th>
+                                <th className="p-2 text-center">Change</th>
+                                <th className="p-2">Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 text-[11px]">
+                              {prodMovements.slice(0, 10).map((m: any) => {
+                                const qty = Number(m.quantity || 0);
+                                const isInc = [
+                                  "opening",
+                                  "purchase",
+                                  "customer_return",
+                                  "transfer_in",
+                                ].includes((m.type || m.movement_type || "").toLowerCase());
+                                return (
+                                  <tr key={m.id} className="hover:bg-gray-50/80">
+                                    <td className="p-2 text-gray-500 font-mono">
+                                      {new Date(m.created_at || m.createdAt).toLocaleDateString(
+                                        "en-IN"
+                                      )}
+                                    </td>
+                                    <td className="p-2 font-bold capitalize text-gray-700">
+                                      {m.type || m.movement_type}
+                                    </td>
+                                    <td
+                                      className={`p-2 text-center font-black ${
+                                        isInc ? "text-emerald-700" : "text-rose-600"
+                                      }`}
+                                    >
+                                      {isInc ? `+${qty}` : `-${qty}`}
+                                    </td>
+                                    <td className="p-2 text-gray-500 truncate max-w-xs">
+                                      {m.notes || m.reference_code || "—"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => handleStartViewEdit(viewProduct)}
+                      className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                      <span>✏️ Edit Details (Photo, Margin & Prices)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewProduct(null)}
+                      className="px-5 py-2 bg-gray-900 hover:bg-black text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* =================== EDIT MODE =================== */
+                <form onSubmit={handleSaveViewEdit} className="space-y-4">
+                  {/* Modal Header for Edit */}
+                  <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+                    <div>
+                      <h3 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
+                        <span>✏️</span>
+                        <span>Edit Product Details & Photo</span>
+                      </h3>
+                      <p className="text-xs text-gray-500 font-mono mt-0.5">
+                        Product: {viewProduct.name} ({viewProduct.sku})
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingView(false);
+                          setViewPhotoFile(null);
+                          setViewPhotoPreview(null);
+                        }}
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition cursor-pointer"
+                      >
+                        Cancel Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewProduct(null);
+                          setIsEditingView(false);
+                          setViewPhotoFile(null);
+                          setViewPhotoPreview(null);
+                        }}
+                        className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm transition cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Photo / Icon Upload Card */}
+                  <div className="p-4 bg-emerald-50/40 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-20 h-20 rounded-2xl bg-white border border-emerald-300 flex items-center justify-center overflow-hidden shrink-0 shadow-xs relative">
+                      {viewPhotoPreview ? (
+                        <img src={viewPhotoPreview} alt="Preview" className="w-full h-full object-contain" />
+                      ) : activeDetailImage || viewProduct.images?.[0]?.url ? (
+                        <img
+                          src={resolveAssetUrl(activeDetailImage || viewProduct.images?.[0]?.url || "") || undefined}
+                          alt="Current"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl text-emerald-600">📦</span>
+                      )}
+                    </div>
+                    <div className="flex-1 text-center sm:text-left space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label className="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#047857] hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition shadow-xs">
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                          <span>{viewPhotoFile ? "Change Selected Photo" : "Upload Photo / Icon"}</span>
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                            onChange={(e) => handleViewPhotoSelect(e.target.files?.[0] || null)}
+                            className="hidden"
+                          />
+                        </label>
+                        {viewPhotoFile && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setViewPhotoFile(null);
+                              setViewPhotoPreview(null);
+                            }}
+                            className="px-2.5 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500">
+                        {viewPhotoFile ? (
+                          <span className="font-bold text-emerald-800">
+                            Ready to upload: {viewPhotoFile.name} ({(viewPhotoFile.size / 1024).toFixed(0)} KB)
+                          </span>
+                        ) : (
+                          "Upload clear product image or PNG icon (PNG, JPG, WebP up to 10MB). Saved to Supabase storage."
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Basic Details: Name, Category, Brand */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="sm:col-span-2">
+                      <label className="font-bold text-gray-700 block mb-1">
+                        Product Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={viewEditForm.name}
+                        onChange={(e) => handleViewEditFieldChange("name", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="e.g. Amul Butter 500g"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-gray-700 block mb-1">Category</label>
+                      <select
+                        value={viewEditForm.category_id || ""}
+                        onChange={(e) =>
+                          handleViewEditFieldChange(
+                            "category_id",
+                            e.target.value ? Number(e.target.value) : null
+                          )
+                        }
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-medium text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
+                      >
+                        <option value="">General / None</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* SKU, Barcode, Brand */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <label className="font-bold text-gray-700 block mb-1">SKU</label>
+                      <input
+                        type="text"
+                        value={viewEditForm.sku}
+                        onChange={(e) => handleViewEditFieldChange("sku", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-mono text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="SKU-1001"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-gray-700 block mb-1">Barcode</label>
+                      <input
+                        type="text"
+                        value={viewEditForm.barcode}
+                        onChange={(e) => handleViewEditFieldChange("barcode", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-mono text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="8901030383741"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-gray-700 block mb-1">Brand</label>
+                      <input
+                        type="text"
+                        value={viewEditForm.brand}
+                        onChange={(e) => handleViewEditFieldChange("brand", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-medium text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="e.g. Amul"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing & Real-Time Margin Auto-Calculator */}
+                  <div className="p-4 bg-emerald-50/30 border border-emerald-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-black text-xs text-emerald-900">
+                        <span>💰</span>
+                        <span>Pricing & Margin Calculator</span>
+                      </div>
+                      <span className="text-[10px] text-emerald-700 font-medium">
+                        Change margin % or selling price to auto-calculate
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <label className="font-bold text-gray-700 block mb-1">
+                          Purchase Price (Cost ₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={viewEditForm.purchase_price}
+                          onChange={(e) => handleViewEditFieldChange("purchase_price", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-emerald-800 block mb-1">
+                          Selling Price (Retail ₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={viewEditForm.selling_price}
+                          onChange={(e) => handleViewEditFieldChange("selling_price", e.target.value)}
+                          className="w-full px-3 py-2 border border-emerald-300 bg-white rounded-xl font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-emerald-800 block mb-1">
+                          Gross Margin (%)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={viewEditForm.margin_percent}
+                            onChange={(e) => handleViewEditFieldChange("margin_percent", e.target.value)}
+                            className="w-full px-3 py-2 pr-7 border border-emerald-300 bg-white rounded-xl font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                          <span className="absolute right-2.5 top-2 font-black text-xs text-emerald-700 pointer-events-none">
+                            %
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dynamic Calculation Callout */}
+                    <div className="flex items-center justify-between p-2.5 bg-white border border-emerald-200/80 rounded-xl text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 font-semibold">Profit per unit:</span>
+                        <span className="font-black text-emerald-700 text-sm">
+                          ₹
+                          {(
+                            Math.max(
+                              0,
+                              Number(viewEditForm.selling_price || 0) -
+                                Number(viewEditForm.purchase_price || 0)
+                            )
+                          ).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-500 text-[11px]">Margin Health:</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                            Number(viewEditForm.margin_percent || 0) >= 20
+                              ? "bg-emerald-100 text-emerald-800"
+                              : Number(viewEditForm.margin_percent || 0) > 0
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-rose-100 text-rose-700"
+                          }`}
+                        >
+                          {Number(viewEditForm.margin_percent || 0) >= 20
+                            ? "Healthy Margin"
+                            : Number(viewEditForm.margin_percent || 0) > 0
+                            ? "Low Margin"
+                            : "No / Negative Margin"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MRP, Min Stock Alert & Status */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <label className="font-bold text-gray-700 block mb-1">MRP (Optional ₹)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={viewEditForm.mrp}
+                        onChange={(e) => handleViewEditFieldChange("mrp", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-medium text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="e.g. 100"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-gray-700 block mb-1">Min Stock Alert</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={viewEditForm.min_stock}
+                        onChange={(e) => handleViewEditFieldChange("min_stock", e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-gray-700 block mb-1">Catalog Status</label>
+                      <select
+                        value={viewEditForm.status}
+                        onChange={(e) => handleViewEditFieldChange("status", e.target.value as any)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
+                      >
+                        <option value="active">Active (Live in Shop)</option>
+                        <option value="inactive">Inactive (Offline)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="text-xs">
+                    <label className="font-bold text-gray-700 block mb-1">Product Description</label>
+                    <textarea
+                      rows={2}
+                      value={viewEditForm.description}
+                      onChange={(e) => handleViewEditFieldChange("description", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      placeholder="Add details, size, weight, packaging notes..."
                     />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Description (if available) */}
-            {viewProduct.description && (
-              <div className="p-3 bg-gray-50/70 border border-gray-200 rounded-2xl text-xs text-gray-600">
-                <span className="font-bold text-gray-800 block mb-1">
-                  Product Description:
-                </span>
-                <p className="leading-relaxed">{viewProduct.description}</p>
-              </div>
-            )}
-
-            {/* Product Movement Audit History */}
-            <div className="space-y-2 pt-2 border-t border-gray-100">
-              <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider">
-                Recent Stock Movements for this Product
-              </h4>
-              {(() => {
-                const prodMovements = history.filter(
-                  (m: any) => m.product_id === viewProduct.id
-                );
-                if (prodMovements.length === 0) {
-                  return (
-                    <div className="p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-400">
-                      No recent inventory movements recorded for this item.
-                    </div>
-                  );
-                }
-                return (
-                  <div className="border border-gray-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase">
-                        <tr>
-                          <th className="p-2">Date</th>
-                          <th className="p-2">Type</th>
-                          <th className="p-2 text-center">Change</th>
-                          <th className="p-2">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 text-[11px]">
-                        {prodMovements.slice(0, 10).map((m: any) => {
-                          const qty = Number(m.quantity || 0);
-                          const isInc = [
-                            "opening",
-                            "purchase",
-                            "customer_return",
-                            "transfer_in",
-                          ].includes(
-                            (m.type || m.movement_type || "").toLowerCase()
-                          );
-                          return (
-                            <tr key={m.id} className="hover:bg-gray-50/80">
-                              <td className="p-2 text-gray-500 font-mono">
-                                {new Date(
-                                  m.created_at || m.createdAt
-                                ).toLocaleDateString("en-IN")}
-                              </td>
-                              <td className="p-2 font-bold capitalize text-gray-700">
-                                {m.type || m.movement_type}
-                              </td>
-                              <td
-                                className={`p-2 text-center font-black ${
-                                  isInc ? "text-emerald-700" : "text-rose-600"
-                                }`}
-                              >
-                                {isInc ? `+${qty}` : `-${qty}`}
-                              </td>
-                              <td className="p-2 text-gray-500 truncate max-w-xs">
-                                {m.notes || m.reference_code || "—"}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
                   </div>
-                );
-              })()}
-            </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = viewProduct;
-                    setViewProduct(null);
-                    handleStartInlineEdit(target);
-                  }}
-                  className="px-4 py-2 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold rounded-xl text-xs transition flex items-center gap-1.5"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
-                  <span>Edit Fields Inline</span>
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewProduct(null)}
-                className="px-5 py-2 bg-gray-900 hover:bg-black text-white font-bold rounded-xl text-xs transition"
-              >
-                Close
-              </button>
+                  {/* Actions (Footer) */}
+                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      disabled={savingViewEdit}
+                      onClick={() => {
+                        setIsEditingView(false);
+                        setViewPhotoFile(null);
+                        setViewPhotoPreview(null);
+                      }}
+                      className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingViewEdit}
+                      className="px-6 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-xs cursor-pointer"
+                    >
+                      {savingViewEdit ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Saving Changes...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          <span>Save Product Changes</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ============================================================== */}
       {/* 6. OTHER MODALS: Stock Movement, Add Product, Edit Product, CSV */}
