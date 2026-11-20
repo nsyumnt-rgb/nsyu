@@ -78,6 +78,10 @@ export default function Inventory() {
   const [inlineDraft, setInlineDraft] = useState<InlineEditDraft | null>(null);
   const [inlineSaving, setInlineSaving] = useState(false);
 
+  // Direct Stock Input state
+  const [stockEdits, setStockEdits] = useState<Record<number, string>>({});
+  const [savingStockId, setSavingStockId] = useState<number | null>(null);
+
   // Adjust Stock Form (Top Header "Stock Movement" button)
   const [adjustMode, setAdjustMode] = useState<"change" | "set">("change");
   const [adjustQuantity, setAdjustQuantity] = useState("");
@@ -370,6 +374,79 @@ export default function Inventory() {
       alert(apiErrorMessage(err, "Failed to save product changes"));
     } finally {
       setInlineSaving(false);
+    }
+  }
+
+  // Direct Stock Input Save handler (triggered on Enter, blur, or checkmark click)
+  async function handleDirectStockSave(product: Product) {
+    const rawVal = stockEdits[product.id];
+    if (rawVal === undefined) return;
+    const oldStock = getProductStock(product);
+    const n = Number(rawVal);
+    if (!rawVal.trim() || !Number.isFinite(n)) {
+      setStockEdits((prev) => {
+        const next = { ...prev };
+        delete next[product.id];
+        return next;
+      });
+      return;
+    }
+
+    const newStock = Math.max(0, Math.trunc(n));
+    const delta = newStock - oldStock;
+    if (delta === 0) {
+      setStockEdits((prev) => {
+        const next = { ...prev };
+        delete next[product.id];
+        return next;
+      });
+      return;
+    }
+
+    setSavingStockId(product.id);
+    try {
+      const targetShopId = effectiveShopId || product.stocks?.[0]?.shop_id;
+      await recordMovement({
+        productId: product.id,
+        shopId: targetShopId,
+        type: "adjustment",
+        quantity: delta,
+        notes: `Direct inventory stock change (${oldStock} -> ${newStock})`,
+      });
+
+      // Update local state immediately
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id !== product.id) return p;
+          const currentStocks = p.stocks || [];
+          const matchIdx = currentStocks.findIndex(
+            (s) => !targetShopId || s.shop_id === targetShopId
+          );
+          let nextStocks;
+          if (matchIdx >= 0) {
+            nextStocks = currentStocks.map((s, idx) =>
+              idx === matchIdx ? { ...s, current_stock: newStock } : s
+            );
+          } else {
+            nextStocks = [
+              ...currentStocks,
+              { shop_id: targetShopId || 1, current_stock: newStock } as any,
+            ];
+          }
+          return { ...p, stocks: nextStocks };
+        })
+      );
+
+      setToastMsg(`✓ Stock for "${product.name}" updated to ${newStock}`);
+      setStockEdits((prev) => {
+        const next = { ...prev };
+        delete next[product.id];
+        return next;
+      });
+    } catch (err: any) {
+      alert(apiErrorMessage(err, "Failed to update stock"));
+    } finally {
+      setSavingStockId(null);
     }
   }
 
@@ -1252,7 +1329,7 @@ export default function Inventory() {
                         </div>
                       </td>
 
-                      {/* Requirement 3: Quantity (Stock) - Editable Inline */}
+                      {/* Quantity (Stock) - Direct Input */}
                       <td className="p-3 text-center">
                         {isEditing ? (
                           <div className="flex items-center justify-center">
@@ -1264,22 +1341,69 @@ export default function Inventory() {
                               onChange={(e) =>
                                 handleDraftChange("stockQuantity", e.target.value)
                               }
-                              className="w-16 px-1.5 py-1 text-center font-black text-xs bg-white border border-emerald-400 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                              className="w-20 px-2 py-1 text-center font-black text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
                               title="Adjust Stock Quantity"
                             />
                           </div>
                         ) : (
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-[10.5px] font-bold ${
-                              isOut
-                                ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                : isLow
-                                ? "bg-amber-50 text-amber-800 border border-amber-200"
-                                : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                            }`}
-                          >
-                            {stock} {stock === 1 ? "unit" : "units"}
-                          </span>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              disabled={savingStockId === p.id}
+                              value={
+                                stockEdits[p.id] !== undefined
+                                  ? stockEdits[p.id]
+                                  : stock
+                              }
+                              onChange={(e) =>
+                                setStockEdits((prev) => ({
+                                  ...prev,
+                                  [p.id]: e.target.value,
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              onBlur={() => {
+                                if (
+                                  stockEdits[p.id] !== undefined &&
+                                  Number(stockEdits[p.id]) !== stock
+                                ) {
+                                  handleDirectStockSave(p);
+                                }
+                              }}
+                              className={`w-20 px-2 py-1 text-center font-black text-xs rounded-xl border transition outline-none shadow-2xs ${
+                                isOut
+                                  ? "bg-rose-50/70 border-rose-300 text-rose-800 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
+                                  : isLow
+                                  ? "bg-amber-50/70 border-amber-300 text-amber-800 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                                  : "bg-gray-50/70 border-gray-300 text-gray-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+                              }`}
+                              title="Directly edit stock and press Enter or click outside to save"
+                            />
+                            {stockEdits[p.id] !== undefined &&
+                              Number(stockEdits[p.id]) !== stock && (
+                                <button
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    handleDirectStockSave(p);
+                                  }}
+                                  disabled={savingStockId === p.id}
+                                  className="w-6 h-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white flex items-center justify-center transition shadow-2xs text-[11px]"
+                                  title="Save Stock"
+                                >
+                                  ✓
+                                </button>
+                              )}
+                            {savingStockId === p.id && (
+                              <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
+                            )}
+                          </div>
                         )}
                       </td>
 
