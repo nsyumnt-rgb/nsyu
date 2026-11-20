@@ -1,7 +1,9 @@
 import { useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { usePosStore } from "../store/posStore";
 import { resolveAssetUrl } from "../api/client";
+import { getCategoryAlias } from "../utils/categoryAlias";
 
 function formatINR(val: number): string {
   return "₹" + Number(val || 0).toLocaleString("en-IN", {
@@ -36,21 +38,21 @@ export default function PosCartDrawer() {
   const location = useLocation();
   if (!open || location.pathname.startsWith("/app/billing")) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex justify-end animate-fade-in font-sans">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-navy-950/40 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-navy-950/50 backdrop-blur-xs transition-opacity"
         onClick={() => setOpen(false)}
         aria-hidden="true"
       />
 
       {/* Slide-over panel */}
-      <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col z-10 border-l border-slate-200">
+      <div className="relative w-full max-w-md bg-white h-screen shadow-2xl flex flex-col z-10 border-l border-slate-200">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-700">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700">
               <svg
                 className="w-5 h-5"
                 viewBox="0 0 24 24"
@@ -66,8 +68,8 @@ export default function PosCartDrawer() {
               </svg>
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">
-                Current Bill / POS Cart
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                <span>Current Bill / POS Cart</span>
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
                 {items.length} {items.length === 1 ? "product" : "products"} ·{" "}
@@ -85,7 +87,7 @@ export default function PosCartDrawer() {
                     clearCart();
                   }
                 }}
-                className="px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                className="px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer"
                 title="Clear entire cart"
               >
                 Clear
@@ -94,7 +96,7 @@ export default function PosCartDrawer() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
               aria-label="Close cart drawer"
             >
               ✕
@@ -133,7 +135,7 @@ export default function PosCartDrawer() {
                     setOpen(false);
                     navigate("/app/products");
                   }}
-                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition"
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer"
                 >
                   Browse Products
                 </button>
@@ -143,7 +145,7 @@ export default function PosCartDrawer() {
                     setOpen(false);
                     navigate("/app/billing");
                   }}
-                  className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs transition shadow-xs"
+                  className="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition shadow-xs cursor-pointer"
                 >
                   Open Billing
                 </button>
@@ -151,10 +153,12 @@ export default function PosCartDrawer() {
             </div>
           ) : (
             items.map((item) => {
-              const p = item.product;
-              const photo =
-                p.cover_image || (p.photos && p.photos[0]?.url) || null;
+              const p = item.product || {};
+              const coverImg = (p.images?.find((img: any) => img.is_primary) || p.images?.[0])?.url;
+              const photo = coverImg || p.cover_image || (p.photos && p.photos[0]?.url) || null;
               const lineTotal = Number(item.unitPrice || 0) * item.quantity;
+              const catName = p.category?.name || (typeof p.category === "string" ? p.category : "");
+              const catAlias = getCategoryAlias(catName, p.category?.alias);
 
               return (
                 <div
@@ -162,27 +166,36 @@ export default function PosCartDrawer() {
                   className="p-3 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all shadow-xs flex items-center gap-3"
                 >
                   {/* Thumbnail */}
-                  <div className="w-13 h-13 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200/60 flex items-center justify-center">
+                  <div className="w-13 h-13 rounded-xl bg-slate-50 overflow-hidden shrink-0 border border-slate-200/60 flex items-center justify-center p-1">
                     {photo ? (
                       <img
                         src={resolveAssetUrl(photo) ?? undefined}
                         alt={p.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                         onError={(e) => {
                           (e.currentTarget as HTMLElement).style.display =
                             "none";
                         }}
                       />
                     ) : (
-                      <span className="text-lg">📦</span>
+                      <span className="text-gray-400 font-bold text-xs">
+                        {p.name ? p.name.charAt(0) : "📦"}
+                      </span>
                     )}
                   </div>
 
                   {/* Details */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">
-                      {p.name}
-                    </h4>
+                    <div className="flex items-start justify-between gap-1">
+                      <h4 className="text-xs font-bold text-slate-900 truncate">
+                        {p.name}
+                      </h4>
+                      {catAlias && (
+                        <span className="px-1.5 py-0.2 rounded text-[9.5px] font-black font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
+                          {catAlias}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
                         {p.sku || "NO-SKU"}
@@ -198,7 +211,7 @@ export default function PosCartDrawer() {
                         <button
                           type="button"
                           onClick={() => updateQuantity(p.id, item.quantity - 1)}
-                          className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 text-xs font-bold transition"
+                          className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 text-xs font-bold transition cursor-pointer"
                           title="Decrease quantity"
                         >
                           −
@@ -209,21 +222,21 @@ export default function PosCartDrawer() {
                         <button
                           type="button"
                           onClick={() => updateQuantity(p.id, item.quantity + 1)}
-                          className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 text-xs font-bold transition"
+                          className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 text-xs font-bold transition cursor-pointer"
                           title="Increase quantity"
                         >
                           +
                         </button>
                       </div>
 
-                      <div className="text-xs font-black text-brand-700 ml-auto">
+                      <div className="text-xs font-black text-emerald-800 ml-auto">
                         {formatINR(lineTotal)}
                       </div>
 
                       <button
                         type="button"
                         onClick={() => removeItem(p.id)}
-                        className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition"
+                        className="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition cursor-pointer"
                         title="Remove product"
                       >
                         <svg
@@ -255,34 +268,48 @@ export default function PosCartDrawer() {
               </div>
               <div className="flex justify-between text-sm font-bold text-slate-900 pt-1 border-t border-slate-200">
                 <span>Subtotal</span>
-                <span className="text-base text-brand-800 font-black">
+                <span className="text-base text-emerald-800 font-black">
                   {formatINR(subtotal)}
                 </span>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                navigate("/app/billing");
-              }}
-              className="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-brand-600/20 transition flex items-center justify-center gap-2"
-            >
-              <span>Proceed to POS Billing</span>
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  navigate("/app/products");
+                }}
+                className="py-2.5 px-3 rounded-xl border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-xs transition cursor-pointer shrink-0"
               >
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </button>
+                + Add More
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  navigate("/app/billing");
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-[#047857] hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs shadow-md shadow-emerald-700/20 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Proceed to POS Billing</span>
+                <svg
+                  className="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
+
