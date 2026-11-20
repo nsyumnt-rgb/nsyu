@@ -133,14 +133,6 @@ export default function MarketCard({
           )}
         </Link>
 
-        {/* Flower-Shop Style Rating Pill on bottom-left of photo tile */}
-        {listing.inStock && (
-          <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/95 backdrop-blur-xs text-[10px] font-bold text-gray-800 shadow-xs ring-1 ring-black/5">
-            <span className="text-amber-500">★</span>
-            <span>4.8</span>
-          </div>
-        )}
-
         {/* Out of stock label */}
         {!listing.inStock && (
           <span className="absolute bottom-2 inset-x-2 text-center py-0.5 rounded-md bg-black/75 text-[10px] font-bold text-white uppercase tracking-wider backdrop-blur-xs">

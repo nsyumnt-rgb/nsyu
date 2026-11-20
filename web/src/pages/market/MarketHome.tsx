@@ -8,16 +8,48 @@ import {
 import MarketCard from "../../components/MarketCard";
 import MarketCategorySidebar from "../../components/MarketCategorySidebar";
 
-// Quick category circle items below hero banner (matching Image 1)
-const CATEGORY_CIRCLES = [
-  { name: "Electronics", icon: "💻", query: "Electronics" },
-  { name: "Accessories", icon: "🎧", query: "Accessories" },
-  { name: "Home & Living", icon: "🛋️", query: "Home & Living" },
-  { name: "Fashion", icon: "👕", query: "Fashion" },
-  { name: "Beauty Care", icon: "💄", query: "Beauty & Personal Care" },
-  { name: "Health Care", icon: "💊", query: "Health & Wellness" },
-  { name: "Sports", icon: "🏀", query: "Sports & Fitness" },
-  { name: "More", icon: "⊞", query: "" },
+// Quick category items below hero banner (matching Image 1 Wireframe)
+const CATEGORY_TILES = [
+  {
+    name: "Electronics",
+    image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=200&q=80",
+    query: "Electronics",
+  },
+  {
+    name: "Accessories",
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=200&q=80",
+    query: "Accessories",
+  },
+  {
+    name: "Home & Living",
+    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=200&q=80",
+    query: "Home & Living",
+  },
+  {
+    name: "Fashion",
+    image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=200&q=80",
+    query: "Fashion",
+  },
+  {
+    name: "Beauty Care",
+    image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=200&q=80",
+    query: "Beauty & Personal Care",
+  },
+  {
+    name: "Health Care",
+    image: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=200&q=80",
+    query: "Health & Wellness",
+  },
+  {
+    name: "Sports",
+    image: "https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&w=200&q=80",
+    query: "Sports & Fitness",
+  },
+  {
+    name: "More",
+    icon: "⊞",
+    query: "",
+  },
 ];
 
 export default function MarketHome() {
@@ -116,10 +148,11 @@ export default function MarketHome() {
               />
             </div>
 
-            {/* "Up to 50% OFF" Badge */}
-            <div className="absolute top-2 -right-2 sm:right-2 bg-brand-700 text-white px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white flex items-center gap-1.5 text-xs font-black animate-bounce">
-              <span>⭐</span>
-              <span>{heroSlides[currentSlide].badgeText}</span>
+            {/* "Up to 50% OFF" Badge matching Image 1 Wireframe */}
+            <div className="absolute top-2 -right-2 sm:right-2 w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#064E3B] text-white p-1 shadow-xl border-2 border-white flex flex-col items-center justify-center text-center leading-none z-20 animate-pulse">
+              <span className="text-[9px] sm:text-[10px] font-bold text-emerald-200">Up to</span>
+              <span className="text-base sm:text-lg font-black text-amber-300 tracking-tight">50%</span>
+              <span className="text-[9px] sm:text-[10px] font-bold text-white uppercase">OFF</span>
             </div>
           </div>
 
@@ -165,34 +198,34 @@ export default function MarketHome() {
           </div>
         </div>
 
-        {/* 2. CIRCULAR CATEGORY STRIP with Pastel Tints (Inspired by Flower-Shop) */}
-        <div className="bg-white rounded-2xl border border-[#EAE7DD] p-4 sm:p-5 shadow-xs">
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 sm:gap-4 text-center">
-            {CATEGORY_CIRCLES.map((cat, i) => {
+        {/* 2. CATEGORY TILES ROW (Matching Image 1 Wireframe) */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 shadow-2xs">
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 sm:gap-3 text-center">
+            {CATEGORY_TILES.map((cat) => {
               const href = cat.query
                 ? `/market/search?category=${encodeURIComponent(cat.query)}`
                 : "/market/search";
-              const tints = [
-                "bg-emerald-50/80 border-emerald-100 text-emerald-900 group-hover:bg-emerald-100",
-                "bg-amber-50/80 border-amber-100 text-amber-900 group-hover:bg-amber-100",
-                "bg-sky-50/80 border-sky-100 text-sky-900 group-hover:bg-sky-100",
-                "bg-rose-50/80 border-rose-100 text-rose-900 group-hover:bg-rose-100",
-                "bg-indigo-50/80 border-indigo-100 text-indigo-900 group-hover:bg-indigo-100",
-                "bg-teal-50/80 border-teal-100 text-teal-900 group-hover:bg-teal-100",
-                "bg-orange-50/80 border-orange-100 text-orange-900 group-hover:bg-orange-100",
-                "bg-slate-50/80 border-slate-100 text-slate-900 group-hover:bg-slate-100",
-              ];
-              const tint = tints[i % tints.length];
               return (
                 <Link
                   key={cat.name}
                   to={href}
-                  className="group flex flex-col items-center gap-2 transition"
+                  className="bg-white rounded-2xl border border-gray-100/90 shadow-2xs p-2 sm:p-2.5 flex flex-col items-center justify-center gap-1.5 hover:shadow-md hover:border-emerald-200 transition group"
                 >
-                  <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full border flex items-center justify-center text-xl sm:text-2xl shadow-xs group-hover:scale-110 transition-all duration-200 ${tint}`}>
-                    <span>{cat.icon}</span>
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center overflow-hidden bg-gray-50/50">
+                    {cat.image ? (
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        loading="lazy"
+                        className="max-h-full max-w-full object-contain p-1 group-hover:scale-110 transition duration-300"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#047857] flex items-center justify-center text-lg font-black">
+                        ⊞
+                      </div>
+                    )}
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold text-gray-700 group-hover:text-brand-700 transition truncate max-w-full">
+                  <span className="text-[11px] sm:text-xs font-bold text-gray-800 group-hover:text-emerald-700 transition truncate max-w-full">
                     {cat.name}
                   </span>
                 </Link>

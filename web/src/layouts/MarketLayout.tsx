@@ -93,7 +93,7 @@ export default function MarketLayout() {
           {/* Customer Support */}
           <div className="flex items-center gap-1.5 text-emerald-100">
             <span>🎧</span>
-            <span>Customer Support Hotline: +91 90459 17913</span>
+            <span>Customer Support: 98765 43210</span>
           </div>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function MarketLayout() {
           
           {/* Logo & Branding */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200/60 group-hover:bg-brand-100 flex items-center justify-center font-black text-xl shadow-xs transition-all duration-200">
+            <div className="w-10 h-10 rounded-xl bg-[#047857] text-white flex items-center justify-center font-black text-xl shadow-xs transition-all duration-200">
               N
             </div>
             <div className="min-w-0">
@@ -114,7 +114,7 @@ export default function MarketLayout() {
                 NSYU Market
               </span>
               <span className="block text-[10.5px] font-semibold text-slate-500 mt-0.5 tracking-tight">
-                Shop Smart · Shop Local
+                Shop Smart · Shop Better
               </span>
             </div>
           </Link>
@@ -126,18 +126,28 @@ export default function MarketLayout() {
             role="search"
           >
             <div className="relative flex items-center">
+              <svg
+                className="w-4 h-4 text-gray-400 absolute left-3.5 pointer-events-none"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 id="market-global-search"
                 type="text"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search products, shops, brands..."
-                className="w-full h-11 pl-4 pr-12 rounded-xl border border-[#EAE7DD] bg-[#FAF9F5]/90 text-xs sm:text-sm focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition shadow-xs"
+                className="w-full h-11 pl-10 pr-14 rounded-xl border border-gray-200 bg-white text-xs sm:text-sm focus:border-[#047857] focus:ring-2 focus:ring-emerald-500/20 outline-none transition shadow-2xs"
               />
               <button
                 type="submit"
                 aria-label="Search"
-                className="absolute right-1 top-1 h-9 w-9 rounded-lg bg-[#047857] hover:bg-[#064E3B] text-white flex items-center justify-center transition shadow-xs"
+                className="absolute right-1 top-1 h-9 px-3.5 rounded-lg bg-[#047857] hover:bg-[#064E3B] text-white flex items-center justify-center transition shadow-xs cursor-pointer"
               >
                 <svg
                   className="w-4 h-4"
@@ -158,58 +168,44 @@ export default function MarketLayout() {
             {/* Wishlist */}
             <Link
               to="/portal/wishlist"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-brand-700 hover:bg-brand-50/70 transition relative"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-gray-700 hover:text-emerald-700 transition"
               title="View Wishlist"
             >
-              <div className="relative">
-                <svg
-                  className="w-5 h-5 text-gray-700"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-emerald-600 text-white text-[9.5px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white">
-                    {wishlistCount}
-                  </span>
-                )}
-              </div>
+              <svg
+                className="w-5 h-5 text-gray-700"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
               <span className="hidden md:inline">Wishlist</span>
-              <span className="text-[11px] text-gray-400 font-normal">
-                ({wishlistCount})
+              <span className="bg-[#047857] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                {wishlistCount}
               </span>
             </Link>
 
             {/* Cart */}
             <Link
               to="/market/cart"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-brand-700 hover:bg-brand-50/70 transition relative"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-gray-700 hover:text-emerald-700 transition"
               title="View Cart"
             >
-              <div className="relative">
-                <svg
-                  className="w-5 h-5 text-gray-700"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <path d="M16 10a4 4 0 0 1-8 0" />
-                </svg>
-                {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-brand-700 text-white text-[9.5px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white shadow-xs">
-                    {cartCount}
-                  </span>
-                )}
-              </div>
+              <svg
+                className="w-5 h-5 text-gray-700"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
               <span className="hidden md:inline">Cart</span>
-              <span className="text-[11px] text-gray-400 font-normal">
-                ({cartCount})
+              <span className="bg-[#047857] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                {cartCount}
               </span>
             </Link>
 
