@@ -22,6 +22,8 @@ const MarketCheckout = lazy(() => import("./pages/market/MarketCheckout"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const SelectShop = lazy(() => import("./pages/SelectShop"));
+const Categories = lazy(() => import("./pages/Categories"));
+const MobileAppView = lazy(() => import("./pages/MobileAppView"));
 
 // Staff & Admin App Pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -41,6 +43,12 @@ const Suppliers = lazy(() => import("./pages/Suppliers"));
 const Ledger = lazy(() => import("./pages/Ledger"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Khata = lazy(() => import("./pages/Khata"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const LowStock = lazy(() => import("./pages/LowStock"));
+const B2BMarketplace = lazy(() => import("./pages/B2BMarketplace"));
+const B2BPurchaseOrders = lazy(() => import("./pages/B2BPurchaseOrders"));
+const B2BLedger = lazy(() => import("./pages/B2BLedger"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Detail Pages
@@ -94,6 +102,7 @@ export default function App() {
           {/* Public marketplace (MultiShop phase 1) — no login required */}
           <Route element={<MarketLayout />}>
             <Route path="/" element={<MarketHome />} />
+            <Route path="/categories" element={<Categories />} />
             <Route path="/market/search" element={<MarketSearch />} />
             <Route path="/market/shops" element={<MarketShops />} />
             <Route path="/market/shop/:code" element={<MarketShop />} />
@@ -101,6 +110,8 @@ export default function App() {
             <Route path="/market/cart" element={<MarketCart />} />
             <Route path="/market/checkout" element={<MarketCheckout />} />
           </Route>
+          {/* Interactive Mobile App Wireframe Simulation */}
+          <Route path="/mobile" element={<MobileAppView />} />
           {/* Single Unified Login Page */}
           <Route path="/login" element={<Login />} />
           <Route path="/portal/login" element={<Navigate to="/login?tab=customer" replace />} />
@@ -157,6 +168,12 @@ export default function App() {
               <Route path="billing" element={<SalesHub />} />
               <Route path="customers" element={<Customers />} />
               <Route path="customers/:id" element={<CustomerDetail />} />
+              <Route path="khata" element={<Khata />} />
+              <Route path="expenses" element={<Expenses />} />
+              <Route path="low-stock" element={<LowStock />} />
+              <Route path="b2b-market" element={<B2BMarketplace />} />
+              <Route path="b2b-po" element={<B2BPurchaseOrders />} />
+              <Route path="b2b-ledger" element={<B2BLedger />} />
               <Route path="suppliers" element={<Suppliers />} />
               <Route path="suppliers/:id" element={<SupplierDetail />} />
               <Route path="payments" element={<Navigate to="/app/ledger" replace />} />

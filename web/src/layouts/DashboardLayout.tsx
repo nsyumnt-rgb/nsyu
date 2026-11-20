@@ -1,10 +1,16 @@
+import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import BusinessHeader from "./BusinessHeader";
 import BusinessFooter from "./BusinessFooter";
 import Sidebar from "./Sidebar";
+import DemoBar from "../components/DemoBar";
+import HinglishToggle from "../components/HinglishToggle";
+import DemoGuideModal from "../components/DemoGuideModal";
 
 export default function DashboardLayout() {
   const location = useLocation();
+  const [demoGuideOpen, setDemoGuideOpen] = useState(false);
+
   // Pages with dedicated full-website layout (Category Sidebar, Product Grid, Inventory Table, Staff Grid)
   const isFullWidthPage = [
     "/app/catalog",
@@ -14,7 +20,10 @@ export default function DashboardLayout() {
   ].some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
 
   return (
-    <div className="min-h-screen flex flex-col bg-canvas">
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Prototype Persona Switcher Bar */}
+      <DemoBar onOpenGuide={() => setDemoGuideOpen(true)} />
+
       {/* Universal Top Header with Brand, Navigation & Profile */}
       <BusinessHeader />
 
@@ -29,6 +38,15 @@ export default function DashboardLayout() {
 
       {/* Universal Bottom Footer with Brand, Contact Info & Copyright */}
       <BusinessFooter />
+
+      {/* Floating Hinglish Toggle Button */}
+      <HinglishToggle />
+
+      {/* Demo Guide Modal */}
+      <DemoGuideModal
+        isOpen={demoGuideOpen}
+        onClose={() => setDemoGuideOpen(false)}
+      />
     </div>
   );
 }

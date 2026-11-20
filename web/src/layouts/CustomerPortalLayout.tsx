@@ -7,6 +7,9 @@ import { resolveAssetUrl } from "../api/client";
 import { useStorefront } from "../store/storefrontStore";
 import CartDrawer from "../components/storefront/CartDrawer";
 import { KindIcon, initialsOf, productKind } from "../components/ProductArt";
+import DemoBar from "../components/DemoBar";
+import HinglishToggle from "../components/HinglishToggle";
+import DemoGuideModal from "../components/DemoGuideModal";
 
 /**
  * Customer storefront shell: dark-green sticky header (Home · Shop · Categories ·
@@ -39,6 +42,7 @@ export default function CustomerPortalLayout() {
   const [policies, setPolicies] = useState<{ privacyPolicy: string; termsConditions: string; returnPolicy: string; announcement?: string | null } | null>(null);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
   const [policyModal, setPolicyModal] = useState<{ title: string; text: string } | null>(null);
+  const [demoGuideOpen, setDemoGuideOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const catsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -139,7 +143,10 @@ export default function CustomerPortalLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F6F8F7] flex flex-col font-sans">
+    <div className="min-h-screen bg-white flex flex-col font-sans">
+      {/* ───────────── Prototype Persona Switcher Bar ───────────── */}
+      <DemoBar onOpenGuide={() => setDemoGuideOpen(true)} />
+
       {/* ───────────── Top Announcement / Promotional Bar ───────────── */}
       {policies?.announcement && !dismissedAnnouncement && (
         <div className="bg-brand-900 text-brand-50 text-[12px] sm:text-[13px] py-2 px-4 text-center font-semibold border-b border-brand-700/50 flex items-center justify-between relative shadow-xs z-50">
@@ -463,6 +470,15 @@ export default function CustomerPortalLayout() {
       )}
 
       <CartDrawer />
+
+      {/* Floating Hinglish Toggle Button */}
+      <HinglishToggle />
+
+      {/* Demo Guide Modal */}
+      <DemoGuideModal
+        isOpen={demoGuideOpen}
+        onClose={() => setDemoGuideOpen(false)}
+      />
     </div>
   );
 }

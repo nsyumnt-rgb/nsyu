@@ -2,12 +2,16 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import AdminFooter from "./AdminFooter";
+import DemoBar from "../components/DemoBar";
+import HinglishToggle from "../components/HinglishToggle";
+import DemoGuideModal from "../components/DemoGuideModal";
 
 export default function AdminLayout() {
   const { owner, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [demoGuideOpen, setDemoGuideOpen] = useState(false);
   useEffect(() => setOpen(false), [location.pathname]);
 
   const handleLogout = () => {
@@ -136,6 +140,9 @@ export default function AdminLayout() {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-white text-navy-900">
+      {/* Top Prototype Switcher Bar */}
+      <DemoBar onOpenGuide={() => setDemoGuideOpen(true)} />
+
       <div className="flex min-h-0 flex-1">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-64 bg-[#04261D] flex-col shrink-0 sticky top-0 h-[100dvh]">{sidebar}</aside>
@@ -166,7 +173,16 @@ export default function AdminLayout() {
         </main>
         </div>
       </div>
-        <AdminFooter />
+      <AdminFooter />
+
+      {/* Floating Hinglish Toggle Button */}
+      <HinglishToggle />
+
+      {/* Demo Guide Modal */}
+      <DemoGuideModal
+        isOpen={demoGuideOpen}
+        onClose={() => setDemoGuideOpen(false)}
+      />
     </div>
   );
 }
