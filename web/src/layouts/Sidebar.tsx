@@ -43,6 +43,7 @@ const NAV_ITEMS: NavItem[] = [
 
   // Products & Inventory
   { to: "/app/products", label: "Products", module: "products", group: "PRODUCTS & STOCK", icon: ico("M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z", "M7 7h.01") },
+  { to: "/app/categories", label: "Categories", module: "products", group: "PRODUCTS & STOCK", icon: ico("M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z") },
   { to: "/app/inventory", label: "Inventory", module: "inventory", group: "PRODUCTS & STOCK", icon: ico("M12 2L2 7l10 5 10-5-10-5z", "M2 17l10 5 10-5", "M2 12l10 5 10-5") },
 
   // Billing & Orders

@@ -5,12 +5,37 @@ export function listCategories() {
   return api.get<ApiEnvelope<Category[]>>("/categories");
 }
 
-export function createCategory(name: string, status?: "active" | "inactive") {
-  return api.post<ApiEnvelope<Category>>("/categories", { name, status: status || "active" });
+export interface CategoryPayload {
+  name: string;
+  status?: "active" | "inactive";
+  icon?: string | null;
+  image_url?: string | null;
 }
 
-export function updateCategory(categoryId: number, name: string) {
-  return api.put<ApiEnvelope<Category>>(`/categories/${categoryId}`, { name });
+export function createCategory(payload: string | CategoryPayload, status?: "active" | "inactive") {
+  if (typeof payload === "string") {
+    return api.post<ApiEnvelope<Category>>("/categories", { name: payload, status: status || "active" });
+  }
+  return api.post<ApiEnvelope<Category>>("/categories", payload);
+}
+
+export function updateCategory(categoryId: number, payload: string | Partial<CategoryPayload>) {
+  if (typeof payload === "string") {
+    return api.put<ApiEnvelope<Category>>(`/categories/${categoryId}`, { name: payload });
+  }
+  return api.put<ApiEnvelope<Category>>(`/categories/${categoryId}`, payload);
+}
+
+export function uploadCategoryImage(categoryId: number, file: File) {
+  const formData = new FormData();
+  formData.append("image", file);
+  return api.post<ApiEnvelope<{ imageUrl: string; category: Category }>>(`/categories/${categoryId}/image`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+export function deleteCategory(categoryId: number) {
+  return api.delete<ApiEnvelope<{ id: number }>>(`/categories/${categoryId}`);
 }
 
 export function setCategoryStatus(categoryId: number, status: "active" | "inactive") {

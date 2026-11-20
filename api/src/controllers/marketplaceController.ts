@@ -136,16 +136,22 @@ export async function listMarketCategories(_req: Request, res: Response) {
   try {
     const rows = await sequelize.query(
       `SELECT c.name AS name, COUNT(*) AS count,
-              MIN((SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC, pi.id ASC LIMIT 1)) AS image_url
+              COALESCE(c.image_url, MIN((SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC, pi.id ASC LIMIT 1))) AS image_url,
+              c.icon AS icon
        ${LISTING_FROM}
        WHERE p.status = 'active' AND c.name IS NOT NULL
-       GROUP BY c.name
+       GROUP BY c.name, c.image_url, c.icon
        ORDER BY COUNT(*) DESC, c.name ASC`,
       { type: QueryTypes.SELECT }
     );
     return res.json({
       success: true,
-      data: (rows as any[]).map((r) => ({ name: r.name, count: Number(r.count), imageUrl: r.image_url || null })),
+      data: (rows as any[]).map((r) => ({
+        name: r.name,
+        count: Number(r.count),
+        imageUrl: r.image_url || null,
+        icon: r.icon || null,
+      })),
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Could not load categories" });

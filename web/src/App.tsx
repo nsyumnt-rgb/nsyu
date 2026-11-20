@@ -27,6 +27,7 @@ const SelectShop = lazy(() => import("./pages/SelectShop"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Shops = lazy(() => import("./pages/Shops"));
 const Products = lazy(() => import("./pages/Products"));
+const Categories = lazy(() => import("./pages/Categories"));
 const ProductDetail = lazy(() => import("./pages/details/ProductDetail"));
 const Inventory = lazy(() => import("./pages/Inventory"));
 const InventoryOverview = lazy(() => import("./pages/InventoryOverview"));
@@ -141,6 +142,7 @@ export default function App() {
 
               {/* Product */}
               <Route path="products" element={<Products />} />
+              <Route path="categories" element={<Categories />} />
               <Route path="products/:id" element={<ProductDetail />} />
               <Route path="catalog" element={<Navigate to="/app/products" replace />} />
 

@@ -76,7 +76,7 @@ export async function searchMarket(params: {
   return res.data;
 }
 
-export async function getMarketCategories(): Promise<{ name: string; count: number; imageUrl: string | null }[]> {
+export async function getMarketCategories(): Promise<{ name: string; count: number; imageUrl: string | null; icon?: string | null }[]> {
   const res = await marketApi.get("/marketplace/categories");
   return res.data?.data || [];
 }

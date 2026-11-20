@@ -7,9 +7,12 @@ interface CategoryAttributes {
   name: string;
   status: "active" | "inactive";
   reference_code?: string | null;
+  image_url?: string | null;
+  icon?: string | null;
 }
 
-interface CategoryCreationAttributes extends Optional<CategoryAttributes, "id" | "status" | "reference_code"> {}
+interface CategoryCreationAttributes
+  extends Optional<CategoryAttributes, "id" | "status" | "reference_code" | "image_url" | "icon"> {}
 
 export class Category
   extends Model<CategoryAttributes, CategoryCreationAttributes>
@@ -20,6 +23,8 @@ export class Category
   public name!: string;
   public status!: "active" | "inactive";
   public reference_code?: string | null;
+  public image_url?: string | null;
+  public icon?: string | null;
 }
 
 Category.init(
@@ -29,6 +34,8 @@ Category.init(
     name: { type: DataTypes.STRING(100), allowNull: false },
     status: { type: DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
+    image_url: { type: DataTypes.TEXT, allowNull: true },
+    icon: { type: DataTypes.STRING(100), allowNull: true },
   },
   {
     sequelize,

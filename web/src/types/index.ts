@@ -157,6 +157,9 @@ export interface Category {
   owner_id: number;
   name: string;
   status: "active" | "inactive";
+  image_url?: string | null;
+  icon?: string | null;
+  product_count?: number;
   subcategories?: Subcategory[];
 }
 

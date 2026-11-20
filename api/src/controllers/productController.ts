@@ -9,6 +9,8 @@ import {
   InventoryTransaction,
   SaleItem,
   OrderItem,
+  CustomerCartItem,
+  PurchaseItem,
   Category,
   Subcategory,
   Shop,
@@ -245,19 +247,25 @@ export async function deleteProduct(req: Request, res: Response) {
   if (isPermanent) {
     const hasSales = await SaleItem.count({ where: { product_id: productId } });
     const hasOrders = await OrderItem.count({ where: { product_id: productId } });
+    const hasPurchases = await PurchaseItem.count({ where: { product_id: productId } });
 
-    if (hasSales > 0 || hasOrders > 0) {
+    if (hasSales > 0 || hasOrders > 0 || hasPurchases > 0) {
       product.status = "inactive";
       await product.save();
       await logAudit({ req, module: "products", action: "deactivate", entityType: "Product", entityId: product.id });
       return res.json({
         success: true,
-        message: "Product has sales or order history; marked as inactive instead",
+        message: "Product has sales, purchases, or order history; marked as inactive instead",
         data: { action: "deactivated" },
       });
     }
 
+    await CustomerCartItem.destroy({ where: { product_id: productId } });
     await ProductStock.destroy({ where: { product_id: productId } });
+    const images = await ProductImage.findAll({ where: { product_id: productId } });
+    for (const img of images) {
+      await removeImage(img.url);
+    }
     await ProductImage.destroy({ where: { product_id: productId } });
     await InventoryTransaction.destroy({ where: { product_id: productId } });
     await Product.destroy({ where: { id: productId } });

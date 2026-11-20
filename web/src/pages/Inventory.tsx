@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   getInventoryHistory,
   recordMovement,
@@ -40,7 +39,6 @@ interface InlineEditDraft {
 }
 
 export default function Inventory() {
-  const navigate = useNavigate();
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
 
@@ -484,6 +482,8 @@ export default function Inventory() {
     setEditMinStock(String(p.min_stock || 5));
     setShowEditModal(true);
   }
+  void openAdjust;
+  void openEdit;
 
   // Save Edit Product Modal
   async function handleSaveEdit(e: React.FormEvent) {
@@ -519,14 +519,12 @@ export default function Inventory() {
     try {
       const res = await deleteProduct(target.id, permanent);
       const action = res.data?.data?.action || (permanent ? "deleted" : "deactivated");
+      // Immediately remove from inventory table view
+      setProducts((prev) => prev.filter((p) => p.id !== target.id));
       if (action === "deleted") {
-        setProducts((prev) => prev.filter((p) => p.id !== target.id));
         setToastMsg(`✓ Product "${target.name}" permanently deleted`);
       } else {
-        setProducts((prev) =>
-          prev.map((p) => (p.id === target.id ? { ...p, status: "inactive" } : p))
-        );
-        setToastMsg(`✓ Product "${target.name}" marked as inactive`);
+        setToastMsg(`✓ Product "${target.name}" deactivated & removed from inventory`);
       }
       setProductToDelete(null);
     } catch (err: any) {
@@ -625,33 +623,8 @@ export default function Inventory() {
           </p>
         </div>
 
-        {/* Action Buttons: Stock Movement, Import, Export, Add Product */}
+        {/* Action Buttons: Import, Export, Add Product */}
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => openAdjust()}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
-          >
-            <svg
-              className="w-4 h-4 text-emerald-700"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <line x1="4" y1="21" x2="4" y2="14" />
-              <line x1="4" y1="10" x2="4" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12" y2="3" />
-              <line x1="20" y1="21" x2="20" y2="16" />
-              <line x1="20" y1="12" x2="20" y2="3" />
-              <line x1="1" y1="14" x2="7" y2="14" />
-              <line x1="9" y1="8" x2="15" y2="8" />
-              <line x1="17" y1="16" x2="23" y2="16" />
-            </svg>
-            <span>Stock Movement</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setShowImportModal(true)}
@@ -1478,54 +1451,7 @@ export default function Inventory() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
-                            {/* Requirement 1: View Icon (Eye) - Opens Full Product Page */}
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/app/products/${p.id}`)}
-                              className="w-8 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
-                              title="Open Product Page"
-                              aria-label="Open Product Page"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              >
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                <circle cx="12" cy="12" r="3" />
-                              </svg>
-                            </button>
-
-                            {/* Adjust Stock Button (Sliders / Plus-Minus) */}
-                            <button
-                              type="button"
-                              onClick={() => openAdjust(p)}
-                              className="w-8 h-8 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
-                              title="Adjust Stock / Record Movement"
-                              aria-label="Adjust Stock"
-                            >
-                              <svg
-                                className="w-4 h-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              >
-                                <line x1="4" y1="21" x2="4" y2="14" />
-                                <line x1="4" y1="10" x2="4" y2="3" />
-                                <line x1="12" y1="21" x2="12" y2="12" />
-                                <line x1="12" y1="8" x2="12" y2="3" />
-                                <line x1="20" y1="21" x2="20" y2="16" />
-                                <line x1="20" y1="12" x2="20" y2="3" />
-                                <line x1="1" y1="14" x2="7" y2="14" />
-                                <line x1="9" y1="8" x2="15" y2="8" />
-                                <line x1="17" y1="16" x2="23" y2="16" />
-                              </svg>
-                            </button>
-
-                            {/* Requirement 5: Inline Edit Action Icon (Pencil) */}
+                            {/* Inline Edit Action Icon (Pencil) */}
                             <button
                               type="button"
                               onClick={() => handleStartInlineEdit(p)}
@@ -1545,13 +1471,13 @@ export default function Inventory() {
                               </svg>
                             </button>
 
-                            {/* Requirement 5: Delete / Deactivate Action Icon (Trash) */}
+                            {/* Delete Action Icon (Trash) */}
                             <button
                               type="button"
                               onClick={() => handleDeleteProduct(p)}
                               className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
-                              title="Deactivate Product"
-                              aria-label="Deactivate Product"
+                              title="Delete / Deactivate Product"
+                              aria-label="Delete Product"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -1898,34 +1824,6 @@ export default function Inventory() {
                   onClick={() => {
                     const target = viewProduct;
                     setViewProduct(null);
-                    openAdjust(target);
-                  }}
-                  className="px-3.5 py-2 bg-teal-50 text-teal-800 hover:bg-teal-100 font-bold rounded-xl text-xs transition flex items-center gap-1.5"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <line x1="4" y1="21" x2="4" y2="14" />
-                    <line x1="4" y1="10" x2="4" y2="3" />
-                    <line x1="12" y1="21" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12" y2="3" />
-                    <line x1="20" y1="21" x2="20" y2="16" />
-                    <line x1="20" y1="12" x2="20" y2="3" />
-                    <line x1="1" y1="14" x2="7" y2="14" />
-                    <line x1="9" y1="8" x2="15" y2="8" />
-                    <line x1="17" y1="16" x2="23" y2="16" />
-                  </svg>
-                  <span>Adjust Stock</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = viewProduct;
-                    setViewProduct(null);
                     handleStartInlineEdit(target);
                   }}
                   className="px-4 py-2 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-bold rounded-xl text-xs transition flex items-center gap-1.5"
@@ -1941,29 +1839,6 @@ export default function Inventory() {
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
                   <span>Edit Fields Inline</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = viewProduct;
-                    setViewProduct(null);
-                    openEdit(target);
-                  }}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs transition"
-                >
-                  Full Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (viewProduct) {
-                      navigate(`/app/products/${viewProduct.id}`);
-                    }
-                  }}
-                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition flex items-center gap-1 shadow-xs"
-                >
-                  <span>Open Product Page</span>
-                  <span>→</span>
                 </button>
               </div>
               <button
