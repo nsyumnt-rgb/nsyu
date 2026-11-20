@@ -30,8 +30,12 @@ export class InvalidImageError extends Error {
 }
 
 function cfg() {
-  const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  const isTest = Boolean(process.env.TEST_DIALECT || process.env.NODE_ENV === "test");
+  const fallbackUrl = isTest ? "" : "https://lggjtxzannywecuvwqbl.supabase.co";
+  const fallbackKey = isTest ? "" : (process.env.SUPABASE_ANON_KEY || "sb_publishable_RDa1A_btjBZApVlr1d0WFw_8HP2WZNU");
+
+  const url = (process.env.SUPABASE_URL || fallbackUrl).replace(/\/+$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || fallbackKey;
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || "nsyu-media";
   return { url, key, bucket, enabled: Boolean(url && key) };
 }
