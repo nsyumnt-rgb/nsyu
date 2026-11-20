@@ -48,6 +48,7 @@ export async function createProduct(req: Request, res: Response) {
     description,
     purchase_price,
     selling_price,
+    live_price,
     mrp,
     discount,
     tax_percent,
@@ -59,7 +60,12 @@ export async function createProduct(req: Request, res: Response) {
   if (!name || !sku) {
     return res.status(400).json({ success: false, message: "name and sku are required" });
   }
-  if (Number(selling_price) < 0 || Number(purchase_price) < 0 || Number(mrp) < 0) {
+  if (
+    Number(selling_price) < 0 ||
+    Number(purchase_price) < 0 ||
+    Number(mrp) < 0 ||
+    (live_price !== undefined && live_price !== null && live_price !== "" && Number(live_price) < 0)
+  ) {
     return res.status(400).json({ success: false, message: "Prices cannot be negative" });
   }
   if (discount !== undefined && (discount < 0 || discount > 100)) {
@@ -84,6 +90,7 @@ export async function createProduct(req: Request, res: Response) {
         description,
         purchase_price: purchase_price || 0,
         selling_price: selling_price || 0,
+        live_price: live_price !== undefined && live_price !== null && live_price !== "" ? Number(live_price) : null,
         mrp: mrp || 0,
         discount: discount || 0,
         tax_percent: tax_percent || 0,
@@ -122,25 +129,34 @@ export async function updateProduct(req: Request, res: Response) {
 
   const fields = [
     "name", "barcode", "category_id", "subcategory_id", "brand", "description",
-    "purchase_price", "selling_price", "mrp", "discount", "tax_percent", "min_stock",
+    "purchase_price", "selling_price", "live_price", "mrp", "discount", "tax_percent", "min_stock",
     "supplier_id", "status",
   ] as const;
 
-  const priceFields = ["purchase_price", "selling_price", "mrp"] as const;
+  const priceFields = ["purchase_price", "selling_price", "live_price", "mrp"] as const;
   const oldPrices: Record<string, number> = {};
   const newPrices: Record<string, number> = {};
 
   for (const f of fields) {
     if (req.body[f] !== undefined) {
-      if ((priceFields as readonly string[]).includes(f) && Number(req.body[f]) !== Number(product[f])) {
+      const incomingVal = f === "live_price"
+        ? (req.body[f] === "" || req.body[f] === null ? null : Number(req.body[f]))
+        : req.body[f];
+
+      if ((priceFields as readonly string[]).includes(f) && Number(incomingVal) !== Number(product[f])) {
         oldPrices[f] = Number(product[f]);
-        newPrices[f] = Number(req.body[f]);
+        newPrices[f] = Number(incomingVal);
       }
-      (product as any)[f] = req.body[f];
+      (product as any)[f] = incomingVal;
     }
   }
 
-  if (Number(product.selling_price) < 0 || Number(product.purchase_price) < 0 || Number(product.mrp) < 0) {
+  if (
+    Number(product.selling_price) < 0 ||
+    Number(product.purchase_price) < 0 ||
+    Number(product.mrp) < 0 ||
+    (product.live_price !== null && product.live_price !== undefined && Number(product.live_price) < 0)
+  ) {
     return res.status(400).json({ success: false, message: "Prices cannot be negative" });
   }
 

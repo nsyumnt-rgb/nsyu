@@ -31,6 +31,7 @@ interface ProductAttributes {
   description?: string;
   purchase_price: number;
   selling_price: number;
+  live_price?: number | null;
   mrp: number;
   discount: number; // percentage, 0-100
   tax_percent: number; // GST %, 0 if not applicable
@@ -49,6 +50,7 @@ interface ProductCreationAttributes
     | "subcategory_id"
     | "brand"
     | "description"
+    | "live_price"
     | "discount"
     | "tax_percent"
     | "min_stock"
@@ -72,6 +74,7 @@ export class Product
   public description?: string;
   public purchase_price!: number;
   public selling_price!: number;
+  public live_price?: number | null;
   public mrp!: number;
   public discount!: number;
   public tax_percent!: number;
@@ -94,6 +97,7 @@ Product.init(
     description: { type: DataTypes.TEXT },
     purchase_price: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     selling_price: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
+    live_price: { type: DataTypes.DECIMAL(12, 2), allowNull: true, defaultValue: null },
     mrp: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     discount: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },
     tax_percent: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 0 },

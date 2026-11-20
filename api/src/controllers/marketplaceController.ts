@@ -29,7 +29,8 @@ export function productMatchKey(name: string, brand?: string | null) {
 
 const LISTING_SELECT = `
   p.id AS product_id, p.name, p.brand, p.barcode, p.sku, p.description,
-  p.selling_price AS price, p.mrp, p.tax_percent, p.created_at,
+  COALESCE(NULLIF(p.live_price, 0), p.selling_price) AS price,
+  p.selling_price, p.live_price, p.mrp, p.tax_percent, p.created_at,
   c.name AS category_name,
   s.id AS shop_id, s.name AS shop_name, s.code AS shop_code, s.address AS shop_address,
   COALESCE(ps.current_stock, 0) AS stock,
@@ -45,6 +46,8 @@ const LISTING_FROM = `
 function toListing(r: any) {
   const price = Number(r.price) || 0;
   const mrp = Number(r.mrp) || 0;
+  const sellingPrice = Number(r.selling_price) || price;
+  const livePrice = r.live_price !== null && r.live_price !== undefined ? Number(r.live_price) : null;
   return {
     productId: Number(r.product_id),
     name: r.name,
@@ -52,6 +55,9 @@ function toListing(r: any) {
     sku: r.sku,
     category: r.category_name || null,
     price,
+    sellingPrice,
+    livePrice,
+    isLivePrice: livePrice !== null && livePrice > 0,
     mrp,
     discountPercent: mrp > price && price > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0,
     gstPercent: Number(r.tax_percent) || 0,

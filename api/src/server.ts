@@ -20,6 +20,8 @@ async function ensureSingleLedgerSchema() {
       ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID';
       ALTER TABLE public.sales ADD COLUMN IF NOT EXISTS client_request_id VARCHAR(120);
       ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS billed_at TIMESTAMPTZ;
+      ALTER TABLE public.products ADD COLUMN IF NOT EXISTS live_price NUMERIC(12, 2);
+      ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS alias VARCHAR(20);
       CREATE UNIQUE INDEX IF NOT EXISTS sales_unique_order_id_uidx ON public.sales (order_id) WHERE order_id IS NOT NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS sales_owner_client_request_uidx ON public.sales (owner_id, client_request_id) WHERE client_request_id IS NOT NULL;
       CREATE UNIQUE INDEX IF NOT EXISTS customer_ledger_idempotency_key_uidx ON public.customer_ledger (owner_id, idempotency_key) WHERE idempotency_key IS NOT NULL;

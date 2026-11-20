@@ -85,9 +85,17 @@ export async function createSale(req: Request, res: Response) {
 
   // Normalize payment method to supported backend enum
   const rawMethod = String(paymentMethod || "cash").trim().toLowerCase();
+  const isUnpaidMethod =
+    rawMethod.includes("unpaid") ||
+    rawMethod.includes("credit") ||
+    rawMethod.includes("udhaar") ||
+    rawMethod.includes("due");
+
   const normalizedPaymentMethod: PaymentMethod = (
     PAYMENT_METHODS.includes(rawMethod as any)
       ? rawMethod
+      : isUnpaidMethod
+      ? "other"
       : rawMethod.includes("upi") || rawMethod.includes("gpay") || rawMethod.includes("phonepe") || rawMethod.includes("paytm")
       ? "upi"
       : rawMethod.includes("card")
@@ -98,6 +106,10 @@ export async function createSale(req: Request, res: Response) {
       ? "cheque"
       : "cash"
   ) as PaymentMethod;
+
+  const effectivePaidAmount = isUnpaidMethod && (paidAmount === undefined || paidAmount === null || paidAmount === "")
+    ? 0
+    : paidAmount;
 
   if (!customerId && !newCustomerInput?.name) {
     return res.status(400).json({ success: false, message: "customerId or customer.name is required" });
@@ -143,7 +155,7 @@ export async function createSale(req: Request, res: Response) {
       const shopSettings = (shop.settings || {}) as Record<string, any>;
       const pricesIncludeTax = Boolean(shopSettings.pricesIncludeTax);
       const allowNegativeStock = shopSettings.allowNegativeStock !== undefined ? Boolean(shopSettings.allowNegativeStock) : true;
-      const enableCredit = shopSettings.enableCredit !== false;
+      const enableCredit = shopSettings.enableCredit !== false || shopSettings.enableCustomerCredit === true;
 
       // 1. Customer
       let customer: Customer;
@@ -256,9 +268,9 @@ export async function createSale(req: Request, res: Response) {
       const totalAmount = Math.max(0, round2(grandTotal - extraDiscount));
 
       // Overpayment check
-      if (paidAmount !== undefined && Number(paidAmount) > totalAmount) {
+      if (effectivePaidAmount !== undefined && Number(effectivePaidAmount) > totalAmount) {
         throw Object.assign(
-          new Error(`Overpayment is not allowed. Paid amount (₹${Number(paidAmount)}) cannot exceed grand total (₹${totalAmount}).`),
+          new Error(`Overpayment is not allowed. Paid amount (₹${Number(effectivePaidAmount)}) cannot exceed grand total (₹${totalAmount}).`),
           { status: 400 }
         );
       }
@@ -271,7 +283,7 @@ export async function createSale(req: Request, res: Response) {
           throw Object.assign(new Error("emi.downPayment must be between 0 and the total amount"), { status: 400 });
         }
       }
-      const initialPaid = isEmi ? downPayment : round2(Math.min(Number(paidAmount) || 0, totalAmount));
+      const initialPaid = isEmi ? downPayment : round2(Math.min(Number(effectivePaidAmount) || 0, totalAmount));
       const dueAmount = round2(totalAmount - initialPaid);
 
       if (!enableCredit && dueAmount > 0) {
@@ -288,7 +300,11 @@ export async function createSale(req: Request, res: Response) {
 
       // 4. Invoice number + Sale header
       const invoiceNumber = await nextInvoiceNumber({ ownerId, shopId, transaction: t });
-      const finalNotes = [notes, clientRequestId ? `[req:${clientRequestId}]` : null].filter(Boolean).join(" ");
+      const finalNotes = [
+        notes,
+        isUnpaidMethod ? "[Payment: Unpaid (Credit / Udhaar)]" : null,
+        clientRequestId ? `[req:${clientRequestId}]` : null,
+      ].filter(Boolean).join(" ");
 
       const sale = await Sale.create(
         {

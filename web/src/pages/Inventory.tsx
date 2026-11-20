@@ -16,6 +16,7 @@ import {
 import { listCategories } from "../api/categories";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import { useAuthStore } from "../store/authStore";
+import { getCategoryAlias } from "../utils/categoryAlias";
 import type { Category, InventoryTransaction, Product } from "../types";
 
 // Helper for formatting INR currency
@@ -35,6 +36,7 @@ interface InlineEditDraft {
   categoryId: number | null;
   purchasePrice: string;
   sellingPrice: string;
+  livePrice: string;
   marginPercent: string;
   stockQuantity: string;
   minStock: string;
@@ -191,6 +193,7 @@ export default function Inventory({
     category_id: null as number | null,
     purchase_price: "",
     selling_price: "",
+    live_price: "",
     margin_percent: "",
     mrp: "",
     min_stock: "5",
@@ -229,6 +232,7 @@ export default function Inventory({
   const [addCategory, setAddCategory] = useState("");
   const [addPurchasePrice, setAddPurchasePrice] = useState("");
   const [addSellingPrice, setAddSellingPrice] = useState("");
+  const [addLivePrice, setAddLivePrice] = useState("");
   const [addMinStock, setAddMinStock] = useState("5");
   const [addOpeningStock, setAddOpeningStock] = useState("10");
   const [addingProduct, setAddingProduct] = useState(false);
@@ -237,6 +241,7 @@ export default function Inventory({
   const [editName, setEditName] = useState("");
   const [editPurchasePrice, setEditPurchasePrice] = useState("");
   const [editSellingPrice, setEditSellingPrice] = useState("");
+  const [editLivePrice, setEditLivePrice] = useState("");
   const [editMinStock, setEditMinStock] = useState("5");
   const [editingProduct, setEditingProduct] = useState(false);
 
@@ -410,6 +415,7 @@ export default function Inventory({
   function handleStartInlineEdit(p: Product) {
     const pp = Number(p.purchase_price || 0);
     const sp = Number(p.selling_price || 0);
+    const lp = p.live_price ? String(p.live_price) : "";
     const currentStock = getProductStock(p);
     const margin = sp > 0 ? (((sp - pp) / sp) * 100).toFixed(1) : "0.0";
 
@@ -419,6 +425,7 @@ export default function Inventory({
       categoryId: p.category_id || p.category?.id || null,
       purchasePrice: String(pp),
       sellingPrice: String(sp),
+      livePrice: lp,
       marginPercent: margin,
       stockQuantity: String(currentStock),
       minStock: String(p.min_stock ?? 5),
@@ -434,6 +441,7 @@ export default function Inventory({
     field:
       | "purchasePrice"
       | "sellingPrice"
+      | "livePrice"
       | "marginPercent"
       | "stockQuantity"
       | "categoryId"
@@ -487,6 +495,7 @@ export default function Inventory({
     try {
       const newPp = Math.max(0, Number(inlineDraft.purchasePrice) || 0);
       const newSp = Math.max(0, Number(inlineDraft.sellingPrice) || 0);
+      const newLp = inlineDraft.livePrice ? Number(inlineDraft.livePrice) : null;
       const newMin = Math.max(0, Number(inlineDraft.minStock) || 5);
       const newCatId = inlineDraft.categoryId ? Number(inlineDraft.categoryId) : undefined;
 
@@ -494,6 +503,7 @@ export default function Inventory({
       await updateProduct(product.id, {
         purchase_price: newPp,
         selling_price: newSp,
+        live_price: newLp,
         min_stock: newMin,
         category_id: newCatId,
       });
@@ -658,6 +668,7 @@ export default function Inventory({
         sku: addSku.trim() || `SKU-${Date.now().toString().slice(-4)}`,
         selling_price: Number(addSellingPrice) || 0,
         purchase_price: Number(addPurchasePrice) || Number(addSellingPrice) * 0.8,
+        live_price: addLivePrice ? Number(addLivePrice) : null,
         category_id: catId,
         min_stock: Number(addMinStock) || 5,
         opening_stock: shopId
@@ -669,6 +680,7 @@ export default function Inventory({
       setAddSku("");
       setAddSellingPrice("");
       setAddPurchasePrice("");
+      setAddLivePrice("");
       setToastMsg("✓ Product created successfully");
       loadData();
     } catch (err: any) {
@@ -684,6 +696,7 @@ export default function Inventory({
     setEditName(p.name);
     setEditPurchasePrice(String(p.purchase_price || 0));
     setEditSellingPrice(String(p.selling_price || 0));
+    setEditLivePrice(p.live_price ? String(p.live_price) : "");
     setEditMinStock(String(p.min_stock || 5));
     setShowEditModal(true);
   }
@@ -700,6 +713,7 @@ export default function Inventory({
         name: editName.trim(),
         purchase_price: Number(editPurchasePrice) || 0,
         selling_price: Number(editSellingPrice) || 0,
+        live_price: editLivePrice ? Number(editLivePrice) : null,
         min_stock: Number(editMinStock) || 5,
       });
       setShowEditModal(false);
@@ -716,6 +730,7 @@ export default function Inventory({
   function handleStartViewEdit(p: Product) {
     const pp = Number(p.purchase_price ?? 0);
     const sp = Number(p.selling_price ?? 0);
+    const lp = p.live_price ? String(p.live_price) : "";
     const margin = sp > 0 ? (((sp - pp) / sp) * 100).toFixed(1) : "0.0";
     setViewEditForm({
       name: p.name || "",
@@ -725,6 +740,7 @@ export default function Inventory({
       category_id: p.category_id ?? p.category?.id ?? null,
       purchase_price: String(pp),
       selling_price: String(sp),
+      live_price: lp,
       margin_percent: margin,
       mrp: p.mrp ? String(p.mrp) : "",
       min_stock: String(p.min_stock ?? 5),
@@ -745,6 +761,7 @@ export default function Inventory({
       | "category_id"
       | "purchase_price"
       | "selling_price"
+      | "live_price"
       | "margin_percent"
       | "mrp"
       | "min_stock"
@@ -838,6 +855,7 @@ export default function Inventory({
         category_id: viewEditForm.category_id || undefined,
         purchase_price: Number(viewEditForm.purchase_price) || 0,
         selling_price: Number(viewEditForm.selling_price) || 0,
+        live_price: viewEditForm.live_price ? Number(viewEditForm.live_price) : null,
         mrp: viewEditForm.mrp ? Number(viewEditForm.mrp) : undefined,
         min_stock: Number(viewEditForm.min_stock) || 5,
         description: viewEditForm.description.trim() || undefined,
@@ -1277,6 +1295,15 @@ export default function Inventory({
                     : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
               >
+                <span
+                  className={`px-1.5 py-0.2 rounded text-[10px] font-black font-mono border ${
+                    isSelected
+                      ? "bg-white/20 text-white border-white/30"
+                      : "bg-emerald-100 text-emerald-900 border-emerald-300"
+                  }`}
+                >
+                  {getCategoryAlias(c.name, c.alias)}
+                </span>
                 <span>{c.name}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full ${
@@ -1536,6 +1563,7 @@ export default function Inventory({
                 <th className="p-3.5 text-center">Stock</th>
                 <th className="p-3.5 text-right">Purchase Price</th>
                 <th className="p-3.5 text-right">Selling Price</th>
+                <th className="p-3.5 text-right">Live Price</th>
                 <th className="p-3.5 text-right">Margin (%)</th>
                 <th className="p-3.5 text-right">Stock Value</th>
                 {/* Requirement 1 & 5: Action Icons with View Details (Eye) */}
@@ -1545,7 +1573,7 @@ export default function Inventory({
             <tbody className="divide-y divide-gray-100">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-12 text-center text-gray-400">
+                  <td colSpan={11} className="p-12 text-center text-gray-400">
                     No products match the selected inventory filter.
                   </td>
                 </tr>
@@ -1632,8 +1660,11 @@ export default function Inventory({
                             ))}
                           </select>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-semibold text-[11px] border border-emerald-200/60 whitespace-nowrap">
-                            {p.category?.name || "—"}
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-semibold text-[11px] border border-emerald-200/60 whitespace-nowrap">
+                            <span className="px-1.5 py-0.2 rounded bg-emerald-200/80 text-emerald-950 font-black text-[10px] tracking-wider border border-emerald-300 font-mono">
+                              {getCategoryAlias(p.category?.name, (p.category as any)?.alias)}
+                            </span>
+                            <span>{p.category?.name || "General"}</span>
                           </span>
                         )}
                       </td>
@@ -1754,6 +1785,43 @@ export default function Inventory({
                           <span className="font-bold text-gray-900">
                             {formatINR(sellingPrice)}
                           </span>
+                        )}
+                      </td>
+
+                      {/* Live Price - Online Customer Rate */}
+                      <td className="p-3 text-right">
+                        {isEditing ? (
+                          <div className="flex items-center justify-end">
+                            <span className="text-gray-400 text-xs mr-0.5 font-bold">
+                              ₹
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="Live ₹"
+                              value={inlineDraft.livePrice}
+                              onChange={(e) =>
+                                handleDraftChange("livePrice", e.target.value)
+                              }
+                              className="w-20 px-1.5 py-1 text-right font-black text-xs bg-white border border-emerald-400 text-emerald-900 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-end">
+                            <span
+                              className={`font-bold tabular ${
+                                p.live_price ? "text-emerald-700" : "text-gray-400"
+                              }`}
+                            >
+                              {p.live_price ? formatINR(p.live_price) : "—"}
+                            </span>
+                            {Boolean(p.live_price) && (
+                              <span className="text-[9px] uppercase tracking-wider font-extrabold text-emerald-600 bg-emerald-50 px-1 rounded border border-emerald-200">
+                                Online
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
 
@@ -2121,6 +2189,12 @@ export default function Inventory({
                           <span className="text-gray-500 font-semibold">Selling Price (Retail):</span>
                           <span className="font-black text-emerald-800 text-sm">
                             {formatINR(viewProduct.selling_price)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500 font-semibold">Live Price (Online):</span>
+                          <span className="font-bold text-emerald-700">
+                            {viewProduct.live_price ? formatINR(viewProduct.live_price) : "(Same as Selling Price)"}
                           </span>
                         </div>
                         {viewProduct.mrp && viewProduct.mrp > viewProduct.selling_price && (
@@ -2511,6 +2585,22 @@ export default function Inventory({
                       </div>
                     </div>
 
+                    <div>
+                      <label className="font-bold text-emerald-800 block mb-1 flex items-center justify-between">
+                        <span>Live Price (Online Rate ₹)</span>
+                        <span className="text-[10px] text-emerald-600 font-normal">Customer Storefront Rate</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Leave blank to use Selling Price"
+                        value={viewEditForm.live_price}
+                        onChange={(e) => handleViewEditFieldChange("live_price", e.target.value)}
+                        className="w-full px-3 py-2 border border-emerald-300 bg-white rounded-xl font-bold text-emerald-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+
                     {/* Dynamic Calculation Callout */}
                     <div className="flex items-center justify-between p-2.5 bg-white border border-emerald-200/80 rounded-xl text-xs">
                       <div className="flex items-center gap-2">
@@ -2867,6 +2957,21 @@ export default function Inventory({
                     className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="font-bold text-gray-700 block mb-1 flex items-center justify-between">
+                  <span>Live Price (Online Rate ₹)</span>
+                  <span className="text-[10px] text-emerald-600 font-normal">Shown to online customers (optional)</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={addLivePrice}
+                  onChange={(e) => setAddLivePrice(e.target.value)}
+                  placeholder="Leave empty to use Selling Price"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

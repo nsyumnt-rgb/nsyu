@@ -159,6 +159,7 @@ export interface Category {
   status: "active" | "inactive";
   image_url?: string | null;
   icon?: string | null;
+  alias?: string | null;
   product_count?: number;
   subcategories?: Subcategory[];
 }
@@ -213,6 +214,7 @@ export interface Product {
   description?: string;
   purchase_price?: number; // omitted from response entirely if role can't view it
   selling_price: number;
+  live_price?: number | null;
   mrp: number;
   discount: number;
   tax_percent: number;
@@ -236,6 +238,9 @@ export interface CustomerProduct {
   description?: string;
   images: ProductImage[];
   selling_price: number;
+  live_price?: number | null;
+  is_live_price?: boolean;
+  isLivePrice?: boolean;
   mrp: number;
   discount: number;
   availability: boolean;

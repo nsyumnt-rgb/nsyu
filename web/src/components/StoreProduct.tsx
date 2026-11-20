@@ -45,12 +45,19 @@ export const inr = (n: number) => {
   return "₹" + v.toLocaleString("en-IN", { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
 };
 
-/** Real price/MRP comparison from the API — no invented discounts. */
-export function priceInfo(p: Product) {
-  const price = Number(p.pricing?.sellingPriceInclTax || 0);
-  const mrp = Number(p.pricing?.mrp ?? p.mrp ?? 0);
+/** Real price/MRP comparison from the API — checks live_price first for customer online store. */
+export function priceInfo(p: any) {
+  const livePrice =
+    p?.live_price !== undefined && p?.live_price !== null && Number(p?.live_price) > 0
+      ? Number(p.live_price)
+      : p?.livePrice !== undefined && p?.livePrice !== null && Number(p?.livePrice) > 0
+      ? Number(p.livePrice)
+      : null;
+  const isLive = livePrice !== null;
+  const price = isLive ? livePrice : Number(p?.pricing?.sellingPriceInclTax ?? p?.pricing?.unitPrice ?? p?.selling_price ?? p?.price ?? 0);
+  const mrp = Number(p?.pricing?.mrp ?? p?.mrp ?? 0);
   const off = mrp > price && price > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
-  return { price, mrp, off };
+  return { price, mrp, off, isLive };
 }
 
 export function primaryImage(p: Product) {
@@ -73,7 +80,7 @@ export function ProductCard({
   const href = `/portal/product/${product.id}`;
   const img = primaryImage(product);
   const [imgFailed, setImgFailed] = useState(false);
-  const { price, mrp, off } = priceInfo(product);
+  const { price, mrp, off, isLive } = priceInfo(product);
   const hasExact = typeof product.inventory?.availableStock === "number";
   const stock = hasExact ? (product.inventory.availableStock as number) : null;
   const isAvailable = product.inventory?.isAvailable ?? (product.inventory?.availability !== "out_of_stock");
@@ -140,7 +147,14 @@ export function ProductCard({
 
         <div className="mt-auto pt-2.5 flex items-end justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[16px] sm:text-[17px] font-bold text-navy-900 tabular leading-none">{inr(price)}</div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[16px] sm:text-[17px] font-bold text-navy-900 tabular leading-none">{inr(price)}</span>
+              {isLive && (
+                <span className="px-1 py-0.2 rounded text-[9px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  Live
+                </span>
+              )}
+            </div>
             {off > 0 && <div className="mt-1 text-[12px] text-slate-400 line-through tabular">{inr(mrp)}</div>}
           </div>
           {qty > 0 ? (
@@ -200,7 +214,7 @@ export function CatalogCard({
   const href = `/portal/product/${product.id}`;
   const img = primaryImage(product);
   const [imgFailed, setImgFailed] = useState(false);
-  const { price, mrp, off } = priceInfo(product);
+  const { price, mrp, off, isLive } = priceInfo(product);
   const hasExact = typeof product.inventory?.availableStock === "number";
   const stock = hasExact ? (product.inventory.availableStock as number) : null;
   const isAvailable = product.inventory?.isAvailable ?? (product.inventory?.availability !== "out_of_stock");
@@ -261,10 +275,15 @@ export function CatalogCard({
             {product.name}
           </Link>
           <div className="text-[12px] text-slate-500 mt-1 truncate">SKU: {product.sku}</div>
-          <div className="mt-1.5 flex items-baseline gap-2">
+          <div className="mt-1.5 flex items-baseline gap-2 flex-wrap">
             <span className="text-[17px] font-bold text-navy-900 font-mono tabular">{"₹" + price.toFixed(2)}</span>
             {off > 0 && <span className="text-[12px] text-slate-400 line-through tabular">{inr(mrp)}</span>}
             {off > 0 && <span className="text-[11.5px] font-bold text-rose-600">{off}% off</span>}
+            {isLive && (
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                Live Price
+              </span>
+            )}
           </div>
           <span className={`mt-2 inline-block px-2.5 py-1 rounded-md text-[11.5px] font-bold tabular whitespace-nowrap ${chip.cls}`}>{chip.text}</span>
         </div>

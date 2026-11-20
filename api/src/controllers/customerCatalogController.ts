@@ -169,7 +169,11 @@ export async function getPortalProducts(req: Request, res: Response) {
       }
 
       const primaryImg = (p as any).images?.find((img: any) => img.is_primary) || (p as any).images?.[0];
-      const priceVal = round2(Number(p.selling_price || 0));
+      const sellingPriceVal = round2(Number(p.selling_price || 0));
+      const livePriceVal = (p as any).live_price !== null && (p as any).live_price !== undefined && Number((p as any).live_price) > 0
+        ? round2(Number((p as any).live_price))
+        : null;
+      const priceVal = livePriceVal !== null ? livePriceVal : sellingPriceVal;
       const mrpVal = round2(Number(p.mrp || 0));
       const gstVal = shopDefaultGst > 0 ? round2(Number(p.tax_percent) || shopDefaultGst) : 0;
       const catObj = (p as any).category ? { id: (p as any).category.id, name: (p as any).category.name } : null;
@@ -183,8 +187,11 @@ export async function getPortalProducts(req: Request, res: Response) {
         brand: p.brand,
         description: p.description,
         spec: p.description,
-        sellingPrice: priceVal,
-        selling_price: priceVal,
+        sellingPrice: sellingPriceVal,
+        selling_price: sellingPriceVal,
+        livePrice: livePriceVal,
+        live_price: livePriceVal,
+        isLivePrice: livePriceVal !== null,
         price: priceVal,
         mrp: mrpVal,
         discountPercent: round2(Number(p.discount || 0)),
@@ -286,7 +293,11 @@ export async function getPortalProduct(req: Request, res: Response) {
     }
 
     const primaryImg = (product as any).images?.find((img: any) => img.is_primary) || (product as any).images?.[0];
-    const priceVal = round2(Number(product.selling_price || 0));
+    const sellingPriceVal = round2(Number(product.selling_price || 0));
+    const livePriceVal = (product as any).live_price !== null && (product as any).live_price !== undefined && Number((product as any).live_price) > 0
+      ? round2(Number((product as any).live_price))
+      : null;
+    const priceVal = livePriceVal !== null ? livePriceVal : sellingPriceVal;
     const mrpVal = round2(Number(product.mrp || 0));
     const gstVal = shopDefaultGst > 0 ? round2(Number(product.tax_percent) || shopDefaultGst) : 0;
     const catObj = (product as any).category ? { id: (product as any).category.id, name: (product as any).category.name } : null;
@@ -303,8 +314,11 @@ export async function getPortalProduct(req: Request, res: Response) {
         brand: product.brand,
         description: product.description,
         spec: product.description,
-        sellingPrice: priceVal,
-        selling_price: priceVal,
+        sellingPrice: sellingPriceVal,
+        selling_price: sellingPriceVal,
+        livePrice: livePriceVal,
+        live_price: livePriceVal,
+        isLivePrice: livePriceVal !== null,
         price: priceVal,
         mrp: mrpVal,
         discountPercent: round2(Number(product.discount || 0)),

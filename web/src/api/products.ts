@@ -21,6 +21,7 @@ export interface CreateProductPayload {
   description?: string;
   purchase_price?: number;
   selling_price?: number;
+  live_price?: number | null;
   mrp?: number;
   discount?: number;
   tax_percent?: number;

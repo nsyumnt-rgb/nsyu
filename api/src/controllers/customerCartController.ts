@@ -62,7 +62,8 @@ export async function getCart(req: Request, res: Response) {
         continue;
       }
 
-      const rate = round2(Number(product.selling_price || 0));
+      const effectivePrice = product.live_price && Number(product.live_price) > 0 ? product.live_price : product.selling_price;
+      const rate = round2(Number(effectivePrice || 0));
       const discPercent = round2(Number(product.discount || 0));
       const gstPercent = shopDefaultGst > 0 ? round2(Number(product.tax_percent) || shopDefaultGst) : 0;
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { listProducts } from "../api/products";
 import { listCustomers, createCustomer } from "../api/customers";
@@ -42,6 +42,46 @@ function BillingInner() {
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Price Source: Selling Price (Counter) vs Live Price (Online)
+  const [priceSource, setPriceSource] = useState<"selling" | "live">(() => {
+    try {
+      return (localStorage.getItem("nsyu_billing_price_source") as "selling" | "live") || "selling";
+    } catch {
+      return "selling";
+    }
+  });
+
+  // Shop Owner enabled payment methods + Unpaid (Credit / Udhaar) option
+  const enabledPaymentOptions = useMemo(() => {
+    const s = (activeShop?.settings || {}) as Record<string, any>;
+    const opts: Array<[string, string]> = [];
+
+    const allowCash = s.enableCash !== false;
+    const allowUpi = s.enableUpi !== false;
+    const allowCard = s.enableCard !== false;
+    const allowBank = s.enableNetBanking !== false && s.enableBank !== false;
+
+    if (allowCash) opts.push(["cash", "Cash"]);
+    if (allowUpi) opts.push(["upi", "UPI"]);
+    if (allowCard) opts.push(["card", "Card"]);
+    if (allowBank) opts.push(["bank_transfer", "Bank"]);
+
+    // Requirement: "ek Unpaid option bhi add kar do jissye jo credit k kam aayega"
+    opts.push(["unpaid", "Unpaid (Credit)"]);
+
+    return opts;
+  }, [activeShop?.settings]);
+
+  // Keep selected payment method valid according to shop owner enabled options
+  useEffect(() => {
+    if (
+      enabledPaymentOptions.length > 0 &&
+      !enabledPaymentOptions.some(([val]: [string, string]) => val === paymentMethod)
+    ) {
+      setPaymentMethod(enabledPaymentOptions[0][0]);
+    }
+  }, [enabledPaymentOptions, paymentMethod]);
 
   // The bill drawer is opened from the product cards, the phone bottom bar or the top-bar cart button.
   const cartOpen = usePosStore((st) => st.open);
@@ -103,6 +143,30 @@ function BillingInner() {
     [setCartOpen]
   );
 
+  function handlePriceSourceChange(newMode: "selling" | "live") {
+    setPriceSource(newMode);
+    try {
+      localStorage.setItem("nsyu_billing_price_source", newMode);
+    } catch {}
+
+    if (cart.length > 0) {
+      setCart((prev) =>
+        prev.map((item) => {
+          const targetRate =
+            newMode === "live" && item.product.live_price && Number(item.product.live_price) > 0
+              ? Number(item.product.live_price)
+              : Number(item.product.selling_price || 0);
+          return { ...item, unitPrice: targetRate };
+        })
+      );
+      setToast({
+        type: "info",
+        title: `Billing Rate: ${newMode === "live" ? "Live Price (Online)" : "Selling Price (Counter)"}`,
+        subtitle: `Updated cart item rates to ${newMode === "live" ? "online live prices" : "store counter selling prices"}.`,
+      });
+    }
+  }
+
   function getStock(p: Product): number {
     if (!p.stocks || p.stocks.length === 0) return 0;
     const s = p.stocks.find((st) => st.shop_id === shopId);
@@ -110,18 +174,23 @@ function BillingInner() {
   }
 
   function addToCart(p: Product) {
+    const rate =
+      priceSource === "live" && p.live_price && Number(p.live_price) > 0
+        ? Number(p.live_price)
+        : Number(p.selling_price || 0);
+
     const existingIndex = cart.findIndex((item) => item.product.id === p.id);
     if (existingIndex >= 0) {
       const updated = [...cart];
       updated[existingIndex].quantity += 1;
       setCart(updated);
     } else {
-      setCart([...cart, { product: p, quantity: 1, unitPrice: Number(p.selling_price) }]);
+      setCart([...cart, { product: p, quantity: 1, unitPrice: rate }]);
     }
     setToast({
       type: "success",
       title: `Added "${p.name}" to Bill`,
-      subtitle: `Rate: ₹${Number(p.selling_price).toFixed(2)}`,
+      subtitle: `Rate: ₹${rate.toFixed(2)} (${priceSource === "live" && p.live_price ? "Live Online Price" : "Selling Price"})`,
       actionLabel: "View Bill",
       onAction: () => {
         setCartOpen(true);
@@ -218,7 +287,11 @@ function BillingInner() {
       errors.push("Quantity must be greater than 0 for all items.");
     }
 
-    const effectivePaid = paidAmount === "" ? grandTotal : Number(paidAmount);
+    const isUnpaid = paymentMethod === "unpaid";
+    if (isUnpaid && !selectedCustomerId) {
+      errors.push("Customer is required for Unpaid (Credit / Udhaar) bill to record credit debt.");
+    }
+    const effectivePaid = isUnpaid ? 0 : paidAmount === "" ? grandTotal : Number(paidAmount);
     if (effectivePaid < 0) {
       errors.push("Paid amount cannot be negative.");
     }
@@ -252,7 +325,8 @@ function BillingInner() {
         billDiscount: Number(discountAmount) || 0,
         overallDiscount: Number(discountAmount) || 0,
         paidAmount: effectivePaid,
-        paymentMethod,
+        paymentMethod: isUnpaid ? "other" : paymentMethod,
+        notes: isUnpaid ? "Unpaid credit bill (Udhaar)" : undefined,
         idempotencyKey,
       });
 
@@ -301,12 +375,13 @@ function BillingInner() {
 
     setProcessing(true);
     try {
-      const effectivePaid = paidAmount === "" ? grandTotal : Number(paidAmount);
+      const isUnpaid = paymentMethod === "unpaid";
+      const effectivePaid = isUnpaid ? 0 : paidAmount === "" ? grandTotal : Number(paidAmount);
       const isPaid = effectivePaid >= grandTotal - 0.01;
       const res = await createOrder({
         customerId: Number(selectedCustomerId),
         orderType: "Walk-in",
-        paymentMethod,
+        paymentMethod: isUnpaid ? "Credit" : paymentMethod,
         paymentStatus: isPaid ? "Paid" : "Pending",
         discountAmount: Number(discountAmount) || 0,
         items: cart.map((c) => ({
@@ -433,6 +508,37 @@ function BillingInner() {
         </div>
       </div>
 
+      {/* Rate Source Selection in Current Bill */}
+      <div className="px-5 py-2.5 bg-emerald-50/60 border-b border-emerald-100 flex items-center justify-between text-xs">
+        <span className="font-bold text-emerald-950 flex items-center gap-1">
+          <span>Billing Rate:</span>
+        </span>
+        <div className="inline-flex items-center gap-1 bg-white p-0.5 rounded-lg border border-emerald-200">
+          <button
+            type="button"
+            onClick={() => handlePriceSourceChange("selling")}
+            className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition ${
+              priceSource === "selling"
+                ? "bg-emerald-700 text-white shadow-2xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Selling Price
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePriceSourceChange("live")}
+            className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition ${
+              priceSource === "live"
+                ? "bg-emerald-700 text-white shadow-2xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            Live Price
+          </button>
+        </div>
+      </div>
+
       <div className={`p-4 sm:p-5 space-y-4 overflow-y-auto ${isDrawer ? "flex-1" : "max-h-[calc(100vh-230px)]"}`}>
         {/* Customer Selection */}
         <div className="space-y-1.5 bg-slate-50/70 p-3 rounded-xl border border-slate-200/80">
@@ -515,7 +621,14 @@ function BillingInner() {
                       <div className="text-[13px] font-bold text-navy-900 truncate" title={item.product.name}>
                         {item.product.name.trim()}
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono">{item.product.sku}</div>
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-mono">
+                        <span>{item.product.sku}</span>
+                        {item.product.live_price && Number(item.product.live_price) === item.unitPrice ? (
+                          <span className="px-1 py-0.2 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            Live Rate
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -614,26 +727,52 @@ function BillingInner() {
         {/* Payment Options */}
         <div className="space-y-3 pt-1">
           <div>
-            <label className="text-[12px] font-bold text-navy-900 block mb-1.5">Payment Method</label>
+            <label className="text-[12px] font-bold text-navy-900 block mb-1.5 flex items-center justify-between">
+              <span>Payment Method</span>
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                Shop Enabled Modes
+              </span>
+            </label>
             <ChoiceGroup
-              cols={4}
+              cols={enabledPaymentOptions.length > 4 ? 3 : (enabledPaymentOptions.length as any || 2)}
               value={paymentMethod}
-              onChange={setPaymentMethod}
-              options={[
-                ["cash", "Cash"],
-                ["upi", "UPI"],
-                ["card", "Card"],
-                ["bank_transfer", "Bank"],
-              ]}
+              onChange={(val) => {
+                setPaymentMethod(val);
+                if (val === "unpaid") {
+                  setPaidAmount(0);
+                } else if (paidAmount === 0) {
+                  setPaidAmount(Number(grandTotal.toFixed(2)));
+                }
+              }}
+              options={enabledPaymentOptions}
             />
           </div>
+
+          {paymentMethod === "unpaid" && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                <span>⚠️</span>
+                <span>Unpaid Bill / Udhaar (Credit)</span>
+              </div>
+              <p className="text-amber-700 leading-relaxed text-[11.5px]">
+                Paid amount is set to <strong>₹0.00</strong>. The full balance of{" "}
+                <strong>₹{grandTotal.toFixed(2)}</strong> will be charged as customer debt on their credit ledger.
+              </p>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-[12px] font-bold text-navy-900">Paid Amount (₹)</label>
               <div className="flex gap-2 text-[11px] font-bold">
                 <button
                   type="button"
-                  onClick={() => setPaidAmount(Number(grandTotal.toFixed(2)))}
+                  onClick={() => {
+                    setPaidAmount(Number(grandTotal.toFixed(2)));
+                    if (paymentMethod === "unpaid") {
+                      setPaymentMethod(enabledPaymentOptions[0]?.[0] || "cash");
+                    }
+                  }}
                   className="text-brand-700 hover:underline"
                 >
                   Full
@@ -641,7 +780,10 @@ function BillingInner() {
                 <span className="text-slate-300">·</span>
                 <button
                   type="button"
-                  onClick={() => setPaidAmount(0)}
+                  onClick={() => {
+                    setPaidAmount(0);
+                    setPaymentMethod("unpaid");
+                  }}
                   className="text-rose-600 hover:underline"
                 >
                   Unpaid
@@ -653,9 +795,12 @@ function BillingInner() {
               min="0"
               max={Number(grandTotal.toFixed(2))}
               step="0.01"
-              placeholder={grandTotal.toFixed(2)}
-              className="input tabular font-bold text-[13.5px] bg-white"
-              value={paidAmount}
+              disabled={paymentMethod === "unpaid"}
+              placeholder={paymentMethod === "unpaid" ? "0.00 (Unpaid / Udhaar)" : grandTotal.toFixed(2)}
+              className={`input tabular font-bold text-[13.5px] ${
+                paymentMethod === "unpaid" ? "bg-amber-50/50 text-amber-800 border-amber-200 cursor-not-allowed" : "bg-white"
+              }`}
+              value={paymentMethod === "unpaid" ? 0 : paidAmount}
               onChange={(e) => setPaidAmount(e.target.value !== "" ? Number(e.target.value) : "")}
             />
             {cart.length > 0 && (() => {
@@ -715,6 +860,46 @@ function BillingInner() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Toolbar, Product Catalog & Recent Bills */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-6 min-w-0">
+          {/* Rate Mode Selector & Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 border border-slate-200 p-3 rounded-2xl shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-700">Billing Rate Mode:</span>
+              <div className="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => handlePriceSourceChange("selling")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                    priceSource === "selling"
+                      ? "bg-emerald-700 text-white shadow-2xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Selling Price (Counter)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePriceSourceChange("live")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                    priceSource === "live"
+                      ? "bg-emerald-700 text-white shadow-2xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Live Price (Online)
+                </button>
+              </div>
+            </div>
+            {priceSource === "live" ? (
+              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-lg border border-emerald-300">
+                ⚡ Active: Billing using Online Live Prices
+              </span>
+            ) : (
+              <span className="text-[11px] font-semibold text-slate-500">
+                Standard Shop Counter Rate
+              </span>
+            )}
+          </div>
+
           {/* Toolbar: search · category · add product */}
           <div className="card p-3 sm:p-4 flex flex-col lg:flex-row gap-3">
             <div className="relative flex-1">
@@ -791,7 +976,21 @@ function BillingInner() {
                         <div className="text-[13.5px] font-bold text-navy-900 leading-snug line-clamp-2" title={p.name}>{p.name}</div>
                       </button>
                       <div className="text-[11px] text-slate-500 mt-0.5 truncate">SKU: {p.sku}</div>
-                      <div className="text-[15px] font-bold text-navy-900 font-mono tabular mt-1">₹{Number(p.selling_price || 0).toFixed(2)}</div>
+                      <div className="flex items-baseline gap-1.5 flex-wrap mt-1">
+                        <div className="text-[15px] font-bold text-navy-900 font-mono tabular">
+                          ₹{Number(priceSource === "live" && p.live_price ? p.live_price : p.selling_price || 0).toFixed(2)}
+                        </div>
+                        {priceSource === "live" && p.live_price && (
+                          <span className="text-[9.5px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-1 rounded border border-emerald-300">
+                            Live Price
+                          </span>
+                        )}
+                        {priceSource === "selling" && p.live_price && (
+                          <span className="text-[9.5px] text-slate-400">
+                            (Live: ₹{Number(p.live_price).toFixed(2)})
+                          </span>
+                        )}
+                      </div>
                       <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
                         <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold tabular whitespace-nowrap ${stock > 0 ? "bg-amber-100 text-amber-800" : "bg-rose-50 text-rose-700"}`}>
                           Stock: {stock}
