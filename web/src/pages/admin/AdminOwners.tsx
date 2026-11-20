@@ -161,7 +161,7 @@ export default function AdminOwners() {
       )}
 
       {/* Owners Table */}
-      <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
@@ -247,13 +247,13 @@ export default function AdminOwners() {
                         <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => openPasswordModal(owner)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#EAE7DD] shadow-2xs transition"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition"
                           >
                             Reset Password
                           </button>
                           <button
                             onClick={() => openStatusModal(owner)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#EAE7DD] shadow-2xs transition"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition"
                           >
                             Status
                           </button>
@@ -271,7 +271,7 @@ export default function AdminOwners() {
       {/* CREATE FIRST OWNER MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-navy-900">Create First Owner for Shop</h3>
               <button
@@ -365,7 +365,7 @@ export default function AdminOwners() {
       {/* RESET PASSWORD MODAL */}
       {showPasswordModal && selectedOwner && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-navy-900">Reset Password for {selectedOwner.name}</h3>
               <button
@@ -424,7 +424,7 @@ export default function AdminOwners() {
       {/* CHANGE OWNER STATUS MODAL */}
       {showStatusModal && selectedOwner && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-navy-900">Update Status for {selectedOwner.name}</h3>
               <button

@@ -130,19 +130,19 @@ export default function AdminShopView() {
         <div className="space-y-6">
           {/* Shop Profile & Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Total Bills</span>
               <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.billsCount}</span>
             </div>
-            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Total Orders</span>
               <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.ordersCount}</span>
             </div>
-            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Stock Lines</span>
               <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.productsCount}</span>
             </div>
-            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Customers</span>
               <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.customersCount}</span>
             </div>
@@ -172,7 +172,7 @@ export default function AdminShopView() {
 
           {/* TAB 1: BILLS */}
           {activeTab === "bills" && (
-            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
@@ -228,7 +228,7 @@ export default function AdminShopView() {
 
           {/* TAB 2: ORDERS */}
           {activeTab === "orders" && (
-            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
@@ -274,7 +274,7 @@ export default function AdminShopView() {
 
           {/* TAB 3: INVENTORY */}
           {activeTab === "inventory" && (
-            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
@@ -322,7 +322,7 @@ export default function AdminShopView() {
 
           {/* TAB 4: CUSTOMERS */}
           {activeTab === "customers" && (
-            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">

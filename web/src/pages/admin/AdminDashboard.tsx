@@ -68,7 +68,7 @@ export default function AdminDashboard() {
         <div className="flex items-center space-x-3">
           <button
             onClick={loadData}
-            className="flex items-center space-x-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl border border-[#EAE7DD] shadow-2xs transition"
+            className="flex items-center space-x-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl border border-[#E5E7EB] shadow-2xs transition"
           >
             <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Shops */}
-        <div className="bg-white border border-[#EAE7DD] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">TOTAL SHOPS</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 2: Total Platform Users */}
-        <div className="bg-white border border-[#EAE7DD] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">TOTAL USERS</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center">
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 3: Total Platform Sales Amount */}
-        <div className="bg-white border border-[#EAE7DD] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">TOTAL SALES (CROSS-SHOP)</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 4: Governance & Audit */}
-        <div className="bg-white border border-[#EAE7DD] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">SECURITY AUDIT</span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
@@ -172,7 +172,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link
           to="/admin/shops"
-          className="p-5 rounded-2xl bg-white border border-[#EAE7DD] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
         >
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
 
         <Link
           to="/admin/owners"
-          className="p-5 rounded-2xl bg-white border border-[#EAE7DD] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
         >
           <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
 
         <Link
           to="/admin/audit-logs"
-          className="p-5 rounded-2xl bg-white border border-[#EAE7DD] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
         >
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Platform Activity */}
-      <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-navy-900">Recent Super Admin Activity</h2>

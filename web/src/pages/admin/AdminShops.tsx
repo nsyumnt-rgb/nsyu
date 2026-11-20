@@ -223,7 +223,7 @@ export default function AdminShops() {
                   : "bg-emerald-700 text-white shadow-xs"
                 : t.highlight
                 ? "bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 font-bold"
-                : "bg-white text-slate-700 border border-[#EAE7DD] hover:bg-slate-50 shadow-2xs font-semibold"
+                : "bg-white text-slate-700 border border-[#E5E7EB] hover:bg-slate-50 shadow-2xs font-semibold"
             }`}
           >
             {t.label}
@@ -238,7 +238,7 @@ export default function AdminShops() {
       )}
 
       {/* Shops Table */}
-      <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
@@ -327,14 +327,14 @@ export default function AdminShops() {
                         )}
                         <Link
                           to={`/admin/support?shopId=${shop.id}`}
-                          className="px-2.5 py-1 bg-white hover:bg-slate-50 text-emerald-700 font-semibold text-xs rounded-lg border border-[#EAE7DD] shadow-2xs transition"
+                          className="px-2.5 py-1 bg-white hover:bg-slate-50 text-emerald-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition"
                           title="Read-only Support Viewer"
                         >
                           Support View
                         </Link>
                         <button
                           onClick={() => openEditModal(shop)}
-                          className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#EAE7DD] shadow-2xs transition"
+                          className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition"
                         >
                           Edit
                         </button>
@@ -361,7 +361,7 @@ export default function AdminShops() {
       {/* CREATE SHOP MODAL */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-navy-900">Create New Shop</h3>
               <button
@@ -479,7 +479,7 @@ export default function AdminShops() {
       {/* EDIT SHOP MODAL */}
       {showEditModal && selectedShop && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-navy-900">Edit Shop: {selectedShop.name}</h3>
               <button
@@ -563,7 +563,7 @@ export default function AdminShops() {
       {/* ACTIVATE / SUSPEND CONFIRMATION MODAL */}
       {showStatusModal && selectedShop && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center space-x-3 text-amber-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

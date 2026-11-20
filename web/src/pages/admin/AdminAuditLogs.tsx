@@ -91,7 +91,7 @@ export default function AdminAuditLogs() {
       )}
 
       {/* Logs Table */}
-      <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
+      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
@@ -141,7 +141,7 @@ export default function AdminAuditLogs() {
                     <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => setSelectedLog(log)}
-                        className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-[#EAE7DD] shadow-2xs transition"
+                        className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-[#E5E7EB] shadow-2xs transition"
                       >
                         Inspect
                       </button>
@@ -184,7 +184,7 @@ export default function AdminAuditLogs() {
       {/* INSPECT LOG DETAILS MODAL */}
       {selectedLog && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
                 <span className="font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{selectedLog.action}</span>

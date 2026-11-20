@@ -526,7 +526,7 @@ export default function MarketHome() {
       {/* ============================================================== */}
       {/* 4. TRUST & ASSURANCE BANNER                                    */}
       {/* ============================================================== */}
-      <div className="rounded-2xl border border-[#EAE7DD] bg-white p-6 sm:p-8 shadow-xs">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6 sm:p-8 shadow-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center sm:text-left">
           <div className="flex items-start gap-3.5">
             <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 text-xl border border-emerald-100">

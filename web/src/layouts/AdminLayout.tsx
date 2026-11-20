@@ -135,7 +135,7 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-[#FAF9F5] text-navy-900">
+    <div className="flex min-h-[100dvh] flex-col bg-white text-navy-900">
       <div className="flex min-h-0 flex-1">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-64 bg-[#04261D] flex-col shrink-0 sticky top-0 h-[100dvh]">{sidebar}</aside>
@@ -147,8 +147,8 @@ export default function AdminLayout() {
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#FAF9F5]">
-        <header className="h-14 sm:h-16 border-b border-[#EAE7DD] px-4 sm:px-6 flex items-center justify-between gap-3 bg-white/95 backdrop-blur sticky top-0 z-30 shadow-2xs">
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
+        <header className="h-14 sm:h-16 border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between gap-3 bg-white/95 backdrop-blur sticky top-0 z-30 shadow-2xs">
           <div className="flex items-center gap-3 min-w-0">
             <button type="button" onClick={() => setOpen(true)} className="lg:hidden w-10 h-10 -ml-1 rounded-lg text-slate-500 hover:bg-slate-100 flex items-center justify-center" aria-label="Open menu">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -161,7 +161,7 @@ export default function AdminLayout() {
           </span>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 min-w-0 bg-[#FAF9F5]">
+        <main className="flex-1 p-4 sm:p-6 min-w-0 bg-white">
           <Outlet />
         </main>
         </div>
