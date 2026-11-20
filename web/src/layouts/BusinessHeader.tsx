@@ -12,6 +12,7 @@ import {
   markAllNotificationsReadApi,
   type AppNotification,
 } from "../api/notifications";
+import PosCartDrawer from "../components/PosCartDrawer";
 
 function formatTimeAgo(dateStr: string): string {
   try {
@@ -48,6 +49,7 @@ export default function BusinessHeader() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<AppNotification | null>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
 
   // Profile menu
@@ -123,6 +125,8 @@ export default function BusinessHeader() {
         setUnreadCount((c) => Math.max(0, c - 1));
       } catch {}
     }
+    setNotifOpen(false);
+    setSelectedNotif(n);
   }
 
   async function handleMarkAllRead() {
@@ -391,24 +395,25 @@ export default function BusinessHeader() {
             )}
           </div>
 
-          {/* POS Bill Quick Launcher (if items present) */}
-          {posCount !== null && posCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setPosOpen(true)}
-              className="relative p-2 rounded-xl text-emerald-100 hover:text-white hover:bg-emerald-800/60 transition"
-              title="Open Bill Drawer"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="9" cy="21" r="1" />
-                <circle cx="20" cy="21" r="1" />
-                <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
-              </svg>
+          {/* POS Bill Quick Launcher */}
+          <button
+            type="button"
+            onClick={() => setPosOpen(true)}
+            className="relative p-2 rounded-xl text-emerald-100 hover:text-white hover:bg-emerald-800/60 transition"
+            title="Open POS Cart Drawer"
+            aria-label="Open POS Cart"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
+            </svg>
+            {posCount && posCount > 0 ? (
               <span className="absolute -top-1 -right-1 bg-amber-500 text-white font-black text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
-                {posCount}
+                {posCount > 99 ? "99+" : posCount}
               </span>
-            </button>
-          )}
+            ) : null}
+          </button>
 
           {/* Notification Bell matching screenshot */}
           <div className="relative" ref={notifMenuRef}>
@@ -619,6 +624,103 @@ export default function BusinessHeader() {
             </div>
           </div>
           <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+        </div>
+      )}
+
+      {/* POS Cart Drawer */}
+      <PosCartDrawer />
+
+      {/* Notification Detail Modal */}
+      {selectedNotif && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in text-slate-800">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
+                      {selectedNotif.type.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {formatTimeAgo(selectedNotif.created_at)}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mt-1">
+                    {selectedNotif.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNotif(null)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Date/Time */}
+            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-2">
+              <span>📅</span>
+              <span>
+                {new Date(selectedNotif.created_at).toLocaleString("en-IN", {
+                  dateStyle: "full",
+                  timeStyle: "medium",
+                })}
+              </span>
+            </div>
+
+            {/* Full Message Body */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/60 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+              {selectedNotif.message}
+            </div>
+
+            {/* Reference Entity Details & Direct Action Button */}
+            {selectedNotif.reference_type && (
+              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-100 flex items-center justify-between">
+                <div className="text-xs">
+                  <span className="text-slate-500 font-medium">Reference: </span>
+                  <span className="font-bold text-emerald-900 capitalize">
+                    {selectedNotif.reference_type}{" "}
+                    {selectedNotif.reference_id ? `#${selectedNotif.reference_id}` : ""}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ref = (selectedNotif.reference_type || "").toLowerCase();
+                    setSelectedNotif(null);
+                    if (ref === "sale") navigate("/app/sales");
+                    else if (ref === "order") navigate("/app/orders");
+                    else if (ref === "payment" || ref === "customerledger") navigate("/app/ledger");
+                    else if (ref === "product") navigate("/app/inventory");
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
+                >
+                  <span>Open {selectedNotif.reference_type}</span>
+                  <span>→</span>
+                </button>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedNotif(null)}
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </header>

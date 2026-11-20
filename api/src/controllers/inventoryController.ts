@@ -30,7 +30,16 @@ export async function recordMovement(req: Request, res: Response) {
     return res.status(400).json({ success: false, message: "quantity must be a positive number" });
   }
 
-  const shopId = req.body.shopId ? Number(req.body.shopId) : req.auth!.shopId;
+  let shopId = req.body.shopId ? Number(req.body.shopId) : req.auth!.shopId;
+  if (!shopId && req.auth!.ownerId) {
+    const defaultShop = await Shop.findOne({
+      where: { owner_id: req.auth!.ownerId, status: "active" },
+      order: [["id", "ASC"]],
+    });
+    if (defaultShop) {
+      shopId = defaultShop.id;
+    }
+  }
   if (!shopId) {
     return res.status(400).json({ success: false, message: "shopId is required" });
   }

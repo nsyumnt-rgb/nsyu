@@ -58,3 +58,6 @@ scripts/screenshots/
 
 # Office temporary lock files
 ~$*
+
+# External reference projects
+flower-shop/

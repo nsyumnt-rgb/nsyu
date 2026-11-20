@@ -66,10 +66,22 @@ export default function MarketCart() {
       {loading ? (
         <div className="card h-40 animate-pulse" />
       ) : groups.length === 0 ? (
-        <div className="card p-10 text-center">
-          <div className="text-[15px] font-semibold text-navy-900">Your cart is empty</div>
-          <p className="text-[13px] text-slate-500 mt-1">Add products from one or more shops — each shop's items stay together.</p>
-          <Link to="/market/search" className="btn-primary mt-5">Start shopping</Link>
+        <div className="card p-12 text-center max-w-lg mx-auto rounded-2xl border border-[#EAE7DD] shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-700 mx-auto flex items-center justify-center text-3xl border border-emerald-100 shadow-xs mb-4">
+            🛍️
+          </div>
+          <div className="text-[17px] font-bold text-navy-900">Your Cart is Empty</div>
+          <p className="text-[13px] text-slate-500 mt-1.5 max-w-sm mx-auto">
+            Discover thousands of products from verified local merchants and add them to your cart.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <Link to="/market/search" className="btn-primary px-6 py-2.5">
+              Explore Products →
+            </Link>
+            <Link to="/market/shops" className="btn-secondary px-5 py-2.5">
+              Browse Shops
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="grid lg:grid-cols-12 gap-6 items-start">

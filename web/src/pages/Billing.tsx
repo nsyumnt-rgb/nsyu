@@ -29,9 +29,12 @@ function BillingInner() {
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Cart state
+  // Cart state - initialized from POS Store so items added from Catalog or Products show up
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">("");
-  const [cart, setCart] = useState<Array<{ product: Product; quantity: number; unitPrice: number }>>([]);
+  const setPosStoreItems = usePosStore((st) => st.setItems);
+  const [cart, setCart] = useState<Array<{ product: Product; quantity: number; unitPrice: number }>>(() => {
+    return usePosStore.getState().items || [];
+  });
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paidAmount, setPaidAmount] = useState<number | "">("");
   const [discountAmount, setDiscountAmount] = useState<number>(0);
@@ -43,7 +46,6 @@ function BillingInner() {
   // The bill drawer is opened from the product cards, the phone bottom bar or the top-bar cart button.
   const cartOpen = usePosStore((st) => st.open);
   const setCartOpen = usePosStore((st) => st.setOpen);
-  const setPosCount = usePosStore((st) => st.setCount);
 
   // Process & Feedback State matching Reference Design
   const [processing, setProcessing] = useState(false);
@@ -89,16 +91,16 @@ function BillingInner() {
     loadData();
   }, [shopId]);
 
-  // Publish the bill size to the top bar; hide the top-bar cart when leaving the Sales screen.
+  // Sync the Billing cart with usePosStore so cart drawer and topbar stay updated
   useEffect(() => {
-    setPosCount(cart.reduce((a, c) => a + c.quantity, 0));
-  }, [cart, setPosCount]);
+    setPosStoreItems(cart);
+  }, [cart, setPosStoreItems]);
+
   useEffect(
     () => () => {
-      setPosCount(null);
       setCartOpen(false);
     },
-    [setPosCount, setCartOpen]
+    [setCartOpen]
   );
 
   function getStock(p: Product): number {

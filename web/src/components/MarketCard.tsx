@@ -82,29 +82,29 @@ export default function MarketCard({
   return (
     <div className="market-card group p-3 flex flex-col relative [transform-style:preserve-3d]">
       
-      {/* Top Media Container */}
-      <div className="relative w-full aspect-square bg-gradient-to-br from-slate-50 to-violet-50/60 rounded-xl overflow-hidden flex items-center justify-center p-3 mb-2.5">
+      {/* Top Media Container - Airy photo tile with soft warm background */}
+      <div className="relative w-full aspect-square bg-gradient-to-br from-[#FAF9F5] to-emerald-50/40 rounded-xl border border-[#EAE7DD]/70 overflow-hidden flex items-center justify-center p-3 mb-2.5 transition-colors group-hover:border-brand-200">
         
         {/* Top-Left Discount Badge */}
         {discount > 0 && (
-          <span className="absolute left-2.5 top-2.5 z-10 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10.5px] font-black uppercase tracking-wider shadow-xs">
+          <span className="absolute left-2.5 top-2.5 z-10 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
             {discount}% OFF
           </span>
         )}
 
-        {/* Top-Right Wishlist Heart Button */}
+        {/* Top-Right Wishlist Heart Button with micro-bounce */}
         <button
           type="button"
           onClick={handleToggleWishlist}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          className={`absolute right-2.5 top-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center transition shadow-xs ${
+          className={`absolute right-2.5 top-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 shadow-xs ${
             isWishlisted
-              ? "bg-rose-50 text-rose-600"
-              : "bg-white/90 text-gray-400 hover:text-rose-600 hover:bg-white"
+              ? "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
+              : "bg-white/95 text-gray-400 hover:text-rose-600 hover:bg-white"
           }`}
         >
           <svg
-            className={`w-4 h-4 ${isWishlisted ? "fill-rose-600 stroke-rose-600" : "fill-none stroke-current"}`}
+            className={`w-3.5 h-3.5 ${isWishlisted ? "fill-rose-600 stroke-rose-600" : "fill-none stroke-current"}`}
             viewBox="0 0 24 24"
             strokeWidth="2"
           >
@@ -133,6 +133,14 @@ export default function MarketCard({
           )}
         </Link>
 
+        {/* Flower-Shop Style Rating Pill on bottom-left of photo tile */}
+        {listing.inStock && (
+          <div className="absolute bottom-2 left-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/95 backdrop-blur-xs text-[10px] font-bold text-gray-800 shadow-xs ring-1 ring-black/5">
+            <span className="text-amber-500">★</span>
+            <span>4.8</span>
+          </div>
+        )}
+
         {/* Out of stock label */}
         {!listing.inStock && (
           <span className="absolute bottom-2 inset-x-2 text-center py-0.5 rounded-md bg-black/75 text-[10px] font-bold text-white uppercase tracking-wider backdrop-blur-xs">
@@ -144,10 +152,17 @@ export default function MarketCard({
       {/* Product Details */}
       <div className="flex-1 flex flex-col justify-between space-y-2">
         <div>
+          {/* Shop / Branch tag */}
+          {listing.shop?.name && (
+            <span className="text-[10px] font-semibold text-brand-700 tracking-wide uppercase line-clamp-1 mb-0.5">
+              {listing.shop.name}
+            </span>
+          )}
+
           {/* Product Title */}
           <Link
             to={href}
-            className="block text-xs sm:text-[13px] font-bold text-navy-900 leading-snug line-clamp-2 hover:text-violet-700 transition"
+            className="block text-xs sm:text-[13px] font-bold text-navy-900 leading-snug line-clamp-2 hover:text-brand-700 transition"
             title={listing.name}
           >
             {listing.name}
@@ -155,11 +170,11 @@ export default function MarketCard({
 
           {/* Pricing Row */}
           <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-sm sm:text-base font-black text-gray-900 tracking-tight">
+            <span className="text-sm sm:text-base font-black text-gray-900 tracking-tight tabular">
               {rupees(listing.price)}
             </span>
             {listing.mrp && listing.mrp > listing.price && (
-              <span className="text-[11px] text-gray-400 line-through font-medium">
+              <span className="text-[11px] text-gray-400 line-through font-medium tabular">
                 {rupees(listing.mrp)}
               </span>
             )}
@@ -173,9 +188,9 @@ export default function MarketCard({
           disabled={!listing.inStock || adding}
           className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs ${
             added
-              ? "bg-emerald-800 text-white"
+              ? "bg-brand-800 text-white"
               : listing.inStock
-              ? "bg-navy-900 hover:bg-violet-700 active:scale-98 text-white"
+              ? "bg-brand-700 hover:bg-brand-800 text-white shadow-brand active:scale-[0.98]"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >

@@ -3,7 +3,13 @@ import type { ApiEnvelope, InventoryTransaction, MovementType, ProductStockEntry
 
 export type DirectMovementType = Exclude<MovementType, "opening" | "transfer_in" | "transfer_out">;
 
-export function recordMovement(payload: { productId: number; type: DirectMovementType; quantity: number; notes?: string }) {
+export function recordMovement(payload: {
+  productId: number;
+  type: DirectMovementType;
+  quantity: number;
+  notes?: string;
+  shopId?: number;
+}) {
   return api.post<ApiEnvelope<{ currentStock: number; transaction: InventoryTransaction }>>("/inventory/movement", payload);
 }
 

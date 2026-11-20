@@ -86,14 +86,14 @@ export default function MarketLayout() {
             <span>Free Shipping on Orders Above ₹1,000</span>
           </div>
           {/* Best Quality */}
-          <div className="hidden md:flex items-center gap-1.5 text-violet-200">
+          <div className="hidden md:flex items-center gap-1.5 text-emerald-200">
             <span>⭐</span>
-            <span>Best Quality Products</span>
+            <span>Verified Neighborhood Stores</span>
           </div>
           {/* Customer Support */}
           <div className="flex items-center gap-1.5 text-slate-200">
             <span>🎧</span>
-            <span>Customer Support: 98765 43210</span>
+            <span>Support Hotline: 90459 17913</span>
           </div>
         </div>
       </div>
@@ -101,20 +101,20 @@ export default function MarketLayout() {
       {/* ============================================================== */}
       {/* 2. MAIN HEADER (Logo, Central Search Bar, Wishlist, Cart)       */}
       {/* ============================================================== */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200/80 shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#EAE7DD] shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
           
           {/* Logo & Branding */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-100 group-hover:bg-violet-100 flex items-center justify-center font-black text-xl shadow-sm transition">
+            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200/60 group-hover:bg-brand-100 flex items-center justify-center font-black text-xl shadow-xs transition-all duration-200">
               N
             </div>
             <div className="min-w-0">
-              <span className="block text-lg font-black text-gray-900 tracking-tight leading-none">
+              <span className="block text-lg font-black text-navy-900 tracking-tight leading-none">
                 NSYU Market
               </span>
-              <span className="block text-[10.5px] font-medium text-gray-500 mt-0.5 tracking-tight">
-                Shop Smart · Shop Better
+              <span className="block text-[10.5px] font-semibold text-slate-500 mt-0.5 tracking-tight">
+                Shop Smart · Shop Local
               </span>
             </div>
           </Link>
@@ -132,12 +132,12 @@ export default function MarketLayout() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search products, shops, brands..."
-                className="w-full h-11 pl-4 pr-12 rounded-xl border border-slate-200 bg-slate-50/80 text-xs sm:text-sm focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-200 outline-none transition"
+                className="w-full h-11 pl-4 pr-12 rounded-xl border border-[#EAE7DD] bg-[#FAF9F5]/90 text-xs sm:text-sm focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition shadow-xs"
               />
               <button
                 type="submit"
                 aria-label="Search"
-                className="absolute right-1 top-1 h-9 w-9 rounded-lg bg-navy-900 hover:bg-navy-800 text-white flex items-center justify-center transition shadow-xs"
+                className="absolute right-1 top-1 h-9 w-9 rounded-lg bg-navy-900 hover:bg-brand-800 text-white flex items-center justify-center transition shadow-xs"
               >
                 <svg
                   className="w-4 h-4"
@@ -158,7 +158,7 @@ export default function MarketLayout() {
             {/* Wishlist */}
             <Link
               to="/portal/wishlist"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-violet-700 hover:bg-violet-50/60 transition relative"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-brand-700 hover:bg-brand-50/70 transition relative"
               title="View Wishlist"
             >
               <div className="relative">
@@ -186,7 +186,7 @@ export default function MarketLayout() {
             {/* Cart */}
             <Link
               to="/market/cart"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-violet-700 hover:bg-violet-50/60 transition relative"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-700 hover:text-brand-700 hover:bg-brand-50/70 transition relative"
               title="View Cart"
             >
               <div className="relative">
@@ -202,7 +202,7 @@ export default function MarketLayout() {
                   <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[9.5px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white">
+                  <span className="absolute -top-1.5 -right-2 bg-brand-700 text-white text-[9.5px] font-black w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white shadow-xs">
                     {cartCount}
                   </span>
                 )}

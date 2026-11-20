@@ -13,6 +13,7 @@ import {
   type AppNotification,
 } from "../api/notifications";
 import type { Shop } from "../types";
+import PosCartDrawer from "../components/PosCartDrawer";
 
 function formatTimeAgo(dateStr: string): string {
   try {
@@ -135,6 +136,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [notifFilter, setNotifFilter] = useState<"all" | "unread">("all");
+  const [selectedNotif, setSelectedNotif] = useState<AppNotification | null>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -260,18 +262,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
     }
 
     setNotifOpen(false);
-
-    // Contextual routing based on reference
-    const refType = (n.reference_type || "").toLowerCase();
-    if (refType === "sale") {
-      navigate("/app/sales");
-    } else if (refType === "order") {
-      navigate("/app/orders");
-    } else if (refType === "payment" || refType === "customerledger") {
-      navigate("/app/ledger");
-    } else if (refType === "product") {
-      navigate("/app/inventory");
-    }
+    setSelectedNotif(n);
   };
 
   // Debounced search on input
@@ -507,27 +498,29 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           )}
         </div>
 
-        {/* Current bill (only while the Sales screen is open) */}
-        {posCount !== null && (
-          <button
-            type="button"
-            onClick={() => setPosOpen(true)}
-            className={`relative h-10 px-3 rounded-xl transition-colors flex items-center ${posCount > 0 ? "bg-brand-50 text-brand-700 hover:bg-brand-100" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"}`}
-            title="Current bill"
-            aria-label={`Current bill, ${posCount} item${posCount === 1 ? "" : "s"}`}
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
-            </svg>
-            {posCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-xs leading-none">
-                {posCount > 99 ? "99+" : posCount}
-              </span>
-            )}
-          </button>
-        )}
+        {/* POS Cart / Current Bill Button */}
+        <button
+          type="button"
+          onClick={() => setPosOpen(true)}
+          className={`relative h-10 px-3 rounded-xl transition-colors flex items-center ${
+            posCount && posCount > 0
+              ? "bg-brand-50 text-brand-700 hover:bg-brand-100 ring-1 ring-brand-200"
+              : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+          }`}
+          title="Current Bill / POS Cart"
+          aria-label={`Current Bill, ${posCount || 0} item${posCount === 1 ? "" : "s"}`}
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
+          </svg>
+          {posCount && posCount > 0 ? (
+            <span className="absolute -top-1 -right-1 flex min-w-[18px] h-[18px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-xs leading-none">
+              {posCount > 99 ? "99+" : posCount}
+            </span>
+          ) : null}
+        </button>
 
         {/* Notification Bell with Real Live Dropdown */}
         <div className="relative" ref={notifMenuRef}>
@@ -739,6 +732,104 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           )}
         </div>
       </div>
+
+      {/* POS Cart Drawer */}
+      <PosCartDrawer />
+
+      {/* Notification Detail Modal */}
+      {selectedNotif && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+                    getNotifVisuals(selectedNotif.type).bg
+                  }`}
+                >
+                  {getNotifVisuals(selectedNotif.type).icon}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
+                      {selectedNotif.type.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {formatTimeAgo(selectedNotif.created_at)}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900 mt-1">
+                    {selectedNotif.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNotif(null)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Date/Time */}
+            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-2">
+              <span>📅</span>
+              <span>
+                {new Date(selectedNotif.created_at).toLocaleString("en-IN", {
+                  dateStyle: "full",
+                  timeStyle: "medium",
+                })}
+              </span>
+            </div>
+
+            {/* Full Message Body */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/60 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+              {selectedNotif.message}
+            </div>
+
+            {/* Reference Entity Details & Direct Action Button */}
+            {selectedNotif.reference_type && (
+              <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center justify-between">
+                <div className="text-xs">
+                  <span className="text-slate-500 font-medium">Reference: </span>
+                  <span className="font-bold text-blue-900 capitalize">
+                    {selectedNotif.reference_type}{" "}
+                    {selectedNotif.reference_id ? `#${selectedNotif.reference_id}` : ""}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const ref = (selectedNotif.reference_type || "").toLowerCase();
+                    setSelectedNotif(null);
+                    if (ref === "sale") navigate("/app/sales");
+                    else if (ref === "order") navigate("/app/orders");
+                    else if (ref === "payment" || ref === "customerledger") navigate("/app/ledger");
+                    else if (ref === "product") navigate("/app/inventory");
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
+                >
+                  <span>Open {selectedNotif.reference_type}</span>
+                  <span>→</span>
+                </button>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedNotif(null)}
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

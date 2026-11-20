@@ -108,7 +108,7 @@ export default function MarketHome() {
           {/* Right Hero Product Collage with 50% Off Badge */}
           <div className="relative flex items-center justify-center z-10">
             {/* Visual Circular Product Frame */}
-            <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-white/80 backdrop-blur-xs p-4 flex items-center justify-center shadow-lg border border-violet-100">
+            <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-full bg-white/85 backdrop-blur-xs p-4 flex items-center justify-center shadow-lg border border-emerald-100">
               <img
                 src={heroSlides[currentSlide].image}
                 alt="Featured Products"
@@ -117,7 +117,7 @@ export default function MarketHome() {
             </div>
 
             {/* "Up to 50% OFF" Badge */}
-            <div className="absolute top-2 -right-2 sm:right-2 bg-violet-700 text-white px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white flex items-center gap-1.5 text-xs font-black animate-bounce">
+            <div className="absolute top-2 -right-2 sm:right-2 bg-brand-700 text-white px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white flex items-center gap-1.5 text-xs font-black animate-bounce">
               <span>⭐</span>
               <span>{heroSlides[currentSlide].badgeText}</span>
             </div>
@@ -165,23 +165,34 @@ export default function MarketHome() {
           </div>
         </div>
 
-        {/* 2. CIRCULAR CATEGORY STRIP (Image 1 Mockup) */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-xs">
+        {/* 2. CIRCULAR CATEGORY STRIP with Pastel Tints (Inspired by Flower-Shop) */}
+        <div className="bg-white rounded-2xl border border-[#EAE7DD] p-4 sm:p-5 shadow-xs">
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-3 sm:gap-4 text-center">
-            {CATEGORY_CIRCLES.map((cat) => {
+            {CATEGORY_CIRCLES.map((cat, i) => {
               const href = cat.query
                 ? `/market/search?category=${encodeURIComponent(cat.query)}`
                 : "/market/search";
+              const tints = [
+                "bg-emerald-50/80 border-emerald-100 text-emerald-900 group-hover:bg-emerald-100",
+                "bg-amber-50/80 border-amber-100 text-amber-900 group-hover:bg-amber-100",
+                "bg-sky-50/80 border-sky-100 text-sky-900 group-hover:bg-sky-100",
+                "bg-rose-50/80 border-rose-100 text-rose-900 group-hover:bg-rose-100",
+                "bg-indigo-50/80 border-indigo-100 text-indigo-900 group-hover:bg-indigo-100",
+                "bg-teal-50/80 border-teal-100 text-teal-900 group-hover:bg-teal-100",
+                "bg-orange-50/80 border-orange-100 text-orange-900 group-hover:bg-orange-100",
+                "bg-slate-50/80 border-slate-100 text-slate-900 group-hover:bg-slate-100",
+              ];
+              const tint = tints[i % tints.length];
               return (
                 <Link
                   key={cat.name}
                   to={href}
                   className="group flex flex-col items-center gap-2 transition"
                 >
-                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-xl sm:text-2xl shadow-xs group-hover:scale-110 group-hover:border-emerald-400 group-hover:bg-emerald-50 transition">
+                  <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-full border flex items-center justify-center text-xl sm:text-2xl shadow-xs group-hover:scale-110 transition-all duration-200 ${tint}`}>
                     <span>{cat.icon}</span>
                   </div>
-                  <span className="text-[11px] sm:text-xs font-bold text-gray-700 group-hover:text-[#047857] transition truncate max-w-full">
+                  <span className="text-[11px] sm:text-xs font-bold text-gray-700 group-hover:text-brand-700 transition truncate max-w-full">
                     {cat.name}
                   </span>
                 </Link>
@@ -273,6 +284,51 @@ export default function MarketHome() {
             </div>
           )}
         </section>
+
+        {/* 5. TRUST & ASSURANCE BANNER (Inspired by Flower-Shop's Contact & Assurance Card) */}
+        <div className="rounded-2xl border border-[#EAE7DD] bg-white p-6 sm:p-8 shadow-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center sm:text-left">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 text-xl border border-emerald-100">
+                🏪
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-navy-900">Verified Direct Shops</h4>
+                <p className="text-[11px] text-gray-500 mt-0.5">Order directly from approved neighborhood merchants.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 text-xl border border-emerald-100">
+                🚚
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-navy-900">Fast Local Dispatch</h4>
+                <p className="text-[11px] text-gray-500 mt-0.5">Prompt delivery directly from your nearest store.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 text-xl border border-emerald-100">
+                📑
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-navy-900">B2B & B2C Billing</h4>
+                <p className="text-[11px] text-gray-500 mt-0.5">Instant GST invoices, customer ledger & credit terms.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0 text-xl border border-emerald-100">
+                🛡️
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-navy-900">100% Genuine Products</h4>
+                <p className="text-[11px] text-gray-500 mt-0.5">Transparent stock records and easy returns policy.</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div>
     </div>

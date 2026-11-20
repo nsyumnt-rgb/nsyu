@@ -13,9 +13,9 @@ class AppColors {
   static const blue600 = Color(0xFF047857); // accent, links, active states (unified emerald)
   static const blue100 = Color(0xFFD1FAE5); // soft surfaces, chips (light green)
   static const blue50 = Color(0xFFECFDF5);  // soft surfaces, active pills (lightest green)
-  static const bg = Color(0xFFF6F8FA);      // screen canvas (matches web `canvas`)
+  static const bg = Color(0xFFFAF9F5);      // screen canvas (warm ivory, matches web `canvas`)
   static const surface = Color(0xFFFFFFFF); // card surface
-  static const border = Color(0xFFE4E9EE);  // soft 1px border (matches web `border`)
+  static const border = Color(0xFFEAE7DD);  // soft 1px border (warm neutral, matches web `border`)
   static const textPrimary = Color(0xFF0F172A);
   static const textSecondary = Color(0xFF64748B);
   static const success = Color(0xFF16A34A);

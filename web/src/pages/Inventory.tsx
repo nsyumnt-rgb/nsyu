@@ -40,8 +40,10 @@ interface InlineEditDraft {
 
 export default function Inventory() {
   const shopId = useAuthStore((s) => s.shopId);
+  const activeShop = useAuthStore((s) => s.activeShop);
 
   const [products, setProducts] = useState<Product[]>([]);
+  const effectiveShopId = shopId || activeShop?.id || (products[0]?.stocks?.[0]?.shop_id ?? undefined);
   const [categories, setCategories] = useState<Category[]>([]);
   const [history, setHistory] = useState<InventoryTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -347,8 +349,10 @@ export default function Inventory() {
       const delta = newStock - oldStock;
 
       if (delta !== 0) {
+        const targetShopId = effectiveShopId || product.stocks?.[0]?.shop_id;
         await recordMovement({
           productId: product.id,
+          shopId: targetShopId,
           type: "adjustment",
           quantity: delta,
           notes: `Inline inventory stock update (${oldStock} -> ${newStock})`,
@@ -384,7 +388,7 @@ export default function Inventory() {
     if (!selectedProduct) return;
     setAdjustError(null);
 
-    const curr = Number(selectedProduct.stocks?.[0]?.current_stock ?? 0);
+    const curr = getProductStock(selectedProduct);
     const n = Number(adjustQuantity);
     if (!adjustQuantity.trim() || !Number.isFinite(n)) {
       setAdjustError("Please enter a valid quantity.");
@@ -417,8 +421,10 @@ export default function Inventory() {
     setAdjustSaving(true);
     try {
       const quantityToRecord = type === "adjustment" ? delta : Math.abs(delta);
+      const targetShopId = effectiveShopId || selectedProduct.stocks?.[0]?.shop_id;
       await recordMovement({
         productId: selectedProduct.id,
+        shopId: targetShopId,
         type,
         quantity: quantityToRecord,
         notes: `[Reason: ${adjustReason}] ${adjustNotes.trim()}`.trim(),
@@ -1474,6 +1480,33 @@ export default function Inventory() {
                               </svg>
                             </button>
 
+                            {/* Adjust Stock Button (Sliders / Plus-Minus) */}
+                            <button
+                              type="button"
+                              onClick={() => openAdjust(p)}
+                              className="w-8 h-8 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
+                              title="Adjust Stock / Record Movement"
+                              aria-label="Adjust Stock"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <line x1="4" y1="21" x2="4" y2="14" />
+                                <line x1="4" y1="10" x2="4" y2="3" />
+                                <line x1="12" y1="21" x2="12" y2="12" />
+                                <line x1="12" y1="8" x2="12" y2="3" />
+                                <line x1="20" y1="21" x2="20" y2="16" />
+                                <line x1="20" y1="12" x2="20" y2="3" />
+                                <line x1="1" y1="14" x2="7" y2="14" />
+                                <line x1="9" y1="8" x2="15" y2="8" />
+                                <line x1="17" y1="16" x2="23" y2="16" />
+                              </svg>
+                            </button>
+
                             {/* Requirement 5: Inline Edit Action Icon (Pencil) */}
                             <button
                               type="button"
@@ -1842,6 +1875,34 @@ export default function Inventory() {
             {/* Modal Actions */}
             <div className="flex items-center justify-between pt-2 border-t border-gray-100">
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = viewProduct;
+                    setViewProduct(null);
+                    openAdjust(target);
+                  }}
+                  className="px-3.5 py-2 bg-teal-50 text-teal-800 hover:bg-teal-100 font-bold rounded-xl text-xs transition flex items-center gap-1.5"
+                >
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <line x1="4" y1="21" x2="4" y2="14" />
+                    <line x1="4" y1="10" x2="4" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12" y2="3" />
+                    <line x1="20" y1="21" x2="20" y2="16" />
+                    <line x1="20" y1="12" x2="20" y2="3" />
+                    <line x1="1" y1="14" x2="7" y2="14" />
+                    <line x1="9" y1="8" x2="15" y2="8" />
+                    <line x1="17" y1="16" x2="23" y2="16" />
+                  </svg>
+                  <span>Adjust Stock</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
