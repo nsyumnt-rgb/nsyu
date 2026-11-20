@@ -535,6 +535,90 @@ export default function Inventory({
     }
   }
 
+  // -------------------------------------------------------------
+  // Quick Sync: Selling Price => Live Price (Row arrow & Header arrow)
+  // -------------------------------------------------------------
+  const [syncingLiveId, setSyncingLiveId] = useState<number | null>(null);
+  const [bulkSyncing, setBulkSyncing] = useState(false);
+
+  async function handleQuickSetLivePrice(p: Product) {
+    // 1. If currently editing inline, sync draft fields directly
+    if (editingRowId === p.id && inlineDraft) {
+      handleDraftChange("livePrice", inlineDraft.sellingPrice);
+      setToastMsg(`✓ Live Price draft set to ₹${inlineDraft.sellingPrice}`);
+      return;
+    }
+
+    const sp = Number(p.selling_price || 0);
+    if (sp <= 0) {
+      alert(`Please set a valid Selling Price for "${p.name}" first.`);
+      return;
+    }
+
+    setSyncingLiveId(p.id);
+
+    // Optimistic UI update
+    setProducts((prev) =>
+      prev.map((item) => (item.id === p.id ? { ...item, live_price: sp } : item))
+    );
+    if (viewProduct && viewProduct.id === p.id) {
+      setViewProduct({ ...viewProduct, live_price: sp });
+    }
+
+    try {
+      await updateProduct(p.id, { live_price: sp });
+      setToastMsg(`✓ Live Price for "${p.name}" set to ${formatINR(sp)}`);
+    } catch (err: any) {
+      // Revert on error
+      setProducts((prev) =>
+        prev.map((item) => (item.id === p.id ? { ...item, live_price: p.live_price } : item))
+      );
+      if (viewProduct && viewProduct.id === p.id) {
+        setViewProduct({ ...viewProduct, live_price: p.live_price });
+      }
+      alert(apiErrorMessage(err, "Failed to update Live Price"));
+    } finally {
+      setSyncingLiveId(null);
+    }
+  }
+
+  async function handleSyncAllLivePrices() {
+    const eligible = filteredProducts.filter((p) => Number(p.selling_price || 0) > 0);
+    if (eligible.length === 0) {
+      alert("No products with valid selling price to sync in current view.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `Set Live Price = Selling Price for all ${eligible.length} product(s) shown in the list?`
+    );
+    if (!confirmed) return;
+
+    setBulkSyncing(true);
+    let updatedCount = 0;
+    try {
+      await Promise.all(
+        eligible.map(async (p) => {
+          const sp = Number(p.selling_price || 0);
+          if (Number(p.live_price) !== sp) {
+            await updateProduct(p.id, { live_price: sp });
+            updatedCount++;
+          }
+        })
+      );
+      setProducts((prev) =>
+        prev.map((item) => {
+          const match = eligible.find((e) => e.id === item.id);
+          return match ? { ...item, live_price: Number(match.selling_price || 0) } : item;
+        })
+      );
+      setToastMsg(`✓ Live Price synced to Selling Price for ${eligible.length} product(s)`);
+    } catch (err: any) {
+      alert(apiErrorMessage(err, "Failed to sync all live prices"));
+    } finally {
+      setBulkSyncing(false);
+    }
+  }
+
   // Direct Stock Input Save handler (triggered on Enter, blur, or checkmark click)
   const handleDirectStockSave = useCallback(
     async (product: Product, newStock: number) => {
@@ -1563,6 +1647,34 @@ export default function Inventory({
                 <th className="p-3.5 text-center">Stock</th>
                 <th className="p-3.5 text-right">Purchase Price</th>
                 <th className="p-3.5 text-right">Selling Price</th>
+                {/* Arrow Header: Copy Selling Price to Live Price */}
+                <th className="p-2 text-center w-10">
+                  <button
+                    type="button"
+                    disabled={bulkSyncing}
+                    onClick={handleSyncAllLivePrices}
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-800/80 hover:bg-emerald-600 border border-emerald-500/50 text-white transition cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                    title="Bulk Sync: Click to copy Selling Price → Live Price for all filtered products"
+                    aria-label="Bulk sync Selling Price to Live Price"
+                  >
+                    {bulkSyncing ? (
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
+                    )}
+                  </button>
+                </th>
                 <th className="p-3.5 text-right">Live Price</th>
                 <th className="p-3.5 text-right">Margin (%)</th>
                 <th className="p-3.5 text-right">Stock Value</th>
@@ -1573,7 +1685,7 @@ export default function Inventory({
             <tbody className="divide-y divide-gray-100">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="p-12 text-center text-gray-400">
+                  <td colSpan={12} className="p-12 text-center text-gray-400">
                     No products match the selected inventory filter.
                   </td>
                 </tr>
@@ -1786,6 +1898,39 @@ export default function Inventory({
                             {formatINR(sellingPrice)}
                           </span>
                         )}
+                      </td>
+
+                      {/* Arrow Icon Button: Selling Price => Live Price */}
+                      <td className="p-2 text-center w-10 align-middle">
+                        <button
+                          type="button"
+                          disabled={syncingLiveId === p.id}
+                          onClick={() => handleQuickSetLivePrice(p)}
+                          className="w-7 h-7 mx-auto rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 border border-emerald-300 flex items-center justify-center transition shadow-2xs hover:scale-110 active:scale-95 disabled:opacity-50 cursor-pointer group"
+                          title={
+                            isEditing
+                              ? "Copy Selling Price to Live Price (Draft)"
+                              : `Set Live Price = Selling Price (${formatINR(p.selling_price)})`
+                          }
+                          aria-label={`Set Live Price from Selling Price for ${p.name}`}
+                        >
+                          {syncingLiveId === p.id ? (
+                            <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <svg
+                              className="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                              <polyline points="12 5 19 12 12 19" />
+                            </svg>
+                          )}
+                        </button>
                       </td>
 
                       {/* Live Price - Online Customer Rate */}
@@ -2588,7 +2733,19 @@ export default function Inventory({
                     <div>
                       <label className="font-bold text-emerald-800 block mb-1 flex items-center justify-between">
                         <span>Live Price (Online Rate ₹)</span>
-                        <span className="text-[10px] text-emerald-600 font-normal">Customer Storefront Rate</span>
+                        {viewEditForm.selling_price && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleViewEditFieldChange("live_price", viewEditForm.selling_price)
+                            }
+                            className="text-[10px] text-emerald-700 hover:text-emerald-900 bg-emerald-100/80 hover:bg-emerald-200 px-2 py-0.5 rounded font-bold transition flex items-center gap-1 cursor-pointer border border-emerald-300"
+                            title="Copy Selling Price into Live Price"
+                          >
+                            <span>Copy Selling Price</span>
+                            <span>→</span>
+                          </button>
+                        )}
                       </label>
                       <input
                         type="number"
@@ -2961,7 +3118,17 @@ export default function Inventory({
               <div>
                 <label className="font-bold text-gray-700 block mb-1 flex items-center justify-between">
                   <span>Live Price (Online Rate ₹)</span>
-                  <span className="text-[10px] text-emerald-600 font-normal">Shown to online customers (optional)</span>
+                  {addSellingPrice && (
+                    <button
+                      type="button"
+                      onClick={() => setAddLivePrice(addSellingPrice)}
+                      className="text-[10px] text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded font-bold transition flex items-center gap-1 cursor-pointer border border-emerald-200"
+                      title="Copy Selling Price into Live Price"
+                    >
+                      <span>Copy Selling Price</span>
+                      <span>→</span>
+                    </button>
+                  )}
                 </label>
                 <input
                   type="number"
