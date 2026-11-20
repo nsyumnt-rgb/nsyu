@@ -28,6 +28,8 @@ export default function DemoBar({ onOpenGuide }: DemoBarProps) {
   const currentRole = (() => {
     if (location.pathname === "/mobile") return "mobile";
     if (location.pathname.startsWith("/admin")) return "admin";
+    if (location.pathname.startsWith("/app/b2b-market")) return "buyer";
+    if (location.pathname.startsWith("/app/b2b-po") || location.pathname.startsWith("/app/b2b-ledger")) return "seller";
     if (location.pathname.startsWith("/app")) return "owner";
     if (location.pathname.startsWith("/portal") || customer) return "customer";
     return "public";
@@ -93,6 +95,65 @@ export default function DemoBar({ onOpenGuide }: DemoBarProps) {
       });
       navigate("/app");
       showToast("Signed in as Shop Owner: Rakesh Sharma");
+      return;
+    }
+
+    if (role === "buyer") {
+      setSession("demo-buyer-token", "demo-buyer-refresh", "employee");
+      setMe({
+        employee: {
+          id: 4,
+          owner_id: 1,
+          name: "Rakesh Sharma (B2B Buyer)",
+          email: "buyer@sharmahub.in",
+          phone: "98100 11122",
+          status: "active",
+        },
+        shopId: 1,
+        roleId: 4,
+        roleName: "B2B Buyer",
+        assignedShopIds: [1],
+        permissions: {},
+        fieldPermissions: {},
+      });
+      setActiveShop({
+        id: 1,
+        name: "Sharma Mobile Hub",
+        code: "SMH",
+        owner_id: 1,
+        status: "active",
+      });
+      navigate("/app/b2b-market");
+      showToast("Switched to B2B Buyer persona");
+      return;
+    }
+
+    if (role === "seller") {
+      setSession("demo-seller-token", "demo-seller-refresh", "owner");
+      setMe({
+        owner: {
+          id: 3,
+          name: "Vikram Verma (B2B Seller)",
+          email: "seller@vermadist.in",
+          phone: "98120 33344",
+          status: "active",
+        },
+        shopId: 4,
+        roleId: 1,
+        roleName: "B2B Seller",
+        assignedShopIds: [4],
+        permissions: {},
+        fieldPermissions: {},
+      });
+      setActiveShop({
+        id: 4,
+        name: "Verma Distributors",
+        code: "VDIST",
+        owner_id: 3,
+        status: "active",
+      });
+      navigate("/app/b2b-po");
+      showToast("Switched to B2B Seller persona: Verma Distributors");
       return;
     }
 
@@ -179,6 +240,30 @@ export default function DemoBar({ onOpenGuide }: DemoBarProps) {
               }`}
             >
               Owner
+            </button>
+
+            <button
+              type="button"
+              onClick={() => switchToPersona("buyer")}
+              className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+                currentRole === "buyer"
+                  ? "bg-white text-[#064E3B] font-bold shadow-xs"
+                  : "bg-white/10 text-emerald-100 hover:bg-white/20 border border-white/20"
+              }`}
+            >
+              B2B buyer
+            </button>
+
+            <button
+              type="button"
+              onClick={() => switchToPersona("seller")}
+              className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+                currentRole === "seller"
+                  ? "bg-white text-[#064E3B] font-bold shadow-xs"
+                  : "bg-white/10 text-emerald-100 hover:bg-white/20 border border-white/20"
+              }`}
+            >
+              B2B seller
             </button>
 
             <button

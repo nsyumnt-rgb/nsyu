@@ -549,7 +549,7 @@ export default function BusinessHeader() {
                   onClick={() => setUserOpen(false)}
                   className="px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition"
                 >
-                  <span>🚚</span> Purchases & Stock Inward
+                  <span>🚚</span> Purchases & B2B
                 </Link>
                 <Link
                   to="/app/suppliers"

@@ -553,7 +553,7 @@ export default function MarketHome() {
               📑
             </div>
             <div>
-              <h4 className="text-xs sm:text-sm font-bold text-navy-900">Retail & POS Billing</h4>
+              <h4 className="text-xs sm:text-sm font-bold text-navy-900">B2B & B2C Billing</h4>
               <p className="text-[11px] text-gray-500 mt-0.5">Instant GST invoices, customer ledger & credit terms.</p>
             </div>
           </div>
