@@ -11,12 +11,12 @@ interface CategoryItem {
 const DEFAULT_CATEGORIES: CategoryItem[] = [
   { name: "Electronics", icon: "💻" },
   { name: "Accessories", icon: "🎧" },
-  { name: "Home & Living", icon: "🏠" },
+  { name: "Home & Living", icon: "🛋️" },
   { name: "Fashion", icon: "👕" },
   { name: "Beauty & Personal Care", icon: "🪷" },
   { name: "Health & Wellness", icon: "❤️" },
   { name: "Sports & Fitness", icon: "🏀" },
-  { name: "More Categories", icon: "•••" },
+  { name: "More Categories", icon: "⋯" },
 ];
 
 export default function MarketCategorySidebar({

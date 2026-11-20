@@ -66,10 +66,10 @@ export default function MarketLayout() {
 
   const navLinks = [
     { to: "/", label: "Home", icon: "🏠", exact: true },
-    { to: "/market/search", label: "Products", icon: "🛍️" },
+    { to: "/market/search", label: "Products", icon: "📦" },
     { to: "/market/shops", label: "Shops", icon: "🏪" },
     { to: "/market/search?sort=newest&offers=true", label: "Offers", icon: "🏷️" },
-    { to: "/market/about", label: "About Us", icon: "ℹ️" },
+    { to: "/market/about", label: "About Us", icon: "👤" },
     { to: "/market/contact", label: "Contact", icon: "✉️" },
   ];
 
@@ -338,17 +338,6 @@ export default function MarketLayout() {
                 </NavLink>
               ))}
             </nav>
-
-            {/* Quick Link to Customer Portal / Sell */}
-            <div className="hidden lg:flex items-center gap-3 text-xs font-semibold">
-              <Link
-                to="/register"
-                className="text-emerald-700 hover:text-emerald-900 font-bold"
-              >
-                Become a Seller →
-              </Link>
-            </div>
-
           </div>
         </div>
 

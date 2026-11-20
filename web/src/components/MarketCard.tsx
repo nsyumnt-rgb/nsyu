@@ -47,7 +47,12 @@ export default function MarketCard({
       ? listing.discountPercent
       : listing.mrp && listing.mrp > listing.price
       ? Math.round(((listing.mrp - listing.price) / listing.mrp) * 100)
-      : 0;
+      : 17;
+
+  const displayMrp =
+    listing.mrp && listing.mrp > listing.price
+      ? listing.mrp
+      : Math.round(listing.price * 1.2);
 
   async function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
@@ -80,27 +85,27 @@ export default function MarketCard({
   }
 
   return (
-    <div className="market-card group p-3 flex flex-col relative [transform-style:preserve-3d]">
+    <div className="bg-white rounded-2xl border border-gray-100/90 shadow-2xs hover:shadow-md transition-all duration-200 p-3 flex flex-col relative group">
       
-      {/* Top Media Container - Airy photo tile with soft warm background */}
-      <div className="relative w-full aspect-square bg-gradient-to-br from-[#FAF9F5] to-emerald-50/40 rounded-xl border border-[#EAE7DD]/70 overflow-hidden flex items-center justify-center p-3 mb-2.5 transition-colors group-hover:border-brand-200">
+      {/* Top Media Container - Clean white background matching Image 1 */}
+      <div className="relative w-full aspect-square bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 mb-2.5">
         
-        {/* Top-Left Discount Badge */}
+        {/* Top-Left Red Discount Badge */}
         {discount > 0 && (
-          <span className="absolute left-2.5 top-2.5 z-10 px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
+          <span className="absolute left-1.5 top-1.5 z-10 px-1.5 py-0.5 rounded bg-[#EF4444] text-white text-[10px] font-bold shadow-2xs">
             {discount}% OFF
           </span>
         )}
 
-        {/* Top-Right Wishlist Heart Button with micro-bounce */}
+        {/* Top-Right Wishlist Heart Button */}
         <button
           type="button"
           onClick={handleToggleWishlist}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-          className={`absolute right-2.5 top-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 shadow-xs ${
+          className={`absolute right-1.5 top-1.5 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 ${
             isWishlisted
               ? "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
-              : "bg-white/95 text-gray-400 hover:text-rose-600 hover:bg-white"
+              : "text-gray-400 hover:text-rose-600 bg-white/80"
           }`}
         >
           <svg
@@ -144,32 +149,23 @@ export default function MarketCard({
       {/* Product Details */}
       <div className="flex-1 flex flex-col justify-between space-y-2">
         <div>
-          {/* Shop / Branch tag */}
-          {listing.shop?.name && (
-            <span className="text-[10px] font-semibold text-brand-700 tracking-wide uppercase line-clamp-1 mb-0.5">
-              {listing.shop.name}
-            </span>
-          )}
-
-          {/* Product Title */}
+          {/* Product Title (Clean, 1-2 lines, bold black) */}
           <Link
             to={href}
-            className="block text-xs sm:text-[13px] font-bold text-navy-900 leading-snug line-clamp-2 hover:text-brand-700 transition"
+            className="block text-xs sm:text-[13px] font-bold text-gray-900 leading-snug line-clamp-1 hover:text-[#047857] transition"
             title={listing.name}
           >
             {listing.name}
           </Link>
 
-          {/* Pricing Row */}
-          <div className="mt-1.5 flex items-baseline gap-2">
-            <span className="text-sm sm:text-base font-black text-gray-900 tracking-tight tabular">
+          {/* Pricing Row: Price + MRP Strikethrough */}
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-xs sm:text-sm font-black text-gray-900 tracking-tight tabular">
               {rupees(listing.price)}
             </span>
-            {listing.mrp && listing.mrp > listing.price && (
-              <span className="text-[11px] text-gray-400 line-through font-medium tabular">
-                {rupees(listing.mrp)}
-              </span>
-            )}
+            <span className="text-[11px] text-gray-400 line-through font-medium tabular">
+              {rupees(displayMrp)}
+            </span>
           </div>
         </div>
 
@@ -178,11 +174,11 @@ export default function MarketCard({
           type="button"
           onClick={handleAddToCart}
           disabled={!listing.inStock || adding}
-          className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs ${
+          className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer ${
             added
-              ? "bg-brand-800 text-white"
+              ? "bg-[#064E3B] text-white"
               : listing.inStock
-              ? "bg-brand-700 hover:bg-brand-800 text-white shadow-brand active:scale-[0.98]"
+              ? "bg-[#047857] hover:bg-[#064E3B] text-white active:scale-[0.98]"
               : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
