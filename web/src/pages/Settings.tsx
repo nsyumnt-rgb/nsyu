@@ -529,15 +529,12 @@ function SettingsInner() {
         {[
           { id: "general", label: "General", icon: "⚙️" },
           { id: "business", label: "Business", icon: "🏬" },
-          { id: "shop", label: "Shop", icon: "🏪" },
+          { id: "shop", label: "Shop & Banner", icon: "🏪" },
           { id: "invoice", label: "Invoice", icon: "📄" },
           { id: "tax", label: "Tax & GST", icon: "⚖️" },
           { id: "payment", label: "Payment", icon: "💳" },
           { id: "inventory", label: "Inventory", icon: "📦" },
-          { id: "users", label: "Users", icon: "👥" },
           { id: "notifications", label: "Notifications", icon: "🔔" },
-          { id: "backup", label: "Backup", icon: "🔒" },
-          { id: "integrations", label: "Integrations", icon: "🔗" },
           { id: "security", label: "Security", icon: "🛡️" },
         ].map((tab) => {
           const isActive = activeTab === tab.id;
@@ -565,6 +562,7 @@ function SettingsInner() {
       {activeTab === "general" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-6">
+            <ShopBannerCard />
             {/* Account Information Card */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
