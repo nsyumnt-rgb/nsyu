@@ -1555,7 +1555,7 @@ export default function Inventory({
               <tr>
                 <th className="p-3.5">Product</th>
                 {/* Requirement 4: Category column moved left immediately next to product */}
-                <th className="p-3.5">Category</th>
+                <th className="p-3.5 text-center">Category</th>
                 <th className="p-3.5">SKU</th>
                 {/* Requirement 2: Live status ON/OFF toggle switch column */}
                 <th className="p-3.5 text-center">Live</th>
@@ -1640,7 +1640,7 @@ export default function Inventory({
                       </td>
 
                       {/* Requirement 4: Category column on the LEFT */}
-                      <td className="p-3">
+                      <td className="p-3 text-center">
                         {isEditing ? (
                           <select
                             value={inlineDraft.categoryId || ""}
@@ -1655,16 +1655,16 @@ export default function Inventory({
                             <option value="">No Category</option>
                             {categories.map((c) => (
                               <option key={c.id} value={c.id}>
-                                {c.name}
+                                {getCategoryAlias(c.name, c.alias)} - {c.name}
                               </option>
                             ))}
                           </select>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-semibold text-[11px] border border-emerald-200/60 whitespace-nowrap">
-                            <span className="px-1.5 py-0.2 rounded bg-emerald-200/80 text-emerald-950 font-black text-[10px] tracking-wider border border-emerald-300 font-mono">
-                              {getCategoryAlias(p.category?.name, (p.category as any)?.alias)}
-                            </span>
-                            <span>{p.category?.name || "General"}</span>
+                          <span
+                            title={p.category?.name ? `Category: ${p.category.name}` : "General"}
+                            className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-950 font-black text-xs font-mono tracking-wider border border-emerald-300 whitespace-nowrap shadow-2xs"
+                          >
+                            {getCategoryAlias(p.category?.name, (p.category as any)?.alias)}
                           </span>
                         )}
                       </td>
