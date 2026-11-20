@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   getInventoryHistory,
   recordMovement,
@@ -1507,8 +1508,9 @@ export default function Inventory() {
       {/* ============================================================== */}
       {/* 5. VIEW PRODUCT DETAIL MODAL (Requirement 1)                    */}
       {/* ============================================================== */}
-      {viewProduct && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+      {viewProduct &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-start justify-between pb-3 border-b border-gray-100">
@@ -1850,7 +1852,8 @@ export default function Inventory() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ============================================================== */}
@@ -1858,9 +1861,10 @@ export default function Inventory() {
       {/* ============================================================== */}
 
       {/* Stock Movement / Adjustment Modal */}
-      {showAdjustModal && selectedProduct && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      {showAdjustModal && selectedProduct &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
               <div>
                 <h3 className="font-black text-gray-900 text-sm">
@@ -1993,12 +1997,14 @@ export default function Inventory() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Add Product Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      {showAddModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
               <h3 className="font-black text-gray-900 text-sm">
@@ -2124,12 +2130,14 @@ export default function Inventory() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Product Modal */}
-      {showEditModal && selectedProduct && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      {showEditModal && selectedProduct &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
               <h3 className="font-black text-gray-900 text-sm">
@@ -2211,12 +2219,14 @@ export default function Inventory() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Import CSV Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      {showImportModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-gray-100">
               <h3 className="font-black text-gray-900 text-sm">
@@ -2260,77 +2270,80 @@ export default function Inventory() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Delete Confirmation Modal */}
-      {productToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  <line x1="10" y1="11" x2="10" y2="17" />
-                  <line x1="14" y1="11" x2="14" y2="17" />
-                </svg>
+      {productToDelete &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-up">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">
+                    Delete / Deactivate Product
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Choose how you want to handle <strong className="text-gray-800">{productToDelete.name}</strong> ({productToDelete.sku}).
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900">
-                  Delete / Deactivate Product
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Choose how you want to handle <strong className="text-gray-800">{productToDelete.name}</strong> ({productToDelete.sku}).
-                </p>
+
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-1.5 text-gray-600">
+                <div className="flex justify-between">
+                  <span>Current Stock:</span>
+                  <span className="font-bold text-gray-900">{getProductStock(productToDelete)} units</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Selling Price:</span>
+                  <span className="font-bold text-emerald-700">{formatINR(productToDelete.selling_price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Current Status:</span>
+                  <span className="font-bold capitalize">{productToDelete.status}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  type="button"
+                  disabled={deletingProduct}
+                  onClick={() => handleConfirmDelete(true)}
+                  className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+                >
+                  <span>🗑️ Permanently Delete Product</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={deletingProduct}
+                  onClick={() => handleConfirmDelete(false)}
+                  className="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 border border-amber-200 disabled:opacity-50"
+                >
+                  <span>⏸️ Deactivate / Set Offline (Retain Ledger)</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={deletingProduct}
+                  onClick={() => setProductToDelete(null)}
+                  className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs transition"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
-
-            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-1.5 text-gray-600">
-              <div className="flex justify-between">
-                <span>Current Stock:</span>
-                <span className="font-bold text-gray-900">{getProductStock(productToDelete)} units</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Selling Price:</span>
-                <span className="font-bold text-emerald-700">{formatINR(productToDelete.selling_price)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Current Status:</span>
-                <span className="font-bold capitalize">{productToDelete.status}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              <button
-                type="button"
-                disabled={deletingProduct}
-                onClick={() => handleConfirmDelete(true)}
-                className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
-              >
-                <span>🗑️ Permanently Delete Product</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={deletingProduct}
-                onClick={() => handleConfirmDelete(false)}
-                className="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 border border-amber-200 disabled:opacity-50"
-              >
-                <span>⏸️ Deactivate / Set Offline (Retain Ledger)</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={deletingProduct}
-                onClick={() => setProductToDelete(null)}
-                className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
