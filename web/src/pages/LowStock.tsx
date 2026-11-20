@@ -56,11 +56,11 @@ export default function LowStock() {
           </p>
         </div>
         <Link
-          to="/app/b2b-market"
+          to="/app/purchase"
           className="px-4 py-2 rounded-xl bg-[#047857] hover:bg-[#064E3B] text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
         >
-          <span>🏭</span>
-          <span>Order B2B Wholesale</span>
+          <span>📦</span>
+          <span>Create Purchase</span>
         </Link>
       </div>
 

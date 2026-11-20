@@ -570,10 +570,10 @@ export default function MobileAppView() {
                         💵 Daily Expenses & Cash Book
                       </Link>
                       <Link
-                        to="/app/b2b-market"
+                        to="/app/purchase"
                         className="block p-2.5 bg-white rounded-xl border border-gray-200 font-bold text-xs text-gray-800 hover:border-emerald-500 shadow-2xs"
                       >
-                        🏭 B2B Wholesale Ordering
+                        📦 Purchases & Stock Inward
                       </Link>
                       <button
                         type="button"

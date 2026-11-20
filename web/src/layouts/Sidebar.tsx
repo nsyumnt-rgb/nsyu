@@ -5,7 +5,7 @@ import { usePermission } from "../hooks/usePermission";
 import { useAuthStore } from "../store/authStore";
 import type { ModuleName } from "../types";
 
-export type NavGroup = "DASHBOARD" | "CATALOG" | "SALES & KHATA" | "B2B WHOLESALE" | "SETTINGS";
+export type NavGroup = "DASHBOARD" | "CATALOG" | "SALES & KHATA" | "PURCHASES" | "SETTINGS";
 
 export interface NavItem {
   to: string;
@@ -56,12 +56,9 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/app/khata", label: "Udhaar / Khata", module: "ledger", group: "SALES & KHATA", icon: ico("M3 7h16a2 2 0 0 1 2 2v10H5a2 2 0 0 1-2-2zM3 7l2-3h12M16 13h2") },
   { to: "/app/expenses", label: "Expenses & cash book", module: "billing", group: "SALES & KHATA", icon: ico("M4 2h16v20l-3-2-3 2-3-2-3 2-4-2z", "M8 7h8", "M8 11h8", "M8 15h5") },
 
-  // Buying & B2B
-  { to: "/app/b2b-market", label: "B2B marketplace", module: "purchase", group: "B2B WHOLESALE", icon: ico("M3 21V9l6 4V9l6 4V5h4v16z") },
-  { to: "/app/b2b-po", label: "Purchase orders", module: "purchase", group: "B2B WHOLESALE", icon: ico("M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01") },
-  { to: "/app/b2b-ledger", label: "Payables & receivables", module: "purchase", group: "B2B WHOLESALE", icon: ico("M4 8h14l-3-3M20 16H6l3 3") },
-  { to: "/app/purchase", label: "Purchases", module: "purchase", group: "B2B WHOLESALE", icon: ico("M1 3h15v13H1z", "M16 8h4l3 3v5h-7z", "M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
-  { to: "/app/suppliers", label: "Suppliers", module: "suppliers", group: "B2B WHOLESALE", icon: ico("M3 21h18", "M5 21V7l7-4 7 4v14", "M9 21v-6h6v6") },
+  // Purchases & Suppliers
+  { to: "/app/purchase", label: "Purchases", module: "purchase", group: "PURCHASES", icon: ico("M1 3h15v13H1z", "M16 8h4l3 3v5h-7z", "M5.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M18.5 21a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
+  { to: "/app/suppliers", label: "Suppliers", module: "suppliers", group: "PURCHASES", icon: ico("M3 21h18", "M5 21V7l7-4 7 4v14", "M9 21v-6h6v6") },
 
   // Business Settings
   { to: "/app/reports", label: "Reports", module: "reports", group: "SETTINGS", icon: ico("M3 3v18h18", "M7 15l4-4 3 3 5-6") },
@@ -70,7 +67,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/app/roles", label: "Roles & permissions", module: "role_permissions", group: "SETTINGS", icon: ico("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z") },
 ];
 
-const GROUPS: NavGroup[] = ["DASHBOARD", "CATALOG", "SALES & KHATA", "B2B WHOLESALE", "SETTINGS"];
+const GROUPS: NavGroup[] = ["DASHBOARD", "CATALOG", "SALES & KHATA", "PURCHASES", "SETTINGS"];
 
 const STORAGE_KEY = "nsyu_sidebar_collapsed_groups";
 

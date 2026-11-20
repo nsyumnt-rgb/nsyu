@@ -413,7 +413,7 @@ export default function MarketLayout() {
             <b className="text-white text-sm block mb-2">Sell</b>
             <div className="space-y-1.5 text-emerald-200/80 font-medium">
               <div><Link to="/register" className="hover:text-white">Register a shop</Link></div>
-              <div><Link to="/app/b2b-market" className="hover:text-white">B2B wholesale</Link></div>
+              <div><Link to="/app/inventory" className="hover:text-white">Inventory management</Link></div>
               <div><Link to="/app/billing" className="hover:text-white">POS counter sales</Link></div>
             </div>
           </div>

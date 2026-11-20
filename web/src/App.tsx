@@ -46,9 +46,6 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Khata = lazy(() => import("./pages/Khata"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const LowStock = lazy(() => import("./pages/LowStock"));
-const B2BMarketplace = lazy(() => import("./pages/B2BMarketplace"));
-const B2BPurchaseOrders = lazy(() => import("./pages/B2BPurchaseOrders"));
-const B2BLedger = lazy(() => import("./pages/B2BLedger"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Detail Pages
@@ -171,9 +168,6 @@ export default function App() {
               <Route path="khata" element={<Khata />} />
               <Route path="expenses" element={<Expenses />} />
               <Route path="low-stock" element={<LowStock />} />
-              <Route path="b2b-market" element={<B2BMarketplace />} />
-              <Route path="b2b-po" element={<B2BPurchaseOrders />} />
-              <Route path="b2b-ledger" element={<B2BLedger />} />
               <Route path="suppliers" element={<Suppliers />} />
               <Route path="suppliers/:id" element={<SupplierDetail />} />
               <Route path="payments" element={<Navigate to="/app/ledger" replace />} />
