@@ -80,6 +80,8 @@ Notification.init(
     sequelize,
     modelName: "Notification",
     tableName: "notifications",
+    underscored: true,
+    createdAt: "created_at",
     updatedAt: false,
     indexes: [
       { fields: ["owner_id", "recipient_type", "recipient_id"] },

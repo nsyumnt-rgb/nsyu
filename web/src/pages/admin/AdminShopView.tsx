@@ -60,17 +60,17 @@ export default function AdminShopView() {
   return (
     <div className="space-y-6">
       {/* Read-Only Governance Banner */}
-      <div className="p-4 bg-amber-950/40 border border-amber-800/80 rounded-xl flex items-start space-x-3 text-amber-200">
-        <div className="w-5 h-5 mt-0.5 text-amber-400 shrink-0">
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start space-x-3 text-amber-900 shadow-xs">
+        <div className="w-5 h-5 mt-0.5 text-amber-600 shrink-0">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
         <div>
-          <h4 className="font-bold text-xs uppercase tracking-wider text-amber-300">
+          <h4 className="font-bold text-xs uppercase tracking-wider text-amber-800">
             Support Viewer Mode — Read-Only Access
           </h4>
-          <p className="text-xs text-amber-200/90 mt-0.5">
+          <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
             Super Admin has strictly read-only inspection access to shop operational data. Creating, editing, or cancelling bills, orders, inventory stock, or customer payments is restricted to preserve business audit integrity.
           </p>
         </div>
@@ -79,16 +79,21 @@ export default function AdminShopView() {
       {/* Header & Shop Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Shop Support Viewer</h1>
-          <p className="text-sm text-slate-400">Inspect business records for customer support and system diagnosis</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Diagnostic Console
+            </span>
+          </div>
+          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Shop Support Viewer</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Inspect business records for customer support and system diagnosis</p>
         </div>
 
         <div className="flex items-center space-x-3">
-          <span className="text-xs text-slate-400">Target Shop:</span>
+          <span className="text-xs font-bold text-slate-500">Target Shop:</span>
           <select
             value={selectedShopId || ""}
             onChange={(e) => setSelectedShopId(Number(e.target.value))}
-            className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
+            className="input h-10 text-xs font-semibold bg-white"
           >
             {shops.map((s) => (
               <option key={s.id} value={s.id}>
@@ -99,10 +104,10 @@ export default function AdminShopView() {
           {selectedShopId && (
             <button
               onClick={() => loadShopData(selectedShopId)}
-              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition"
+              className="btn-secondary btn-sm p-2.5"
               title="Refresh shop data"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
@@ -111,40 +116,40 @@ export default function AdminShopView() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-950/40 border border-red-800 rounded-xl text-red-200 text-xs">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-medium">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="py-16 text-center text-slate-500">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+        <div className="py-16 text-center text-slate-400">
+          <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
           Loading shop data...
         </div>
       ) : supportData ? (
         <div className="space-y-6">
           {/* Shop Profile & Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl">
-              <span className="text-[11px] text-slate-400 block uppercase font-medium">Total Bills</span>
-              <span className="text-2xl font-bold text-white">{supportData.stats.billsCount}</span>
+            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+              <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Total Bills</span>
+              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.billsCount}</span>
             </div>
-            <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl">
-              <span className="text-[11px] text-slate-400 block uppercase font-medium">Total Orders</span>
-              <span className="text-2xl font-bold text-white">{supportData.stats.ordersCount}</span>
+            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+              <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Total Orders</span>
+              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.ordersCount}</span>
             </div>
-            <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl">
-              <span className="text-[11px] text-slate-400 block uppercase font-medium">Stock Lines</span>
-              <span className="text-2xl font-bold text-white">{supportData.stats.productsCount}</span>
+            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+              <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Stock Lines</span>
+              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.productsCount}</span>
             </div>
-            <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl">
-              <span className="text-[11px] text-slate-400 block uppercase font-medium">Customers</span>
-              <span className="text-2xl font-bold text-white">{supportData.stats.customersCount}</span>
+            <div className="p-4 bg-white border border-[#EAE7DD] rounded-2xl shadow-xs">
+              <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Customers</span>
+              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.customersCount}</span>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-slate-800 text-xs font-semibold">
+          <div className="flex border-b border-slate-200 text-xs font-bold gap-2">
             {[
               { key: "bills", label: `Bills (${supportData.recentBills.length})` },
               { key: "orders", label: `Orders (${supportData.recentOrders.length})` },
@@ -154,10 +159,10 @@ export default function AdminShopView() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`py-2.5 px-4 border-b-2 transition ${
+                className={`py-2.5 px-4 border-b-2 font-bold transition ${
                   activeTab === tab.key
-                    ? "border-purple-500 text-white"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
+                    ? "border-emerald-700 text-emerald-800"
+                    : "border-transparent text-slate-500 hover:text-navy-900"
                 }`}
               >
                 {tab.label}
@@ -167,10 +172,10 @@ export default function AdminShopView() {
 
           {/* TAB 1: BILLS */}
           {activeTab === "bills" && (
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Invoice #</th>
                       <th className="py-3 px-4">Date</th>
@@ -181,32 +186,32 @@ export default function AdminShopView() {
                       <th className="py-3 px-4">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {supportData.recentBills.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-500">
+                        <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
                           No bills recorded for this shop.
                         </td>
                       </tr>
                     ) : (
                       supportData.recentBills.map((b: any) => (
-                        <tr key={b.id} className="hover:bg-slate-900/40">
-                          <td className="py-3 px-4 font-mono font-medium text-white">{b.invoice_number}</td>
-                          <td className="py-3 px-4 text-slate-400">
+                        <tr key={b.id} className="hover:bg-slate-50/70 transition">
+                          <td className="py-3.5 px-4 font-mono font-bold text-brand-700">{b.invoice_number}</td>
+                          <td className="py-3.5 px-4 text-slate-500">
                             {b.invoice_date ? new Date(b.invoice_date).toLocaleDateString() : "-"}
                           </td>
-                          <td className="py-3 px-4 font-semibold text-white">₹{Number(b.total_amount).toFixed(2)}</td>
-                          <td className="py-3 px-4 text-emerald-400">₹{Number(b.paid_amount || 0).toFixed(2)}</td>
-                          <td className="py-3 px-4 text-amber-400">₹{Number(b.due_amount || 0).toFixed(2)}</td>
-                          <td className="py-3 px-4 capitalize text-slate-400">{b.payment_method}</td>
-                          <td className="py-3 px-4">
+                          <td className="py-3.5 px-4 font-bold text-navy-900 tabular">₹{Number(b.total_amount).toFixed(2)}</td>
+                          <td className="py-3.5 px-4 text-emerald-700 font-bold tabular">₹{Number(b.paid_amount || 0).toFixed(2)}</td>
+                          <td className="py-3.5 px-4 text-amber-700 font-bold tabular">₹{Number(b.due_amount || 0).toFixed(2)}</td>
+                          <td className="py-3.5 px-4 capitalize text-slate-600 font-medium">{b.payment_method}</td>
+                          <td className="py-3.5 px-4">
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                              className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${
                                 b.status === "paid"
-                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                                   : b.status === "cancelled"
-                                  ? "bg-rose-950 text-rose-300 border border-rose-800"
-                                  : "bg-amber-950 text-amber-300 border border-amber-800"
+                                  ? "bg-rose-50 text-rose-800 border border-rose-200"
+                                  : "bg-amber-50 text-amber-800 border border-amber-200"
                               }`}
                             >
                               {b.status}
@@ -223,10 +228,10 @@ export default function AdminShopView() {
 
           {/* TAB 2: ORDERS */}
           {activeTab === "orders" && (
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Order #</th>
                       <th className="py-3 px-4">Order Date</th>
@@ -235,26 +240,26 @@ export default function AdminShopView() {
                       <th className="py-3 px-4">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {supportData.recentOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-slate-500">
+                        <td colSpan={5} className="py-8 text-center text-slate-400 font-medium">
                           No orders recorded for this shop.
                         </td>
                       </tr>
                     ) : (
                       supportData.recentOrders.map((o: any) => (
-                        <tr key={o.id} className="hover:bg-slate-900/40">
-                          <td className="py-3 px-4 font-mono font-medium text-white">{o.order_number}</td>
-                          <td className="py-3 px-4 text-slate-400">
+                        <tr key={o.id} className="hover:bg-slate-50/70 transition">
+                          <td className="py-3.5 px-4 font-mono font-bold text-brand-700">{o.order_number}</td>
+                          <td className="py-3.5 px-4 text-slate-500">
                             {o.order_date ? new Date(o.order_date).toLocaleDateString() : "-"}
                           </td>
-                          <td className="py-3 px-4 font-semibold text-white">₹{Number(o.total_amount).toFixed(2)}</td>
-                          <td className="py-3 px-4 font-mono text-slate-400">
+                          <td className="py-3.5 px-4 font-bold text-navy-900 tabular">₹{Number(o.total_amount).toFixed(2)}</td>
+                          <td className="py-3.5 px-4 font-mono text-slate-500">
                             {o.billed_bill_id ? `#Bill ${o.billed_bill_id}` : "-"}
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-slate-800 text-slate-300 border border-slate-700">
+                          <td className="py-3.5 px-4">
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
                               {o.status}
                             </span>
                           </td>
@@ -269,10 +274,10 @@ export default function AdminShopView() {
 
           {/* TAB 3: INVENTORY */}
           {activeTab === "inventory" && (
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Product Name</th>
                       <th className="py-3 px-4">SKU</th>
@@ -280,32 +285,32 @@ export default function AdminShopView() {
                       <th className="py-3 px-4">Selling Price</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {supportData.inventorySummary.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-8 text-center text-slate-500">
+                        <td colSpan={4} className="py-8 text-center text-slate-400 font-medium">
                           No stock records found.
                         </td>
                       </tr>
                     ) : (
                       supportData.inventorySummary.map((st: any) => (
-                        <tr key={st.id} className="hover:bg-slate-900/40">
-                          <td className="py-3 px-4 font-medium text-white">{st.product?.name || `Product #${st.product_id}`}</td>
-                          <td className="py-3 px-4 font-mono text-slate-400">{st.product?.sku || "-"}</td>
-                          <td className="py-3 px-4">
+                        <tr key={st.id} className="hover:bg-slate-50/70 transition">
+                          <td className="py-3.5 px-4 font-bold text-navy-900">{st.product?.name || `Product #${st.product_id}`}</td>
+                          <td className="py-3.5 px-4 font-mono text-slate-500">{st.product?.sku || "-"}</td>
+                          <td className="py-3.5 px-4">
                             <span
-                              className={`font-semibold ${
+                              className={`font-bold tabular ${
                                 Number(st.current_stock) < 0
-                                  ? "text-rose-400 font-mono"
+                                  ? "text-rose-600 font-mono"
                                   : Number(st.current_stock) === 0
-                                  ? "text-slate-500"
-                                  : "text-emerald-400"
+                                  ? "text-slate-400"
+                                  : "text-emerald-700"
                               }`}
                             >
                               {st.current_stock}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-slate-300">₹{Number(st.product?.selling_price || 0).toFixed(2)}</td>
+                          <td className="py-3.5 px-4 text-navy-900 font-bold tabular">₹{Number(st.product?.selling_price || 0).toFixed(2)}</td>
                         </tr>
                       ))
                     )}
@@ -317,10 +322,10 @@ export default function AdminShopView() {
 
           {/* TAB 4: CUSTOMERS */}
           {activeTab === "customers" && (
-            <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
                     <tr>
                       <th className="py-3 px-4">Customer Name</th>
                       <th className="py-3 px-4">Phone</th>
@@ -328,20 +333,20 @@ export default function AdminShopView() {
                       <th className="py-3 px-4">Outstanding Balance</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-300">
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
                     {supportData.customersList.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-8 text-center text-slate-500">
+                        <td colSpan={4} className="py-8 text-center text-slate-400 font-medium">
                           No customer records found.
                         </td>
                       </tr>
                     ) : (
                       supportData.customersList.map((c: any) => (
-                        <tr key={c.id} className="hover:bg-slate-900/40">
-                          <td className="py-3 px-4 font-semibold text-white">{c.name}</td>
-                          <td className="py-3 px-4 font-mono text-slate-400">{c.phone || "-"}</td>
-                          <td className="py-3 px-4 text-slate-400">{c.email || "-"}</td>
-                          <td className="py-3 px-4 font-semibold text-amber-400">
+                        <tr key={c.id} className="hover:bg-slate-50/70 transition">
+                          <td className="py-3.5 px-4 font-bold text-navy-900">{c.name}</td>
+                          <td className="py-3.5 px-4 font-mono text-slate-500">{c.phone || "-"}</td>
+                          <td className="py-3.5 px-4 text-slate-500">{c.email || "-"}</td>
+                          <td className="py-3.5 px-4 font-bold text-amber-700 tabular">
                             ₹{Number(c.current_balance || 0).toFixed(2)}
                           </td>
                         </tr>

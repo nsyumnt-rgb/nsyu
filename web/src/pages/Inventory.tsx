@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getInventoryHistory,
   recordMovement,
@@ -39,6 +40,7 @@ interface InlineEditDraft {
 }
 
 export default function Inventory() {
+  const navigate = useNavigate();
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
 
@@ -62,6 +64,8 @@ export default function Inventory() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState(false);
 
   // 1. View Detail Modal state (Requirement 1)
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
@@ -504,14 +508,31 @@ export default function Inventory() {
   }
 
   // Delete Product
-  async function handleDeleteProduct(p: Product) {
-    if (!confirm(`Are you sure you want to deactivate "${p.name}"?`)) return;
+  function handleDeleteProduct(p: Product) {
+    setProductToDelete(p);
+  }
+
+  async function handleConfirmDelete(permanent: boolean) {
+    if (!productToDelete) return;
+    const target = productToDelete;
+    setDeletingProduct(true);
     try {
-      await deleteProduct(p.id);
-      setToastMsg(`✓ Product "${p.name}" deactivated`);
-      loadData();
+      const res = await deleteProduct(target.id, permanent);
+      const action = res.data?.data?.action || (permanent ? "deleted" : "deactivated");
+      if (action === "deleted") {
+        setProducts((prev) => prev.filter((p) => p.id !== target.id));
+        setToastMsg(`✓ Product "${target.name}" permanently deleted`);
+      } else {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === target.id ? { ...p, status: "inactive" } : p))
+        );
+        setToastMsg(`✓ Product "${target.name}" marked as inactive`);
+      }
+      setProductToDelete(null);
     } catch (err: any) {
       alert(apiErrorMessage(err, "Failed to delete product"));
+    } finally {
+      setDeletingProduct(false);
     }
   }
 
@@ -1457,16 +1478,13 @@ export default function Inventory() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
-                            {/* Requirement 1: View Icon (Eye) - Shows All Detail with Image */}
+                            {/* Requirement 1: View Icon (Eye) - Opens Full Product Page */}
                             <button
                               type="button"
-                              onClick={() => {
-                                setViewProduct(p);
-                                setActiveDetailImage(coverImg || null);
-                              }}
+                              onClick={() => navigate(`/app/products/${p.id}`)}
                               className="w-8 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
-                              title="View Product Details with Image"
-                              aria-label="View Product Details"
+                              title="Open Product Page"
+                              aria-label="Open Product Page"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -1935,6 +1953,18 @@ export default function Inventory() {
                 >
                   Full Edit
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (viewProduct) {
+                      navigate(`/app/products/${viewProduct.id}`);
+                    }
+                  }}
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition flex items-center gap-1 shadow-xs"
+                >
+                  <span>Open Product Page</span>
+                  <span>→</span>
+                </button>
               </div>
               <button
                 type="button"
@@ -2352,6 +2382,75 @@ export default function Inventory() {
                 className="px-4 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {productToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">
+                  Delete / Deactivate Product
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Choose how you want to handle <strong className="text-gray-800">{productToDelete.name}</strong> ({productToDelete.sku}).
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-1.5 text-gray-600">
+              <div className="flex justify-between">
+                <span>Current Stock:</span>
+                <span className="font-bold text-gray-900">{getProductStock(productToDelete)} units</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Selling Price:</span>
+                <span className="font-bold text-emerald-700">{formatINR(productToDelete.selling_price)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Current Status:</span>
+                <span className="font-bold capitalize">{productToDelete.status}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                type="button"
+                disabled={deletingProduct}
+                onClick={() => handleConfirmDelete(true)}
+                className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-xs disabled:opacity-50"
+              >
+                <span>🗑️ Permanently Delete Product</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={deletingProduct}
+                onClick={() => handleConfirmDelete(false)}
+                className="w-full py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 border border-amber-200 disabled:opacity-50"
+              >
+                <span>⏸️ Deactivate / Set Offline (Retain Ledger)</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={deletingProduct}
+                onClick={() => setProductToDelete(null)}
+                className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs transition"
+              >
+                Cancel
               </button>
             </div>
           </div>

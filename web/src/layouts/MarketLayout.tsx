@@ -78,22 +78,22 @@ export default function MarketLayout() {
       {/* ============================================================== */}
       {/* 1. TOP NOTICE / ANNOUNCEMENT BAR (Emerald Green)                */}
       {/* ============================================================== */}
-      <div className="bg-navy-900 text-white text-[11px] sm:text-xs font-semibold py-2 px-4 shadow-xs">
+      <div className="bg-[#064E3B] text-white text-[11px] sm:text-xs font-semibold py-2 px-4 shadow-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-4 text-center sm:text-left">
           {/* Free Shipping */}
-          <div className="flex items-center gap-1.5 text-slate-200">
+          <div className="flex items-center gap-1.5 text-emerald-100">
             <span>🚚</span>
             <span>Free Shipping on Orders Above ₹1,000</span>
           </div>
           {/* Best Quality */}
           <div className="hidden md:flex items-center gap-1.5 text-emerald-200">
             <span>⭐</span>
-            <span>Verified Neighborhood Stores</span>
+            <span>Best Quality Products</span>
           </div>
           {/* Customer Support */}
-          <div className="flex items-center gap-1.5 text-slate-200">
+          <div className="flex items-center gap-1.5 text-emerald-100">
             <span>🎧</span>
-            <span>Support Hotline: 90459 17913</span>
+            <span>Customer Support Hotline: +91 90459 17913</span>
           </div>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function MarketLayout() {
               <button
                 type="submit"
                 aria-label="Search"
-                className="absolute right-1 top-1 h-9 w-9 rounded-lg bg-navy-900 hover:bg-brand-800 text-white flex items-center justify-center transition shadow-xs"
+                className="absolute right-1 top-1 h-9 w-9 rounded-lg bg-[#047857] hover:bg-[#064E3B] text-white flex items-center justify-center transition shadow-xs"
               >
                 <svg
                   className="w-4 h-4"

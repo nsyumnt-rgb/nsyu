@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { listProducts, createProduct, importProductsApi } from "../api/products";
-import { listCategories, createCategory, setCategoryStatus } from "../api/categories";
+import { listCategories, createCategory } from "../api/categories";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { usePosStore } from "../store/posStore";
@@ -88,7 +88,6 @@ export default function Catalog() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showScanModal, setShowScanModal] = useState(false);
   const [mobileCategoryOpen, setMobileCategoryOpen] = useState(false);
-  const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [barcodeInput, setBarcodeInput] = useState("");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -171,13 +170,6 @@ export default function Catalog() {
     });
     return map;
   }, [products]);
-
-  // Filter Categories in Sidebar if search query exists
-  const visibleCategories = useMemo(() => {
-    if (!categorySearchQuery.trim()) return categories;
-    const q = categorySearchQuery.toLowerCase();
-    return categories.filter((c) => c.name.toLowerCase().includes(q));
-  }, [categories, categorySearchQuery]);
 
   // Filtered & Sorted Products
   const filteredProducts = useMemo(() => {
@@ -299,24 +291,6 @@ export default function Catalog() {
     }
   }
 
-  // Toggle Category Live / Offline status
-  async function handleToggleCategoryStatus(c: Category, e: React.MouseEvent) {
-    e.stopPropagation();
-    const nextStatus = c.status === "active" ? "inactive" : "active";
-    setCategories((prev) =>
-      prev.map((item) => (item.id === c.id ? { ...item, status: nextStatus } : item))
-    );
-    try {
-      await setCategoryStatus(c.id, nextStatus);
-      setToastMsg(`✓ Category "${c.name}" is now ${nextStatus === "active" ? "Live" : "Offline"}`);
-    } catch (err: any) {
-      setCategories((prev) =>
-        prev.map((item) => (item.id === c.id ? { ...item, status: c.status } : item))
-      );
-      alert(apiErrorMessage(err, "Failed to update category status"));
-    }
-  }
-
   // Quick Add Product Form Submit
   async function handleCreateProduct(e: React.FormEvent) {
     e.preventDefault();
@@ -404,31 +378,16 @@ export default function Catalog() {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-1 font-medium">
-            Browse products, filter by category on the left, search by name or barcode, and add to cart.
+            Browse & quickly order items for store inventory / POS
           </p>
         </div>
 
         {/* Action Buttons: Scan Barcode, Import, + Add Product */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Mobile Category Sidebar Trigger Button */}
-          <button
-            type="button"
-            onClick={() => setMobileCategoryOpen(true)}
-            className="lg:hidden px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold rounded-xl text-xs hover:bg-emerald-100 transition shadow-xs flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-            </svg>
-            <span>Categories ({selectedCategory})</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setShowScanModal(true)}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
@@ -440,7 +399,7 @@ export default function Catalog() {
           <button
             type="button"
             onClick={() => setShowImportModal(true)}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -453,7 +412,7 @@ export default function Catalog() {
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-[#047857] hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#047857] hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 cursor-pointer"
           >
             <span className="text-sm font-black">+</span>
             <span>Add Product</span>
@@ -461,287 +420,141 @@ export default function Catalog() {
         </div>
       </div>
 
-      {/* Mobile Horizontal Quick Category Pills Bar */}
-      <div className="lg:hidden flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      {/* ============================================================== */}
+      {/* 2. HORIZONTAL CATEGORY CAROUSEL CARDS ACROSS TOP (Wireframe)   */}
+      {/* ============================================================== */}
+      <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
+        {/* All Products Card */}
         <button
           type="button"
-          onClick={() => { setSelectedCategory("All"); setCurrentPage(1); }}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 shadow-2xs ${
+          onClick={() => {
+            setSelectedCategory("All");
+            setCurrentPage(1);
+          }}
+          className={`px-4 py-2.5 rounded-2xl flex items-center gap-3 transition shadow-xs shrink-0 cursor-pointer ${
             selectedCategory === "All"
-              ? "bg-[#064E3B] text-white shadow-xs"
-              : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+              ? "bg-emerald-50/70 border-2 border-emerald-600 text-emerald-950 font-black ring-1 ring-emerald-500/20"
+              : "bg-white border border-gray-200/90 text-gray-700 hover:bg-emerald-50/40 hover:border-emerald-300 font-bold"
           }`}
         >
-          <span>All Products</span>
-          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${selectedCategory === "All" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-600"}`}>
-            {products.length}
-          </span>
+          <div
+            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+              selectedCategory === "All" ? "bg-emerald-600 text-white" : "bg-emerald-100 text-emerald-800"
+            }`}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+          </div>
+          <div className="text-left">
+            <span className="text-xs block font-bold">All Products</span>
+            <span
+              className={`text-[10.5px] block font-mono ${
+                selectedCategory === "All" ? "text-emerald-700 font-semibold" : "text-gray-400"
+              }`}
+            >
+              ({products.length})
+            </span>
+          </div>
         </button>
+
+        {/* Dynamic Category Cards */}
         {categories.map((c) => {
           const count = categoryCounts[c.name] || 0;
           const isSelected = selectedCategory.toLowerCase() === c.name.toLowerCase();
+          const catImage = categoryImageMap[c.name];
+
           return (
             <button
               key={c.id}
               type="button"
-              onClick={() => { setSelectedCategory(c.name); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition flex items-center gap-1.5 shadow-2xs ${
+              onClick={() => {
+                setSelectedCategory(c.name);
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2.5 rounded-2xl flex items-center gap-3 transition shadow-xs shrink-0 cursor-pointer ${
                 isSelected
-                  ? "bg-[#064E3B] text-white shadow-xs"
-                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                  ? "bg-emerald-50/70 border-2 border-emerald-600 text-emerald-950 font-black ring-1 ring-emerald-500/20"
+                  : "bg-white border border-gray-200/90 text-gray-700 hover:bg-emerald-50/40 hover:border-emerald-300 font-bold"
               }`}
             >
-              <span>{c.name}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-600"}`}>
-                {count}
-              </span>
+              <div
+                className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 overflow-hidden ${
+                  isSelected ? "bg-emerald-600 text-white" : "bg-emerald-100 text-emerald-800"
+                }`}
+              >
+                {catImage ? (
+                  <img src={resolveAssetUrl(catImage) || ""} alt="" className="w-full h-full object-contain p-0.5" />
+                ) : (
+                  <CategoryIcon name={c.name} />
+                )}
+              </div>
+              <div className="text-left">
+                <span className="text-xs block font-bold">{c.name}</span>
+                <span
+                  className={`text-[10.5px] block font-mono ${
+                    isSelected ? "text-emerald-700 font-semibold" : "text-gray-400"
+                  }`}
+                >
+                  ({count})
+                </span>
+              </div>
             </button>
           );
         })}
+
+        {/* Add Category Button in Carousel */}
+        <button
+          type="button"
+          onClick={() => setShowAddCategoryModal(true)}
+          className="px-3.5 py-2.5 rounded-2xl border border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/50 text-emerald-800 font-bold text-xs flex items-center gap-2 shrink-0 transition cursor-pointer"
+          title="Create a new category live"
+        >
+          <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-xs">
+            +
+          </span>
+          <span>Add Category</span>
+        </button>
       </div>
 
       {/* ============================================================== */}
-      {/* 2. MAIN WORKSPACE: LEFT CATEGORY SIDEBAR + RIGHT PRODUCT GRID   */}
+      {/* 3. MAIN WORKSPACE: FULL-WIDTH PRODUCT CATALOG                   */}
       {/* ============================================================== */}
-      <div className="flex items-start gap-6 lg:gap-8">
+      <div className="space-y-4">
         
-        {/* ============================================================== */}
-        {/* LEFT CATEGORY SIDEBAR (Permanent on Desktop)                   */}
-        {/* ============================================================== */}
-        <aside className="hidden lg:block w-64 xl:w-72 shrink-0">
-          <div className="bg-white rounded-3xl border border-gray-200/90 shadow-sm p-4 sticky top-20 max-h-[calc(100vh-6.5rem)] flex flex-col justify-between">
-            <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
-              
-              {/* Sidebar Header with Live "+ Add Category" button */}
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-100/80 text-emerald-800 flex items-center justify-center font-bold">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="3" y="3" width="7" height="7" />
-                      <rect x="14" y="3" width="7" height="7" />
-                      <rect x="14" y="14" width="7" height="7" />
-                      <rect x="3" y="14" width="7" height="7" />
-                    </svg>
-                  </div>
-                  <h2 className="font-black text-gray-900 text-sm tracking-tight">Categories</h2>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddCategoryModal(true)}
-                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-[#047857] text-[11px] font-bold rounded-lg border border-emerald-200 transition flex items-center gap-1 shadow-2xs"
-                    title="Add a new product category live"
-                  >
-                    <span className="text-xs font-black">+</span>
-                    <span>Add</span>
-                  </button>
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                    {categories.length}
-                  </span>
-                </div>
-              </div>
-
-              {/* Quick Category Filter Input (if many categories) */}
-              {categories.length > 6 && (
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={categorySearchQuery}
-                    onChange={(e) => setCategorySearchQuery(e.target.value)}
-                    placeholder="Filter categories..."
-                    className="w-full pl-7 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-1 focus:ring-emerald-500 outline-none transition"
-                  />
-                  <svg className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                </div>
-              )}
-
-              {/* Categories Scrollable List */}
-              <div className="space-y-1.5 overflow-y-auto pr-1 flex-1 max-h-[calc(100vh-16rem)]">
-                {/* 1. All Products Item */}
-                <div
-                  onClick={() => {
-                    setSelectedCategory("All");
-                    setCurrentPage(1);
-                  }}
-                  className={`w-full p-2 rounded-2xl flex items-center justify-between cursor-pointer transition-all ${
-                    selectedCategory === "All"
-                      ? "bg-[#064E3B] text-white shadow-md ring-1 ring-emerald-600"
-                      : "bg-slate-50/70 hover:bg-emerald-50/60 text-gray-700 hover:text-emerald-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition ${
-                        selectedCategory === "All"
-                          ? "bg-emerald-700/80 text-white"
-                          : "bg-emerald-100/70 text-emerald-800"
-                      }`}
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-                        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-xs block truncate">All Products</span>
-                      <span className={`text-[10px] block ${selectedCategory === "All" ? "text-emerald-200" : "text-gray-400"}`}>
-                        Full inventory catalog
-                      </span>
-                    </div>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
-                      selectedCategory === "All"
-                        ? "bg-emerald-600 text-white"
-                        : "bg-white text-gray-600 border border-gray-200"
-                    }`}
-                  >
-                    {products.length}
-                  </span>
-                </div>
-
-                {/* 2. Dynamic Categories */}
-                {visibleCategories.map((c) => {
-                  const count = categoryCounts[c.name] || 0;
-                  const isSelected = selectedCategory.toLowerCase() === c.name.toLowerCase();
-                  const catImage = categoryImageMap[c.name];
-
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => {
-                        setSelectedCategory(c.name);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full p-2 rounded-2xl flex items-center justify-between cursor-pointer transition-all ${
-                        isSelected
-                          ? "bg-[#064E3B] text-white shadow-md ring-1 ring-emerald-600"
-                          : "bg-slate-50/70 hover:bg-emerald-50/60 text-gray-700 hover:text-emerald-900"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {/* Category Thumbnail from DB or Fallback Icon */}
-                        <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border ${
-                            isSelected
-                              ? "bg-emerald-700/80 border-emerald-500 text-white"
-                              : "bg-white border-gray-200 text-emerald-700"
-                          }`}
-                        >
-                          {catImage ? (
-                            <img
-                              src={resolveAssetUrl(catImage) || ""}
-                              alt={c.name}
-                              className="w-full h-full object-contain p-0.5"
-                            />
-                          ) : (
-                            <CategoryIcon name={c.name} />
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <span className="font-bold text-xs block truncate">{c.name}</span>
-                          <span className={`text-[10px] block ${isSelected ? "text-emerald-200" : "text-gray-400"}`}>
-                            {count} {count === 1 ? "product" : "products"}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Live Status indicator button */}
-                        <button
-                          type="button"
-                          onClick={(e) => handleToggleCategoryStatus(c, e)}
-                          title={c.status === "active" ? "Category is Live — click to set offline" : "Category is Offline — click to set Live"}
-                          className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider transition ${
-                            c.status === "active"
-                              ? isSelected ? "bg-emerald-600 text-white" : "bg-emerald-100 text-emerald-800"
-                              : isSelected ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
-                          }`}
-                        >
-                          {c.status === "active" ? "Live" : "Off"}
-                        </button>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[11px] font-black shrink-0 ${
-                            isSelected
-                              ? "bg-emerald-600 text-white"
-                              : "bg-white text-gray-600 border border-gray-200"
-                          }`}
-                        >
-                          {count}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Live "+ Add Category" button in Menu / Sidebar */}
+        {/* Search, Filters, Sorting & View Controls Bar */}
+        <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-gray-200/90 shadow-xs space-y-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            
+            {/* Product Search Input (Name, SKU, Barcode) */}
+            <div className="relative flex-1 w-full">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search product by name, SKU or barcode..."
+                className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+              />
+              <svg className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              {search && (
                 <button
                   type="button"
-                  onClick={() => setShowAddCategoryModal(true)}
-                  className="w-full p-2 rounded-2xl border border-dashed border-emerald-300 hover:border-emerald-500 hover:bg-emerald-50/60 text-xs font-bold text-emerald-800 transition flex items-center justify-center gap-2 mt-2"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 text-xs font-bold"
                 >
-                  <span className="w-5 h-5 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-xs">+</span>
-                  <span>+ Add Category</span>
+                  ✕
                 </button>
-              </div>
-
+              )}
             </div>
-
-            {/* Sidebar Bottom Banner */}
-            <div className="pt-3 border-t border-gray-100 text-[11px] text-gray-400 flex items-center justify-between">
-              <span>Selected: <b className="text-emerald-700">{selectedCategory}</b></span>
-              <button
-                type="button"
-                onClick={() => setSelectedCategory("All")}
-                className="text-[10.5px] font-bold text-gray-500 hover:text-emerald-800"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* ============================================================== */}
-        {/* RIGHT MAIN CONTENT AREA                                        */}
-        {/* ============================================================== */}
-        <main className="flex-1 min-w-0 space-y-4">
-          
-          {/* Search, Filters, Sorting & View Controls Bar */}
-          <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-gray-200/90 shadow-xs space-y-3">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-              
-              {/* Product Search Input (Name, SKU, Barcode) */}
-              <div className="relative flex-1 w-full">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Search product by name, SKU or barcode..."
-                  className="w-full pl-9 pr-8 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
-                />
-                <svg className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 text-xs font-bold"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
 
               {/* Dropdowns & View Toggles */}
               <div className="flex items-center gap-2 w-full md:w-auto shrink-0 flex-wrap">
@@ -877,9 +690,9 @@ export default function Catalog() {
           {/* PRODUCT CARDS DISPLAY (3D Grid or List)                        */}
           {/* ============================================================== */}
           {loading ? (
-            /* Skeleton Loading Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
-              {Array.from({ length: 8 }).map((_, i) => (
+            /* Skeleton Loading Grid - 5 columns on desktop matching Image 3 */
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
+              {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3 animate-pulse">
                   <div className="w-full aspect-square rounded-xl bg-gray-100" />
                   <div className="h-3 bg-gray-100 rounded-md w-1/3" />
@@ -906,15 +719,15 @@ export default function Catalog() {
                 <button
                   type="button"
                   onClick={clearAllFilters}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition shadow-sm cursor-pointer"
                 >
                   Reset All Filters
                 </button>
               </div>
             </div>
           ) : viewMode === "grid" ? (
-            /* 3D Product Cards Grid */
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-4 sm:gap-5">
+            /* 3D Product Cards Grid - 5 columns on desktop matching Image 3 wireframe */
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-4">
               {paginatedProducts.map((p, idx) => (
                 <ProductCard3D
                   key={p.id}
@@ -1070,10 +883,7 @@ export default function Catalog() {
               </div>
             </div>
           )}
-
-        </main>
-
-      </div>
+        </div>
 
       {/* ============================================================== */}
       {/* 3. MODALS & DRAWERS                                            */}

@@ -54,8 +54,13 @@ export default function AdminAuditLogs() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Platform Audit Log</h1>
-          <p className="text-sm text-slate-400">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Platform Compliance
+            </span>
+          </div>
+          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Platform Audit Log</h1>
+          <p className="text-xs sm:text-sm text-slate-500">
             Immutable system audit trail recording every administrative governance operation
           </p>
         </div>
@@ -65,13 +70,13 @@ export default function AdminAuditLogs() {
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
             placeholder="Search action, target, actor..."
-            className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 w-64"
+            className="input h-10 text-xs w-64 bg-white"
           />
           <button
             onClick={() => loadLogs(page)}
-            className="flex items-center space-x-2 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition"
+            className="btn-secondary btn-sm flex items-center space-x-2 text-xs font-bold"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <span>Refresh</span>
@@ -80,16 +85,16 @@ export default function AdminAuditLogs() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-950/40 border border-red-800 rounded-xl text-red-200 text-xs">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-medium">
           {error}
         </div>
       )}
 
       {/* Logs Table */}
-      <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Action</th>
@@ -101,42 +106,42 @@ export default function AdminAuditLogs() {
                 <th className="py-3 px-4 text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-slate-100 text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
-                    <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                     Loading audit logs...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                     No platform audit logs match the query.
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-900/40 transition">
-                    <td className="py-3 px-4 font-mono text-slate-500">{log.id}</td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono font-semibold px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[11px]">
+                  <tr key={log.id} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3.5 px-4 font-mono text-slate-400 font-semibold">{log.id}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px]">
                         {log.action}
                       </span>
                     </td>
-                    <td className="py-3 px-4 capitalize text-slate-300">{log.target_type}</td>
-                    <td className="py-3 px-4 font-medium text-white">
+                    <td className="py-3.5 px-4 capitalize text-slate-500 font-medium">{log.target_type}</td>
+                    <td className="py-3.5 px-4 font-bold text-navy-900">
                       {log.target_name || (log.target_id ? `#${log.target_id}` : "-")}
                     </td>
-                    <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">{log.super_admin_email}</td>
-                    <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">{log.ip_address || "127.0.0.1"}</td>
-                    <td className="py-3 px-4 text-slate-400">
-                      {new Date(log.created_at).toLocaleString()}
+                    <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{log.super_admin_email}</td>
+                    <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">{log.ip_address || "127.0.0.1"}</td>
+                    <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+                      {new Date(log.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => setSelectedLog(log)}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded border border-slate-700 transition"
+                        className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-[#EAE7DD] shadow-2xs transition"
                       >
                         Inspect
                       </button>
@@ -149,26 +154,26 @@ export default function AdminAuditLogs() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="p-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+        <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
           <div>
-            Showing <strong className="text-white">{filteredLogs.length}</strong> of{" "}
-            <strong className="text-white">{total}</strong> total log entries
+            Showing <strong className="text-navy-900">{filteredLogs.length}</strong> of{" "}
+            <strong className="text-navy-900">{total}</strong> total log entries
           </div>
           <div className="flex items-center space-x-2">
             <button
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 disabled:opacity-40 transition"
+              className="btn-secondary btn-sm text-xs font-bold disabled:opacity-40"
             >
               Previous
             </button>
-            <span className="px-2 text-white">
+            <span className="px-2 font-bold text-navy-900">
               Page {page} of {totalPages}
             </span>
             <button
               disabled={page >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 disabled:opacity-40 transition"
+              className="btn-secondary btn-sm text-xs font-bold disabled:opacity-40"
             >
               Next
             </button>
@@ -178,50 +183,50 @@ export default function AdminAuditLogs() {
 
       {/* INSPECT LOG DETAILS MODAL */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
-                <span className="font-mono text-purple-400 font-bold">{selectedLog.action}</span>
-                <span className="text-slate-500">•</span>
-                <span className="text-xs text-slate-400">Log #{selectedLog.id}</span>
+                <span className="font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{selectedLog.action}</span>
+                <span className="text-slate-300">•</span>
+                <span className="text-xs font-bold text-slate-500">Log #{selectedLog.id}</span>
               </div>
               <button
                 onClick={() => setSelectedLog(null)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
               >
-                ×
+                ✕
               </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                <span className="text-slate-500 block">Target Entity</span>
-                <span className="font-semibold text-white capitalize">{selectedLog.target_type}</span>
-                <span className="text-slate-400 block truncate">{selectedLog.target_name || `#${selectedLog.target_id || "-"}`}</span>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
+                <span className="text-slate-400 block font-medium">Target Entity</span>
+                <span className="font-bold text-navy-900 capitalize">{selectedLog.target_type}</span>
+                <span className="text-slate-500 block truncate mt-0.5">{selectedLog.target_name || `#${selectedLog.target_id || "-"}`}</span>
               </div>
-              <div className="p-3 bg-slate-950 rounded-lg border border-slate-800">
-                <span className="text-slate-500 block">Actor & IP</span>
-                <span className="font-semibold text-white">{selectedLog.super_admin_email}</span>
-                <span className="text-slate-400 font-mono block">{selectedLog.ip_address || "127.0.0.1"}</span>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
+                <span className="text-slate-400 block font-medium">Actor & IP</span>
+                <span className="font-bold text-navy-900">{selectedLog.super_admin_email}</span>
+                <span className="text-slate-500 font-mono block mt-0.5">{selectedLog.ip_address || "127.0.0.1"}</span>
               </div>
             </div>
 
             <div>
-              <span className="text-xs font-semibold text-slate-300 block mb-1">Payload / Details JSON</span>
-              <pre className="p-3 bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-200 overflow-x-auto max-h-64">
+              <span className="text-xs font-bold text-slate-700 block mb-1">Payload / Details JSON</span>
+              <pre className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 overflow-x-auto max-h-64 leading-relaxed">
                 {JSON.stringify(selectedLog.details, null, 2)}
               </pre>
             </div>
 
-            <div className="text-[11px] text-slate-400">
+            <div className="text-[11px] text-slate-400 font-medium">
               Recorded at: {new Date(selectedLog.created_at).toISOString()} ({new Date(selectedLog.created_at).toLocaleString()})
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-800">
+            <div className="flex justify-end pt-2 border-t border-slate-100">
               <button
                 onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg transition"
+                className="btn-secondary btn-sm text-xs font-bold"
               >
                 Close
               </button>

@@ -135,12 +135,17 @@ export default function AdminOwners() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Owner Management</h1>
-          <p className="text-sm text-slate-400">Create tenant owners, reset credentials, and govern account lifecycles</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Identity & Access
+            </span>
+          </div>
+          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Owner Management</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Create tenant owners, reset credentials, and govern account lifecycles</p>
         </div>
         <button
           onClick={openCreateModal}
-          className="flex items-center space-x-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg shadow-md transition self-start sm:self-auto"
+          className="btn-primary self-start sm:self-auto flex items-center gap-2 text-xs font-bold px-4 py-2.5 shadow-xs"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -150,16 +155,16 @@ export default function AdminOwners() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-950/40 border border-red-800 rounded-xl text-red-200 text-xs">
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-medium">
           {error}
         </div>
       )}
 
       {/* Owners Table */}
-      <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#EAE7DD] rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/60 text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Owner Name</th>
@@ -171,36 +176,36 @@ export default function AdminOwners() {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
+            <tbody className="divide-y divide-slate-100 text-slate-700">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
-                    <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                     Loading owners...
                   </td>
                 </tr>
               ) : owners.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
                     No owners found in database.
                   </td>
                 </tr>
               ) : (
                 owners.map((owner) => (
-                  <tr key={owner.id} className="hover:bg-slate-900/40 transition">
-                    <td className="py-3.5 px-4 font-mono text-slate-400">{owner.id}</td>
+                  <tr key={owner.id} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3.5 px-4 font-mono text-slate-400 font-semibold">{owner.id}</td>
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-white text-sm">{owner.name}</div>
+                      <div className="font-bold text-navy-900 text-sm">{owner.name}</div>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-300">{owner.email}</td>
-                    <td className="py-3.5 px-4 text-slate-400">{owner.phone || "-"}</td>
+                    <td className="py-3.5 px-4 font-mono text-slate-600">{owner.email}</td>
+                    <td className="py-3.5 px-4 text-slate-500 font-medium">{owner.phone || "-"}</td>
                     <td className="py-3.5 px-4">
                       {owner.is_super_admin ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-950 text-purple-300 border border-purple-800">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-50 text-purple-700 border border-purple-200">
                           Super Admin
                         </span>
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium uppercase bg-slate-800 text-slate-300 border border-slate-700">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200">
                           Owner
                         </span>
                       )}
@@ -211,27 +216,27 @@ export default function AdminOwners() {
                           {owner.shops.map((s) => (
                             <span
                               key={s.id}
-                              className="px-2 py-0.5 bg-slate-800/80 border border-slate-700 text-slate-300 rounded text-[11px]"
+                              className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-[11px] font-semibold"
                             >
                               {s.name} ({s.code})
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-slate-500 italic">No shops linked</span>
+                        <span className="text-slate-400 italic">No shops linked</span>
                       )}
                     </td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
                           owner.status === "active"
-                            ? "bg-emerald-950/70 text-emerald-300 border-emerald-800"
-                            : "bg-rose-950/70 text-rose-300 border-rose-800"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-rose-50 text-rose-800 border-rose-200"
                         }`}
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            owner.status === "active" ? "bg-emerald-400" : "bg-rose-400"
+                            owner.status === "active" ? "bg-emerald-600" : "bg-rose-500"
                           }`}
                         ></span>
                         {owner.status}
@@ -242,13 +247,13 @@ export default function AdminOwners() {
                         <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => openPasswordModal(owner)}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded border border-slate-700 transition"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#EAE7DD] shadow-2xs transition"
                           >
                             Reset Password
                           </button>
                           <button
                             onClick={() => openStatusModal(owner)}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded border border-slate-700 transition"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#EAE7DD] shadow-2xs transition"
                           >
                             Status
                           </button>
@@ -265,51 +270,51 @@ export default function AdminOwners() {
 
       {/* CREATE FIRST OWNER MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Create First Owner for Shop</h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-navy-900">Create First Owner for Shop</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
               >
-                ×
+                ✕
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 bg-red-950/50 border border-red-800 text-red-200 text-xs rounded-lg">
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl font-medium">
                 {formError}
               </div>
             )}
 
             <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Full Name *</label>
+                <label className="block text-slate-700 font-bold mb-1">Full Name *</label>
                 <input
                   type="text"
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. John Doe"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  className="input h-10 text-xs bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Email (Login Username) *</label>
+                <label className="block text-slate-700 font-bold mb-1">Email (Login Username) *</label>
                 <input
                   type="email"
                   required
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                   placeholder="owner@domain.com"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  className="input h-10 text-xs bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Password *</label>
+                <label className="block text-slate-700 font-bold mb-1">Password *</label>
                 <input
                   type="password"
                   required
@@ -317,37 +322,37 @@ export default function AdminOwners() {
                   value={formPassword}
                   onChange={(e) => setFormPassword(e.target.value)}
                   placeholder="Minimum 6 characters"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  className="input h-10 text-xs bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Phone Number</label>
+                <label className="block text-slate-700 font-bold mb-1">Phone Number</label>
                 <input
                   type="text"
                   value={formPhone}
                   onChange={(e) => setFormPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  className="input h-10 text-xs bg-white"
                 />
               </div>
 
-              <div className="p-3 rounded-lg bg-purple-950/30 border border-purple-800/40 text-purple-300 text-[11px] leading-relaxed">
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-900 text-[11px] leading-relaxed">
                 ℹ Creating an owner account automatically initializes default system roles (Owner, Manager, Sales Staff) with standardized granular permissions.
               </div>
 
-              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-lg transition"
+                  className="btn-secondary btn-sm text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-md transition disabled:opacity-50"
+                  className="btn-primary btn-sm text-xs font-bold shadow-xs disabled:opacity-50"
                 >
                   {submitting ? "Creating..." : "Create Owner"}
                 </button>
@@ -359,31 +364,31 @@ export default function AdminOwners() {
 
       {/* RESET PASSWORD MODAL */}
       {showPasswordModal && selectedOwner && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Reset Password for {selectedOwner.name}</h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-navy-900">Reset Password for {selectedOwner.name}</h3>
               <button
                 onClick={() => setShowPasswordModal(false)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
               >
-                ×
+                ✕
               </button>
             </div>
 
-            <p className="text-xs text-slate-400">
-              Set a new secure password for <strong className="text-white">{selectedOwner.email}</strong>.
+            <p className="text-xs text-slate-500">
+              Set a new secure password for <strong className="text-navy-900 font-semibold">{selectedOwner.email}</strong>.
             </p>
 
             {formError && (
-              <div className="p-3 bg-red-950/50 border border-red-800 text-red-200 text-xs rounded-lg">
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl font-medium">
                 {formError}
               </div>
             )}
 
             <form onSubmit={handlePasswordSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">New Password *</label>
+                <label className="block text-slate-700 font-bold mb-1">New Password *</label>
                 <input
                   type="password"
                   required
@@ -391,22 +396,22 @@ export default function AdminOwners() {
                   value={formPassword}
                   onChange={(e) => setFormPassword(e.target.value)}
                   placeholder="Enter new password (min 6 characters)"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  className="input h-10 text-xs bg-white"
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowPasswordModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-lg transition"
+                  className="btn-secondary btn-sm text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-md transition disabled:opacity-50"
+                  className="btn-primary btn-sm text-xs font-bold shadow-xs disabled:opacity-50"
                 >
                   {submitting ? "Resetting..." : "Reset Password"}
                 </button>
@@ -418,31 +423,31 @@ export default function AdminOwners() {
 
       {/* CHANGE OWNER STATUS MODAL */}
       {showStatusModal && selectedOwner && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Update Status for {selectedOwner.name}</h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-[#EAE7DD] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-navy-900">Update Status for {selectedOwner.name}</h3>
               <button
                 onClick={() => setShowStatusModal(false)}
-                className="text-slate-400 hover:text-white text-lg font-bold"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
               >
-                ×
+                ✕
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 bg-red-950/50 border border-red-800 text-red-200 text-xs rounded-lg">
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl font-medium">
                 {formError}
               </div>
             )}
 
             <form onSubmit={handleStatusSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Account Status *</label>
+                <label className="block text-slate-700 font-bold mb-1">Account Status *</label>
                 <select
                   value={formStatus}
                   onChange={(e) => setFormStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  className="input h-10 text-xs bg-white font-semibold"
                 >
                   <option value="active">Active (Full access)</option>
                   <option value="inactive">Inactive (Deactivated)</option>
@@ -451,28 +456,28 @@ export default function AdminOwners() {
               </div>
 
               <div>
-                <label className="block text-slate-300 font-semibold mb-1">Reason</label>
+                <label className="block text-slate-700 font-bold mb-1">Reason</label>
                 <textarea
                   rows={2}
                   value={formReason}
                   onChange={(e) => setFormReason(e.target.value)}
                   placeholder="Optional note for platform audit log"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  className="input text-xs bg-white py-2"
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowStatusModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-lg transition"
+                  className="btn-secondary btn-sm text-xs font-bold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg shadow-md transition disabled:opacity-50"
+                  className="btn-primary btn-sm text-xs font-bold shadow-xs disabled:opacity-50"
                 >
                   {submitting ? "Updating..." : "Save Status"}
                 </button>

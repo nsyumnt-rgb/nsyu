@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { usePosStore } from "../store/posStore";
 import { resolveAssetUrl } from "../api/client";
 
@@ -33,7 +33,8 @@ export default function PosCartDrawer() {
     [items]
   );
 
-  if (!open) return null;
+  const location = useLocation();
+  if (!open || location.pathname.startsWith("/app/billing")) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end animate-fade-in">

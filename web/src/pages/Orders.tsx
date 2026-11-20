@@ -1530,6 +1530,7 @@ const TRACK_STAGES: { key: string; label: string }[] = [
 function fmtDateTime(d?: string | null, withTime = true) {
   if (!d) return "—";
   const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "—";
   return withTime
     ? `${dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}, ${dt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
     : dt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });

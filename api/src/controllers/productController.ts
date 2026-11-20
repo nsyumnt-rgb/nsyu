@@ -6,6 +6,9 @@ import {
   Product,
   ProductImage,
   ProductStock,
+  InventoryTransaction,
+  SaleItem,
+  OrderItem,
   Category,
   Subcategory,
   Shop,
@@ -238,13 +241,38 @@ export async function deleteProduct(req: Request, res: Response) {
   const product = await Product.findOne({ where: { id: productId, owner_id: req.auth!.ownerId } });
   if (!product) return res.status(404).json({ success: false, message: "Product not found" });
 
+  const isPermanent = req.query.permanent === "true";
+  if (isPermanent) {
+    const hasSales = await SaleItem.count({ where: { product_id: productId } });
+    const hasOrders = await OrderItem.count({ where: { product_id: productId } });
+
+    if (hasSales > 0 || hasOrders > 0) {
+      product.status = "inactive";
+      await product.save();
+      await logAudit({ req, module: "products", action: "deactivate", entityType: "Product", entityId: product.id });
+      return res.json({
+        success: true,
+        message: "Product has sales or order history; marked as inactive instead",
+        data: { action: "deactivated" },
+      });
+    }
+
+    await ProductStock.destroy({ where: { product_id: productId } });
+    await ProductImage.destroy({ where: { product_id: productId } });
+    await InventoryTransaction.destroy({ where: { product_id: productId } });
+    await Product.destroy({ where: { id: productId } });
+
+    await logAudit({ req, module: "products", action: "delete", entityType: "Product", entityId: productId });
+    return res.json({ success: true, message: "Product permanently deleted", data: { action: "deleted" } });
+  }
+
   // Soft delete via status rather than a hard DELETE — preserves
   // inventory ledger / order history integrity that reference this product.
   product.status = "inactive";
   await product.save();
 
   await logAudit({ req, module: "products", action: "deactivate", entityType: "Product", entityId: product.id });
-  return res.json({ success: true, message: "Product deactivated" });
+  return res.json({ success: true, message: "Product deactivated", data: { action: "deactivated" } });
 }
 
 /* ---------------- Images ---------------- */

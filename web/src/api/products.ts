@@ -37,8 +37,10 @@ export function updateProduct(productId: number, payload: Partial<Product>) {
   return api.put<ApiEnvelope<Product>>(`/products/${productId}`, payload);
 }
 
-export function deleteProduct(productId: number) {
-  return api.delete<ApiEnvelope<null>>(`/products/${productId}`);
+export function deleteProduct(productId: number, permanent = false) {
+  return api.delete<ApiEnvelope<{ action?: string }>>(`/products/${productId}`, {
+    params: permanent ? { permanent: "true" } : undefined,
+  });
 }
 
 /* ---------------- Images ---------------- */

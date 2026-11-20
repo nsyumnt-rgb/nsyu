@@ -14,9 +14,33 @@ import {
 } from "../api/notifications";
 import PosCartDrawer from "../components/PosCartDrawer";
 
-function formatTimeAgo(dateStr: string): string {
+function parseNotificationDate(raw?: any): Date {
+  if (!raw) return new Date();
+  const candidate =
+    typeof raw === "string" || typeof raw === "number" || raw instanceof Date
+      ? raw
+      : raw.created_at || raw.createdAt || raw.date;
+  if (!candidate) return new Date();
+  const d = new Date(candidate);
+  return isNaN(d.getTime()) ? new Date() : d;
+}
+
+function formatNotificationTime(raw?: any): string {
+  const d = parseNotificationDate(raw);
   try {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    return d.toLocaleString("en-IN", {
+      dateStyle: "full",
+      timeStyle: "medium",
+    });
+  } catch {
+    return d.toLocaleString();
+  }
+}
+
+function formatTimeAgo(raw?: any): string {
+  try {
+    const d = parseNotificationDate(raw);
+    const diff = Date.now() - d.getTime();
     const sec = Math.floor(diff / 1000);
     if (sec < 60) return "Just now";
     const min = Math.floor(sec / 60);
@@ -25,9 +49,9 @@ function formatTimeAgo(dateStr: string): string {
     if (hr < 24) return `${hr}h ago`;
     const days = Math.floor(hr / 24);
     if (days < 7) return `${days}d ago`;
-    return new Date(dateStr).toLocaleDateString();
+    return d.toLocaleDateString("en-IN");
   } catch {
-    return "";
+    return "Recently";
   }
 }
 
@@ -669,12 +693,7 @@ export default function BusinessHeader() {
             {/* Date/Time */}
             <div className="text-[11px] text-slate-500 font-mono flex items-center gap-2">
               <span>📅</span>
-              <span>
-                {new Date(selectedNotif.created_at).toLocaleString("en-IN", {
-                  dateStyle: "full",
-                  timeStyle: "medium",
-                })}
-              </span>
+              <span>{formatNotificationTime(selectedNotif)}</span>
             </div>
 
             {/* Full Message Body */}

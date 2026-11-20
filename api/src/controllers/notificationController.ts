@@ -52,11 +52,21 @@ export async function listMyNotifications(req: Request, res: Response) {
     limit: maxLimit,
   });
 
+  const mapped = notifications.map((n) => {
+    const json = n.toJSON ? n.toJSON() : (n as any);
+    const ts = json.created_at || json.createdAt || new Date().toISOString();
+    return {
+      ...json,
+      created_at: ts,
+      createdAt: ts,
+    };
+  });
+
   const countWhere = buildNotificationWhere(req);
   countWhere.is_read = false;
   const unreadCount = await Notification.count({ where: countWhere });
 
-  return res.json({ success: true, data: { notifications, unreadCount } });
+  return res.json({ success: true, data: { notifications: mapped, unreadCount } });
 }
 
 export async function getUnreadCount(req: Request, res: Response) {
