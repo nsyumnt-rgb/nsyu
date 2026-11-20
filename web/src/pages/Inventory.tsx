@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, memo, startTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   getInventoryHistory,
@@ -39,6 +39,110 @@ interface InlineEditDraft {
   stockQuantity: string;
   minStock: string;
 }
+
+interface DirectStockInputProps {
+  productId: number;
+  initialStock: number;
+  minStock: number;
+  isSaving: boolean;
+  onSave: (product: Product, newStock: number) => Promise<void>;
+  product: Product;
+}
+
+// Dedicated isolated component to avoid re-rendering entire table on stock input keystrokes (prevents INP delays)
+const DirectStockInput = memo(function DirectStockInput({
+  initialStock,
+  minStock,
+  isSaving,
+  onSave,
+  product,
+}: DirectStockInputProps) {
+  const [val, setVal] = useState<string>(String(initialStock));
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Sync if initialStock changes from server/props while not focused
+  useEffect(() => {
+    if (!isFocused) {
+      setVal(String(initialStock));
+    }
+  }, [initialStock, isFocused]);
+
+  const numVal = Number(val);
+  const isValidNum = !isNaN(numVal) && val.trim() !== "";
+  const isDirty = isValidNum && Math.max(0, Math.trunc(numVal)) !== initialStock;
+
+  const displayStock = isValidNum ? Math.max(0, Math.trunc(numVal)) : initialStock;
+  const isOut = displayStock <= 0;
+  const isLow = displayStock > 0 && displayStock <= minStock;
+
+  const handleCommit = () => {
+    if (isSaving) return;
+    if (!isValidNum) {
+      setVal(String(initialStock));
+      return;
+    }
+    const n = Math.max(0, Math.trunc(numVal));
+    if (n !== initialStock) {
+      onSave(product, n);
+    } else {
+      setVal(String(initialStock));
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-1.5">
+      <input
+        type="number"
+        min="0"
+        step="1"
+        disabled={isSaving}
+        value={val}
+        onFocus={() => setIsFocused(true)}
+        onChange={(e) => {
+          // Local isolated state: instantaneous input reaction, 0ms INP block!
+          setVal(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          } else if (e.key === "Escape") {
+            setVal(String(initialStock));
+            e.currentTarget.blur();
+          }
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          handleCommit();
+        }}
+        className={`w-20 px-2 py-1 text-center font-black text-xs rounded-xl border transition outline-none shadow-2xs ${
+          isOut
+            ? "bg-rose-50/70 border-rose-300 text-rose-800 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
+            : isLow
+            ? "bg-amber-50/70 border-amber-300 text-amber-800 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+            : "bg-gray-50/70 border-gray-300 text-gray-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+        }`}
+        title="Directly edit stock and press Enter or click outside to save"
+      />
+      {isDirty && !isSaving && (
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            handleCommit();
+          }}
+          className="w-6 h-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white flex items-center justify-center transition shadow-2xs text-[11px] cursor-pointer"
+          title="Save Stock"
+        >
+          ✓
+        </button>
+      )}
+      {isSaving && (
+        <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
+      )}
+    </div>
+  );
+});
 
 export interface InventoryProps {
   showViewOption?: boolean;
@@ -105,8 +209,7 @@ export default function Inventory({
   const [inlineDraft, setInlineDraft] = useState<InlineEditDraft | null>(null);
   const [inlineSaving, setInlineSaving] = useState(false);
 
-  // Direct Stock Input state
-  const [stockEdits, setStockEdits] = useState<Record<number, string>>({});
+  // Direct Stock Input state (saving state per product)
   const [savingStockId, setSavingStockId] = useState<number | null>(null);
 
   // Adjust Stock Form (Top Header "Stock Movement" button)
@@ -180,26 +283,44 @@ export default function Inventory({
     return () => clearTimeout(t);
   }, [toastMsg]);
 
-  // Real database-calculated summary metrics
-  const totalProducts = products.length;
-  const liveProducts = products.filter((p) => p.status === "active");
-  const liveCount = liveProducts.length;
-  const offlineProducts = products.filter((p) => p.status !== "active");
-  const offlineCount = offlineProducts.length;
-  const totalStock = products.reduce(
-    (sum, p) => sum + getProductStock(p),
-    0
-  );
-  const lowStockProducts = products.filter((p) => {
-    const s = getProductStock(p);
-    const min = Number(p.min_stock ?? 5) || 5;
-    return s > 0 && s <= min;
-  });
-  const lowStockCount = lowStockProducts.length;
-  const outOfStockProducts = products.filter(
-    (p) => getProductStock(p) <= 0
-  );
-  const outOfStockCount = outOfStockProducts.length;
+  // Real database-calculated summary metrics (memoized to eliminate redundant computations on input change)
+  const summaryMetrics = useMemo(() => {
+    let live = 0;
+    let offline = 0;
+    let stockSum = 0;
+    let low = 0;
+    let out = 0;
+
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      if (p.status === "active") live++;
+      else offline++;
+
+      const s = getProductStock(p);
+      stockSum += s;
+      const min = Number(p.min_stock ?? 5) || 5;
+      if (s <= 0) out++;
+      else if (s <= min) low++;
+    }
+
+    return {
+      totalProducts: products.length,
+      liveCount: live,
+      offlineCount: offline,
+      totalStock: stockSum,
+      lowStockCount: low,
+      outOfStockCount: out,
+    };
+  }, [products, getProductStock]);
+
+  const {
+    totalProducts,
+    liveCount,
+    offlineCount,
+    totalStock,
+    lowStockCount,
+    outOfStockCount,
+  } = summaryMetrics;
 
   // Category counts for quick category selector pills
   const categoryCounts = useMemo(() => {
@@ -405,77 +526,56 @@ export default function Inventory({
   }
 
   // Direct Stock Input Save handler (triggered on Enter, blur, or checkmark click)
-  async function handleDirectStockSave(product: Product) {
-    const rawVal = stockEdits[product.id];
-    if (rawVal === undefined) return;
-    const oldStock = getProductStock(product);
-    const n = Number(rawVal);
-    if (!rawVal.trim() || !Number.isFinite(n)) {
-      setStockEdits((prev) => {
-        const next = { ...prev };
-        delete next[product.id];
-        return next;
-      });
-      return;
-    }
+  const handleDirectStockSave = useCallback(
+    async (product: Product, newStock: number) => {
+      const oldStock = getProductStock(product);
+      const delta = newStock - oldStock;
+      if (delta === 0) return;
 
-    const newStock = Math.max(0, Math.trunc(n));
-    const delta = newStock - oldStock;
-    if (delta === 0) {
-      setStockEdits((prev) => {
-        const next = { ...prev };
-        delete next[product.id];
-        return next;
-      });
-      return;
-    }
+      setSavingStockId(product.id);
+      try {
+        const targetShopId = effectiveShopId || product.stocks?.[0]?.shop_id;
+        await recordMovement({
+          productId: product.id,
+          shopId: targetShopId,
+          type: "adjustment",
+          quantity: delta,
+          notes: `Direct inventory stock change (${oldStock} -> ${newStock})`,
+        });
 
-    setSavingStockId(product.id);
-    try {
-      const targetShopId = effectiveShopId || product.stocks?.[0]?.shop_id;
-      await recordMovement({
-        productId: product.id,
-        shopId: targetShopId,
-        type: "adjustment",
-        quantity: delta,
-        notes: `Direct inventory stock change (${oldStock} -> ${newStock})`,
-      });
-
-      // Update local state immediately
-      setProducts((prev) =>
-        prev.map((p) => {
-          if (p.id !== product.id) return p;
-          const currentStocks = p.stocks || [];
-          const matchIdx = currentStocks.findIndex(
-            (s) => !targetShopId || s.shop_id === targetShopId
+        // Non-blocking UI update with startTransition so paint happens immediately (0ms INP block)
+        startTransition(() => {
+          setProducts((prev) =>
+            prev.map((p) => {
+              if (p.id !== product.id) return p;
+              const currentStocks = p.stocks || [];
+              const matchIdx = currentStocks.findIndex(
+                (s) => !targetShopId || s.shop_id === targetShopId
+              );
+              let nextStocks;
+              if (matchIdx >= 0) {
+                nextStocks = currentStocks.map((s, idx) =>
+                  idx === matchIdx ? { ...s, current_stock: newStock } : s
+                );
+              } else {
+                nextStocks = [
+                  ...currentStocks,
+                  { shop_id: targetShopId || 1, current_stock: newStock } as any,
+                ];
+              }
+              return { ...p, stocks: nextStocks };
+            })
           );
-          let nextStocks;
-          if (matchIdx >= 0) {
-            nextStocks = currentStocks.map((s, idx) =>
-              idx === matchIdx ? { ...s, current_stock: newStock } : s
-            );
-          } else {
-            nextStocks = [
-              ...currentStocks,
-              { shop_id: targetShopId || 1, current_stock: newStock } as any,
-            ];
-          }
-          return { ...p, stocks: nextStocks };
-        })
-      );
-
-      setToastMsg(`✓ Stock for "${product.name}" updated to ${newStock}`);
-      setStockEdits((prev) => {
-        const next = { ...prev };
-        delete next[product.id];
-        return next;
-      });
-    } catch (err: any) {
-      alert(apiErrorMessage(err, "Failed to update stock"));
-    } finally {
-      setSavingStockId(null);
-    }
-  }
+          setToastMsg(`✓ Stock for "${product.name}" updated to ${newStock}`);
+        });
+      } catch (err: any) {
+        alert(apiErrorMessage(err, "Failed to update stock"));
+      } finally {
+        setSavingStockId(null);
+      }
+    },
+    [effectiveShopId, getProductStock]
+  );
 
   // Open Global Stock Movement Modal
   function openAdjust(p?: Product) {
@@ -1456,9 +1556,6 @@ export default function Inventory({
                   const purchasePrice = Number(p.purchase_price || 0);
                   const sellingPrice = Number(p.selling_price || 0);
                   const stockValue = Math.max(0, stock) * purchasePrice;
-                  const min = Number(p.min_stock ?? 5) || 5;
-                  const isOut = stock <= 0;
-                  const isLow = stock > 0 && stock <= min;
                   const coverImg = (
                     p.images?.find((i) => i.is_primary) || p.images?.[0]
                   )?.url;
@@ -1599,64 +1696,14 @@ export default function Inventory({
                             />
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center gap-1.5">
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              disabled={savingStockId === p.id}
-                              value={
-                                stockEdits[p.id] !== undefined
-                                  ? stockEdits[p.id]
-                                  : stock
-                              }
-                              onChange={(e) =>
-                                setStockEdits((prev) => ({
-                                  ...prev,
-                                  [p.id]: e.target.value,
-                                }))
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                              onBlur={() => {
-                                if (
-                                  stockEdits[p.id] !== undefined &&
-                                  Number(stockEdits[p.id]) !== stock
-                                ) {
-                                  handleDirectStockSave(p);
-                                }
-                              }}
-                              className={`w-20 px-2 py-1 text-center font-black text-xs rounded-xl border transition outline-none shadow-2xs ${
-                                isOut
-                                  ? "bg-rose-50/70 border-rose-300 text-rose-800 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
-                                  : isLow
-                                  ? "bg-amber-50/70 border-amber-300 text-amber-800 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
-                                  : "bg-gray-50/70 border-gray-300 text-gray-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
-                              }`}
-                              title="Directly edit stock and press Enter or click outside to save"
-                            />
-                            {stockEdits[p.id] !== undefined &&
-                              Number(stockEdits[p.id]) !== stock && (
-                                <button
-                                  type="button"
-                                  onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    handleDirectStockSave(p);
-                                  }}
-                                  disabled={savingStockId === p.id}
-                                  className="w-6 h-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white flex items-center justify-center transition shadow-2xs text-[11px]"
-                                  title="Save Stock"
-                                >
-                                  ✓
-                                </button>
-                              )}
-                            {savingStockId === p.id && (
-                              <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
-                            )}
-                          </div>
+                          <DirectStockInput
+                            productId={p.id}
+                            initialStock={stock}
+                            minStock={Number(p.min_stock ?? 5) || 5}
+                            isSaving={savingStockId === p.id}
+                            onSave={handleDirectStockSave}
+                            product={p}
+                          />
                         )}
                       </td>
 
