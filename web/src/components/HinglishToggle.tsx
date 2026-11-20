@@ -25,7 +25,7 @@ const HINGLISH_MAP: Record<string, string> = {
   "Customers with udhaar": "Udhaar wale grahak",
   "Over their limit": "Limit ke paar",
   "Search customer name or phone": "Naam ya phone se khojein",
-  "Search by name, SKU or scan barcode": "Naam, brand ya barcode se khojein",
+  "Search by name, SKU or barcode": "Naam, brand ya barcode se khojein",
   "Customers": "Grahak",
   "Invoices": "Bill",
   "Payments": "Bhugtaan",

@@ -327,8 +327,6 @@ function ProductsInner() {
 
   // View mode (grid vs list matching Image 2)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [showScanModal, setShowScanModal] = useState(false);
-  const [barcodeInput, setBarcodeInput] = useState("");
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
 
   // Live Category Creation State
@@ -349,23 +347,6 @@ function ProductsInner() {
   function handleAddToCart(p: Product) {
     addItemToCart(p, 1);
     setToastMsg(`✓ Added "${p.name}" to cart`);
-  }
-
-  function handleBarcodeSearch(e: React.FormEvent) {
-    e.preventDefault();
-    if (!barcodeInput.trim()) return;
-    const target = products.find(
-      (p) =>
-        p.barcode?.toLowerCase() === barcodeInput.trim().toLowerCase() ||
-        p.sku.toLowerCase() === barcodeInput.trim().toLowerCase()
-    );
-    if (target) {
-      setQuickViewProduct(target);
-      setShowScanModal(false);
-      setBarcodeInput("");
-    } else {
-      alert(`No product found with barcode/SKU: ${barcodeInput}`);
-    }
   }
 
   // Filter & Search Logic
@@ -645,18 +626,6 @@ function ProductsInner() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setShowScanModal(true)}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 7V5a2 2 0 0 1 2-2h2m10 0h2a2 2 0 0 1 2 2v2m0 10v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
-              <line x1="7" y1="12" x2="17" y2="12" />
-            </svg>
-            <span>Scan Barcode</span>
-          </button>
-
           <button
             type="button"
             onClick={() => setShowImportModal(true)}
@@ -1134,45 +1103,7 @@ function ProductsInner() {
         </div>
       )}
 
-      {/* Barcode Scanner Modal */}
-      {showScanModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <h3 className="font-black text-gray-900 text-sm">Scan / Type Barcode or SKU</h3>
-              <button onClick={() => setShowScanModal(false)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
-            </div>
-            <form onSubmit={handleBarcodeSearch} className="space-y-3">
-              <div>
-                <label className="text-[11px] font-bold text-gray-600 block mb-1">Enter Barcode or SKU:</label>
-                <input
-                  type="text"
-                  autoFocus
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder="e.g. UC-381 or 890123456789"
-                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowScanModal(false)}
-                  className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 text-xs font-bold text-white bg-[#047857] hover:bg-emerald-700 rounded-xl shadow-xs"
-                >
-                  Locate Product
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
       {/* ============================================================== */}
       {/* 6. MODALS (Add, Edit, View, Delete, Import)                    */}
       {/* ============================================================== */}

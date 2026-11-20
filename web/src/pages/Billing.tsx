@@ -41,7 +41,6 @@ function BillingInner() {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [scanMode, setScanMode] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // The bill drawer is opened from the product cards, the phone bottom bar or the top-bar cart button.
@@ -716,7 +715,7 @@ function BillingInner() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Toolbar, Product Catalog & Recent Bills */}
         <div className="lg:col-span-7 xl:col-span-8 space-y-6 min-w-0">
-          {/* Toolbar: search · barcode · category · add product */}
+          {/* Toolbar: search · category · add product */}
           <div className="card p-3 sm:p-4 flex flex-col lg:flex-row gap-3">
             <div className="relative flex-1">
               <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -725,8 +724,8 @@ function BillingInner() {
               <input
                 ref={searchRef}
                 type="text"
-                placeholder={scanMode ? "Scan a barcode now…" : "Search product name, SKU or barcode..."}
-                className={`input h-12 pl-11 text-[14px] ${scanMode ? "border-brand-500 ring-4 ring-brand-500/10" : ""}`}
+                placeholder="Search product name, SKU or barcode..."
+                className="input h-12 pl-11 text-[14px]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -735,26 +734,9 @@ function BillingInner() {
                     handleSearchEnter();
                   }
                 }}
-                onBlur={() => setScanMode(false)}
               />
             </div>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setScanMode(true);
-                  setSearchQuery("");
-                  searchRef.current?.focus();
-                }}
-                className={`w-12 h-12 shrink-0 rounded-lg border flex items-center justify-center transition ${scanMode ? "border-brand-500 bg-brand-50 text-brand-700" : "border-border bg-white text-navy-900 hover:bg-slate-50"}`}
-                title="Scan barcode (use a USB / Bluetooth scanner)"
-                aria-label="Scan barcode"
-              >
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                  <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
-                  <path d="M7 8v8M10 8v8M13 8v8M16 8v8" />
-                </svg>
-              </button>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="input h-12 flex-1 lg:w-64 lg:flex-none font-semibold text-navy-900" aria-label="Category">
                 <option value="all">All Categories</option>
                 {categories.map((c) => (
