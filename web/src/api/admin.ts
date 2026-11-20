@@ -116,6 +116,98 @@ export function approveAdminShop(id: number, reason?: string) {
   return api.post<ApiEnvelope<AdminShopItem>>(`/admin/shops/${id}/approve`, { reason });
 }
 
+export function rejectAdminShop(id: number, reason: string) {
+  return api.post<ApiEnvelope<AdminShopItem>>(`/admin/shops/${id}/reject`, { reason });
+}
+
+export interface AdminCategoryItem {
+  id: number;
+  owner_id: number;
+  name: string;
+  alias?: string | null;
+  icon?: string | null;
+  image_url?: string | null;
+  status: "active" | "inactive";
+  product_count?: number;
+  created_at?: string;
+  owner?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
+export function fetchAdminCategories() {
+  return api.get<ApiEnvelope<AdminCategoryItem[]>>("/admin/categories");
+}
+
+export function createAdminCategory(data: {
+  name: string;
+  alias?: string;
+  icon?: string;
+  image_url?: string;
+  status?: "active" | "inactive";
+  owner_id?: number;
+}) {
+  return api.post<ApiEnvelope<AdminCategoryItem>>("/admin/categories", data);
+}
+
+export function updateAdminCategory(
+  id: number,
+  data: {
+    name?: string;
+    alias?: string | null;
+    icon?: string | null;
+    image_url?: string | null;
+    status?: "active" | "inactive";
+  }
+) {
+  return api.put<ApiEnvelope<AdminCategoryItem>>(`/admin/categories/${id}`, data);
+}
+
+export function deleteAdminCategory(id: number) {
+  return api.delete<ApiEnvelope<{ id: number }>>(`/admin/categories/${id}`);
+}
+
+export function uploadAdminCategoryImage(id: number, file: File) {
+  const form = new FormData();
+  form.append("image", file);
+  return api.post<ApiEnvelope<{ imageUrl: string; category: AdminCategoryItem }>>(
+    `/admin/categories/${id}/image`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } }
+  );
+}
+
+export interface AdminNotificationItem {
+  id: number;
+  owner_id: number;
+  shop_id?: number | null;
+  recipient_type: string;
+  recipient_id: number;
+  type: string;
+  title: string;
+  message: string;
+  reference_type?: string | null;
+  reference_id?: number | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export function fetchAdminNotifications() {
+  return api.get<ApiEnvelope<AdminNotificationItem[]>>("/admin/notifications");
+}
+
+export function broadcastAdminNotification(data: {
+  target_audience: "all_owners" | "all_employees" | "all_customers" | "specific_owner";
+  owner_id?: number;
+  title: string;
+  message: string;
+  type?: string;
+}) {
+  return api.post<ApiEnvelope<{ count: number }>>("/admin/notifications/broadcast", data);
+}
+
 export function fetchAdminOwners() {
   return api.get<ApiEnvelope<AdminOwnerItem[]>>("/admin/owners");
 }
@@ -141,7 +233,21 @@ export function toggleAdminOwnerStatus(
   return api.patch<ApiEnvelope<any>>(`/admin/owners/${id}/status`, { status, reason });
 }
 
-export function fetchAdminAuditLogs(page = 1, limit = 20) {
+export function fetchAdminAuditLogs(options: {
+  page?: number;
+  limit?: number;
+  action?: string;
+  search?: string;
+  target_type?: string;
+} = {}) {
+  const { page = 1, limit = 20, action, search, target_type } = options;
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+  if (action && action !== "all") params.set("action", action);
+  if (search && search.trim()) params.set("search", search.trim());
+  if (target_type && target_type !== "all") params.set("target_type", target_type);
+
   return api.get<
     ApiEnvelope<{
       total: number;
@@ -150,10 +256,11 @@ export function fetchAdminAuditLogs(page = 1, limit = 20) {
       totalPages: number;
       logs: PlatformAuditLogEntry[];
     }>
-  >(`/admin/audit-logs?page=${page}&limit=${limit}`);
+  >(`/admin/audit-logs?${params.toString()}`);
 }
 
 export function fetchAdminShopSupportData(id: number) {
   return api.get<ApiEnvelope<AdminShopSupportData>>(`/admin/shops/${id}/data`);
 }
+
 

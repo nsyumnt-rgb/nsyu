@@ -15,8 +15,11 @@ import {
   CustomerAccount,
   Notification,
   Employee,
+  Category,
+  Subcategory,
 } from "../models";
 import { seedOwnerDefaults } from "../utils/seed";
+import { saveImage, removeImage } from "../utils/mediaStorage";
 
 /**
  * Helper to record Super Admin actions in the platform audit log.
@@ -314,7 +317,22 @@ export async function toggleAdminShopStatus(req: Request, res: Response) {
           recipient_id: shop.owner_id,
           type: "general",
           title: "Shop Approved!",
-          message: `Your shop "${shop.name}" has been approved by the platform administrator and is now live.`,
+          message: `Your shop "${shop.name}" (${shop.code}) has been approved by the platform administrator and is now live. Note: ${reason || "Welcome to NSYU platform!"}`,
+          reference_type: "shop",
+          reference_id: shop.id,
+          is_read: false,
+        });
+      } catch {}
+    } else if (status === "suspended" && oldStatus === "pending_approval") {
+      try {
+        await Notification.create({
+          owner_id: shop.owner_id,
+          shop_id: shop.id,
+          recipient_type: "owner",
+          recipient_id: shop.owner_id,
+          type: "general",
+          title: "Shop Registration Rejected",
+          message: `Your shop "${shop.name}" (${shop.code}) could not be approved at this time. Reason: ${reason || "Information verification required."}`,
           reference_type: "shop",
           reference_id: shop.id,
           is_read: false,
@@ -328,7 +346,9 @@ export async function toggleAdminShopStatus(req: Request, res: Response) {
           ? "Shop approved and activated successfully"
           : "Shop successfully activated"
         : status === "suspended"
-        ? "Shop successfully suspended"
+        ? oldStatus === "pending_approval"
+          ? "Shop registration rejected"
+          : "Shop successfully suspended"
         : "Shop status set to pending approval";
 
     return res.json({
@@ -350,6 +370,20 @@ export async function toggleAdminShopStatus(req: Request, res: Response) {
 export async function approveAdminShop(req: Request, res: Response) {
   req.body.status = "active";
   req.body.reason = req.body.reason || "Approved by Super Admin";
+  return toggleAdminShopStatus(req, res);
+}
+
+/**
+ * Rejection endpoint for Super Admin:
+ * POST /api/admin/shops/:id/reject
+ */
+export async function rejectAdminShop(req: Request, res: Response) {
+  const { reason } = req.body;
+  if (!reason || !String(reason).trim()) {
+    return res.status(400).json({ success: false, message: "A reason is required to reject a shop registration." });
+  }
+  req.body.status = "suspended";
+  req.body.reason = `Registration Rejected: ${String(reason).trim()}`;
   return toggleAdminShopStatus(req, res);
 }
 
@@ -525,7 +559,7 @@ export async function toggleAdminOwnerStatus(req: Request, res: Response) {
 
 /**
  * 10. GET /api/admin/audit-logs
- * List all platform audit logs.
+ * List all platform audit logs with search and action filters.
  */
 export async function getAdminAuditLogs(req: Request, res: Response) {
   try {
@@ -533,7 +567,27 @@ export async function getAdminAuditLogs(req: Request, res: Response) {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const offset = (page - 1) * limit;
 
+    const where: any = {};
+    const { action, search, target_type } = req.query;
+
+    if (action && action !== "all") {
+      where.action = action;
+    }
+    if (target_type && target_type !== "all") {
+      where.target_type = target_type;
+    }
+    if (search && String(search).trim()) {
+      const q = `%${String(search).trim()}%`;
+      where[Op.or] = [
+        { super_admin_email: { [Op.iLike]: q } },
+        { target_name: { [Op.iLike]: q } },
+        { action: { [Op.iLike]: q } },
+        { ip_address: { [Op.iLike]: q } },
+      ];
+    }
+
     const { count, rows } = await PlatformAuditLog.findAndCountAll({
+      where,
       order: [["created_at", "DESC"]],
       limit,
       offset,
@@ -642,3 +696,300 @@ export async function getAdminShopSupportData(req: Request, res: Response) {
     return res.status(500).json({ success: false, message: "Failed to load shop support data" });
   }
 }
+
+/**
+ * 12. GET /api/admin/categories
+ * List all master platform categories across all owners with item counts.
+ */
+export async function getAdminCategories(req: Request, res: Response) {
+  try {
+    const categories = await Category.findAll({
+      include: [
+        { model: Owner, as: "owner", attributes: ["id", "name", "email"] },
+        { model: Subcategory, as: "subcategories" },
+      ],
+      order: [["name", "ASC"]],
+    });
+
+    const categoryIds = categories.map((c) => c.id);
+    const counts = (await Product.findAll({
+      attributes: ["category_id", [sequelize.fn("COUNT", sequelize.col("id")), "product_count"]],
+      where: { category_id: categoryIds },
+      group: ["category_id"],
+      raw: true,
+    })) as any[];
+
+    const countMap: Record<number, number> = {};
+    for (const r of counts) {
+      if (r.category_id) countMap[Number(r.category_id)] = Number(r.product_count);
+    }
+
+    const data = categories.map((c) => {
+      const json = c.toJSON() as any;
+      json.product_count = countMap[c.id] || 0;
+      return json;
+    });
+
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    console.error("Error fetching admin categories:", error);
+    return res.status(500).json({ success: false, message: "Failed to load categories" });
+  }
+}
+
+/**
+ * 13. POST /api/admin/categories
+ * Create a new master category.
+ */
+export async function createAdminCategory(req: Request, res: Response) {
+  try {
+    const { name, alias, icon, image_url, status, owner_id } = req.body;
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ success: false, message: "Category name is required" });
+    }
+
+    const targetOwnerId = owner_id || req.auth?.ownerId || 1;
+    const trimmedName = String(name).trim();
+
+    const category = await Category.create({
+      owner_id: targetOwnerId,
+      name: trimmedName,
+      alias: alias ? String(alias).trim().toUpperCase() : null,
+      icon: icon ? String(icon).trim() : null,
+      image_url: image_url ? String(image_url).trim() : null,
+      status: status === "inactive" ? "inactive" : "active",
+    });
+
+    await logSuperAdminAction(
+      req,
+      "CREATE_CATEGORY",
+      "category",
+      category.id,
+      category.name,
+      { alias: category.alias, status: category.status }
+    );
+
+    return res.status(201).json({ success: true, message: "Category created successfully", data: category });
+  } catch (error: any) {
+    console.error("Error creating category:", error);
+    return res.status(500).json({ success: false, message: error.message || "Failed to create category" });
+  }
+}
+
+/**
+ * 14. PUT /api/admin/categories/:id
+ * Update a master category.
+ */
+export async function updateAdminCategory(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    const { name, alias, icon, image_url, status } = req.body;
+    if (name && String(name).trim()) category.name = String(name).trim();
+    if (alias !== undefined) category.alias = alias ? String(alias).trim().toUpperCase() : null;
+    if (icon !== undefined) category.icon = icon ? String(icon).trim() : null;
+    if (image_url !== undefined) category.image_url = image_url ? String(image_url).trim() : null;
+    if (status && (status === "active" || status === "inactive")) category.status = status;
+
+    await category.save();
+
+    await logSuperAdminAction(
+      req,
+      "UPDATE_CATEGORY",
+      "category",
+      category.id,
+      category.name,
+      { alias: category.alias, status: category.status }
+    );
+
+    return res.json({ success: true, message: "Category updated successfully", data: category });
+  } catch (error: any) {
+    console.error("Error updating category:", error);
+    return res.status(500).json({ success: false, message: "Failed to update category" });
+  }
+}
+
+/**
+ * 15. DELETE /api/admin/categories/:id
+ * Delete a master category.
+ */
+export async function deleteAdminCategory(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    // Unlink products
+    await Product.update({ category_id: null }, { where: { category_id: id } });
+    await Subcategory.destroy({ where: { category_id: id } });
+    const oldUrl = category.image_url;
+    await category.destroy();
+    if (oldUrl) await removeImage(oldUrl);
+
+    await logSuperAdminAction(
+      req,
+      "DELETE_CATEGORY",
+      "category",
+      id,
+      category.name
+    );
+
+    return res.json({ success: true, message: "Category deleted successfully", data: { id } });
+  } catch (error: any) {
+    console.error("Error deleting category:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete category" });
+  }
+}
+
+/**
+ * 16. POST /api/admin/categories/:id/image
+ * Upload category icon / PNG image.
+ */
+export async function uploadAdminCategoryImage(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) {
+      return res.status(400).json({ success: false, message: "Choose an image file to upload" });
+    }
+
+    const url = await saveImage(file, `platform/categories/${category.id}`);
+    const oldUrl = category.image_url;
+    category.image_url = url;
+    await category.save();
+    if (oldUrl) await removeImage(oldUrl);
+
+    await logSuperAdminAction(
+      req,
+      "UPLOAD_CATEGORY_IMAGE",
+      "category",
+      category.id,
+      category.name,
+      { image_url: url }
+    );
+
+    return res.json({ success: true, message: "Category image uploaded", data: { imageUrl: url, category } });
+  } catch (error: any) {
+    console.error("Error uploading category image:", error);
+    return res.status(500).json({ success: false, message: error?.message || "Failed to upload image" });
+  }
+}
+
+/**
+ * 17. GET /api/admin/notifications
+ * List platform sent notifications.
+ */
+export async function getAdminNotifications(req: Request, res: Response) {
+  try {
+    const notifications = await Notification.findAll({
+      order: [["created_at", "DESC"]],
+      limit: 100,
+    });
+    return res.json({
+      success: true,
+      data: notifications,
+    });
+  } catch (error: any) {
+    console.error("Error fetching admin notifications:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch notifications" });
+  }
+}
+
+/**
+ * 18. POST /api/admin/notifications/broadcast
+ * Broadcast notification to all owners, all staff, all customers, or a specific owner.
+ */
+export async function broadcastAdminNotification(req: Request, res: Response) {
+  try {
+    const { target_audience, owner_id, title, message, type } = req.body;
+    if (!title || !message) {
+      return res.status(400).json({ success: false, message: "Title and message are required" });
+    }
+
+    let createdCount = 0;
+    const notifType = type || "general";
+
+    if (target_audience === "specific_owner" && owner_id) {
+      await Notification.create({
+        owner_id: Number(owner_id),
+        recipient_type: "owner",
+        recipient_id: Number(owner_id),
+        type: notifType,
+        title: String(title).trim(),
+        message: String(message).trim(),
+        is_read: false,
+      });
+      createdCount = 1;
+    } else if (target_audience === "all_employees") {
+      const employees = await Employee.findAll({ attributes: ["id", "owner_id"] });
+      const notifs = employees.map((e) => ({
+        owner_id: e.owner_id,
+        recipient_type: "employee" as const,
+        recipient_id: e.id,
+        type: notifType,
+        title: String(title).trim(),
+        message: String(message).trim(),
+        is_read: false,
+      }));
+      if (notifs.length > 0) await Notification.bulkCreate(notifs);
+      createdCount = notifs.length;
+    } else if (target_audience === "all_customers") {
+      const customers = await Customer.findAll({ attributes: ["id", "owner_id"] });
+      const notifs = customers.map((c) => ({
+        owner_id: c.owner_id,
+        recipient_type: "customer" as const,
+        recipient_id: c.id,
+        type: notifType,
+        title: String(title).trim(),
+        message: String(message).trim(),
+        is_read: false,
+      }));
+      if (notifs.length > 0) await Notification.bulkCreate(notifs);
+      createdCount = notifs.length;
+    } else {
+      // Default: all_owners
+      const owners = await Owner.findAll({ attributes: ["id"] });
+      const notifs = owners.map((o) => ({
+        owner_id: o.id,
+        recipient_type: "owner" as const,
+        recipient_id: o.id,
+        type: notifType,
+        title: String(title).trim(),
+        message: String(message).trim(),
+        is_read: false,
+      }));
+      if (notifs.length > 0) await Notification.bulkCreate(notifs);
+      createdCount = notifs.length;
+    }
+
+    await logSuperAdminAction(
+      req,
+      "BROADCAST_NOTIFICATION",
+      "notification",
+      null,
+      String(title).trim(),
+      { target_audience: target_audience || "all_owners", count: createdCount, message }
+    );
+
+    return res.json({
+      success: true,
+      message: `Notification broadcast sent to ${createdCount} recipient(s)`,
+      data: { count: createdCount },
+    });
+  } catch (error: any) {
+    console.error("Error broadcasting notification:", error);
+    return res.status(500).json({ success: false, message: "Failed to broadcast notification" });
+  }
+}
+

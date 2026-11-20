@@ -58,6 +58,8 @@ const PortalProfile = lazy(() => import("./pages/portal/PortalProfile"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminShops = lazy(() => import("./pages/admin/AdminShops"));
 const AdminOwners = lazy(() => import("./pages/admin/AdminOwners"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
 const AdminShopView = lazy(() => import("./pages/admin/AdminShopView"));
 
@@ -123,6 +125,8 @@ export default function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="shops" element={<AdminShops />} />
               <Route path="owners" element={<AdminOwners />} />
+              <Route path="categories" element={<AdminCategories />} />
+              <Route path="notifications" element={<AdminNotifications />} />
               <Route path="audit-logs" element={<AdminAuditLogs />} />
               <Route path="support" element={<AdminShopView />} />
             </Route>

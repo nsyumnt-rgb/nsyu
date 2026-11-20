@@ -6,6 +6,7 @@ import {
   updateAdminShop,
   toggleAdminShopStatus,
   approveAdminShop,
+  rejectAdminShop,
   fetchAdminOwners,
   type AdminShopItem,
   type AdminOwnerItem,
@@ -19,11 +20,14 @@ export default function AdminShops() {
   const [owners, setOwners] = useState<AdminOwnerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   // Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
 
   const [selectedShop, setSelectedShop] = useState<AdminShopItem | null>(null);
 
@@ -35,6 +39,7 @@ export default function AdminShops() {
   const [formEmail, setFormEmail] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const [formReason, setFormReason] = useState("");
+  const [approveNote, setApproveNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -156,13 +161,55 @@ export default function AdminShops() {
     }
   };
 
-  const handleApprove = async (shop: AdminShopItem) => {
-    if (!window.confirm(`Approve and activate "${shop.name}" (${shop.code})?`)) return;
+  const openApproveModal = (shop: AdminShopItem) => {
+    setSelectedShop(shop);
+    setApproveNote("");
+    setFormError(null);
+    setShowApproveModal(true);
+  };
+
+  const handleApproveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedShop) return;
+    setSubmitting(true);
+    setFormError(null);
     try {
-      await approveAdminShop(shop.id);
+      await approveAdminShop(selectedShop.id, approveNote.trim() || undefined);
+      setShowApproveModal(false);
+      setActionSuccess(`Shop "${selectedShop.name}" approved and activated successfully.`);
       await loadData();
     } catch (err: any) {
-      alert(err.response?.data?.message || err.message || "Failed to approve shop");
+      setFormError(err.response?.data?.message || err.message || "Failed to approve shop");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openRejectModal = (shop: AdminShopItem) => {
+    setSelectedShop(shop);
+    setFormReason("");
+    setFormError(null);
+    setShowRejectModal(true);
+  };
+
+  const handleRejectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedShop) return;
+    if (!formReason.trim()) {
+      setFormError("Please provide a reason for rejecting this registration.");
+      return;
+    }
+    setSubmitting(true);
+    setFormError(null);
+    try {
+      await rejectAdminShop(selectedShop.id, formReason.trim());
+      setShowRejectModal(false);
+      setActionSuccess(`Shop "${selectedShop.name}" registration rejected.`);
+      await loadData();
+    } catch (err: any) {
+      setFormError(err.response?.data?.message || err.message || "Failed to reject shop");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -198,6 +245,48 @@ export default function AdminShops() {
           <span>Create New Shop</span>
         </button>
       </div>
+
+      {/* Pending Approvals Attention Banner */}
+      {pendingCount > 0 && (
+        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 font-black shadow-xs">
+              {pendingCount}
+            </div>
+            <div>
+              <div className="text-sm font-bold text-amber-950">
+                Action Required: {pendingCount} Pending Shop Registration{pendingCount > 1 ? "s" : ""}
+              </div>
+              <div className="text-xs text-amber-800">
+                New tenant registrations awaiting Super Admin identity verification and approval.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const next = new URLSearchParams(searchParams);
+              next.set("status", "pending_approval");
+              setSearchParams(next);
+            }}
+            className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition self-start sm:self-auto shrink-0"
+          >
+            Review Pending ({pendingCount})
+          </button>
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{actionSuccess}</span>
+          </div>
+          <button onClick={() => setActionSuccess(null)} className="text-emerald-600 hover:text-emerald-800 font-bold ml-2">✕</button>
+        </div>
+      )}
 
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2 items-center">
@@ -315,14 +404,35 @@ export default function AdminShops() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        {shop.status === "pending_approval" && (
+                        {shop.status === "pending_approval" ? (
+                          <>
+                            <button
+                              onClick={() => openApproveModal(shop)}
+                              className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-2xs"
+                              title="Review and approve shop"
+                            >
+                              <span>✓</span>
+                              <span>Approve</span>
+                            </button>
+                            <button
+                              onClick={() => openRejectModal(shop)}
+                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-lg border border-rose-200 transition flex items-center gap-1 shadow-2xs"
+                              title="Reject registration"
+                            >
+                              <span>✕</span>
+                              <span>Reject</span>
+                            </button>
+                          </>
+                        ) : (
                           <button
-                            onClick={() => handleApprove(shop)}
-                            className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg transition flex items-center gap-1 shadow-2xs"
-                            title="Approve this shop"
+                            onClick={() => openStatusModal(shop)}
+                            className={`px-2.5 py-1 text-xs rounded-lg border transition font-bold ${
+                              shop.status === "active"
+                                ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                            }`}
                           >
-                            <span>✓</span>
-                            <span>Approve</span>
+                            {shop.status === "active" ? "Suspend" : "Activate"}
                           </button>
                         )}
                         <Link
@@ -337,16 +447,6 @@ export default function AdminShops() {
                           className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition"
                         >
                           Edit
-                        </button>
-                        <button
-                          onClick={() => openStatusModal(shop)}
-                          className={`px-2.5 py-1 text-xs rounded-lg border transition font-bold ${
-                            shop.status === "active"
-                              ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                              : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                          }`}
-                        >
-                          {shop.status === "active" ? "Suspend" : shop.status === "pending_approval" ? "Reject" : "Activate"}
                         </button>
                       </div>
                     </td>
@@ -560,7 +660,145 @@ export default function AdminShops() {
         </div>
       )}
 
-      {/* ACTIVATE / SUSPEND CONFIRMATION MODAL */}
+      {/* APPROVE SHOP MODAL */}
+      {showApproveModal && selectedShop && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center space-x-3 text-emerald-700">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold">
+                ✓
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-navy-900">Approve Shop Registration</h3>
+                <p className="text-xs text-slate-500">Activate shop and grant portal & POS access</p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Shop Name:</span>
+                <span className="font-bold text-navy-900">{selectedShop.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Shop Code:</span>
+                <span className="font-mono font-bold text-emerald-800">{selectedShop.code}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Owner:</span>
+                <span className="font-medium text-navy-900">{selectedShop.owner?.name || `#${selectedShop.owner_id}`} ({selectedShop.owner?.email || "-"})</span>
+              </div>
+              {selectedShop.phone && (
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Phone:</span>
+                  <span className="font-medium text-navy-900">{selectedShop.phone}</span>
+                </div>
+              )}
+            </div>
+
+            {formError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl font-medium">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleApproveSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Welcome / Approval Note <span className="font-normal text-slate-400">(Optional)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={approveNote}
+                  onChange={(e) => setApproveNote(e.target.value)}
+                  placeholder="e.g. Welcome to NSYU! Your store is now active and ready for billing."
+                  className="input text-xs bg-white py-2"
+                />
+                <span className="text-[11px] text-slate-400 block mt-1">
+                  Sent as an in-app notification to the shop owner.
+                </span>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowApproveModal(false)}
+                  className="btn-secondary btn-sm text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="btn-primary btn-sm text-xs font-bold shadow-xs disabled:opacity-50"
+                >
+                  {submitting ? "Approving..." : "Confirm & Approve Shop"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* REJECT SHOP MODAL */}
+      {showRejectModal && selectedShop && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+            <div className="flex items-center space-x-3 text-rose-600">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 flex items-center justify-center font-bold">
+                ✕
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-navy-900">Reject Shop Registration</h3>
+                <p className="text-xs text-slate-500">Decline registration and notify the business owner</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Rejecting <strong className="text-navy-900">{selectedShop.name}</strong> ({selectedShop.code}) will set its status to suspended and send an official alert notification with your rejection reason.
+            </p>
+
+            {formError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl font-medium">
+                {formError}
+              </div>
+            )}
+
+            <form onSubmit={handleRejectSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Reason for Rejection *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={formReason}
+                  onChange={(e) => setFormReason(e.target.value)}
+                  placeholder="e.g. Incomplete business documentation or invalid shop code. Please contact platform support."
+                  className="input text-xs bg-white py-2"
+                />
+                <span className="text-[11px] text-slate-400 block mt-1">
+                  Required. This message will be delivered to the applicant via notification and recorded in audit trail.
+                </span>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowRejectModal(false)}
+                  className="btn-secondary btn-sm text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2 text-white font-bold rounded-xl shadow-xs transition disabled:opacity-50 text-xs bg-rose-700 hover:bg-rose-800"
+                >
+                  {submitting ? "Rejecting..." : "Confirm & Reject Registration"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       {showStatusModal && selectedShop && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">

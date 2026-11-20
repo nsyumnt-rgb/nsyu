@@ -5,7 +5,7 @@ export default function AdminAuditLogs() {
   const [logs, setLogs] = useState<PlatformAuditLogEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const [limit] = useState(25);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,14 +13,20 @@ export default function AdminAuditLogs() {
   // Selected Log for detail modal
   const [selectedLog, setSelectedLog] = useState<PlatformAuditLogEntry | null>(null);
 
-  // Filter / Search
-  const [filterQuery, setFilterQuery] = useState("");
+  // Filters
+  const [actionCategory, setActionCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const loadLogs = async (p = page) => {
+  const loadLogs = async (p = page, search = searchQuery, category = actionCategory) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchAdminAuditLogs(p, limit);
+      const res = await fetchAdminAuditLogs({
+        page: p,
+        limit,
+        action: category !== "all" ? category : undefined,
+        search: search.trim() || undefined,
+      });
       if (res.data?.data) {
         setLogs(res.data.data.logs);
         setTotal(res.data.data.total);
@@ -35,19 +41,30 @@ export default function AdminAuditLogs() {
   };
 
   useEffect(() => {
-    loadLogs(page);
-  }, [page]);
+    loadLogs(page, searchQuery, actionCategory);
+  }, [page, actionCategory]);
 
-  const filteredLogs = logs.filter((log) => {
-    if (!filterQuery) return true;
-    const q = filterQuery.toLowerCase();
-    return (
-      log.action.toLowerCase().includes(q) ||
-      log.target_type.toLowerCase().includes(q) ||
-      (log.target_name && log.target_name.toLowerCase().includes(q)) ||
-      log.super_admin_email.toLowerCase().includes(q)
-    );
-  });
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    loadLogs(1, searchQuery, actionCategory);
+  };
+
+  const getActionBadgeColor = (action: string) => {
+    if (action.includes("approved") || action.includes("active")) {
+      return "bg-emerald-50 text-emerald-800 border-emerald-200";
+    }
+    if (action.includes("rejected") || action.includes("suspended") || action.includes("deleted")) {
+      return "bg-rose-50 text-rose-800 border-rose-200";
+    }
+    if (action.includes("broadcast") || action.includes("notification")) {
+      return "bg-purple-50 text-purple-800 border-purple-200";
+    }
+    if (action.includes("category")) {
+      return "bg-amber-50 text-amber-800 border-amber-200";
+    }
+    return "bg-slate-100 text-slate-800 border-slate-200";
+  };
 
   return (
     <div className="space-y-6">
@@ -64,24 +81,66 @@ export default function AdminAuditLogs() {
             Immutable system audit trail recording every administrative governance operation
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <form onSubmit={handleSearchSubmit} className="flex items-center space-x-2">
           <input
             type="text"
-            value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
-            placeholder="Search action, target, actor..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search action, target, actor, IP..."
             className="input h-10 text-xs w-64 bg-white"
           />
           <button
-            onClick={() => loadLogs(page)}
-            className="btn-secondary btn-sm flex items-center space-x-2 text-xs font-bold"
+            type="submit"
+            className="btn-primary btn-sm text-xs font-bold px-3.5 h-10 shadow-xs"
+          >
+            Search
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchQuery("");
+              setActionCategory("all");
+              setPage(1);
+              loadLogs(1, "", "all");
+            }}
+            className="btn-secondary btn-sm flex items-center space-x-1 text-xs font-bold h-10"
+            title="Reset Filters"
           >
             <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span>Refresh</span>
+            <span>Reset</span>
           </button>
-        </div>
+        </form>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2 items-center">
+        {[
+          { key: "all", label: "All Audit Actions" },
+          { key: "shop_approved", label: "Shop Approvals" },
+          { key: "shop_rejected", label: "Shop Rejections" },
+          { key: "shop_status_updated", label: "Status Suspensions / Activations" },
+          { key: "broadcast_notification_created", label: "Broadcast Notifications" },
+          { key: "category_created", label: "Category Creations" },
+          { key: "owner_created", label: "Owner Management" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => {
+              setActionCategory(tab.key);
+              setPage(1);
+            }}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+              actionCategory === tab.key
+                ? "bg-emerald-700 text-white shadow-xs"
+                : "bg-white text-slate-700 border border-[#E5E7EB] hover:bg-slate-50 shadow-2xs"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -99,7 +158,7 @@ export default function AdminAuditLogs() {
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Action</th>
                 <th className="py-3 px-4">Target Type</th>
-                <th className="py-3 px-4">Target Name / ID</th>
+                <th className="py-3 px-4">Target Entity</th>
                 <th className="py-3 px-4">Super Admin</th>
                 <th className="py-3 px-4">IP Address</th>
                 <th className="py-3 px-4">Timestamp</th>
@@ -111,21 +170,21 @@ export default function AdminAuditLogs() {
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
                     <div className="w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                    Loading audit logs...
+                    Loading audit trail...
                   </td>
                 </tr>
-              ) : filteredLogs.length === 0 ? (
+              ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                    No platform audit logs match the query.
+                    No platform audit logs match the selected filter.
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => (
+                logs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/70 transition">
                     <td className="py-3.5 px-4 font-mono text-slate-400 font-semibold">{log.id}</td>
                     <td className="py-3.5 px-4">
-                      <span className="font-mono font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px]">
+                      <span className={`font-mono font-bold px-2.5 py-0.5 rounded text-[11px] border ${getActionBadgeColor(log.action)}`}>
                         {log.action}
                       </span>
                     </td>
@@ -136,7 +195,13 @@ export default function AdminAuditLogs() {
                     <td className="py-3.5 px-4 text-slate-600 font-mono text-[11px]">{log.super_admin_email}</td>
                     <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px]">{log.ip_address || "127.0.0.1"}</td>
                     <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(log.created_at).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <button
@@ -156,7 +221,7 @@ export default function AdminAuditLogs() {
         {/* Pagination Footer */}
         <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
           <div>
-            Showing <strong className="text-navy-900">{filteredLogs.length}</strong> of{" "}
+            Showing <strong className="text-navy-900">{logs.length}</strong> of{" "}
             <strong className="text-navy-900">{total}</strong> total log entries
           </div>
           <div className="flex items-center space-x-2">
@@ -187,7 +252,9 @@ export default function AdminAuditLogs() {
           <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
-                <span className="font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">{selectedLog.action}</span>
+                <span className={`font-mono font-bold px-2.5 py-0.5 rounded text-xs border ${getActionBadgeColor(selectedLog.action)}`}>
+                  {selectedLog.action}
+                </span>
                 <span className="text-slate-300">•</span>
                 <span className="text-xs font-bold text-slate-500">Log #{selectedLog.id}</span>
               </div>
@@ -203,7 +270,9 @@ export default function AdminAuditLogs() {
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
                 <span className="text-slate-400 block font-medium">Target Entity</span>
                 <span className="font-bold text-navy-900 capitalize">{selectedLog.target_type}</span>
-                <span className="text-slate-500 block truncate mt-0.5">{selectedLog.target_name || `#${selectedLog.target_id || "-"}`}</span>
+                <span className="text-slate-600 block truncate mt-0.5 font-medium">
+                  {selectedLog.target_name || `#${selectedLog.target_id || "-"}`}
+                </span>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70">
                 <span className="text-slate-400 block font-medium">Actor & IP</span>
@@ -214,7 +283,7 @@ export default function AdminAuditLogs() {
 
             <div>
               <span className="text-xs font-bold text-slate-700 block mb-1">Payload / Details JSON</span>
-              <pre className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 overflow-x-auto max-h-64 leading-relaxed">
+              <pre className="p-3.5 bg-slate-900 text-emerald-400 rounded-xl text-xs font-mono overflow-x-auto max-h-64 leading-relaxed shadow-inner">
                 {JSON.stringify(selectedLog.details, null, 2)}
               </pre>
             </div>

@@ -84,6 +84,32 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Pending Approvals Attention Banner */}
+      {(data?.pending_shops ?? 0) > 0 && (
+        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 font-black shadow-xs">
+              {data?.pending_shops}
+            </div>
+            <div>
+              <div className="text-sm font-bold text-amber-950">
+                Action Required: {data?.pending_shops} Pending Shop Registration{data?.pending_shops && data.pending_shops > 1 ? "s" : ""}
+              </div>
+              <div className="text-xs text-amber-800">
+                New shop registrations awaiting review, approval, and tenant provisioning.
+              </div>
+            </div>
+          </div>
+          <Link
+            to="/admin/shops?status=pending_approval"
+            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition self-start sm:self-auto shrink-0 flex items-center gap-1.5"
+          >
+            <span>Review & Approve</span>
+            <span>→</span>
+          </Link>
+        </div>
+      )}
+
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Shops */}
@@ -169,34 +195,49 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Access Tiles */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           to="/admin/shops"
           className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
         >
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-navy-900 group-hover:text-emerald-700 transition">Register New Shop</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Onboard a business tenant and configure code</p>
+            <h3 className="text-sm font-bold text-navy-900 group-hover:text-emerald-700 transition">Shop Management</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Approve, reject, or suspend tenant shops</p>
           </div>
         </Link>
 
         <Link
-          to="/admin/owners"
+          to="/admin/categories"
           className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
         >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center group-hover:scale-105 transition">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-navy-900 group-hover:text-blue-700 transition">Create First Owner</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Assign first owner credentials and seed roles</p>
+            <h3 className="text-sm font-bold text-navy-900 group-hover:text-purple-700 transition">Master Categories</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Manage global categories, aliases & icons</p>
+          </div>
+        </Link>
+
+        <Link
+          to="/admin/notifications"
+          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+        >
+          <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center group-hover:scale-105 transition">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-navy-900 group-hover:text-teal-700 transition">Broadcast Alerts</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Dispatch notices to owners, staff, customers</p>
           </div>
         </Link>
 
@@ -210,8 +251,8 @@ export default function AdminDashboard() {
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-navy-900 group-hover:text-amber-700 transition">Review Audit Logs</h3>
-            <p className="text-xs text-slate-500 mt-0.5">Complete historical record of platform actions</p>
+            <h3 className="text-sm font-bold text-navy-900 group-hover:text-amber-700 transition">Platform Audit Log</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Inspect governance operations & logs</p>
           </div>
         </Link>
       </div>
