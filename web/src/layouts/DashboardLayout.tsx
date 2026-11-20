@@ -3,7 +3,6 @@ import { Outlet } from "react-router-dom";
 import Topbar from "./Topbar";
 import Sidebar from "./Sidebar";
 import BusinessFooter from "./BusinessFooter";
-import HinglishToggle from "../components/HinglishToggle";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -24,9 +23,6 @@ export default function DashboardLayout() {
 
       {/* Universal Bottom Footer */}
       <BusinessFooter />
-
-      {/* Floating Hinglish Toggle Button */}
-      <HinglishToggle />
     </div>
   );
 }

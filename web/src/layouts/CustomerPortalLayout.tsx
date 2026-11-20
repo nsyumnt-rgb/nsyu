@@ -7,7 +7,6 @@ import { resolveAssetUrl } from "../api/client";
 import { useStorefront } from "../store/storefrontStore";
 import CartDrawer from "../components/storefront/CartDrawer";
 import { KindIcon, initialsOf, productKind } from "../components/ProductArt";
-import HinglishToggle from "../components/HinglishToggle";
 
 /**
  * Customer storefront shell: dark-green sticky header (Home · Shop · Categories ·
@@ -454,9 +453,6 @@ export default function CustomerPortalLayout() {
       )}
 
       <CartDrawer />
-
-      {/* Floating Hinglish Toggle Button */}
-      <HinglishToggle />
     </div>
   );
 }

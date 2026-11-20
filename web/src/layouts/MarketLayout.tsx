@@ -4,7 +4,6 @@ import { usePortalStore } from "../store/portalStore";
 import { useAuthStore } from "../store/authStore";
 import { getMarketCart } from "../api/marketplace";
 import BusinessFooter from "./BusinessFooter";
-import HinglishToggle from "../components/HinglishToggle";
 
 export default function MarketLayout() {
   const navigate = useNavigate();
@@ -252,9 +251,6 @@ export default function MarketLayout() {
 
       {/* 4. FOOTER */}
       <BusinessFooter />
-
-      {/* Floating Hinglish Toggle */}
-      <HinglishToggle />
     </div>
   );
 }

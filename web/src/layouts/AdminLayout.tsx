@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import AdminFooter from "./AdminFooter";
-import HinglishToggle from "../components/HinglishToggle";
 
 export default function AdminLayout() {
   const { owner, logout } = useAuthStore();
@@ -168,9 +167,6 @@ export default function AdminLayout() {
         </div>
       </div>
       <AdminFooter />
-
-      {/* Floating Hinglish Toggle Button */}
-      <HinglishToggle />
     </div>
   );
 }

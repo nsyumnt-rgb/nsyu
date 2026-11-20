@@ -14,6 +14,7 @@ import {
 } from "../api/notifications";
 import type { Shop } from "../types";
 import PosCartDrawer from "../components/PosCartDrawer";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function parseNotificationDate(raw?: any): Date {
   if (!raw) return new Date();
@@ -703,6 +704,9 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           </svg>
         </button>
 
+        {/* Language Change Option Icon next to profile */}
+        <LanguageSwitcher />
+
         {/* User Profile Pill */}
         <div className="relative" ref={userMenuRef}>
           <button
@@ -745,6 +749,25 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
                 className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
               >
                 <span>⚙️</span> Settings & Profile
+              </button>
+              <button
+                onClick={() => {
+                  const curr = localStorage.getItem("nsyu_language") === "Hindi" ? "Hindi" : "English";
+                  const nextLang = curr === "Hindi" ? "English" : "Hindi";
+                  try {
+                    localStorage.setItem("nsyu_language", nextLang);
+                  } catch {}
+                  window.dispatchEvent(new CustomEvent("nsyu_language_change", { detail: nextLang }));
+                  setUserOpen(false);
+                }}
+                className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-between"
+              >
+                <span className="flex items-center gap-2">
+                  <span>🌐</span> Language / भाषा
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  {localStorage.getItem("nsyu_language") === "Hindi" ? "हिंदी" : "English"}
+                </span>
               </button>
               <button
                 onClick={handleLogout}
