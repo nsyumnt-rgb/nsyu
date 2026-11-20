@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { getCustomerOutstandingReport } from "../api/reports";
 import { listSales } from "../api/sales";
-import { listPurchases } from "../api/purchases";
+import { listOutstandingBalances } from "../api/ledger";
 import { listProducts } from "../api/products";
 import { getOrders, updateOrderStatus, type OrderRecord } from "../api/orders";
-import { apiErrorMessage } from "../api/client";
 import ReferenceLink from "../components/ReferenceLink";
 import ProductItemIcon from "../components/ProductItemIcon";
 import { Avatar, DeltaPill, EmptyState, Icon, Meter, Segmented, StatCard, TONE, Toast } from "../components/ui";
@@ -45,7 +43,7 @@ function chartWindow(period: Period): { range: Range; buckets: { key: string; la
     });
     return { range: { from: new Date(today.getFullYear(), today.getMonth() - 11, 1), to: new Date() }, buckets, monthly: true };
   }
-  const days = period === "month" ? 30 : 7; // "Today" still shows the last week so there is a trend to read
+  const days = period === "month" ? 30 : 7;
   const buckets = Array.from({ length: days }, (_, i) => {
     const d = addDays(today, -(days - 1 - i));
     return {
@@ -59,12 +57,10 @@ function chartWindow(period: Period): { range: Range; buckets: { key: string; la
 const iso = (d?: Date) => (d ? d.toISOString() : undefined);
 const inr = (n: number) => "₹" + Math.round(Number(n) || 0).toLocaleString("en-IN");
 const saleValue = (s: any) => (s.status === "cancelled" ? 0 : Number(s.total_amount) || 0);
-const purchaseValue = (p: any) => (p.status === "cancelled" ? 0 : (Number(p.total_amount) || 0) - (Number(p.returned_amount) || 0));
 const sum = (rows: any[], f: (r: any) => number) => rows.reduce((a, r) => a + f(r), 0);
 
-/* ───────────────────────── order workflow (board 7, note 4) ───────────────────────── */
+/* ───────────────────────── order workflow ───────────────────────── */
 
-// Wireframe stages mapped onto the existing order statuses — no backend change.
 const STAGE: Record<string, { label: string; tone: string; next?: { status: string; action: string } }> = {
   pending: { label: "New", tone: "badge-brand", next: { status: "confirmed", action: "Accept" } },
   confirmed: { label: "Accepted", tone: "badge-warn", next: { status: "processing", action: "Pack" } },
@@ -84,14 +80,12 @@ export default function Dashboard() {
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
   const owner = useAuthStore((s) => s.owner);
-  const employee = useAuthStore((s) => s.employee);
 
   const [period, setPeriod] = useState<Period>("month");
   const [loading, setLoading] = useState(true);
-  const [kpi, setKpi] = useState({ sales: 0, prevSales: 0, orders: 0, prevOrders: 0, purchases: 0, prevPurchases: 0 });
+  const [kpi, setKpi] = useState({ sales: 0, prevSales: 0, orders: 0, prevOrders: 0, productsCount: 0 });
   const [hasPrev, setHasPrev] = useState(true);
   const [chartSales, setChartSales] = useState<any[]>([]);
-  const [chartPurchases, setChartPurchases] = useState<any[]>([]);
   const [dues, setDues] = useState<{ total: number; top: { id?: number; name: string; amount: number }[]; denied: boolean }>({ total: 0, top: [], denied: false });
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -105,19 +99,15 @@ export default function Dashboard() {
     const { cur, prev } = rangesFor(period);
     const empty = { data: { data: [] as any[] } };
     const salesQ = (r: Range) => listSales({ from: iso(r.from), to: iso(r.to), limit: 1000, allShops: true } as any).catch(() => empty);
-    const purchQ = (r: Range) => listPurchases({ from: iso(r.from), to: iso(r.to), limit: 500, allShops: true } as any).catch(() => empty);
     const ordersQ = (r: Range) => getOrders({ startDate: iso(r.from), endDate: iso(r.to) }).catch(() => empty);
 
-    const [s, ps, p, pp, o, po, cs, cp, out, prod, allOrders] = await Promise.all([
+    const [s, ps, o, po, cs, out, prod, allOrders] = await Promise.all([
       salesQ(cur),
       prev ? salesQ(prev) : Promise.resolve(empty),
-      purchQ(cur),
-      prev ? purchQ(prev) : Promise.resolve(empty),
       ordersQ(cur),
       prev ? ordersQ(prev) : Promise.resolve(empty),
       salesQ(chart.range),
-      purchQ(chart.range),
-      getCustomerOutstandingReport().catch((e) => ({ denied: e?.response?.status === 403 }) as any),
+      listOutstandingBalances().catch((e) => ({ denied: e?.response?.status === 403 }) as any),
       listProducts({ shopId: shopId || undefined } as any).catch(() => empty),
       getOrders().catch(() => empty),
     ]);
@@ -128,99 +118,82 @@ export default function Dashboard() {
       prevSales: sum(arr(ps), saleValue),
       orders: arr(o).length,
       prevOrders: arr(po).length,
-      purchases: sum(arr(p), purchaseValue),
-      prevPurchases: sum(arr(pp), purchaseValue),
+      productsCount: arr(prod).length,
     });
     setHasPrev(Boolean(prev));
     setChartSales(arr(cs));
-    setChartPurchases(arr(cp));
 
     if ((out as any)?.denied) {
       setDues({ total: 0, top: [], denied: true });
     } else {
-      const data = (out as any)?.data?.data || {};
-      const list = (data.customers || [])
-        .map((c: any) => ({ id: c.id ?? c.customer?.id, name: c.name ?? c.customer?.name ?? "Customer", amount: Number(c.current_balance ?? c.balance ?? 0) }))
+      const custList = Array.isArray(out?.data?.data) ? out.data.data : [];
+      const list = custList
+        .map((c: any) => ({ id: c.id, name: c.name || "Customer", amount: Number(c.current_balance || 0) }))
         .filter((c: any) => c.amount > 0)
         .sort((a: any, b: any) => b.amount - a.amount);
-      setDues({ total: Number(data.summary?.totalReceivable ?? 0), top: list.slice(0, 5), denied: false });
+      const totalRec = list.reduce((acc: number, c: any) => acc + c.amount, 0);
+      setDues({ total: totalRec, top: list.slice(0, 5), denied: false });
     }
     setProducts(arr(prod));
     setOrders(arr(allOrders));
     setLoading(false);
-  }, [period, chart.range]);
+  }, [period, chart.range, shopId]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shopId, period]);
+  }, [load]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  // Chart series (real records bucketed by day / month)
-  const series = useMemo(() => {
-    const keyOf = (d: Date) => (chart.monthly ? `${d.getFullYear()}-${d.getMonth()}` : `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
-    const bucket = (rows: any[], dateField: string, val: (r: any) => number) => {
-      const m = new Map<string, number>();
-      for (const r of rows) {
-        const raw = r[dateField] || r.created_at || r.createdAt;
-        if (!raw) continue;
-        const k = keyOf(new Date(raw));
-        m.set(k, (m.get(k) || 0) + val(r));
-      }
-      return m;
-    };
-    const sm = bucket(chartSales, "invoice_date", saleValue);
-    const pm = bucket(chartPurchases, "purchase_date", purchaseValue);
-    return chart.buckets.map((b) => ({ label: b.label, sales: sm.get(b.key) || 0, purchases: pm.get(b.key) || 0 }));
-  }, [chartSales, chartPurchases, chart]);
-
-  const lowStock = useMemo(
-    () =>
-      products
-        .map((p) => {
-          const match = shopId ? p.stocks?.find((s: any) => s.shop_id === shopId) : null;
-          const stock = Number(match?.current_stock ?? p.stocks?.[0]?.current_stock ?? 0);
-          return { p, stock, min: Number(p.min_stock ?? 5) };
-        })
-        .filter((x) => x.stock <= x.min)
-        .sort((a, b) => a.stock - b.stock),
-    [products, shopId]
-  );
-
-  const recentOrders = useMemo(() => {
-    const open = orders.filter((o) => stageOf(o.status).next);
-    const rest = orders.filter((o) => !stageOf(o.status).next);
-    return [...open, ...rest].slice(0, 6);
-  }, [orders]);
-
-  async function advance(o: OrderRecord) {
-    const next = stageOf(o.status).next;
+  const advanceOrder = async (order: OrderRecord) => {
+    const next = stageOf(order.status).next;
     if (!next) return;
-    setBusyOrder(o.id);
+    setBusyOrder(order.id);
     try {
-      await updateOrderStatus(o.id, { status: next.status });
-      setOrders((list) => list.map((x) => (x.id === o.id ? { ...x, status: next.status } : x)));
-      setToast({ ok: true, text: `Order ${o.order_number} → ${stageOf(next.status).label}` });
-    } catch (err) {
-      setToast({ ok: false, text: apiErrorMessage(err, "Could not update the order") });
+      await updateOrderStatus(order.id, { status: next.status });
+      setToast({ ok: true, text: `Order #${order.order_number || order.id} marked ${next.status}.` });
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: next.status } : o)));
+    } catch {
+      setToast({ ok: false, text: "Could not update order status." });
     } finally {
       setBusyOrder(null);
     }
-  }
+  };
 
-  const name = (owner?.name || employee?.name || "").split(" ")[0];
+  const name = owner?.name;
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  // Bucket sales for chart
+  const series = useMemo(() => {
+    const bucket = (rows: any[], dateField: string, val: (r: any) => number) => {
+      const map = new Map<string, number>();
+      for (const r of rows) {
+        const raw = r[dateField] || r.created_at;
+        if (!raw) continue;
+        const d = new Date(raw);
+        const k = chart.monthly ? `${d.getFullYear()}-${d.getMonth()}` : `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        map.set(k, (map.get(k) || 0) + val(r));
+      }
+      return map;
+    };
+    const sm = bucket(chartSales, "sale_date", saleValue);
+    return chart.buckets.map((b) => ({ label: b.label, sales: sm.get(b.key) || 0 }));
+  }, [chartSales, chart]);
+
+  // Low stock products
+  const lowStock = useMemo(() => {
+    return products
+      .map((p) => {
+        const s = (p.productStockEntries || [])[0];
+        const stock = Number(s?.current_stock ?? p.current_stock ?? p.stock ?? 0);
+        const min = Number(p.min_stock ?? 5);
+        return { p, stock, min };
+      })
+      .filter((x) => x.stock <= x.min);
+  }, [products]);
+
   const totals = {
     sales: sum(series, (x) => x.sales),
-    purchases: sum(series, (x) => x.purchases),
   };
-  const net = totals.sales - totals.purchases;
   const openOrders = orders.filter((o) => stageOf(o.status).next).length;
   const outCount = lowStock.filter((x) => x.stock <= 0).length;
   const maxDue = Math.max(1, ...dues.top.map((d) => d.amount));
@@ -228,14 +201,12 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 pb-10">
       {/* Hero */}
-      <section className="hero-brand p-5 sm:p-7">
-        <div aria-hidden className="pointer-events-none absolute -right-16 -bottom-24 w-72 h-72 rounded-full border-[28px] border-white/5" />
-        <div aria-hidden className="pointer-events-none absolute right-24 -top-20 w-48 h-48 rounded-full bg-white/5" />
+      <section className="hero-brand p-5 sm:p-7 rounded-2xl relative overflow-hidden bg-gradient-to-r from-[#064E3B] to-[#047857] text-white shadow-sm">
         <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 ring-1 ring-inset ring-white/15 px-3 py-1 text-[11.5px] font-semibold text-emerald-50">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
-              {activeShop?.name || "Your business"}
+              {activeShop?.name || "Your Store"}
             </div>
             <h1 className="mt-3 text-[24px] sm:text-[30px] font-bold tracking-tight text-white leading-tight">
               {greet}{name ? `, ${name}` : ""}
@@ -243,26 +214,28 @@ export default function Dashboard() {
             <p className="mt-1 text-[13.5px] text-emerald-50/80">
               {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               {" · "}
-              {openOrders > 0 ? `${openOrders} order${openOrders > 1 ? "s" : ""} waiting for you` : "No orders waiting"}
-              {lowStock.length > 0 && ` · ${lowStock.length} item${lowStock.length > 1 ? "s" : ""} low on stock`}
+              {openOrders > 0 ? `${openOrders} order${openOrders > 1 ? "s" : ""} waiting for processing` : "No pending orders"}
+              {lowStock.length > 0 && ` · ${lowStock.length} item${lowStock.length > 1 ? "s" : ""} low stock`}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <Link to="/app/billing" className="btn bg-white text-navy-900 hover:bg-emerald-50 shadow-sm">
-                <Icon name="receipt" /> New bill
+              <Link to="/app/billing" className="btn bg-white text-navy-900 hover:bg-emerald-50 shadow-sm font-bold">
+                <Icon name="receipt" /> New Bill (POS)
               </Link>
               <Link to="/app/products" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15">
-                <Icon name="plus" /> Add product
+                <Icon name="plus" /> Add Product
               </Link>
-              <Link to="/app/purchase" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15">
-                <Icon name="truck" /> New purchase
+              <Link to="/app/customers" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15">
+                <Icon name="users" /> Customers
+              </Link>
+              <Link to="/app/ledger" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15">
+                <Icon name="wallet" /> Customer Ledger
               </Link>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:min-w-[420px]">
-            <HeroFigure label="Sales" value={inr(totals.sales)} loading={loading} />
-            <HeroFigure label="Purchases" value={inr(totals.purchases)} loading={loading} />
-            <HeroFigure label="Net" value={inr(net)} loading={loading} accent={net >= 0 ? "text-emerald-200" : "text-rose-200"} />
-            <div className="col-span-3 text-[11px] text-emerald-50/60 text-right">{chart.monthly ? "Last 12 months" : `Last ${series.length} days`}</div>
+          <div className="grid grid-cols-2 gap-3 lg:min-w-[320px]">
+            <HeroFigure label="Total Sales" value={inr(totals.sales)} loading={loading} />
+            <HeroFigure label="Active Orders" value={String(orders.length)} loading={loading} />
+            <div className="col-span-2 text-[11px] text-emerald-50/70 text-right">{chart.monthly ? "Last 12 months" : `Last ${series.length} days`}</div>
           </div>
         </div>
       </section>
@@ -270,7 +243,7 @@ export default function Dashboard() {
       {/* Period + KPIs */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[15px] font-bold text-navy-900">Overview</h2>
+          <h2 className="text-[15px] font-bold text-navy-900">Store Overview</h2>
           <Segmented
             size="sm"
             value={period}
@@ -279,57 +252,56 @@ export default function Dashboard() {
           />
         </div>
         <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard label="Sales" icon="trend" tone="brand" value={inr(kpi.sales)} loading={loading} to="/app/sales" hint={<DeltaPill cur={kpi.sales} prev={kpi.prevSales} hasPrev={hasPrev} />} />
+          <StatCard label="Total Sales" icon="trend" tone="brand" value={inr(kpi.sales)} loading={loading} to="/app/sales" hint={<DeltaPill cur={kpi.sales} prev={kpi.prevSales} hasPrev={hasPrev} />} />
           <StatCard label="Orders" icon="cart" tone="sky" value={kpi.orders.toLocaleString("en-IN")} loading={loading} to="/app/orders" hint={<DeltaPill cur={kpi.orders} prev={kpi.prevOrders} hasPrev={hasPrev} />} />
-          <StatCard label="Purchases" icon="truck" tone="violet" value={inr(kpi.purchases)} loading={loading} to="/app/purchase" hint={<DeltaPill cur={kpi.purchases} prev={kpi.prevPurchases} hasPrev={hasPrev} />} />
+          <StatCard label="Products" icon="layers" tone="violet" value={String(kpi.productsCount)} loading={loading} to="/app/products" hint="Total active catalog items" />
           <StatCard
-            label="Outstanding dues"
+            label="Outstanding Khata"
             icon="wallet"
             tone="rose"
             value={dues.denied ? "—" : inr(dues.total)}
             valueClass={dues.denied ? "text-slate-400" : "text-rose-600"}
             loading={loading}
             to="/app/ledger"
-            hint={dues.denied ? "No permission" : `${dues.top.length ? `${dues.top.length}+ customers` : "Nobody"} owe you`}
+            hint={dues.denied ? "No permission" : `${dues.top.length ? `${dues.top.length} customer(s)` : "Zero balance"} pending`}
           />
         </div>
       </div>
 
       {/* Sales trend + Low stock */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <section className="card xl:col-span-8">
-          <div className="card-header flex-wrap">
+        <section className="card xl:col-span-8 bg-white p-5 rounded-2xl border border-gray-200">
+          <div className="card-header flex items-center justify-between pb-4 border-b border-gray-100">
             <div>
-              <h2 className="card-title text-[14.5px]">Sales vs purchases</h2>
-              <p className="text-[12px] text-slate-500 mt-0.5">{chart.monthly ? "Monthly, last 12 months" : `Daily, last ${series.length} days`}</p>
+              <h2 className="card-title text-[14.5px] font-bold text-navy-950">Daily Sales Trend</h2>
+              <p className="text-[12px] text-slate-500 mt-0.5">{chart.monthly ? "Monthly revenue" : `Daily revenue, last ${series.length} days`}</p>
             </div>
-            <div className="flex items-center gap-4 text-[12px] font-medium text-slate-500">
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-brand-600" /> Sales</span>
-              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-300" /> Purchases</span>
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" /> Real API Revenue
             </div>
           </div>
-          <div className="p-4 sm:p-5">
+          <div className="pt-4">
             <BarChart data={series} loading={loading} />
           </div>
         </section>
 
-        <section className="card xl:col-span-4 flex flex-col">
-          <div className="card-header">
+        <section className="card xl:col-span-4 flex flex-col bg-white p-5 rounded-2xl border border-gray-200">
+          <div className="card-header flex items-center justify-between pb-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <h2 className="card-title text-[14.5px]">Low stock</h2>
-              {lowStock.length > 0 && <span className="badge-danger">{lowStock.length}</span>}
+              <h2 className="card-title text-[14.5px] font-bold text-navy-950">Low Stock</h2>
+              {lowStock.length > 0 && <span className="badge-danger px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700">{lowStock.length}</span>}
               {outCount > 0 && <span className="text-[11.5px] text-slate-400">{outCount} out</span>}
             </div>
-            <Link to="/app/inventory?tab=low" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1">
-              Inventory <Icon name="arrowRight" className="w-3.5 h-3.5" />
+            <Link to="/app/inventory" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1">
+              Inventory →
             </Link>
           </div>
           {lowStock.length === 0 ? (
-            loading ? <Skeleton rows={4} /> : <EmptyState compact icon="checkCircle" tone="emerald" title="Stock looks healthy" text="Every product is above its reorder level." />
+            loading ? <Skeleton rows={4} /> : <EmptyState compact icon="checkCircle" tone="emerald" title="Stock healthy" text="All catalog items are stocked above safety levels." />
           ) : (
-            <ul className="divide-y divide-slate-100 flex-1">
+            <ul className="divide-y divide-slate-100 flex-1 my-2">
               {lowStock.slice(0, 5).map(({ p, stock, min }) => (
-                <li key={p.id} className="px-5 py-3 flex items-center gap-3">
+                <li key={p.id} className="py-2.5 flex items-center gap-3">
                   <ProductItemIcon name={p.name} category={p.category?.name} imageUrl={p.images?.[0]?.url} size="sm" />
                   <div className="flex-1 min-w-0">
                     <ReferenceLink type="product" refNumber={p.name} className="!font-sans block truncate text-[13px] font-medium text-navy-900 hover:text-brand-600">
@@ -344,63 +316,61 @@ export default function Dashboard() {
               ))}
             </ul>
           )}
-          <div className="p-4 pt-2 mt-auto">
-            <Link to="/app/purchase" className="btn-soft w-full">
-              <Icon name="truck" /> Reorder stock
+          <div className="pt-3 mt-auto">
+            <Link to="/app/inventory" className="btn-soft w-full text-center block py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-800">
+              Manage Stock in Inventory →
             </Link>
           </div>
         </section>
       </div>
 
       {/* Recent orders */}
-      <section className="card overflow-hidden">
-        <div className="card-header">
+      <section className="card overflow-hidden bg-white p-5 rounded-2xl border border-gray-200">
+        <div className="card-header flex items-center justify-between pb-4 border-b border-gray-100">
           <div>
-            <h2 className="card-title text-[14.5px]">Recent orders</h2>
-            <p className="text-[12px] text-slate-500 mt-0.5">Open orders first — move each one forward in one click.</p>
+            <h2 className="card-title text-[14.5px] font-bold text-navy-950">Store Orders</h2>
+            <p className="text-[12px] text-slate-500 mt-0.5">Customer orders requiring fulfillment and delivery</p>
           </div>
-          <Link to="/app/orders" className="btn-secondary btn-sm">View all</Link>
+          <Link to="/app/orders" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">
+            View all orders →
+          </Link>
         </div>
-        {recentOrders.length === 0 ? (
-          loading ? <Skeleton rows={4} /> : <EmptyState icon="cart" title="No orders yet" text="Orders from your online store will appear here." />
+
+        {orders.length === 0 ? (
+          loading ? <Skeleton rows={3} /> : <EmptyState compact icon="cart" title="No orders placed yet" text="Incoming orders from the marketplace will show here in real-time." />
         ) : (
-          <div className="overflow-x-auto">
-            <table>
+          <div className="overflow-x-auto mt-2">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th className="!text-right">Amount</th>
-                  <th className="!text-right">Next step</th>
+                <tr className="border-b border-gray-100 text-gray-400 uppercase text-[10px] tracking-wider">
+                  <th className="py-2.5">Order #</th>
+                  <th className="py-2.5">Customer</th>
+                  <th className="py-2.5">Amount</th>
+                  <th className="py-2.5">Status</th>
+                  <th className="py-2.5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody>
-                {recentOrders.map((o) => {
+              <tbody className="divide-y divide-gray-100">
+                {orders.slice(0, 5).map((o) => {
                   const st = stageOf(o.status);
-                  const cname = o.customer?.name || "Customer";
                   return (
-                    <tr key={o.id}>
-                      <td className="font-mono font-semibold whitespace-nowrap">
-                        <Link to="/app/orders" className="text-brand-700 hover:underline">#{String(o.order_number || o.id).replace(/^#/, "")}</Link>
+                    <tr key={o.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3 font-bold text-navy-900">#{o.order_number || o.id}</td>
+                      <td className="py-3 text-gray-700">{o.customer?.name || "Customer"}</td>
+                      <td className="py-3 font-semibold text-emerald-800">{inr(Number(o.total_amount || 0))}</td>
+                      <td className="py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.tone}`}>{st.label}</span>
                       </td>
-                      <td>
-                        <div className="flex items-center gap-2.5 max-w-[220px]">
-                          <Avatar name={cname} size="sm" />
-                          <span className="truncate text-navy-900 font-medium">{cname}</span>
-                        </div>
-                      </td>
-                      <td className="text-slate-500 whitespace-nowrap">{new Date(o.order_date || o.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</td>
-                      <td><span className={st.tone}>{st.label}</span></td>
-                      <td className="text-right font-semibold text-navy-900 whitespace-nowrap tabular">{inr(Number(o.total_amount))}</td>
-                      <td className="text-right whitespace-nowrap">
-                        {st.next ? (
-                          <button type="button" disabled={busyOrder === o.id} onClick={() => advance(o)} className="btn-soft btn-sm min-w-[118px]">
-                            {busyOrder === o.id ? "Saving…" : <>{st.next.action} <Icon name="arrowRight" className="w-3.5 h-3.5" /></>}
+                      <td className="py-3 text-right">
+                        {st.next && (
+                          <button
+                            type="button"
+                            disabled={busyOrder === o.id}
+                            onClick={() => advanceOrder(o)}
+                            className="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] disabled:opacity-50"
+                          >
+                            {busyOrder === o.id ? "..." : st.next.action}
                           </button>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[12px] text-emerald-600 font-medium"><Icon name="check" className="w-3.5 h-3.5" /> Done</span>
                         )}
                       </td>
                     </tr>
@@ -412,30 +382,26 @@ export default function Dashboard() {
         )}
       </section>
 
-      {/* Top dues + Reports */}
+      {/* Top customer dues + Operations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <section className="card">
-          <div className="card-header">
-            <h2 className="card-title text-[14.5px]">Top customer dues</h2>
-            <Link to="/app/ledger" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1">
-              Ledger <Icon name="arrowRight" className="w-3.5 h-3.5" />
+        <section className="card bg-white p-5 rounded-2xl border border-gray-200">
+          <div className="card-header flex items-center justify-between pb-3 border-b border-gray-100">
+            <h2 className="card-title text-[14.5px] font-bold text-navy-950">Customer Khata Dues</h2>
+            <Link to="/app/ledger" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">
+              Open Ledger →
             </Link>
           </div>
           {dues.denied ? (
-            <EmptyState compact icon="ban" title="No access" text="You don't have permission to see customer balances." />
+            <EmptyState compact icon="ban" title="No access" text="Customer balance access is restricted." />
           ) : dues.top.length === 0 ? (
-            loading ? <Skeleton rows={4} /> : <EmptyState compact icon="checkCircle" tone="emerald" title="All settled" text="No customer has an outstanding balance." />
+            loading ? <Skeleton rows={4} /> : <EmptyState compact icon="checkCircle" tone="emerald" title="All cleared" text="No customer has an outstanding balance due." />
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-slate-100 my-2">
               {dues.top.map((c) => (
-                <li key={`${c.id}-${c.name}`} className="px-5 py-3 flex items-center gap-3">
+                <li key={`${c.id}-${c.name}`} className="py-3 flex items-center gap-3">
                   <Avatar name={c.name} />
                   <div className="flex-1 min-w-0">
-                    {c.id ? (
-                      <Link to={`/app/ledger?customerId=${c.id}`} className="block text-[13.5px] font-medium text-navy-900 hover:text-brand-700 truncate">{c.name}</Link>
-                    ) : (
-                      <span className="block text-[13.5px] font-medium text-navy-900 truncate">{c.name}</span>
-                    )}
+                    <Link to={`/app/ledger?customerId=${c.id}`} className="block text-[13.5px] font-medium text-navy-900 hover:text-brand-700 truncate">{c.name}</Link>
                     <Meter value={c.amount} max={maxDue} tone="rose" className="mt-1.5" />
                   </div>
                   <span className="text-[13.5px] font-bold text-rose-600 tabular whitespace-nowrap">{inr(c.amount)}</span>
@@ -445,38 +411,35 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section className="card">
-          <div className="card-header">
-            <h2 className="card-title text-[14.5px]">Reports</h2>
-            <Link to="/app/reports" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1">
-              All reports <Icon name="arrowRight" className="w-3.5 h-3.5" />
-            </Link>
+        {/* 6 Core Modules Quick Navigation */}
+        <section className="card bg-white p-5 rounded-2xl border border-gray-200">
+          <div className="card-header pb-3 border-b border-gray-100">
+            <h2 className="card-title text-[14.5px] font-bold text-navy-950">Store Operations</h2>
+            <p className="text-[12px] text-slate-500 mt-0.5">Core shop management modules</p>
           </div>
-          <div className="p-4 sm:p-5 grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5">
-            {(
-              [
-                ["Sales report", "sales", "trend", "brand"],
-                ["Purchase report", "purchases", "truck", "violet"],
-                ["Stock valuation", "inventory", "layers", "sky"],
-                ["Gross profit", "profit", "rupee", "emerald"],
-                ["Customer ledger", "outstanding", "users", "amber"],
-              ] as const
-            ).map(([label, tab, icon, tone]) => (
+          <div className="pt-3 grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5">
+            {[
+              { label: "POS Billing", desc: "Ring up retail sale", to: "/app/billing", icon: "receipt", tone: "brand" as const },
+              { label: "Sales Invoices", desc: "Past bills & GST", to: "/app/sales", icon: "trend" as const, tone: "emerald" as const },
+              { label: "Live Inventory", desc: "Stock management", to: "/app/inventory", icon: "layers" as const, tone: "sky" as const },
+              { label: "Products Catalog", desc: "Add & edit products", to: "/app/products", icon: "plus" as const, tone: "violet" as const },
+              { label: "Customer Ledger", desc: "Udhaar & statements", to: "/app/ledger", icon: "wallet" as const, tone: "amber" as const },
+              { label: "Store Orders", desc: "Dispatch & tracking", to: "/app/orders", icon: "cart" as const, tone: "sky" as const },
+            ].map((m) => (
               <Link
-                key={tab}
-                to={`/app/reports?tab=${tab}`}
-                className="group flex items-center gap-3 rounded-xl border border-border px-3.5 py-3 hover:border-brand-200 hover:bg-brand-50/40 transition"
+                key={m.to}
+                to={m.to}
+                className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition group"
               >
-                <span className={`w-9 h-9 rounded-lg ring-1 ring-inset flex items-center justify-center shrink-0 ${TONE[tone].tile}`}>
-                  <Icon name={icon} className="w-4 h-4" />
+                <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${TONE[m.tone].tile}`}>
+                  <Icon name={m.icon} className="w-4 h-4" />
                 </span>
-                <span className="flex-1 text-[13px] font-semibold text-navy-900">{label}</span>
-                <Icon name="right" className="w-4 h-4 text-slate-300 group-hover:text-brand-600 transition" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-navy-900 group-hover:text-emerald-800 truncate">{m.label}</div>
+                  <div className="text-[11px] text-gray-500 truncate">{m.desc}</div>
+                </div>
               </Link>
             ))}
-            <Link to="/app/reports" className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3.5 py-3 text-[12.5px] font-semibold text-slate-500 hover:border-brand-300 hover:text-brand-700 transition">
-              <Icon name="download" /> Export CSV / PDF
-            </Link>
           </div>
         </section>
       </div>
@@ -486,100 +449,63 @@ export default function Dashboard() {
   );
 }
 
-/* ───────────────────────── components ───────────────────────── */
-
-function HeroFigure({ label, value, loading, accent }: { label: string; value: string; loading: boolean; accent?: string }) {
+function HeroFigure({ label, value, loading }: { label: string; value: string; loading: boolean }) {
   return (
-    <div className="rounded-xl bg-white/[0.07] ring-1 ring-inset ring-white/10 px-3 py-3 sm:px-4 min-w-0">
-      <div className="text-[10.5px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-50/70">{label}</div>
-      <div className={`mt-1 text-[15px] sm:text-[19px] font-bold tabular truncate ${accent || "text-white"} ${loading ? "opacity-50 animate-pulse" : ""}`}>{value}</div>
+    <div className="p-3 sm:p-4 rounded-xl bg-white/10 ring-1 ring-inset ring-white/15">
+      <div className="text-[11px] font-semibold text-emerald-100 uppercase tracking-wider">{label}</div>
+      <div className="mt-1 text-lg sm:text-xl font-black text-white">{loading ? "..." : value}</div>
     </div>
   );
 }
 
 function Skeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="p-5 space-y-3">
+    <div className="p-4 space-y-2">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="flex items-center gap-3 animate-pulse">
-          <div className="w-8 h-8 rounded-lg bg-slate-100" />
-          <div className="flex-1 space-y-1.5">
-            <div className="h-3 rounded bg-slate-100 w-2/3" />
-            <div className="h-2 rounded bg-slate-100 w-1/3" />
-          </div>
-        </div>
+        <div key={i} className="h-4 bg-gray-100 rounded animate-pulse" />
       ))}
     </div>
   );
 }
 
-/** Grouped bar chart (sales vs purchases) — plain SVG-free CSS bars, no chart library. */
-function BarChart({ data, loading }: { data: { label: string; sales: number; purchases: number }[]; loading: boolean }) {
+function BarChart({ data, loading }: { data: { label: string; sales: number }[]; loading: boolean }) {
   const [hover, setHover] = useState<number | null>(null);
-  const max = Math.max(1, ...data.map((d) => Math.max(d.sales, d.purchases)));
-  const H = 220;
-  const n = data.length;
-  const showEvery = n > 14 ? Math.ceil(n / 10) : 1;
-  const nice = (v: number) => {
-    const p = Math.pow(10, Math.floor(Math.log10(v)));
-    return Math.ceil(v / p) * p;
-  };
-  const top = nice(max);
-  const ticks = [0, top / 4, top / 2, (top * 3) / 4, top];
-  const fmt = (t: number) => (t >= 100000 ? `₹${(t / 100000).toFixed(t % 100000 ? 1 : 0)}L` : t >= 1000 ? `₹${Math.round(t / 1000)}k` : `₹${Math.round(t)}`);
+  const max = Math.max(1, ...data.map((d) => d.sales));
+  const top = Math.ceil(max * 1.15);
+  const H = 180;
 
-  if (!loading && data.every((d) => d.sales === 0 && d.purchases === 0)) {
+  if (loading) return <div className="h-[200px] flex items-center justify-center text-xs text-slate-400">Loading sales data...</div>;
+  if (!loading && data.every((d) => d.sales === 0)) {
     return (
-      <div className="h-[250px] rounded-xl bg-slate-50/70 border border-dashed border-slate-200">
-        <EmptyState compact icon="trend" title="Nothing to chart yet" text="Sales and purchases in this window will show up here." />
+      <div className="h-[200px] flex items-center justify-center">
+        <EmptyState compact icon="trend" title="No sales in this period" text="Create sales in POS Billing to view revenue analytics." />
       </div>
     );
   }
 
   return (
-    <div className={`relative ${loading ? "opacity-40 animate-pulse" : ""}`}>
-      <div className="flex">
-        <div className="relative pr-2 text-[10.5px] text-slate-400 tabular text-right w-12 shrink-0" style={{ height: H }}>
-          {ticks.map((t) => (
-            <span key={t} className="absolute right-2" style={{ bottom: `${(t / top) * 100}%`, transform: "translateY(50%)" }}>{fmt(t)}</span>
-          ))}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="relative border-b border-slate-200" style={{ height: H }}>
-            {ticks.slice(1).map((t) => (
-              <div key={t} className="absolute left-0 right-0 border-t border-dashed border-slate-100" style={{ bottom: `${(t / top) * 100}%` }} />
-            ))}
-            <div className="absolute inset-0 flex items-end gap-[2px] sm:gap-1">
-              {data.map((d, i) => (
-                <div
-                  key={i}
-                  className={`flex-1 h-full flex items-end justify-center gap-[2px] rounded-t-md transition-colors ${hover === i ? "bg-brand-50/70" : ""}`}
-                  onMouseEnter={() => setHover(i)}
-                  onMouseLeave={() => setHover(null)}
-                >
-                  <div className="w-1/2 max-w-[16px] rounded-t-[4px] bg-gradient-to-t from-brand-700 to-brand-500 transition-all duration-500" style={{ height: `${(d.sales / top) * H}px` }} />
-                  <div className="w-1/2 max-w-[16px] rounded-t-[4px] bg-gradient-to-t from-amber-400 to-amber-200 transition-all duration-500" style={{ height: `${(d.purchases / top) * H}px` }} />
-                </div>
-              ))}
-            </div>
-            {hover !== null && (
-              <div
-                className="absolute -top-2 z-10 -translate-x-1/2 -translate-y-full px-3 py-2 rounded-lg bg-navy-900 text-white text-[11.5px] shadow-lift whitespace-nowrap pointer-events-none"
-                style={{ left: `${Math.min(88, Math.max(12, ((hover + 0.5) / n) * 100))}%` }}
-              >
-                <div className="font-semibold mb-0.5">{data[hover].label}</div>
-                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-brand-400" /> Sales {inr(data[hover].sales)}</div>
-                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-300" /> Purchases {inr(data[hover].purchases)}</div>
-              </div>
-            )}
+    <div className="space-y-3">
+      <div className="relative h-[180px] flex items-end justify-between gap-1 sm:gap-2 pt-6">
+        {data.map((d, i) => (
+          <div
+            key={d.label + i}
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover((h) => (h === i ? null : h))}
+            className="group relative flex-1 h-full flex flex-col justify-end items-center cursor-pointer"
+          >
+            <div
+              className="w-full max-w-[28px] rounded-t-md bg-gradient-to-t from-emerald-600 to-emerald-400 hover:from-emerald-700 hover:to-emerald-500 transition-all duration-300"
+              style={{ height: `${Math.max(4, (d.sales / top) * H)}px` }}
+            />
+            <span className="text-[10px] text-slate-400 mt-2 truncate w-full text-center">{d.label}</span>
           </div>
-          <div className="flex mt-2">
-            {data.map((d, i) => (
-              <div key={i} className={`flex-1 text-center text-[10.5px] truncate ${hover === i ? "text-navy-900 font-semibold" : "text-slate-400"}`}>{i % showEvery === 0 ? d.label : ""}</div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
+      {hover !== null && (
+        <div className="text-center text-xs font-bold text-emerald-800">
+          {data[hover].label}: {inr(data[hover].sales)}
+        </div>
+      )}
     </div>
   );
 }

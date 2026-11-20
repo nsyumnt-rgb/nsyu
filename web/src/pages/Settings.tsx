@@ -228,7 +228,7 @@ function SettingsInner() {
       language: "English",
 
       businessName: activeShop?.name || "NSYU",
-      tradeName: activeShop?.name || "NSYU Retail & Wholesale",
+      tradeName: activeShop?.name || "NSYU Retail Store",
       businessType: "Electronics & Accessories",
       cinNumber: "",
       panNumber: "",
@@ -1715,19 +1715,6 @@ function SettingsInner() {
                 </button>
               </div>
             ))}
-          </div>
-
-          <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/50 flex items-center justify-between">
-            <div>
-              <div className="text-xs font-bold text-blue-900">Advanced Role Permission Matrix</div>
-              <div className="text-[11px] text-blue-700 mt-0.5">Customize individual permissions for Managers, Sales, Billing, and Accountants.</div>
-            </div>
-            <a
-              href="/app/roles"
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs"
-            >
-              Open Roles & Permissions →
-            </a>
           </div>
         </div>
       )}

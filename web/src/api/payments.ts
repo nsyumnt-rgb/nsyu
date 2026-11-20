@@ -9,6 +9,20 @@ export function getPayment(paymentId: number | string) {
   return api.get<ApiEnvelope<any>>(`/payments/${paymentId}`);
 }
 
+export function createPayment(data: {
+  amount: number;
+  method?: string;
+  type?: string;
+  customerId?: number;
+  saleId?: number;
+  transactionId?: string;
+  paymentDate?: string;
+  notes?: string;
+  shopId?: number;
+}) {
+  return api.post<ApiEnvelope<any>>("/payments", data);
+}
+
 export function cancelPayment(paymentId: number, reason?: string) {
   return api.post<ApiEnvelope<any>>(`/payments/${paymentId}/cancel`, { reason });
 }

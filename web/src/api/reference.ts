@@ -2,7 +2,7 @@ import { api } from "./client";
 import type { ApiEnvelope } from "../types";
 
 export interface ResolvedReference {
-  type: "sale" | "purchase" | "payment" | "transfer" | "movement" | "product" | "customer" | "supplier" | "employee" | "emi" | "payroll";
+  type: "sale" | "purchase" | "payment" | "product" | "customer" | "supplier" | "employee" | "emi" | "payroll";
   id: number | string;
   reference: string;
   route: string;

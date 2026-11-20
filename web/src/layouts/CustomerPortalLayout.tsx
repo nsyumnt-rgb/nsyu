@@ -1,15 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../store/portalStore";
-import { getCartApi, getPortalCategoriesApi, getPortalShopPoliciesApi, getPortalUnreadCountApi, logoutCustomerApi } from "../api/portal";
+import { getCartApi, getPortalCategoriesApi, getPortalShopPoliciesApi, logoutCustomerApi } from "../api/portal";
 import { getMarketShop } from "../api/marketplace";
 import { resolveAssetUrl } from "../api/client";
 import { useStorefront } from "../store/storefrontStore";
 import CartDrawer from "../components/storefront/CartDrawer";
 import { KindIcon, initialsOf, productKind } from "../components/ProductArt";
-import DemoBar from "../components/DemoBar";
 import HinglishToggle from "../components/HinglishToggle";
-import DemoGuideModal from "../components/DemoGuideModal";
 
 /**
  * Customer storefront shell: dark-green sticky header (Home · Shop · Categories ·
@@ -24,9 +22,7 @@ export default function CustomerPortalLayout() {
   const location = useLocation();
   const customer = usePortalStore((s) => s.customer);
   const cart = usePortalStore((s) => s.cart);
-  const unreadCount = usePortalStore((s) => s.unreadCount);
   const setCart = usePortalStore((s) => s.setCart);
-  const setUnreadCount = usePortalStore((s) => s.setUnreadCount);
   const bindWishlist = useStorefront((s) => s.bindWishlist);
   const openCart = useStorefront((s) => s.openCart);
   const cartBump = useStorefront((s) => s.cartBump);
@@ -42,20 +38,18 @@ export default function CustomerPortalLayout() {
   const [policies, setPolicies] = useState<{ privacyPolicy: string; termsConditions: string; returnPolicy: string; announcement?: string | null } | null>(null);
   const [dismissedAnnouncement, setDismissedAnnouncement] = useState(false);
   const [policyModal, setPolicyModal] = useState<{ title: string; text: string } | null>(null);
-  const [demoGuideOpen, setDemoGuideOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const catsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Refresh cart + unread count on every page change; close menus.
+  // Refresh cart on every page change; close menus.
   useEffect(() => {
-    getPortalUnreadCountApi().then(setUnreadCount).catch(() => {});
     getCartApi().then(setCart).catch(() => {});
     setMenuOpen(false);
     setCatsOpen(false);
     setProfileOpen(false);
     setSearchOpen(false);
-  }, [location.pathname, location.search, setCart, setUnreadCount]);
+  }, [location.pathname, location.search, setCart]);
 
   // Shop branding + live categories (with product counts) from the database.
   useEffect(() => {
@@ -144,9 +138,6 @@ export default function CustomerPortalLayout() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
-      {/* ───────────── Prototype Persona Switcher Bar ───────────── */}
-      <DemoBar onOpenGuide={() => setDemoGuideOpen(true)} />
-
       {/* ───────────── Top Announcement / Promotional Bar ───────────── */}
       {policies?.announcement && !dismissedAnnouncement && (
         <div className="bg-brand-900 text-brand-50 text-[12px] sm:text-[13px] py-2 px-4 text-center font-semibold border-b border-brand-700/50 flex items-center justify-between relative shadow-xs z-50">
@@ -225,11 +216,6 @@ export default function CustomerPortalLayout() {
               <CartIcon className={`w-[22px] h-[22px] transition-transform ${bumping ? "scale-125" : ""}`} />
               {cartCount > 0 && <Badge n={cartCount} className={`bg-amber-400 !text-navy-950 ${bumping ? "scale-125" : ""}`} />}
             </IconBtn>
-            <Link to="/portal/notifications" className="relative hidden sm:flex w-11 h-11 rounded-xl items-center justify-center text-emerald-50/90 hover:bg-white/10 hover:text-white" aria-label={`Notifications, ${unreadCount} unread`} title="Notifications">
-              <BellIcon className="w-[22px] h-[22px]" />
-              {unreadCount > 0 && <Badge n={unreadCount} className="bg-rose-500" />}
-            </Link>
-
             <div className="relative sm:ml-1" ref={profileRef}>
               <button type="button" onClick={() => setProfileOpen((v) => !v)} className="flex items-center gap-2 p-1 lg:pr-2 rounded-xl hover:bg-white/10" aria-haspopup="menu" aria-expanded={profileOpen} aria-label="Account menu">
                 <span className="w-9 h-9 rounded-full bg-white text-navy-900 flex items-center justify-center font-bold text-[13px]">{initialsOf(customer?.name || "C")}</span>
@@ -254,7 +240,6 @@ export default function CustomerPortalLayout() {
                   {ACCOUNT_LINKS.map((l) => (
                     <Link key={l.to} to={l.to} role="menuitem" className="flex items-center justify-between px-4 py-2.5 text-[13.5px] text-slate-700 hover:bg-brand-50 hover:text-brand-700">
                       {l.label}
-                      {l.to === "/portal/notifications" && unreadCount > 0 && <span className="badge-danger">{unreadCount}</span>}
                     </Link>
                   ))}
                   <div className="border-t border-slate-100 my-1" />
@@ -321,7 +306,6 @@ export default function CustomerPortalLayout() {
               {ACCOUNT_LINKS.map((l) => (
                 <Link key={l.to} to={l.to} className="flex items-center justify-between mx-2 px-3 py-2.5 rounded-xl text-[14px] text-slate-700 hover:bg-slate-50">
                   {l.label}
-                  {l.to === "/portal/notifications" && unreadCount > 0 && <span className="badge-danger">{unreadCount}</span>}
                 </Link>
               ))}
             </nav>
@@ -473,12 +457,6 @@ export default function CustomerPortalLayout() {
 
       {/* Floating Hinglish Toggle Button */}
       <HinglishToggle />
-
-      {/* Demo Guide Modal */}
-      <DemoGuideModal
-        isOpen={demoGuideOpen}
-        onClose={() => setDemoGuideOpen(false)}
-      />
     </div>
   );
 }
@@ -488,8 +466,6 @@ const ACCOUNT_LINKS = [
   { to: "/portal/orders", label: "My orders" },
   { to: "/portal/bills", label: "Bills & invoices" },
   { to: "/portal/ledger", label: "Khata / statement" },
-  { to: "/portal/wishlist", label: "Wishlist" },
-  { to: "/portal/notifications", label: "Notifications" },
   { to: "/portal/profile", label: "Profile & password" },
 ];
 
@@ -543,7 +519,6 @@ const OrdersIcon = ({ className }: IP) => sv(className, <><rect x="5" y="3" widt
 const UserIcon = ({ className }: IP) => sv(className, <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>);
 const SearchIcon = ({ className }: IP) => sv(className, <><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>);
 const CartIcon = ({ className }: IP) => sv(className, <><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" /></>);
-const BellIcon = ({ className }: IP) => sv(className, <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></>);
 const ChevronDownIcon = ({ className }: IP) => sv(className, <path d="m6 9 6 6 6-6" />);
 const MenuIcon = ({ className }: IP) => sv(className, <path d="M4 6h16M4 12h16M4 18h16" />);
 const CloseIcon = ({ className }: IP) => sv(className, <path d="M18 6 6 18M6 6l12 12" />);

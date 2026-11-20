@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import BusinessHeader from "../layouts/BusinessHeader";
+import { Link } from "react-router-dom";
 import BusinessFooter from "../layouts/BusinessFooter";
 
 export default function AuthShell({
@@ -13,8 +13,25 @@ export default function AuthShell({
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-[#F9FAFB]">
-      {/* 1. Website Header at Top */}
-      <BusinessHeader />
+      {/* 1. Top Auth Header Banner */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shadow-2xs">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#064E3B] to-[#047857] text-white flex items-center justify-center font-black text-lg shadow-xs">
+            N
+          </div>
+          <div>
+            <div className="text-xl font-black text-navy-950 tracking-tight leading-none">
+              NSYU<span className="text-emerald-700">.</span>
+            </div>
+            <div className="text-[10px] font-bold text-gray-500 tracking-wider uppercase leading-none mt-0.5">
+              Commerce
+            </div>
+          </div>
+        </Link>
+        <Link to="/" className="text-xs font-semibold text-emerald-800 hover:text-emerald-950 flex items-center gap-1">
+          ← Marketplace
+        </Link>
+      </header>
 
       {/* 2. Main Centered Workspace with Login Popup / Card in the Center */}
       <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12 md:py-16 bg-gradient-to-b from-emerald-50/40 via-white to-gray-50/60">

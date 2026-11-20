@@ -12,9 +12,7 @@ export function getSalesReport(params?: ReportParams) {
   return api.get<ApiEnvelope<any>>("/reports/sales", { params });
 }
 
-export function getPurchaseReport(params?: ReportParams) {
-  return api.get<ApiEnvelope<any>>("/reports/purchase", { params });
-}
+
 
 export function getInventoryReport(params?: ReportParams) {
   return api.get<ApiEnvelope<any>>("/reports/inventory", { params });
