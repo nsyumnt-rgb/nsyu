@@ -1,3 +1,5 @@
+import '../config/supabase_config.dart';
+
 class Product {
   final int sno;
   final String code;
@@ -159,15 +161,19 @@ class Product {
     final margin = (selling - purchase) > 0 ? (selling - purchase) : 0.0;
 
     int currentStock = 0;
-    if (json['stocks'] is List && (json['stocks'] as List).isNotEmpty) {
-      final firstStock = (json['stocks'] as List).first;
-      if (firstStock is Map) {
-        currentStock = int.tryParse(firstStock['current_stock']?.toString() ?? '0') ?? 0;
-      }
+    if (json['current_stock'] != null) {
+      currentStock = int.tryParse(json['current_stock'].toString()) ?? 0;
     } else if (json['stock'] != null) {
       currentStock = int.tryParse(json['stock'].toString()) ?? 0;
-    } else if (json['current_stock'] != null) {
-      currentStock = int.tryParse(json['current_stock'].toString()) ?? 0;
+    } else if (json['stocks'] is List && (json['stocks'] as List).isNotEmpty) {
+      final stocksList = (json['stocks'] as List).whereType<Map>().toList();
+      final match = stocksList.firstWhere(
+        (s) => s['shop_id']?.toString() == SupabaseConfig.shopId.toString(),
+        orElse: () => stocksList.isNotEmpty ? stocksList.first : const {},
+      );
+      if (match.isNotEmpty) {
+        currentStock = int.tryParse(match['current_stock']?.toString() ?? '0') ?? 0;
+      }
     }
 
     String categoryName = 'Other';

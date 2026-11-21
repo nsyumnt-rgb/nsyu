@@ -41,6 +41,7 @@ class _BillScreenState extends State<BillScreen> {
     'Card',
     'Bank Transfer',
     'Cheque',
+    'Unpaid',
   ];
 
   @override
@@ -1321,7 +1322,11 @@ class _BillScreenState extends State<BillScreen> {
       return;
     }
 
-    _syncPaymentReceived(provider);
+    if (_selectedPaymentMode.toLowerCase() == 'unpaid') {
+      provider.setPaymentReceived(0.0);
+    } else {
+      _syncPaymentReceived(provider);
+    }
     provider.setPaymentReference(_paymentRefCtrl.text.trim());
     provider.setPaymentRemarks(_remarksCtrl.text.trim());
     provider.setPaymentMethod(_selectedPaymentMode.toLowerCase());
