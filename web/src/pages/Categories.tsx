@@ -8,6 +8,7 @@ import {
   deleteCategory,
 } from "../api/categories";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
+import { getCategoryAlias } from "../utils/categoryAlias";
 import type { Category } from "../types";
 
 const PRESET_ICONS = [
@@ -38,6 +39,7 @@ export default function Categories() {
 
   // Form states for Add / Edit
   const [formName, setFormName] = useState("");
+  const [formAlias, setFormAlias] = useState("");
   const [formIcon, setFormIcon] = useState("📦");
   const [formStatus, setFormStatus] = useState<"active" | "inactive">("active");
   const [formImageFile, setFormImageFile] = useState<File | null>(null);
@@ -73,6 +75,7 @@ export default function Categories() {
   function openAddModal() {
     setEditingCategory(null);
     setFormName("");
+    setFormAlias("");
     setFormIcon("📦");
     setFormStatus("active");
     setFormImageFile(null);
@@ -83,6 +86,7 @@ export default function Categories() {
   function openEditModal(c: Category) {
     setEditingCategory(c);
     setFormName(c.name);
+    setFormAlias(c.alias || getCategoryAlias(c.name));
     setFormIcon(c.icon || "📦");
     setFormStatus(c.status);
     setFormImageFile(null);
@@ -110,10 +114,15 @@ export default function Categories() {
 
     setSaving(true);
     try {
+      const resolvedAlias = formAlias.trim()
+        ? formAlias.trim().toUpperCase()
+        : getCategoryAlias(formName.trim());
+
       if (editingCategory) {
         // Update existing category
         const res = await updateCategory(editingCategory.id, {
           name: formName.trim(),
+          alias: resolvedAlias,
           icon: formIcon.trim() || null,
           status: formStatus,
         });
@@ -135,6 +144,7 @@ export default function Categories() {
         // Create new category
         const res = await createCategory({
           name: formName.trim(),
+          alias: resolvedAlias,
           icon: formIcon.trim() || null,
           status: formStatus,
         });
@@ -351,6 +361,7 @@ export default function Categories() {
                   <th className="py-3 px-4">Image / PNG</th>
                   <th className="py-3 px-4">Icon</th>
                   <th className="py-3 px-4">Category Name</th>
+                  <th className="py-3 px-4 text-center">Alias</th>
                   <th className="py-3 px-4 text-center">Products</th>
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -410,6 +421,13 @@ export default function Categories() {
                     <td className="py-3 px-4">
                       <div className="font-bold text-gray-900 text-sm">{c.name}</div>
                       <div className="text-[11px] text-gray-400">ID: #{c.id}</div>
+                    </td>
+
+                    {/* Alias Badge */}
+                    <td className="py-3 px-4 text-center">
+                      <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-2xs">
+                        {c.alias || getCategoryAlias(c.name)}
+                      </span>
                     </td>
 
                     {/* Product Count */}
@@ -498,10 +516,43 @@ export default function Categories() {
                   type="text"
                   required
                   value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormName(val);
+                    if (!formAlias || formAlias === getCategoryAlias(formName)) {
+                      setFormAlias(getCategoryAlias(val));
+                    }
+                  }}
                   placeholder="e.g. Smart Watches, Audio, Groceries..."
                   className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-600 font-medium"
                 />
+              </div>
+
+              {/* Category Alias */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Category Alias / Code <span className="text-gray-400 font-normal">(e.g. CH, PB, NB)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setFormAlias(getCategoryAlias(formName))}
+                    className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold"
+                  >
+                    ⚡ Auto-Suggest
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={formAlias}
+                  onChange={(e) => setFormAlias(e.target.value.toUpperCase())}
+                  placeholder={getCategoryAlias(formName) || "e.g. CH"}
+                  maxLength={10}
+                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-600 font-mono font-bold uppercase tracking-wider"
+                />
+                <span className="text-[10.5px] text-gray-400 mt-1 block">
+                  Shown in inventory list and compact bill views (e.g. Charger → CH, Neckband → NB, Power Bank → PB).
+                </span>
               </div>
 
               {/* Related Icon */}

@@ -2,14 +2,19 @@ import { Request, Response } from "express";
 import { Category, Product, Subcategory, sequelize } from "../models";
 import { logAudit } from "../utils/audit";
 import { removeImage, saveImage } from "../utils/mediaStorage";
+import { getCategoryAlias } from "../utils/categoryAlias";
 
 export async function createCategory(req: Request, res: Response) {
-  const { name, status, icon, image_url } = req.body;
+  const { name, status, icon, image_url, alias } = req.body;
   if (!name || !String(name).trim()) return res.status(400).json({ success: false, message: "Category name is required" });
 
   const trimmedName = String(name).trim();
   const existing = await Category.findOne({ where: { owner_id: req.auth!.ownerId, name: trimmedName } });
   if (existing) return res.status(409).json({ success: false, message: "Category already exists" });
+
+  const resolvedAlias = alias && String(alias).trim()
+    ? String(alias).trim().toUpperCase()
+    : getCategoryAlias(trimmedName);
 
   const category = await Category.create({
     owner_id: req.auth!.ownerId,
@@ -17,6 +22,7 @@ export async function createCategory(req: Request, res: Response) {
     status: status === "inactive" ? "inactive" : "active",
     icon: icon ? String(icon).trim() : null,
     image_url: image_url ? String(image_url).trim() : null,
+    alias: resolvedAlias,
   });
 
   await logAudit({ req, module: "products", action: "create_category", entityType: "Category", entityId: category.id });
@@ -24,27 +30,39 @@ export async function createCategory(req: Request, res: Response) {
 }
 
 export async function listCategories(req: Request, res: Response) {
-  const categories = await Category.findAll({
-    where: { owner_id: req.auth!.ownerId },
+  const ownerId = req.auth!.ownerId;
+  let categories = await Category.findAll({
+    where: { owner_id: ownerId },
     include: [{ model: Subcategory, as: "subcategories" }],
     order: [["name", "ASC"]],
   });
 
-  const categoryIds = categories.map((c) => c.id);
-  const counts = (await Product.findAll({
-    attributes: ["category_id", [sequelize.fn("COUNT", sequelize.col("id")), "product_count"]],
-    where: { category_id: categoryIds },
-    group: ["category_id"],
-    raw: true,
-  })) as any[];
+  // If super admin has no personal categories, show master platform categories
+  if (categories.length === 0 && req.auth?.isSuperAdmin) {
+    categories = await Category.findAll({
+      include: [{ model: Subcategory, as: "subcategories" }],
+      order: [["name", "ASC"]],
+    });
+  }
 
+  const categoryIds = categories.map((c) => c.id);
   const countMap: Record<number, number> = {};
-  for (const r of counts) {
-    if (r.category_id) countMap[Number(r.category_id)] = Number(r.product_count);
+  if (categoryIds.length > 0) {
+    const counts = (await Product.findAll({
+      attributes: ["category_id", [sequelize.fn("COUNT", sequelize.col("id")), "product_count"]],
+      where: { category_id: categoryIds },
+      group: ["category_id"],
+      raw: true,
+    })) as any[];
+
+    for (const r of counts) {
+      if (r.category_id) countMap[Number(r.category_id)] = Number(r.product_count);
+    }
   }
 
   const data = categories.map((c) => {
     const json = c.toJSON() as any;
+    json.alias = json.alias || getCategoryAlias(json.name);
     json.product_count = countMap[c.id] || 0;
     return json;
   });
@@ -54,14 +72,23 @@ export async function listCategories(req: Request, res: Response) {
 
 export async function updateCategory(req: Request, res: Response) {
   const categoryId = Number(req.params.categoryId);
-  const category = await Category.findOne({ where: { id: categoryId, owner_id: req.auth!.ownerId } });
+  const where: any = { id: categoryId };
+  if (!req.auth?.isSuperAdmin) {
+    where.owner_id = req.auth!.ownerId;
+  }
+  const category = await Category.findOne({ where });
   if (!category) return res.status(404).json({ success: false, message: "Category not found" });
 
-  const { name, icon, image_url, status } = req.body;
+  const { name, icon, image_url, status, alias } = req.body;
   if (name && String(name).trim()) category.name = String(name).trim();
   if (icon !== undefined) category.icon = icon ? String(icon).trim() : null;
   if (image_url !== undefined) category.image_url = image_url ? String(image_url).trim() : null;
   if (status && (status === "active" || status === "inactive")) category.status = status;
+  if (alias !== undefined) {
+    category.alias = alias && String(alias).trim()
+      ? String(alias).trim().toUpperCase()
+      : getCategoryAlias(category.name);
+  }
 
   await category.save();
 

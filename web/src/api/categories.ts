@@ -10,6 +10,7 @@ export interface CategoryPayload {
   status?: "active" | "inactive";
   icon?: string | null;
   image_url?: string | null;
+  alias?: string | null;
 }
 
 export function createCategory(payload: string | CategoryPayload, status?: "active" | "inactive") {

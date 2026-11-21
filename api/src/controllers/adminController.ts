@@ -20,6 +20,7 @@ import {
 } from "../models";
 import { seedOwnerDefaults } from "../utils/seed";
 import { saveImage, removeImage } from "../utils/mediaStorage";
+import { getCategoryAlias } from "../utils/categoryAlias";
 
 /**
  * Helper to record Super Admin actions in the platform audit log.
@@ -712,20 +713,23 @@ export async function getAdminCategories(req: Request, res: Response) {
     });
 
     const categoryIds = categories.map((c) => c.id);
-    const counts = (await Product.findAll({
-      attributes: ["category_id", [sequelize.fn("COUNT", sequelize.col("id")), "product_count"]],
-      where: { category_id: categoryIds },
-      group: ["category_id"],
-      raw: true,
-    })) as any[];
-
     const countMap: Record<number, number> = {};
-    for (const r of counts) {
-      if (r.category_id) countMap[Number(r.category_id)] = Number(r.product_count);
+    if (categoryIds.length > 0) {
+      const counts = (await Product.findAll({
+        attributes: ["category_id", [sequelize.fn("COUNT", sequelize.col("id")), "product_count"]],
+        where: { category_id: categoryIds },
+        group: ["category_id"],
+        raw: true,
+      })) as any[];
+
+      for (const r of counts) {
+        if (r.category_id) countMap[Number(r.category_id)] = Number(r.product_count);
+      }
     }
 
     const data = categories.map((c) => {
       const json = c.toJSON() as any;
+      json.alias = json.alias || getCategoryAlias(json.name);
       json.product_count = countMap[c.id] || 0;
       return json;
     });
@@ -751,10 +755,19 @@ export async function createAdminCategory(req: Request, res: Response) {
     const targetOwnerId = owner_id || req.auth?.ownerId || 1;
     const trimmedName = String(name).trim();
 
+    const existing = await Category.findOne({ where: { owner_id: targetOwnerId, name: trimmedName } });
+    if (existing) {
+      return res.status(409).json({ success: false, message: `Category "${trimmedName}" already exists` });
+    }
+
+    const resolvedAlias = alias && String(alias).trim()
+      ? String(alias).trim().toUpperCase()
+      : getCategoryAlias(trimmedName);
+
     const category = await Category.create({
       owner_id: targetOwnerId,
       name: trimmedName,
-      alias: alias ? String(alias).trim().toUpperCase() : null,
+      alias: resolvedAlias,
       icon: icon ? String(icon).trim() : null,
       image_url: image_url ? String(image_url).trim() : null,
       status: status === "inactive" ? "inactive" : "active",
@@ -790,7 +803,11 @@ export async function updateAdminCategory(req: Request, res: Response) {
 
     const { name, alias, icon, image_url, status } = req.body;
     if (name && String(name).trim()) category.name = String(name).trim();
-    if (alias !== undefined) category.alias = alias ? String(alias).trim().toUpperCase() : null;
+    if (alias !== undefined) {
+      category.alias = alias && String(alias).trim()
+        ? String(alias).trim().toUpperCase()
+        : getCategoryAlias(category.name);
+    }
     if (icon !== undefined) category.icon = icon ? String(icon).trim() : null;
     if (image_url !== undefined) category.image_url = image_url ? String(image_url).trim() : null;
     if (status && (status === "active" || status === "inactive")) category.status = status;

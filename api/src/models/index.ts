@@ -87,6 +87,7 @@ Shop.hasMany(AuditLog, { foreignKey: "shop_id", as: "auditLogs" });
 
 /* ---------------- Categories ---------------- */
 Owner.hasMany(Category, { foreignKey: "owner_id", as: "categories" });
+Category.belongsTo(Owner, { foreignKey: "owner_id", as: "owner" });
 Category.hasMany(Subcategory, { foreignKey: "category_id", as: "subcategories" });
 Subcategory.belongsTo(Category, { foreignKey: "category_id", as: "category" });
 
