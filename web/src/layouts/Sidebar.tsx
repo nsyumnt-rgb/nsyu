@@ -48,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
 
   // Billing & Orders
   { to: "/app/billing", label: "POS Billing", module: "billing", group: "BILLING & ORDERS", icon: ico("M13 2L4 14h7l-1 8 9-12h-7z") },
+  { to: "/app/cart", label: "POS Cart", module: "billing", group: "BILLING & ORDERS", icon: ico("M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6", "M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z", "M20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z") },
   { to: "/app/sales", label: "Sales invoices", module: "sales", group: "BILLING & ORDERS", icon: ico("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", "M14 2v6h6", "M16 13H8", "M16 17H8") },
   { to: "/app/orders", label: "Orders", module: "orders", group: "BILLING & ORDERS", icon: ico("M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z", "M3 6h18", "M16 10a4 4 0 0 1-8 0") },
 

@@ -32,6 +32,7 @@ const ProductDetail = lazy(() => import("./pages/details/ProductDetail"));
 const Inventory = lazy(() => import("./pages/Inventory"));
 const InventoryOverview = lazy(() => import("./pages/InventoryOverview"));
 const Billing = lazy(() => import("./pages/Billing"));
+const Cart = lazy(() => import("./pages/Cart"));
 const Sales = lazy(() => import("./pages/Sales"));
 const SaleDetail = lazy(() => import("./pages/details/SaleDetail"));
 const Orders = lazy(() => import("./pages/Orders"));
@@ -158,6 +159,7 @@ export default function App() {
 
               {/* Bill & Sales */}
               <Route path="billing" element={<Billing />} />
+              <Route path="cart" element={<Cart />} />
               <Route path="sales" element={<Sales />} />
               <Route path="sales/:id" element={<SaleDetail />} />
 

@@ -14,7 +14,6 @@ import {
   type AppNotification,
 } from "../api/notifications";
 import type { Shop } from "../types";
-import PosCartDrawer from "../components/PosCartDrawer";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function parseNotificationDate(raw?: any): Date {
@@ -138,7 +137,6 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
   const posCount = usePosStore((s) => s.count);
-  const setPosOpen = usePosStore((s) => s.setOpen);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
   const setAccessToken = useAuthStore((s) => s.setAccessToken);
   const refreshToken = useAuthStore((s) => s.refreshToken);
@@ -527,7 +525,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
         {/* POS Cart / Current Bill Button */}
         <button
           type="button"
-          onClick={() => setPosOpen(true)}
+          onClick={() => navigate("/app/cart")}
           className={`relative h-10 px-3 rounded-xl transition-colors flex items-center ${
             posCount && posCount > 0
               ? "bg-brand-50 text-brand-700 hover:bg-brand-100 ring-1 ring-brand-200"
@@ -780,9 +778,6 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           )}
         </div>
       </div>
-
-      {/* POS Cart Drawer */}
-      <PosCartDrawer />
 
       {/* Notification Detail Modal */}
       {selectedNotif &&
