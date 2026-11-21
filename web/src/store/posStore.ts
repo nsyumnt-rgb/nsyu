@@ -11,8 +11,9 @@ interface PosState {
   items: PosCartItem[];
   count: number;
   open: boolean;
-  addItem: (product: any, qty?: number) => void;
+  addItem: (product: any, qty?: number, unitPrice?: number) => void;
   updateQuantity: (productId: number, qty: number) => void;
+  updateUnitPrice: (productId: number, price: number) => void;
   removeItem: (productId: number) => void;
   setItems: (items: PosCartItem[]) => void;
   clearCart: () => void;
@@ -27,15 +28,21 @@ export const usePosStore = create<PosState>()(
       count: 0,
       open: false,
 
-      addItem: (product, qty = 1) => {
+      addItem: (product, qty = 1, unitPrice) => {
         const current = get().items;
         const existingIndex = current.findIndex((i) => i.product.id === product.id);
+        const resolvedPrice =
+          unitPrice !== undefined
+            ? unitPrice
+            : Number(product.selling_price || product.live_price || 0);
+
         let next: PosCartItem[];
         if (existingIndex >= 0) {
           next = [...current];
           next[existingIndex] = {
             ...next[existingIndex],
             quantity: next[existingIndex].quantity + qty,
+            unitPrice: unitPrice !== undefined ? unitPrice : next[existingIndex].unitPrice,
           };
         } else {
           next = [
@@ -43,7 +50,7 @@ export const usePosStore = create<PosState>()(
             {
               product,
               quantity: qty,
-              unitPrice: Number(product.selling_price || 0),
+              unitPrice: resolvedPrice,
             },
           ];
         }
@@ -62,6 +69,14 @@ export const usePosStore = create<PosState>()(
         );
         const totalCount = next.reduce((sum, item) => sum + item.quantity, 0);
         set({ items: next, count: totalCount });
+      },
+
+      updateUnitPrice: (productId, price) => {
+        const current = get().items;
+        const next = current.map((i) =>
+          i.product.id === productId ? { ...i, unitPrice: Math.max(0, price) } : i
+        );
+        set({ items: next });
       },
 
       removeItem: (productId) => {
