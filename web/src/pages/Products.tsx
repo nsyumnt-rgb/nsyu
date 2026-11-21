@@ -948,8 +948,9 @@ function ProductsInner() {
           })}
         </div>
       ) : (
-        /* List View (Table) */
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
+        <>
+          {/* List View (Desktop Table) */}
+          <div className="hidden md:block bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-xs">
           <table className="w-full text-left text-xs">
             <thead className="bg-gray-50 border-b border-gray-200 font-bold text-gray-600 uppercase text-[10px] tracking-wider select-none">
               <tr>
@@ -1014,6 +1015,80 @@ function ProductsInner() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Products List */}
+        <div className="md:hidden space-y-3">
+          {paginatedProducts.map((p) => {
+            const stock = Number((p as any).current_stock ?? p.stocks?.[0]?.current_stock ?? 0);
+            const isOutOfStock = stock <= 0;
+            const isLowStock = stock > 0 && stock <= (Number(p.min_stock ?? 5) || 5);
+            const primaryImg = p.images?.find((i) => i.is_primary)?.url || p.images?.[0]?.url;
+            const img = primaryImg ? resolveAssetUrl(primaryImg) : null;
+
+            return (
+              <div key={p.id} className="mobile-card flex flex-col gap-2.5">
+                <div className="flex items-start gap-3">
+                  <div
+                    onClick={() => setQuickViewProduct(p)}
+                    className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer"
+                  >
+                    {img ? (
+                      <img src={img} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
+                    ) : (
+                      <span className="text-slate-400 font-bold text-sm">{p.name.charAt(0)}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                        {p.category?.name || "General"}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400 truncate">{p.sku}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuickViewProduct(p)}
+                      className="text-[13.5px] font-bold text-navy-900 leading-snug text-left line-clamp-2"
+                    >
+                      {p.name}
+                    </button>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-black text-emerald-800 tabular">₹{Number(p.selling_price).toFixed(2)}</div>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      isOutOfStock ? "bg-rose-50 text-rose-700" : isLowStock ? "bg-amber-50 text-amber-800" : "bg-emerald-50 text-emerald-800"
+                    }`}>
+                      {stock} units
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                  <span className={`text-[11px] font-bold ${p.status === "active" ? "text-emerald-700" : "text-slate-400"}`}>
+                    ● {p.status === "active" ? "Active" : "Draft"}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(p)}
+                      className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddToCart(p)}
+                      className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center gap-1"
+                    >
+                      + Cart
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </>
       )}
 
       {/* Pagination */}

@@ -561,7 +561,8 @@ export default function Orders() {
                   )
                 ) : (
                   <>
-                    <div className="overflow-x-auto">
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                       <table>
                         <thead>
                           <tr>
@@ -650,6 +651,132 @@ export default function Orders() {
                           })}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Mobile App-like Card Feed */}
+                    <div className="md:hidden space-y-3 p-3">
+                      {pageRows.map((ord) => {
+                        const billed = isBilledOrder(ord);
+                        const st = statusChip(ord);
+                        const itemCount = ord.items?.length || 0;
+                        const delivered = String(ord.status).toLowerCase() === "delivered";
+                        const open = !billed && String(ord.status).toLowerCase() !== "cancelled";
+                        return (
+                          <div
+                            key={ord.id}
+                            className={`mobile-card p-3.5 space-y-3 ${
+                              String(ord.status).toLowerCase() === "cancelled" ? "opacity-60" : ""
+                            }`}
+                          >
+                            {/* Card Top: Order Number & Date & Amount */}
+                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                              <div>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedOrder(ord);
+                                      setStep("view");
+                                    }}
+                                    className="font-mono text-[13px] font-bold text-brand-700 hover:underline"
+                                  >
+                                    {ord.order_number}
+                                  </button>
+                                  {(ord as any).placed_by === "customer" && (
+                                    <span className="badge-brand !text-[9.5px] uppercase font-bold">Portal</span>
+                                  )}
+                                </div>
+                                <div className="text-[11px] text-slate-400 mt-0.5">
+                                  {new Date(ord.order_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                  {" · "}
+                                  {new Date(ord.order_date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="font-black text-navy-900 text-[15px] tabular">
+                                  ₹{Number(ord.total_amount).toLocaleString("en-IN")}
+                                </div>
+                                {itemCount > 0 && (
+                                  <div className="text-[11px] text-slate-400">
+                                    {itemCount} item{itemCount > 1 ? "s" : ""}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Card Middle: Customer & Badges */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Avatar name={ord.customer?.name || "Walk in"} size="sm" />
+                                <div className="min-w-0">
+                                  <div className="font-bold text-navy-900 text-[12.5px] truncate">
+                                    {ord.customer?.name || "Walk-in customer"}
+                                  </div>
+                                  {ord.customer?.phone && (
+                                    <div className="text-[11px] text-slate-400 tabular truncate">
+                                      {ord.customer.phone}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                                <span className={payChip(ord.payment_status)}>{ord.payment_status || "Pending"}</span>
+                                <span className={st.cls}>{st.label}</span>
+                              </div>
+                            </div>
+
+                            {/* Card Bottom: Quick Actions */}
+                            <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => { setSelectedOrder(ord); setStep("view"); }}
+                                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+                                >
+                                  <Icon name="eye" className="w-3.5 h-3.5" /> View
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setSelectedOrder(ord); setStep("invoice"); }}
+                                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1"
+                                >
+                                  <Icon name="file" className="w-3.5 h-3.5" /> Print
+                                </button>
+                              </div>
+
+                              <div className="flex items-center gap-1.5">
+                                {open && delivered && (
+                                  <button
+                                    type="button"
+                                    disabled={convertingToBill}
+                                    onClick={() => openConvertModal(ord)}
+                                    className="btn-soft btn-sm text-xs font-bold"
+                                  >
+                                    <Icon name="receipt" className="w-3.5 h-3.5" /> Bill it
+                                  </button>
+                                )}
+                                {open && !delivered && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedOrder(ord);
+                                      setStatusUpdateForm({
+                                        status: ord.status.charAt(0).toUpperCase() + ord.status.slice(1),
+                                        payment_status: ord.payment_status || "Paid",
+                                        remarks: ord.remarks || "Status updated.",
+                                      });
+                                      setStep("update_status");
+                                    }}
+                                    className="btn-secondary btn-sm text-xs font-bold"
+                                  >
+                                    <Icon name="edit" className="w-3.5 h-3.5" /> Update
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                     <Pagination
                       page={page}

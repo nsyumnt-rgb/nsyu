@@ -119,6 +119,43 @@
   .badge-warn {
     @apply badge bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-600/20;
   }
+
+  /* ── Mobile App Native Utilities ──────────────────────── */
+  .pb-safe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+  .pt-safe {
+    padding-top: max(12px, env(safe-area-inset-top, 12px));
+  }
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .tap-bounce {
+    @apply transition-transform duration-150 active:scale-[0.96];
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .mobile-card {
+    @apply bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs active:bg-slate-50/80 transition-colors;
+  }
+  .mobile-sheet {
+    @apply fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 max-h-[92vh] overflow-y-auto pb-safe animate-slide-up;
+  }
+  .mobile-nav-btn {
+    @apply flex flex-col items-center justify-center py-1 px-2 rounded-xl text-slate-500 transition-all duration-150 active:scale-95 text-[11px] font-semibold;
+  }
+  .mobile-nav-btn.active {
+    @apply text-emerald-800 font-bold;
+  }
+  .mobile-nav-btn.active svg {
+    @apply text-emerald-700 stroke-[2.4];
+  }
   .badge-danger {
     @apply badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-600/15;
   }
@@ -232,6 +269,24 @@
   0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
   30% { opacity: 1; }
   100% { transform: translate(var(--tw-translate-x, 15px), var(--tw-translate-y, -25px)) scale(1); opacity: 0; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0.6; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes toastCountdown {

@@ -339,46 +339,80 @@ export default function Dashboard() {
         {orders.length === 0 ? (
           loading ? <Skeleton rows={3} /> : <EmptyState compact icon="cart" title="No orders placed yet" text="Incoming orders from the marketplace will show here in real-time." />
         ) : (
-          <div className="overflow-x-auto mt-2">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-gray-100 text-gray-400 uppercase text-[10px] tracking-wider">
-                  <th className="py-2.5">Order #</th>
-                  <th className="py-2.5">Customer</th>
-                  <th className="py-2.5">Amount</th>
-                  <th className="py-2.5">Status</th>
-                  <th className="py-2.5 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {orders.slice(0, 5).map((o) => {
-                  const st = stageOf(o.status);
-                  return (
-                    <tr key={o.id} className="hover:bg-gray-50/60 transition">
-                      <td className="py-3 font-bold text-navy-900">#{o.order_number || o.id}</td>
-                      <td className="py-3 text-gray-700">{o.customer?.name || "Customer"}</td>
-                      <td className="py-3 font-semibold text-emerald-800">{inr(Number(o.total_amount || 0))}</td>
-                      <td className="py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.tone}`}>{st.label}</span>
-                      </td>
-                      <td className="py-3 text-right">
-                        {st.next && (
-                          <button
-                            type="button"
-                            disabled={busyOrder === o.id}
-                            onClick={() => advanceOrder(o)}
-                            className="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] disabled:opacity-50"
-                          >
-                            {busyOrder === o.id ? "..." : st.next.action}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto mt-2">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-gray-100 text-gray-400 uppercase text-[10px] tracking-wider">
+                    <th className="py-2.5">Order #</th>
+                    <th className="py-2.5">Customer</th>
+                    <th className="py-2.5">Amount</th>
+                    <th className="py-2.5">Status</th>
+                    <th className="py-2.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {orders.slice(0, 5).map((o) => {
+                    const st = stageOf(o.status);
+                    return (
+                      <tr key={o.id} className="hover:bg-gray-50/60 transition">
+                        <td className="py-3 font-bold text-navy-900">#{o.order_number || o.id}</td>
+                        <td className="py-3 text-gray-700">{o.customer?.name || "Customer"}</td>
+                        <td className="py-3 font-semibold text-emerald-800">{inr(Number(o.total_amount || 0))}</td>
+                        <td className="py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.tone}`}>{st.label}</span>
+                        </td>
+                        <td className="py-3 text-right">
+                          {st.next && (
+                            <button
+                              type="button"
+                              disabled={busyOrder === o.id}
+                              onClick={() => advanceOrder(o)}
+                              className="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] disabled:opacity-50"
+                            >
+                              {busyOrder === o.id ? "..." : st.next.action}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View */}
+            <div className="md:hidden space-y-2 mt-2">
+              {orders.slice(0, 5).map((o) => {
+                const st = stageOf(o.status);
+                return (
+                  <div key={o.id} className="p-3 rounded-xl border border-gray-100 bg-gray-50/50 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-navy-900">#{o.order_number || o.id}</span>
+                      <span className="font-bold text-emerald-800 tabular">{inr(Number(o.total_amount || 0))}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-gray-600">
+                      <span className="truncate max-w-[150px]">{o.customer?.name || "Customer"}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.tone}`}>{st.label}</span>
+                    </div>
+                    {st.next && (
+                      <div className="pt-1.5 border-t border-gray-200/60 flex justify-end">
+                        <button
+                          type="button"
+                          disabled={busyOrder === o.id}
+                          onClick={() => advanceOrder(o)}
+                          className="w-full py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] disabled:opacity-50 flex items-center justify-center gap-1"
+                        >
+                          {busyOrder === o.id ? "Updating..." : st.next.action}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 

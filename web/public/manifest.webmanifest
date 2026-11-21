@@ -1,0 +1,32 @@
+{
+  "name": "NSYU Business & Retail",
+  "short_name": "NSYU",
+  "description": "Ultra-fast Business Management, POS Billing, Inventory, and Customer Commerce Platform",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#064E3B",
+  "background_color": "#FFFFFF",
+  "categories": ["business", "finance", "shopping", "productivity"],
+  "icons": [
+    {
+      "src": "./favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./nsyu_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

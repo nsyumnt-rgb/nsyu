@@ -4,6 +4,7 @@ import { usePortalStore } from "../store/portalStore";
 import { useAuthStore } from "../store/authStore";
 import { getMarketCart } from "../api/marketplace";
 import BusinessFooter from "./BusinessFooter";
+import MobileBottomNav from "../components/MobileBottomNav";
 
 export default function MarketLayout() {
   const navigate = useNavigate();
@@ -245,12 +246,17 @@ export default function MarketLayout() {
       </header>
 
       {/* 3. MAIN CONTENT (Outlet) */}
-      <main className="flex-1 w-full max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-[1340px] mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 md:pb-8">
         <Outlet />
       </main>
 
-      {/* 4. FOOTER */}
-      <BusinessFooter />
+      {/* 4. FOOTER (Desktop only) */}
+      <div className="hidden md:block">
+        <BusinessFooter />
+      </div>
+
+      {/* Mobile-First App Navigation Bar */}
+      <MobileBottomNav mode="market" />
     </div>
   );
 }

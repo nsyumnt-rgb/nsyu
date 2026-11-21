@@ -1638,8 +1638,9 @@ export default function Inventory({
           </table>
         </div>
       ) : (
-        /* Main Inventory Table with All 5 Requested Features */
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-xs">
+        <>
+        {/* Main Inventory Table with All 5 Requested Features (Desktop) */}
+        <div className="hidden md:block bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-xs">
           <table className="w-full text-left text-xs min-w-[1000px]">
             <thead className="bg-[#064E3B] text-white font-bold uppercase text-[10px] tracking-wider">
               <tr>
@@ -2181,6 +2182,159 @@ export default function Inventory({
             </tbody>
           </table>
         </div>
+
+        {/* Mobile App-Style Card Feed */}
+        <div className="md:hidden space-y-3">
+          {filteredProducts.length === 0 ? (
+            <div className="p-8 text-center text-gray-400 bg-white rounded-2xl border border-gray-200">
+              No products match the selected inventory filter.
+            </div>
+          ) : (
+            filteredProducts.map((p) => {
+              const stock = getProductStock(p);
+              const pp = Number(p.purchase_price || 0);
+              const sp = Number(p.selling_price || 0);
+              const lp = Number(p.live_price || sp);
+              const margin = sp > 0 ? (((sp - pp) / sp) * 100).toFixed(1) : "0.0";
+              const coverImg = (p.images?.find((i) => i.is_primary) || p.images?.[0])?.url;
+              const imgSrc = coverImg ? resolveAssetUrl(coverImg) : null;
+              const catName = p.category?.name || "General";
+
+              return (
+                <div key={p.id} className="mobile-card flex flex-col gap-3">
+                  {/* Top Row: Thumbnail + Title + SKU + Category + Live Toggle */}
+                  <div className="flex items-start gap-3">
+                    <div
+                      onClick={() => {
+                        setViewProduct(p);
+                        setActiveDetailImage(coverImg || null);
+                      }}
+                      className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer"
+                    >
+                      {imgSrc ? (
+                        <img src={imgSrc} alt="" className="w-full h-full object-contain p-1" loading="lazy" />
+                      ) : (
+                        <span className="text-slate-400 font-bold text-base">{p.name.charAt(0)}</span>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/60 uppercase">
+                          {catName}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400 truncate">
+                          {p.sku || p.barcode || "—"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewProduct(p);
+                          setActiveDetailImage(coverImg || null);
+                        }}
+                        className="text-[13.5px] font-bold text-navy-900 leading-snug text-left line-clamp-2 hover:text-emerald-700"
+                      >
+                        {p.name}
+                      </button>
+                      <div className="text-[11px] text-slate-400 mt-0.5 font-medium">{p.brand || "—"}</div>
+                    </div>
+
+                    {/* Live Toggle */}
+                    <div className="flex flex-col items-end shrink-0 gap-1">
+                      <button
+                        type="button"
+                        disabled={togglingLiveId === p.id}
+                        onClick={() => handleToggleLive(p)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                          p.status === "active" ? "bg-emerald-600" : "bg-gray-300"
+                        }`}
+                        title="Toggle Live Online"
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            p.status === "active" ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                      <span className={`text-[10px] font-bold ${p.status === "active" ? "text-emerald-700" : "text-slate-400"}`}>
+                        {p.status === "active" ? "LIVE" : "OFF"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Middle Row: Stock Stepper & Status */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <div>
+                      <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Stock Quantity</div>
+                      <div className="text-[11px] text-slate-400">
+                        Value: <strong className="text-slate-700">{formatINR(Math.max(0, stock) * pp)}</strong>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DirectStockInput
+                        productId={p.id}
+                        initialStock={stock}
+                        minStock={Number(p.min_stock ?? 5) || 5}
+                        isSaving={savingStockId === p.id}
+                        onSave={handleDirectStockSave}
+                        product={p}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pricing Row: Purchase, Selling, Live Price, Margin */}
+                  <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-center">
+                    <div className="p-1.5 rounded-lg bg-slate-50">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase">Purchase</div>
+                      <div className="text-xs font-bold text-slate-700 tabular">{formatINR(pp)}</div>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-emerald-50/70 border border-emerald-100/80">
+                      <div className="text-[10px] text-emerald-800 font-semibold uppercase">Selling</div>
+                      <div className="text-xs font-bold text-emerald-900 tabular">{formatINR(sp)}</div>
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-amber-50/70 border border-amber-100/80">
+                      <div className="text-[10px] text-amber-800 font-semibold uppercase">Margin</div>
+                      <div className="text-xs font-bold text-amber-900 tabular">{margin}%</div>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleQuickSetLivePrice(p)}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-900 active:scale-95"
+                    >
+                      <span>Live: {formatINR(lp)}</span>
+                      <span className="text-slate-400">→ Sync</span>
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleStartInlineEdit(p)}
+                        className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold text-[11px] hover:bg-blue-100 active:scale-95"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewProduct(p);
+                          setActiveDetailImage(coverImg || null);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold text-[11px] hover:bg-emerald-100 active:scale-95"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        </>
       )}
 
       {/* ============================================================== */}

@@ -7,6 +7,7 @@ import { resolveAssetUrl } from "../api/client";
 import { useStorefront } from "../store/storefrontStore";
 import CartDrawer from "../components/storefront/CartDrawer";
 import { KindIcon, initialsOf, productKind } from "../components/ProductArt";
+import MobileBottomNav from "../components/MobileBottomNav";
 
 /**
  * Customer storefront shell: dark-green sticky header (Home · Shop · Categories ·
@@ -317,12 +318,12 @@ export default function CustomerPortalLayout() {
         </div>
       )}
 
-      <main key={location.pathname} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-12 animate-fade-in">
+      <main key={location.pathname} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-24 md:pb-12 animate-fade-in">
         <Outlet />
       </main>
 
-      {/* ───────────── Footer ───────────── */}
-      <footer className="bg-navy-900 text-emerald-50/75">
+      {/* ───────────── Footer (Desktop only) ───────────── */}
+      <footer className="hidden md:block bg-navy-900 text-emerald-50/75">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] gap-8 text-[13.5px]">
           <div>
             <div className="flex items-center gap-3">
@@ -453,6 +454,7 @@ export default function CustomerPortalLayout() {
       )}
 
       <CartDrawer />
+      <MobileBottomNav mode="portal" />
     </div>
   );
 }

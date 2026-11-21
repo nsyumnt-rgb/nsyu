@@ -487,23 +487,84 @@ function BillingInner() {
             text="New bills show up here right after you save them from the Cart page."
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>Invoice</th>
-                  <th>Customer</th>
-                  <th className="!text-right">Amount</th>
-                  <th>Status</th>
-                  <th className="!text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRecentBills.map((s) => (
-                  <tr key={s.id}>
-                    <td className="whitespace-nowrap">
-                      <div className="font-mono text-[12.5px] font-semibold text-brand-700">{s.invoice_number}</div>
-                      <div className="text-[11.5px] text-slate-400">
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Customer</th>
+                    <th className="!text-right">Amount</th>
+                    <th>Status</th>
+                    <th className="!text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRecentBills.map((s) => (
+                    <tr key={s.id}>
+                      <td className="whitespace-nowrap">
+                        <div className="font-mono text-[12.5px] font-semibold text-brand-700">{s.invoice_number}</div>
+                        <div className="text-[11.5px] text-slate-400">
+                          {new Date(s.invoice_date).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </td>
+                      <td className="font-medium text-navy-900">{s.customer?.name || "Customer"}</td>
+                      <td className="text-right font-bold text-navy-900 tabular whitespace-nowrap">
+                        ₹{Number(s.total_amount).toFixed(2)}
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            s.status === "paid"
+                              ? "badge-active"
+                              : s.status === "partially_paid"
+                              ? "badge-warn"
+                              : s.status === "cancelled"
+                              ? "badge-inactive"
+                              : "badge-danger"
+                          }
+                        >
+                          {s.status === "paid"
+                            ? "Paid"
+                            : s.status === "partially_paid"
+                            ? "Partial"
+                            : s.status === "cancelled"
+                            ? "Cancelled"
+                            : "Unpaid"}
+                        </span>
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        <div className="inline-flex gap-1">
+                          <IconButton title="View bill" icon="eye" to={`/app/sales/${s.id}`} />
+                          <IconButton
+                            title="Download PDF"
+                            icon="download"
+                            onClick={() => downloadPdf(s.id, s.invoice_number)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile App-like Card Feed */}
+            <div className="md:hidden divide-y divide-slate-100 p-2 space-y-2">
+              {filteredRecentBills.map((s) => (
+                <div key={s.id} className="mobile-card p-3 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-mono text-[13px] font-bold text-brand-700">
+                        {s.invoice_number}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
                         {new Date(s.invoice_date).toLocaleDateString("en-IN", {
                           day: "2-digit",
                           month: "short",
@@ -511,22 +572,21 @@ function BillingInner() {
                           minute: "2-digit",
                         })}
                       </div>
-                    </td>
-                    <td className="font-medium text-navy-900">{s.customer?.name || "Customer"}</td>
-                    <td className="text-right font-bold text-navy-900 tabular whitespace-nowrap">
-                      ₹{Number(s.total_amount).toFixed(2)}
-                    </td>
-                    <td>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-black text-navy-900 text-[15px] tabular">
+                        ₹{Number(s.total_amount).toFixed(2)}
+                      </div>
                       <span
-                        className={
+                        className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           s.status === "paid"
-                            ? "badge-active"
+                            ? "bg-emerald-100 text-emerald-800"
                             : s.status === "partially_paid"
-                            ? "badge-warn"
+                            ? "bg-amber-100 text-amber-800"
                             : s.status === "cancelled"
-                            ? "badge-inactive"
-                            : "badge-danger"
-                        }
+                            ? "bg-slate-100 text-slate-600"
+                            : "bg-rose-100 text-rose-700"
+                        }`}
                       >
                         {s.status === "paid"
                           ? "Paid"
@@ -536,28 +596,32 @@ function BillingInner() {
                           ? "Cancelled"
                           : "Unpaid"}
                       </span>
-                    </td>
-                    <td className="text-right whitespace-nowrap">
-                      <div className="inline-flex gap-1">
-                        <IconButton title="View bill" icon="eye" to={`/app/sales/${s.id}`} />
-                        <IconButton
-                          title="Download PDF"
-                          icon="download"
-                          onClick={() => downloadPdf(s.id, s.invoice_number)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+                    <span className="font-medium text-navy-900 truncate">
+                      {s.customer?.name || "Customer"}
+                    </span>
+                    <div className="inline-flex gap-1.5 shrink-0">
+                      <IconButton title="View bill" icon="eye" to={`/app/sales/${s.id}`} />
+                      <IconButton
+                        title="Download PDF"
+                        icon="download"
+                        onClick={() => downloadPdf(s.id, s.invoice_number)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
 
-      {/* Mobile: Bottom Floating Bar to Go to Cart & Create Bill */}
+      {/* Mobile: Bottom Floating Bar to Go to Cart & Create Bill (elevated above bottom nav) */}
       {posCount > 0 && (
-        <div className="lg:hidden fixed inset-x-3 bottom-3 z-30">
+        <div className="lg:hidden fixed inset-x-3 bottom-[74px] z-30 pb-safe">
           <button
             type="button"
             onClick={() => navigate("/app/cart")}

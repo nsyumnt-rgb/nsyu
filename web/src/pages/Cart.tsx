@@ -493,7 +493,8 @@ export default function Cart() {
 
             {/* Items Table Card */}
             <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
-              <div className="overflow-x-auto">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-600 uppercase font-black tracking-wider text-[10.5px] border-b border-slate-200">
                     <tr>
@@ -637,6 +638,120 @@ export default function Cart() {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile App-like Cart Item List */}
+              <div className="md:hidden divide-y divide-slate-100 p-2 space-y-2">
+                {items.map((item) => {
+                  const p = item.product || {};
+                  const coverImg = (p.images?.find((img: any) => img.is_primary) || p.images?.[0])?.url;
+                  const photo = coverImg || p.cover_image || (p.photos && p.photos[0]?.url) || null;
+                  const lineTotal = Number(item.unitPrice || 0) * item.quantity;
+                  const catName = p.category?.name || (typeof p.category === "string" ? p.category : "");
+                  const catAlias = getCategoryAlias(catName, p.category?.alias);
+                  const stock = getStock(p);
+
+                  return (
+                    <div key={p.id} className="mobile-card p-3 space-y-2.5">
+                      {/* Top: Image + Info + Remove */}
+                      <div className="flex items-start gap-3">
+                        <div className="w-14 h-14 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center p-1">
+                          {photo ? (
+                            <img
+                              src={resolveAssetUrl(photo) ?? undefined}
+                              alt={p.name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <span className="text-slate-400 font-bold text-base">📦</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-navy-900 text-xs line-clamp-2" title={p.name}>
+                            {p.name}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <span className="font-mono font-black text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-950 border border-emerald-300">
+                              {catAlias}
+                            </span>
+                            <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">
+                              {p.sku || "NO-SKU"}
+                            </span>
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[10px] font-bold tabular ${
+                                stock > 0
+                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                  : "bg-rose-50 text-rose-700 border border-rose-200"
+                              }`}
+                            >
+                              Stock: {stock}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(p.id)}
+                          className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition shrink-0"
+                          title={`Remove ${p.name}`}
+                        >
+                          <Icon name="trash" className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Bottom Controls: Rate Edit + Stepper + Line Total */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+                        {/* Rate edit */}
+                        <div className="flex items-center gap-1 text-xs">
+                          <span className="text-slate-400 text-xs">Rate: ₹</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            value={item.unitPrice}
+                            onChange={(e) => updateUnitPrice(p.id, Number(e.target.value) || 0)}
+                            className="w-16 px-1.5 py-1 text-right text-xs font-bold rounded-lg border border-slate-200 tabular focus:border-brand-500 outline-none"
+                            title="Edit item rate"
+                          />
+                        </div>
+
+                        {/* Stepper */}
+                        <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white shadow-2xs overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(p.id, item.quantity - 1)}
+                            className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 text-sm font-bold transition"
+                            title="Decrease"
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.quantity}
+                            onChange={(e) => updateQuantity(p.id, Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-9 text-center text-xs font-bold text-navy-900 border-x border-slate-100 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(p.id, item.quantity + 1)}
+                            className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-100 text-sm font-bold transition"
+                            title="Increase"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Line Total */}
+                        <div className="text-right font-black text-emerald-800 text-[13.5px] tabular">
+                          {formatINR(lineTotal)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Table Footer Actions */}

@@ -341,7 +341,7 @@ function SalesInner() {
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -466,6 +466,84 @@ function SalesInner() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile App-Style Cards List */}
+        <ul className="md:hidden divide-y divide-slate-100">
+          {visible.map((s) => {
+            const due = Number(s.due_amount);
+            const st = statusChip(s);
+            const dt = s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—";
+
+            return (
+              <li key={s.id} className="p-4 space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <Link to={`/app/sales/${s.id}`} className="font-mono text-xs font-bold text-emerald-800 hover:underline">
+                        {s.invoice_number}
+                      </Link>
+                      <span className="text-[11px] text-slate-400">· {dt}</span>
+                    </div>
+                    <div className="text-[13.5px] font-bold text-navy-900 mt-0.5">
+                      {s.customer?.name || "Walk-in Customer"}
+                    </div>
+                  </div>
+                  <span className={st.cls}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} /> {st.label}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 text-xs tabular">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total</span>
+                    <strong className="text-navy-900 font-bold">{inr2(s.total_amount)}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Paid</span>
+                    <strong className="text-emerald-700 font-bold">{inr2(s.paid_amount)}</strong>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 uppercase font-semibold block">Due</span>
+                    <strong className={due > 0 ? "text-rose-600 font-bold" : "text-slate-400"}>
+                      {due > 0 ? inr2(due) : "Settled"}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-xs">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf(s.id, s.invoice_number)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1"
+                    >
+                      <Icon name="download" className="w-3.5 h-3.5" /> PDF
+                    </button>
+                    <Link
+                      to={`/app/sales/${s.id}`}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs"
+                    >
+                      Details
+                    </Link>
+                  </div>
+
+                  {due > 0 && s.status !== "cancelled" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPayingSale(s);
+                        setPayAmount(String(s.due_amount));
+                      }}
+                      className="btn-primary btn-sm"
+                    >
+                      Collect Due
+                    </button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
         {!loading && visible.length > 0 && (
           <div className="px-4 sm:px-5 py-3 border-t border-slate-100 text-[12.5px] text-slate-500 flex flex-wrap gap-x-5 gap-y-1">
             <span><b className="text-navy-900 tabular">{visible.length}</b> invoice{visible.length === 1 ? "" : "s"}</span>
