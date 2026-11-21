@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { usePosStore } from "../store/posStore";
 import { listShops, switchShop } from "../api/shops";
@@ -381,6 +381,18 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
         </svg>
       </button>
 
+      {/* Mobile: Brand Logo / Monogram */}
+      <div className="lg:hidden flex items-center gap-1.5 shrink-0">
+        <Link to="/app" className="flex items-center gap-1.5 active:scale-95 transition">
+          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#064E3B] to-[#047857] text-white flex items-center justify-center font-black text-xs shadow-2xs">
+            N
+          </span>
+          <span className="font-black text-sm tracking-tight text-navy-900 hidden min-[360px]:inline">
+            NSYU<span className="text-emerald-600">.</span>
+          </span>
+        </Link>
+      </div>
+
       {/* Mobile: Search Toggle Button */}
       <button
         type="button"
@@ -594,11 +606,11 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           )}
         </div>
 
-        {/* POS Cart / Current Bill Button */}
+        {/* POS Cart / Current Bill Button (Desktop - on mobile it is in MobileBottomNav) */}
         <button
           type="button"
           onClick={() => navigate("/app/cart")}
-          className={`relative h-10 px-3 rounded-xl transition-colors flex items-center ${
+          className={`hidden sm:flex relative h-10 px-3 rounded-xl transition-colors items-center ${
             posCount && posCount > 0
               ? "bg-brand-50 text-brand-700 hover:bg-brand-100 ring-1 ring-brand-200"
               : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"

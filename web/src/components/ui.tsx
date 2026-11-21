@@ -287,8 +287,10 @@ export function Modal({ title, subtitle, icon, onClose, children, footer, size =
   const w = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : "max-w-2xl";
   return (
     <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4 animate-fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`bg-white w-full ${w} rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col animate-scale-up`}>
-        <div className="flex items-start gap-3 px-5 sm:px-6 py-4 border-b border-slate-100">
+      <div className={`bg-white w-full ${w} rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col animate-slide-up sm:animate-scale-up`}>
+        {/* Mobile Drag Handle */}
+        <div className="sm:hidden w-10 h-1 bg-slate-300 rounded-full mx-auto my-2.5 shrink-0" />
+        <div className="flex items-start gap-3 px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100">
           {icon && (
             <span className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-600/10 flex items-center justify-center shrink-0">
               <Icon name={icon} className="w-[18px] h-[18px]" />
@@ -303,7 +305,7 @@ export function Modal({ title, subtitle, icon, onClose, children, footer, size =
           </button>
         </div>
         <div className="px-5 sm:px-6 py-5 overflow-y-auto">{children}</div>
-        {footer && <div className="px-5 sm:px-6 py-3.5 border-t border-slate-100 bg-slate-50/60 rounded-b-2xl flex flex-wrap justify-end gap-2">{footer}</div>}
+        {footer && <div className="px-5 sm:px-6 py-3.5 pb-safe sm:pb-3.5 border-t border-slate-100 bg-slate-50/60 rounded-b-2xl flex flex-wrap justify-end gap-2">{footer}</div>}
       </div>
     </div>
   );

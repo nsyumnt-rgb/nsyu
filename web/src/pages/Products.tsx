@@ -852,7 +852,45 @@ function ProductsInner() {
       </div>
 
       {/* ============================================================== */}
-      {/* 4. PRODUCTS PRESENTATION (Grid View matching Image 2 vs List)   */}
+      {/* 3.5. HORIZONTAL SCROLLABLE CATEGORY NAVIGATION (Mobile-First)   */}
+      {/* ============================================================== */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+        <button
+          type="button"
+          onClick={() => { setCategoryFilter("All"); setCurrentPage(1); }}
+          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+            categoryFilter === "All"
+              ? "bg-[#064E3B] text-white shadow-xs"
+              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          All Items ({products.length})
+        </button>
+        {categories.map((c) => {
+          const count = products.filter((p) => p.category?.name === c.name).length;
+          const isActive = categoryFilter === c.name;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => { setCategoryFilter(c.name); setCurrentPage(1); }}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                isActive
+                  ? "bg-[#064E3B] text-white shadow-xs"
+                  : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <span>{c.name}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 font-semibold"}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ============================================================== */}
+      {/* 4. PRODUCTS PRESENTATION (2-Column Grid on Mobile vs List)      */}
       {/* ============================================================== */}
       {loading && products.length === 0 ? (
         <div className="py-20 text-center">
@@ -870,8 +908,8 @@ function ProductsInner() {
           </p>
         </div>
       ) : viewMode === "grid" ? (
-        /* 5-Column Grid View matching Image 2 */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+        /* 2-Column Grid on Mobile, Scaling to 5-Column on Desktop */
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {paginatedProducts.map((p) => {
             const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
             const coverImg = coverOf(p);
@@ -881,15 +919,15 @@ function ProductsInner() {
             return (
               <div
                 key={p.id}
-                className="bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 shadow-xs hover:shadow-md transition p-3 flex flex-col justify-between group relative"
+                className="bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 shadow-xs hover:shadow-md transition p-2.5 sm:p-3 flex flex-col justify-between group relative"
               >
                 <div className="cursor-pointer" onClick={() => setQuickViewProduct(p)}>
                   {/* Image Container with Top-Right Status Badge */}
-                  <div className="w-full h-32 bg-gray-50/70 rounded-xl mb-2.5 flex items-center justify-center overflow-hidden relative">
+                  <div className="w-full aspect-square max-h-36 sm:h-32 bg-gray-50/70 rounded-xl mb-2 flex items-center justify-center overflow-hidden relative">
                     {/* Status Badge in top right */}
-                    <div className="absolute top-2 right-2 z-10">
+                    <div className="absolute top-1.5 right-1.5 z-10">
                       <span
-                        className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full ${
+                        className={`text-[8.5px] sm:text-[9.5px] font-bold px-1.5 py-0.5 rounded-full ${
                           isOutOfStock
                             ? "bg-rose-100 text-rose-700 border border-rose-200"
                             : isLowStock
@@ -897,7 +935,7 @@ function ProductsInner() {
                             : "bg-emerald-100 text-emerald-800 border border-emerald-200"
                         }`}
                       >
-                        {isOutOfStock ? "Out of Stock" : isLowStock ? "Low Stock" : "In Stock"}
+                        {isOutOfStock ? "Out" : isLowStock ? "Low" : "In Stock"}
                       </span>
                     </div>
 
@@ -909,38 +947,37 @@ function ProductsInner() {
                   </div>
 
                   {/* Title & SKU */}
-                  <h3 className="font-bold text-xs text-gray-900 line-clamp-2 min-h-[32px] group-hover:text-emerald-800 transition">
+                  <h3 className="font-bold text-[12px] sm:text-xs text-gray-900 line-clamp-2 min-h-[30px] sm:min-h-[32px] group-hover:text-emerald-800 transition">
                     {p.name}
                   </h3>
-                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                  <div className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">
                     SKU: {p.sku}
                   </div>
 
                   {/* Price & Stock */}
-                  <div className="mt-2 flex items-baseline justify-between">
-                    <div className="text-sm font-black text-gray-900">
+                  <div className="mt-1.5 flex items-baseline justify-between flex-wrap gap-1">
+                    <div className="text-xs sm:text-sm font-black text-gray-900 tabular">
                       ₹{Number(p.selling_price).toFixed(2)}
                     </div>
-                    <div className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                      <span>📦</span>
+                    <div className="text-[10px] sm:text-[11px] font-bold text-gray-600 flex items-center gap-1">
                       <span>Stock: {stock}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Bottom Action Bar: Full Width Add to Cart (view eye button removed) */}
-                <div className="mt-3">
+                {/* Bottom Action Bar: Full Width Add to Cart */}
+                <div className="mt-2.5">
                   <button
                     type="button"
                     onClick={() => handleAddToCart(p)}
-                    className="w-full py-2 bg-[#047857] hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition shadow-xs flex items-center justify-center gap-1.5"
+                    className="w-full py-1.5 sm:py-2 bg-[#047857] hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-[11px] sm:text-xs transition shadow-xs flex items-center justify-center gap-1"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="9" cy="21" r="1" />
                       <circle cx="20" cy="21" r="1" />
                       <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
                     </svg>
-                    <span>Add to Cart</span>
+                    <span>+ Cart</span>
                   </button>
                 </div>
               </div>

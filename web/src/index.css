@@ -97,7 +97,7 @@
 
   /* ── Forms ────────────────────────────────────────────── */
   .input {
-    @apply w-full rounded-lg border border-border bg-white px-3 py-2 text-[13px] text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition-all shadow-xs;
+    @apply w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-[16px] sm:text-[13.5px] text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 outline-none transition-all shadow-xs;
   }
   .label {
     @apply block text-xs font-semibold text-slate-600 mb-1.5;

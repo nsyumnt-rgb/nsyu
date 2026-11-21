@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import { useAuthStore } from "../store/authStore";
+import { logout as logoutApi } from "../api/auth";
 import type { ModuleName } from "../types";
 
 export type NavGroup = "DASHBOARD" | "PRODUCTS & STOCK" | "BILLING & ORDERS" | "CUSTOMERS & LEDGER" | "SETTINGS";
@@ -72,13 +73,33 @@ interface SidebarProps {
 
 export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     onClose?.();
   }, [location.pathname, onClose]);
 
   const accountType = useAuthStore((s) => s.accountType);
+  const owner = useAuthStore((s) => s.owner);
+  const employee = useAuthStore((s) => s.employee);
+  const roleName = useAuthStore((s) => s.roleName);
+  const activeShop = useAuthStore((s) => s.activeShop);
+  const refreshToken = useAuthStore((s) => s.refreshToken);
+  const storeLogout = useAuthStore((s) => s.logout);
   const isOwner = accountType === "owner" || (useAuthStore.getState().owner !== null);
+
+  const userName = accountType === "owner" ? (owner?.name || "Store Owner") : (employee?.name || "Staff");
+  const userRole = accountType === "owner" ? "Store Owner" : (roleName || "Staff Member");
+
+  async function handleLogout() {
+    if (refreshToken) {
+      try {
+        await logoutApi(refreshToken);
+      } catch {}
+    }
+    storeLogout();
+    navigate("/login");
+  }
 
   const [collapsed, setCollapsed] = useState<Record<NavGroup, boolean>>(() => {
     try {
@@ -104,55 +125,53 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
     return true;
   });
 
-  const sidebarContent = (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200">
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {GROUPS.map((group) => {
-          const items = visibleItems.filter((i) => i.group === group);
-          if (items.length === 0) return null;
-          const isCollapsed = Boolean(collapsed[group]);
+  const renderNavList = () => (
+    <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      {GROUPS.map((group) => {
+        const items = visibleItems.filter((i) => i.group === group);
+        if (items.length === 0) return null;
+        const isCollapsed = Boolean(collapsed[group]);
 
-          return (
-            <div key={group} className="space-y-1">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group)}
-                className="w-full flex items-center justify-between px-2.5 py-1 text-[11px] font-bold tracking-wider text-gray-400 uppercase hover:text-gray-700 transition"
-              >
-                <span>{group}</span>
-                <span className="text-gray-300 text-[10px]">{isCollapsed ? "+" : "−"}</span>
-              </button>
+        return (
+          <div key={group} className="space-y-1">
+            <button
+              type="button"
+              onClick={() => toggleGroup(group)}
+              className="w-full flex items-center justify-between px-2.5 py-1 text-[11px] font-bold tracking-wider text-gray-400 uppercase hover:text-gray-700 transition"
+            >
+              <span>{group}</span>
+              <span className="text-gray-300 text-[10px]">{isCollapsed ? "+" : "−"}</span>
+            </button>
 
-              {!isCollapsed && (
-                <div className="space-y-0.5">
-                  {items.map((item) => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      end={item.to === "/app"}
-                      className={({ isActive }) =>
-                        clsx(
-                          "group flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
-                          isActive
-                            ? "bg-emerald-50 text-emerald-900 font-bold shadow-2xs border border-emerald-100/80"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-navy-950"
-                        )
-                      }
-                    >
-                      {({ isActive }) => (
-                        <>
-                          {item.icon(isActive)}
-                          <span className="truncate">{item.label}</span>
-                        </>
-                      )}
-                    </NavLink>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            {!isCollapsed && (
+              <div className="space-y-0.5">
+                {items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === "/app"}
+                    className={({ isActive }) =>
+                      clsx(
+                        "group flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-[0.98]",
+                        isActive
+                          ? "bg-emerald-50 text-emerald-900 font-bold shadow-2xs border border-emerald-100/80"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-navy-950"
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        {item.icon(isActive)}
+                        <span className="truncate">{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 
@@ -160,15 +179,69 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
     <>
       {/* Desktop static sidebar */}
       <aside className="hidden lg:block w-60 shrink-0 sticky top-16 h-[calc(100vh-4rem)]">
-        {sidebarContent}
+        <div className="flex flex-col h-full bg-white border-r border-gray-200">
+          {renderNavList()}
+        </div>
       </aside>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer (Native App Slide-out) */}
       {open && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="fixed inset-0 bg-navy-950/40 backdrop-blur-xs" onClick={onClose} />
-          <div className="relative w-72 max-w-[80vw] h-full shadow-2xl z-10 animate-slide-right">
-            {sidebarContent}
+          <div className="fixed inset-0 bg-navy-950/50 backdrop-blur-xs animate-fade-in" onClick={onClose} />
+          <div className="relative w-80 max-w-[85vw] h-full bg-white shadow-2xl z-10 animate-slide-right flex flex-col justify-between">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50/60 to-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-xl bg-[#064E3B] text-white flex items-center justify-center font-black text-sm shadow-sm">
+                  N
+                </span>
+                <div className="min-w-0">
+                  <div className="font-bold text-navy-900 text-sm truncate">
+                    {activeShop?.name || "NSYU Store"}
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono truncate">
+                    {activeShop?.code || "NSYU-01"}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-navy-900 hover:bg-slate-100 flex items-center justify-center transition"
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Drawer Navigation List */}
+            {renderNavList()}
+
+            {/* Drawer Footer (User Info & Logout) */}
+            <div className="p-3.5 border-t border-gray-100 bg-slate-50/60 space-y-2">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+                <span className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+                  {userName.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-bold text-navy-900 truncate">{userName}</div>
+                  <div className="text-[10.5px] text-slate-400 truncate">{userRole}</div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full py-2 px-3 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-98"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>Sign Out</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

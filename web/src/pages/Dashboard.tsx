@@ -217,17 +217,17 @@ export default function Dashboard() {
               {openOrders > 0 ? `${openOrders} order${openOrders > 1 ? "s" : ""} waiting for processing` : "No pending orders"}
               {lowStock.length > 0 && ` · ${lowStock.length} item${lowStock.length > 1 ? "s" : ""} low stock`}
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link to="/app/billing" className="btn bg-white text-navy-900 hover:bg-emerald-50 shadow-sm font-bold">
+            <div className="mt-5 grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+              <Link to="/app/billing" className="btn bg-white text-navy-900 hover:bg-emerald-50 shadow-sm font-bold text-center justify-center">
                 <Icon name="receipt" /> New Bill (POS)
               </Link>
-              <Link to="/app/products" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15">
+              <Link to="/app/products" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15 text-center justify-center">
                 <Icon name="plus" /> Add Product
               </Link>
-              <Link to="/app/customers" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15">
+              <Link to="/app/customers" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15 text-center justify-center">
                 <Icon name="users" /> Customers
               </Link>
-              <Link to="/app/ledger" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15">
+              <Link to="/app/ledger" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15 text-center justify-center">
                 <Icon name="wallet" /> Customer Ledger
               </Link>
             </div>
@@ -240,7 +240,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Period + KPIs */}
+      {/* Period + KPIs (2-Column Mobile App Grid) */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-[15px] font-bold text-navy-900">Store Overview</h2>
@@ -251,19 +251,19 @@ export default function Dashboard() {
             options={(Object.keys(PERIOD_LABEL) as Period[]).map((p) => ({ key: p, label: PERIOD_LABEL[p] }))}
           />
         </div>
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
           <StatCard label="Total Sales" icon="trend" tone="brand" value={inr(kpi.sales)} loading={loading} to="/app/sales" hint={<DeltaPill cur={kpi.sales} prev={kpi.prevSales} hasPrev={hasPrev} />} />
           <StatCard label="Orders" icon="cart" tone="sky" value={kpi.orders.toLocaleString("en-IN")} loading={loading} to="/app/orders" hint={<DeltaPill cur={kpi.orders} prev={kpi.prevOrders} hasPrev={hasPrev} />} />
-          <StatCard label="Products" icon="layers" tone="violet" value={String(kpi.productsCount)} loading={loading} to="/app/products" hint="Total active catalog items" />
+          <StatCard label="Products" icon="layers" tone="violet" value={String(kpi.productsCount)} loading={loading} to="/app/products" hint="Total catalog" />
           <StatCard
-            label="Outstanding Khata"
+            label="Khata Dues"
             icon="wallet"
             tone="rose"
             value={dues.denied ? "—" : inr(dues.total)}
             valueClass={dues.denied ? "text-slate-400" : "text-rose-600"}
             loading={loading}
             to="/app/ledger"
-            hint={dues.denied ? "No permission" : `${dues.top.length ? `${dues.top.length} customer(s)` : "Zero balance"} pending`}
+            hint={dues.denied ? "No permission" : `${dues.top.length ? `${dues.top.length} pending` : "Cleared"}`}
           />
         </div>
       </div>
@@ -451,7 +451,7 @@ export default function Dashboard() {
             <h2 className="card-title text-[14.5px] font-bold text-navy-950">Store Operations</h2>
             <p className="text-[12px] text-slate-500 mt-0.5">Core shop management modules</p>
           </div>
-          <div className="pt-3 grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5">
+          <div className="pt-3 grid grid-cols-2 gap-2.5">
             {[
               { label: "POS Billing", desc: "Ring up retail sale", to: "/app/billing", icon: "receipt", tone: "brand" as const },
               { label: "Sales Invoices", desc: "Past bills & GST", to: "/app/sales", icon: "trend" as const, tone: "emerald" as const },

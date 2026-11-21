@@ -323,11 +323,47 @@ function BillingInner() {
         </div>
       </div>
 
-      {/* Product Grid (Full Width) */}
+      {/* Horizontal Scrollable Category Bar (Mobile-first app navigation) */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+        <button
+          type="button"
+          onClick={() => setCategory("all")}
+          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+            category === "all"
+              ? "bg-[#064E3B] text-white shadow-xs"
+              : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          All Items ({products.length})
+        </button>
+        {categories.map((cat) => {
+          const count = products.filter((p) => p.category?.name === cat).length;
+          const isActive = category === cat;
+          return (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setCategory(cat)}
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                isActive
+                  ? "bg-[#064E3B] text-white shadow-xs"
+                  : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200"
+              }`}
+            >
+              <span>{cat}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 font-semibold"}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Product Grid (Full Width, 2-Column Mobile Grid) */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {Array.from({ length: 8 }, (_, i) => (
-            <div key={i} className="h-[150px] rounded-2xl bg-white border border-border animate-pulse" />
+            <div key={i} className="h-[180px] rounded-2xl bg-white border border-border animate-pulse" />
           ))}
         </div>
       ) : filteredProducts.length === 0 ? (
@@ -357,7 +393,7 @@ function BillingInner() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {filteredProducts.map((p) => {
             const stock = getStock(p);
             const inCart = qtyInCart(p.id);
@@ -365,14 +401,14 @@ function BillingInner() {
             return (
               <div
                 key={p.id}
-                className={`group bg-white rounded-2xl border p-3.5 flex gap-3 transition hover:shadow-lift hover:-translate-y-0.5 ${
+                className={`group bg-white rounded-2xl border p-2.5 sm:p-3.5 flex flex-col sm:flex-row gap-2 sm:gap-3 transition hover:shadow-lift ${
                   inCart ? "border-brand-300 ring-2 ring-brand-500/10" : "border-border hover:border-brand-200"
                 }`}
               >
                 <button
                   type="button"
                   onClick={() => addToCart(p)}
-                  className="w-20 h-20 sm:w-22 sm:h-22 shrink-0 rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center p-1"
+                  className="w-full h-28 sm:w-22 sm:h-22 shrink-0 rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center p-1"
                   aria-label={`Add ${p.name}`}
                 >
                   {img ? (
@@ -381,60 +417,44 @@ function BillingInner() {
                     <ProductItemIcon name={p.name} category={p.category?.name || p.brand} sku={p.sku} size="lg" />
                   )}
                 </button>
-                <div className="min-w-0 flex-1 flex flex-col">
-                  <button type="button" onClick={() => addToCart(p)} className="text-left">
-                    <div className="text-[13.5px] font-bold text-navy-900 leading-snug line-clamp-2" title={p.name}>
-                      {p.name}
+                <div className="min-w-0 flex-1 flex flex-col justify-between">
+                  <div>
+                    <button type="button" onClick={() => addToCart(p)} className="text-left w-full">
+                      <div className="text-[12px] sm:text-[13.5px] font-bold text-navy-900 leading-snug line-clamp-2" title={p.name}>
+                        {p.name}
+                      </div>
+                    </button>
+                    <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 truncate">SKU: {p.sku}</div>
+                    <div className="flex items-baseline gap-1 flex-wrap mt-1">
+                      <div className="text-[13px] sm:text-[15px] font-bold text-navy-900 font-mono tabular">
+                        ₹{Number(priceSource === "live" && p.live_price ? p.live_price : p.selling_price || 0).toFixed(2)}
+                      </div>
+                      {priceSource === "live" && p.live_price && (
+                        <span className="text-[8.5px] sm:text-[9.5px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-1 rounded border border-emerald-300">
+                          Live
+                        </span>
+                      )}
                     </div>
-                  </button>
-                  <div className="text-[11px] text-slate-500 mt-0.5 truncate">SKU: {p.sku}</div>
-                  <div className="flex items-baseline gap-1.5 flex-wrap mt-1">
-                    <div className="text-[15px] font-bold text-navy-900 font-mono tabular">
-                      ₹{Number(priceSource === "live" && p.live_price ? p.live_price : p.selling_price || 0).toFixed(2)}
-                    </div>
-                    {priceSource === "live" && p.live_price && (
-                      <span className="text-[9.5px] font-extrabold uppercase bg-emerald-100 text-emerald-800 px-1 rounded border border-emerald-300">
-                        Live Price
-                      </span>
-                    )}
-                    {priceSource === "selling" && p.live_price && (
-                      <span className="text-[9.5px] text-slate-400">
-                        (Live: ₹{Number(p.live_price).toFixed(2)})
-                      </span>
-                    )}
                   </div>
-                  <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
+                  <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
                     <span
-                      className={`px-2 py-0.5 rounded-lg text-xs font-bold tabular whitespace-nowrap border shadow-2xs ${
+                      className={`px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold tabular whitespace-nowrap border ${
                         stock > 0
                           ? "bg-amber-50 text-amber-900 border-amber-200"
                           : "bg-rose-50 text-rose-700 border-rose-200"
                       }`}
-                      title={`Available Stock in ${activeShop?.name || "Shop"}: ${stock}`}
+                      title={`Available Stock: ${stock}`}
                     >
-                      Stock: <strong className={stock > 0 ? "text-amber-950 font-black" : "text-rose-800 font-black"}>{stock}</strong>
+                      Stock: <strong>{stock}</strong>
                     </span>
                     <button
                       type="button"
                       onClick={() => addToCart(p)}
-                      className="relative shrink-0 h-8 px-2.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white flex items-center gap-0.5 shadow-sm active:scale-95 transition"
+                      className="relative shrink-0 h-7 sm:h-8 px-2 sm:px-2.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white flex items-center gap-0.5 shadow-sm active:scale-95 transition"
                       title="Add to cart"
                       aria-label={`Add ${p.name} to cart`}
                     >
-                      <svg
-                        className="w-4 h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <circle cx="9" cy="21" r="1" />
-                        <circle cx="20" cy="21" r="1" />
-                        <path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6" />
-                      </svg>
-                      <span className="text-[13px] font-bold leading-none">+</span>
+                      <span className="text-xs sm:text-[13px] font-bold leading-none">+ Cart</span>
                       {inCart > 0 && (
                         <span className="absolute -top-2 -right-2 min-w-[18px] h-4.5 px-1 rounded-full bg-rose-500 text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
                           {inCart}
