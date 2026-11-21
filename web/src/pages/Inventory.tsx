@@ -1603,11 +1603,11 @@ export default function Inventory({
                       <td className="p-3 text-gray-500 font-mono text-[11px]">
                         {new Date(m.created_at || m.createdAt).toLocaleString("en-IN")}
                       </td>
-                      <td className="p-3">
-                        <div className="font-bold text-gray-900">
+                      <td className="p-3 max-w-[220px]">
+                        <div className="font-bold text-gray-900 truncate" title={m.product?.name}>
                           {m.product?.name || `Product #${m.product_id}`}
                         </div>
-                        <div className="text-[10px] text-gray-400 font-mono">
+                        <div className="text-[10px] text-gray-400 font-mono truncate">
                           {m.product?.sku || "—"}
                         </div>
                       </td>
@@ -1636,21 +1636,21 @@ export default function Inventory({
       ) : (
         /* Main Inventory Table with All 5 Requested Features */
         <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-xs">
-          <table className="w-full text-left text-xs min-w-[1050px]">
+          <table className="w-full text-left text-xs min-w-[1000px]">
             <thead className="bg-[#064E3B] text-white font-bold uppercase text-[10px] tracking-wider">
               <tr>
-                <th className="p-3.5">Product</th>
+                <th className="p-3 w-52 max-w-[210px]">Product</th>
                 {/* Requirement 4: Category column moved left immediately next to product */}
-                <th className="p-3.5 text-center">Category</th>
-                <th className="p-3.5">SKU</th>
+                <th className="p-3 text-center w-16">Category</th>
+                <th className="p-3 w-20">SKU</th>
                 {/* Requirement 2: Live status ON/OFF toggle switch column */}
-                <th className="p-3.5 text-center">Live</th>
+                <th className="p-3 text-center w-14">Live</th>
                 {/* Requirement 3: Editable fields: Quantity, Purchase, Selling, Margin */}
-                <th className="p-3.5 text-center">Stock</th>
-                <th className="p-3.5 text-right">Purchase Price</th>
-                <th className="p-3.5 text-right">Selling Price</th>
+                <th className="p-3 text-center w-20">Stock</th>
+                <th className="p-3 text-right w-24">Purchase Price</th>
+                <th className="p-3 text-right w-24">Selling Price</th>
                 {/* Arrow Header: Copy Selling Price to Live Price */}
-                <th className="p-2 text-center w-10">
+                <th className="p-2 text-center w-9">
                   <button
                     type="button"
                     disabled={bulkSyncing}
@@ -1677,11 +1677,11 @@ export default function Inventory({
                     )}
                   </button>
                 </th>
-                <th className="p-3.5 text-right">Live Price</th>
-                <th className="p-3.5 text-right">Margin (%)</th>
-                <th className="p-3.5 text-right">Stock Value</th>
+                <th className="p-3 text-right w-24">Live Price</th>
+                <th className="p-3 text-right w-20">Margin (%)</th>
+                <th className="p-3 text-right w-24">Stock Value</th>
                 {/* Requirement 1 & 5: Action Icons with View Details (Eye) */}
-                <th className="p-3.5 text-center">Actions</th>
+                <th className="p-3 text-center w-16">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -1713,21 +1713,21 @@ export default function Inventory({
                       }`}
                     >
                       {/* Product Image & Name */}
-                      <td className="p-3">
-                        <div className="flex items-center gap-3">
+                      <td className="p-2.5 w-52 max-w-[210px]">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             onClick={() => {
                               setViewProduct(p);
                               setActiveDetailImage(coverImg || null);
                             }}
-                            className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-emerald-500 transition"
-                            title="Click to view details with image"
+                            className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-emerald-500 transition"
+                            title="Click to view full details"
                           >
                             {imgSrc ? (
                               <img
                                 src={imgSrc || undefined}
                                 alt=""
-                                className="w-full h-full object-contain p-1 hover:scale-110 transition-transform duration-200"
+                                className="w-full h-full object-contain p-0.5 hover:scale-110 transition-transform duration-200"
                               />
                             ) : (
                               <span className="text-gray-400 font-bold text-xs">
@@ -1735,18 +1735,22 @@ export default function Inventory({
                               </span>
                             )}
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <button
                               type="button"
                               onClick={() => {
                                 setViewProduct(p);
                                 setActiveDetailImage(coverImg || null);
                               }}
-                              className="font-bold text-gray-900 truncate max-w-xs hover:text-emerald-700 transition text-left block"
+                              className="font-bold text-gray-900 truncate block w-full hover:text-emerald-700 transition text-left text-xs leading-snug"
+                              title={p.name}
                             >
                               {p.name}
                             </button>
-                            <div className="text-[10px] text-gray-400 font-medium">
+                            <div
+                              className="text-[10px] text-gray-400 font-medium truncate block w-full"
+                              title={p.brand || undefined}
+                            >
                               {p.brand || "—"}
                             </div>
                           </div>
@@ -1754,7 +1758,7 @@ export default function Inventory({
                       </td>
 
                       {/* Requirement 4: Category column on the LEFT */}
-                      <td className="p-3 text-center">
+                      <td className="p-2.5 text-center">
                         {isEditing ? (
                           <select
                             value={inlineDraft.categoryId || ""}
@@ -1776,7 +1780,7 @@ export default function Inventory({
                         ) : (
                           <span
                             title={p.category?.name ? `Category: ${p.category.name}` : "General"}
-                            className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-950 font-black text-xs font-mono tracking-wider border border-emerald-300 whitespace-nowrap shadow-2xs"
+                            className="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-950 font-black text-xs font-mono tracking-wider border border-emerald-300 whitespace-nowrap shadow-2xs"
                           >
                             {getCategoryAlias(p.category?.name, (p.category as any)?.alias)}
                           </span>
@@ -1784,12 +1788,12 @@ export default function Inventory({
                       </td>
 
                       {/* SKU */}
-                      <td className="p-3 font-mono text-gray-600 font-semibold">
+                      <td className="p-2.5 font-mono text-gray-600 font-semibold max-w-[90px] truncate" title={p.sku}>
                         {p.sku}
                       </td>
 
                       {/* Requirement 2: Live Product On/Off Toggle Button in Table */}
-                      <td className="p-3 text-center">
+                      <td className="p-2.5 text-center">
                         <div className="flex items-center justify-center flex-col gap-1">
                           <button
                             type="button"
