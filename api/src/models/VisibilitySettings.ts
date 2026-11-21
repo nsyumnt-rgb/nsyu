@@ -109,7 +109,7 @@ VisibilitySettings.init(
     owner_id: { type: DataTypes.INTEGER, allowNull: false },
     shop_id: { type: DataTypes.INTEGER, allowNull: false },
     settings: {
-      type: DataTypes.JSONB,
+      type: DataTypes.JSON,
       allowNull: false,
       defaultValue: DEFAULT_VISIBILITY_SETTINGS,
     },

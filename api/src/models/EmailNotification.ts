@@ -90,7 +90,7 @@ EmailNotification.init(
     error_message: { type: DataTypes.TEXT, allowNull: true },
     reference_type: { type: DataTypes.STRING(50), allowNull: true },
     reference_id: { type: DataTypes.BIGINT, allowNull: true },
-    payload: { type: DataTypes.JSONB, allowNull: true },
+    payload: { type: DataTypes.JSON, allowNull: true },
   },
   {
     sequelize,

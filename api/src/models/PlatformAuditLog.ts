@@ -45,7 +45,7 @@ PlatformAuditLog.init(
     target_type: { type: DataTypes.STRING(50), allowNull: false },
     target_id: { type: DataTypes.INTEGER, allowNull: true },
     target_name: { type: DataTypes.STRING(150), allowNull: true },
-    details: { type: DataTypes.JSONB, allowNull: true, defaultValue: {} },
+    details: { type: DataTypes.JSON, allowNull: true, defaultValue: {} },
     ip_address: { type: DataTypes.STRING(50), allowNull: true },
     created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
   },

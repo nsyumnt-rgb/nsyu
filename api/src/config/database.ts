@@ -8,10 +8,19 @@ dotenv.config();
  * Supports SQLite (for tests), DATABASE_URL connection string,
  * PostgreSQL (e.g. Supabase), or MySQL (default).
  */
-const envDialect = process.env.DB_DIALECT || (process.env.DB_PORT === "5432" || process.env.DB_HOST?.includes("supabase") || process.env.DATABASE_URL?.startsWith("postgres") ? "postgres" : "postgres");
+const envDialect =
+  process.env.DB_DIALECT ||
+  (process.env.DB_PORT === "3306"
+    ? "mysql"
+    : process.env.DB_PORT === "5432" ||
+      process.env.DB_HOST?.includes("supabase") ||
+      process.env.DATABASE_URL?.startsWith("postgres")
+    ? "postgres"
+    : "mysql");
 const dialect: Dialect = (process.env.TEST_DIALECT as Dialect) || (envDialect as Dialect);
 const isSqlite = dialect === "sqlite";
-const isPostgres = true;
+const isMysql = dialect === "mysql";
+const isPostgres = dialect === "postgres";
 
 const DB_HOST = process.env.DB_HOST;
 const DB_USER = process.env.DB_USER;
@@ -63,16 +72,18 @@ export const sequelize = isSqlite
       {
         host: DB_HOST,
         port: DB_PORT,
-        dialect: "postgres",
+        dialect: isMysql ? "mysql" : "postgres",
         logging: false,
-        dialectOptions: {
-          ssl: process.env.DB_SSL === "false"
-            ? false
-            : {
-                require: true,
-                rejectUnauthorized: false,
-              },
-        },
+        dialectOptions: isPostgres
+          ? {
+              ssl: process.env.DB_SSL === "false"
+                ? false
+                : {
+                    require: true,
+                    rejectUnauthorized: false,
+                  },
+            }
+          : (process.env.DB_SSL === "true" ? { ssl: { rejectUnauthorized: false } } : {}),
         define: {
           underscored: true, // created_at / updated_at, owner_id / shop_id etc.
           timestamps: true,

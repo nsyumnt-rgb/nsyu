@@ -49,7 +49,7 @@ Shop.init(
       defaultValue: "pending_approval",
     },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
-    settings: { type: DataTypes.JSONB, defaultValue: {} },
+    settings: { type: DataTypes.JSON, defaultValue: {} },
   },
   {
     sequelize,
