@@ -219,6 +219,13 @@ export async function listProductsOwnerView(req: Request, res: Response) {
       json.profit = Number(json.selling_price) - Number(json.purchase_price);
     }
     if (!allowedFields.supplier) delete json.supplier;
+
+    // Attach convenient top-level current_stock for the active shop
+    const matchingStock = targetShopId && json.stocks
+      ? json.stocks.find((st: any) => Number(st.shop_id) === Number(targetShopId))
+      : json.stocks?.[0];
+    json.current_stock = matchingStock ? Number(matchingStock.current_stock || 0) : 0;
+
     return stripFields(json, { purchase_price: allowedFields.purchase_price, profit: allowedFields.profit });
   });
 
@@ -250,6 +257,12 @@ export async function getProductOwnerView(req: Request, res: Response) {
   const json = product.toJSON() as any;
   if (allowedFields.profit) json.profit = Number(json.selling_price) - Number(json.purchase_price);
   if (!allowedFields.supplier) delete json.supplier;
+
+  const targetShopId = req.query.shopId ? Number(req.query.shopId) : req.auth!.shopId;
+  const matchingStock = targetShopId && json.stocks
+    ? json.stocks.find((st: any) => Number(st.shop_id) === Number(targetShopId))
+    : json.stocks?.[0];
+  json.current_stock = matchingStock ? Number(matchingStock.current_stock || 0) : 0;
 
   return res.json({ success: true, data: stripFields(json, { purchase_price: allowedFields.purchase_price, profit: allowedFields.profit }) });
 }

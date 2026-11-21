@@ -59,9 +59,10 @@ function BillingInner() {
 
   function loadData() {
     setLoading(true);
+    const targetShopId = shopId || activeShop?.id;
     Promise.all([
-      listProducts(),
-      listSales({ limit: 15, shopId: shopId || undefined }),
+      listProducts({ shopId: targetShopId || undefined } as any),
+      listSales({ limit: 15, shopId: targetShopId || undefined }),
     ])
       .then(([p, s]) => {
         setProducts(p.data.data ?? []);
@@ -72,7 +73,7 @@ function BillingInner() {
 
   useEffect(() => {
     loadData();
-  }, [shopId]);
+  }, [shopId, activeShop?.id]);
 
   function handlePriceSourceChange(newMode: "selling" | "live") {
     setPriceSource(newMode);
@@ -98,9 +99,24 @@ function BillingInner() {
   }
 
   function getStock(p: Product): number {
-    if (!p.stocks || p.stocks.length === 0) return 0;
-    const s = p.stocks.find((st) => st.shop_id === shopId);
-    return s ? s.current_stock : 0;
+    if (!p) return 0;
+    // 1. Direct current_stock from backend
+    if (typeof (p as any).current_stock === "number") {
+      return (p as any).current_stock;
+    }
+    // 2. Check stocks array matching current shop
+    const stocks = p.stocks || [];
+    if (stocks.length > 0) {
+      const targetId = shopId || activeShop?.id;
+      if (targetId) {
+        const match = stocks.find((st: any) => Number(st.shop_id) === Number(targetId));
+        if (match && match.current_stock !== undefined && match.current_stock !== null) {
+          return Number(match.current_stock);
+        }
+      }
+      return Number(stocks[0]?.current_stock || 0);
+    }
+    return 0;
   }
 
   function addToCart(p: Product) {
@@ -389,11 +405,14 @@ function BillingInner() {
                   </div>
                   <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
                     <span
-                      className={`px-2 py-0.5 rounded-md text-[11px] font-bold tabular whitespace-nowrap ${
-                        stock > 0 ? "bg-amber-100 text-amber-800" : "bg-rose-50 text-rose-700"
+                      className={`px-2 py-0.5 rounded-lg text-xs font-bold tabular whitespace-nowrap border shadow-2xs ${
+                        stock > 0
+                          ? "bg-amber-50 text-amber-900 border-amber-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200"
                       }`}
+                      title={`Available Stock in ${activeShop?.name || "Shop"}: ${stock}`}
                     >
-                      Stock: {stock}
+                      Stock: <strong className={stock > 0 ? "text-amber-950 font-black" : "text-rose-800 font-black"}>{stock}</strong>
                     </span>
                     <button
                       type="button"

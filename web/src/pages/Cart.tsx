@@ -30,6 +30,23 @@ export default function Cart() {
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
 
+  function getStock(p: any): number {
+    if (!p) return 0;
+    if (typeof p.current_stock === "number") return p.current_stock;
+    const stocks = p.stocks || [];
+    if (stocks.length > 0) {
+      const targetId = shopId || activeShop?.id;
+      if (targetId) {
+        const match = stocks.find((st: any) => Number(st.shop_id) === Number(targetId));
+        if (match && match.current_stock !== undefined && match.current_stock !== null) {
+          return Number(match.current_stock);
+        }
+      }
+      return Number(stocks[0]?.current_stock || 0);
+    }
+    return 0;
+  }
+
   // POS Store
   const items = usePosStore((s) => s.items);
   const updateQuantity = usePosStore((s) => s.updateQuantity);
@@ -496,6 +513,7 @@ export default function Cart() {
                       const lineTotal = Number(item.unitPrice || 0) * item.quantity;
                       const catName = p.category?.name || (typeof p.category === "string" ? p.category : "");
                       const catAlias = getCategoryAlias(catName, p.category?.alias);
+                      const stock = getStock(p);
 
                       return (
                         <tr key={p.id} className="hover:bg-slate-50/70 transition">
@@ -523,6 +541,15 @@ export default function Cart() {
                                 <div className="flex items-center gap-1.5 mt-0.5">
                                   <span className="font-mono text-[10px] px-1 py-0.2 rounded bg-slate-100 text-slate-600 font-semibold">
                                     {p.sku || "NO-SKU"}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold tabular ${
+                                      stock > 0
+                                        ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                                    }`}
+                                  >
+                                    Stock: {stock}
                                   </span>
                                   {p.live_price && Number(p.live_price) === item.unitPrice ? (
                                     <span className="px-1.5 py-0.2 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
