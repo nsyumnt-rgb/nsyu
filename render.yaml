@@ -12,15 +12,15 @@ services:
       - key: NODE_ENV
         value: production
       - key: DB_DIALECT
-        value: postgres
+        value: mysql
       - key: DB_HOST
-        value: aws-0-ap-south-1.pooler.supabase.com
+        value: srv1952.hstgr.io
       - key: DB_PORT
-        value: "5432"
+        value: "3306"
       - key: DB_NAME
-        value: postgres
+        value: u166803992_nsyu
       - key: DB_USER
-        value: postgres.lggjtxzannywecuvwqbl
+        value: u166803992_support
       # Secrets are NOT stored in git. Set them in the Render dashboard
       # (Service → Environment). `sync: false` keeps the dashboard value.
       - key: DB_PASS
