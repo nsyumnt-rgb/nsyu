@@ -95,7 +95,15 @@ api.interceptors.response.use(
 
 export function apiErrorMessage(err: unknown, fallback = "Something went wrong"): string {
   if (axios.isAxiosError(err)) {
-    return (err.response?.data as any)?.message || fallback;
+    const data = err.response?.data as any;
+    if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+      const details = data.errors
+        .map((e: any) => e.message || e.msg || e.field)
+        .filter(Boolean)
+        .join("; ");
+      if (details) return `${data.message || "Validation failed"}: ${details}`;
+    }
+    return data?.message || fallback;
   }
   return fallback;
 }

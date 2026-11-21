@@ -59,7 +59,7 @@ export const createSaleRules = [
   body("paymentMethod")
     .optional()
     .customSanitizer((v) => (typeof v === "string" ? v.trim().toLowerCase() : v))
-    .isIn(["cash", "upi", "bank_transfer", "card", "cheque", "other"])
+    .isIn(["cash", "upi", "bank_transfer", "card", "cheque", "other", "unpaid", "credit", "udhaar"])
     .withMessage("invalid paymentMethod"),
   body("paidAmount").optional().isFloat({ min: 0 }).withMessage("paidAmount must be >= 0"),
   body("billDiscount").optional().isFloat({ min: 0 }).withMessage("billDiscount must be >= 0"),

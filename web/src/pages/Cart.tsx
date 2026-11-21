@@ -99,7 +99,7 @@ export default function Cart() {
         }
       })
       .catch(() => {});
-  }, [shopId]);
+  }, [shopId, activeShop?.id]);
 
   // Shop Owner enabled payment methods + Unpaid (Credit / Udhaar) option
   const enabledPaymentOptions = useMemo(() => {
