@@ -228,8 +228,8 @@ export default function PortalBillDetail() {
           </div>
         </div>
 
-        {/* Invoice Items Table */}
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
+        {/* Invoice Items Table (Desktop) */}
+        <div className="hidden md:block border border-gray-200 rounded-xl overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#047857] text-white uppercase text-[10px] tracking-wider font-bold">
               <tr>
@@ -269,6 +269,37 @@ export default function PortalBillDetail() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Invoice Items (Mobile Cards) */}
+        <div className="md:hidden divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden bg-white">
+          {bill.items?.map((item: any, idx: number) => (
+            <div key={item.id} className="p-3 space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-bold text-gray-900 text-xs leading-snug">{item.product_name}</div>
+                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{idx + 1} · SKU: {item.sku || "—"}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-black text-gray-900 text-sm">
+                    ₹{Number(item.line_total || item.total || item.quantity * item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-[10px] text-gray-500">
+                    {item.quantity} × ₹{Number(item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-50">
+                <span>HSN: {item.hsn_code || "—"}</span>
+                {item.returned_quantity > 0 && (
+                  <span className="font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
+                    Ret: {item.returned_quantity}
+                  </span>
+                )}
+                <span>GST: {item.tax_rate ? `${item.tax_rate}%` : "0%"}</span>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Returns & Credit Adjustments Card */}

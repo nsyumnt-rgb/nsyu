@@ -354,137 +354,222 @@ export default function Categories() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50/80 border-b border-gray-100 text-gray-600 uppercase font-black tracking-wider text-[10.5px]">
-                <tr>
-                  <th className="py-3 px-4">Image / PNG</th>
-                  <th className="py-3 px-4">Icon</th>
-                  <th className="py-3 px-4">Category Name</th>
-                  <th className="py-3 px-4 text-center">Alias</th>
-                  <th className="py-3 px-4 text-center">Products</th>
-                  <th className="py-3 px-4 text-center">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
-                {filteredCategories.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
-                    {/* PNG / Image Preview & Direct Upload */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        {c.image_url ? (
-                          <div className="relative group w-12 h-12 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
-                            <img
-                              src={resolveAssetUrl(c.image_url) ?? undefined}
-                              alt={c.name}
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => triggerTableImageUpload(c.id)}
-                              className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] font-bold transition"
-                              title="Change PNG / Image"
-                            >
-                              Edit
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 flex items-center justify-center text-gray-400 shrink-0 text-[11px]">
-                            No PNG
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => triggerTableImageUpload(c.id)}
-                          disabled={tableUploading && uploadTargetCatId === c.id}
-                          className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-700 font-bold rounded-lg text-[11px] transition shrink-0 flex items-center gap-1 shadow-2xs"
-                        >
-                          <svg className="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                          </svg>
-                          <span>{c.image_url ? "Change PNG" : "Upload PNG"}</span>
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50/80 border-b border-gray-100 text-gray-600 uppercase font-black tracking-wider text-[10.5px]">
+                  <tr>
+                    <th className="py-3 px-4">Image / PNG</th>
+                    <th className="py-3 px-4">Icon</th>
+                    <th className="py-3 px-4">Category Name</th>
+                    <th className="py-3 px-4 text-center">Alias</th>
+                    <th className="py-3 px-4 text-center">Products</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
+                  {filteredCategories.map((c) => (
+                    <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                      {/* PNG / Image Preview & Direct Upload */}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          {c.image_url ? (
+                            <div className="relative group w-12 h-12 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
+                              <img
+                                src={resolveAssetUrl(c.image_url) ?? undefined}
+                                alt={c.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => triggerTableImageUpload(c.id)}
+                                className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] font-bold transition"
+                                title="Change PNG / Image"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 flex items-center justify-center text-gray-400 shrink-0 text-[11px]">
+                              No PNG
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => triggerTableImageUpload(c.id)}
+                            disabled={tableUploading && uploadTargetCatId === c.id}
+                            className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-700 font-bold rounded-lg text-[11px] transition shrink-0 flex items-center gap-1 shadow-2xs"
+                          >
+                            <svg className="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                              <polyline points="17 8 12 3 7 8" />
+                              <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <span>{c.image_url ? "Change PNG" : "Upload PNG"}</span>
+                          </button>
+                        </div>
+                      </td>
 
-                    {/* Icon Badge */}
-                    <td className="py-3 px-4">
-                      <div className="w-9 h-9 rounded-xl bg-gray-100 border border-gray-200/80 flex items-center justify-center text-lg shadow-2xs">
+                      {/* Icon Badge */}
+                      <td className="py-3 px-4">
+                        <div className="w-9 h-9 rounded-xl bg-gray-100 border border-gray-200/80 flex items-center justify-center text-lg shadow-2xs">
+                          {c.icon || "📦"}
+                        </div>
+                      </td>
+
+                      {/* Category Name */}
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-gray-900 text-sm">{c.name}</div>
+                        <div className="text-[11px] text-gray-400">ID: #{c.id}</div>
+                      </td>
+
+                      {/* Alias Badge */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-2xs">
+                          {c.alias || getCategoryAlias(c.name)}
+                        </span>
+                      </td>
+
+                      {/* Product Count */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700">
+                          {c.product_count || 0} products
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                            c.status === "active"
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200/60"
+                              : "bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}
+                        >
+                          {c.status === "active" ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(c)}
+                            className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
+                            title="Edit Category Name & Icon"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setCategoryToDelete(c)}
+                            className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
+                            title="Delete Category"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile App Cards View */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {filteredCategories.map((c) => (
+                <div key={c.id} className="p-3.5 space-y-2.5 bg-white">
+                  <div className="flex items-center gap-3">
+                    {c.image_url ? (
+                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
+                        <img
+                          src={resolveAssetUrl(c.image_url) ?? undefined}
+                          alt={c.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200/80 flex items-center justify-center text-xl shrink-0 shadow-2xs">
                         {c.icon || "📦"}
                       </div>
-                    </td>
-
-                    {/* Category Name */}
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-gray-900 text-sm">{c.name}</div>
-                      <div className="text-[11px] text-gray-400">ID: #{c.id}</div>
-                    </td>
-
-                    {/* Alias Badge */}
-                    <td className="py-3 px-4 text-center">
-                      <span className="font-mono font-black text-xs px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-2xs">
-                        {c.alias || getCategoryAlias(c.name)}
-                      </span>
-                    </td>
-
-                    {/* Product Count */}
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700">
-                        {c.product_count || 0} products
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          c.status === "active"
-                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200/60"
-                            : "bg-gray-100 text-gray-600 border border-gray-200"
-                        }`}
-                      >
-                        {c.status === "active" ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(c)}
-                          className="w-8 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
-                          title="Edit Category Name & Icon"
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <h4 className="font-bold text-gray-900 text-sm truncate">{c.name}</h4>
+                        <span
+                          className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            c.status === "active"
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200/60"
+                              : "bg-gray-100 text-gray-600 border border-gray-200"
+                          }`}
                         >
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                          </svg>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setCategoryToDelete(c)}
-                          className="w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
-                          title="Delete Category"
-                        >
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            <line x1="10" y1="11" x2="10" y2="17" />
-                            <line x1="14" y1="11" x2="14" y2="17" />
-                          </svg>
-                        </button>
+                          {c.status === "active" ? "Active" : "Inactive"}
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-950 border border-emerald-300">
+                          {c.alias || getCategoryAlias(c.name)}
+                        </span>
+                        <span className="text-[11px] text-gray-500 font-medium">
+                          {c.product_count || 0} items
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-50">
+                    <button
+                      type="button"
+                      onClick={() => triggerTableImageUpload(c.id)}
+                      disabled={tableUploading && uploadTargetCatId === c.id}
+                      className="px-2.5 py-1 text-[11px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1 active:scale-95"
+                    >
+                      <svg className="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                      {c.image_url ? "Change PNG" : "Add PNG"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(c)}
+                      className="px-2.5 py-1 text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg flex items-center gap-1 active:scale-95"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryToDelete(c)}
+                      className="px-2 py-1 text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg flex items-center gap-1 active:scale-95"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

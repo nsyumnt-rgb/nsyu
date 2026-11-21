@@ -85,7 +85,7 @@ export default function PortalStore() {
       {(categories === null || categories.length > 0) && (
         <section>
           <SectionHead title="Featured categories" to="/portal/catalog" />
-          <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-3 sm:gap-4 overflow-x-auto snap-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="w-full flex gap-3 sm:gap-4 overflow-x-auto snap-x pb-2 no-scrollbar">
             {categories === null
               ? Array.from({ length: 7 }).map((_, i) => <div key={i} className="shrink-0 w-[104px] sm:w-[124px] h-[136px] rounded-2xl bg-white ring-1 ring-slate-200/70 animate-pulse" />)
               : categories.map((c) => {
@@ -310,7 +310,7 @@ function ProductRail({
           <Link to={to} className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-brand-700 hover:text-brand-800 min-h-[36px] ml-1">View all <Arrow /></Link>
         </div>
       </div>
-      <div ref={ref} className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-3 sm:gap-4 overflow-x-auto snap-x pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div ref={ref} className="w-full flex gap-3 sm:gap-4 overflow-x-auto snap-x pb-2 no-scrollbar">
         {(rail.loading ? Array.from({ length: 5 }) : rail.items).map((p: any, k) => (
           <div key={p?.id ?? k} className="snap-start shrink-0 w-[86%] min-[560px]:w-[48%] lg:w-[calc((100%-2*16px)/3)] xl:w-[calc((100%-3*16px)/4)]">
             {p ? <CatalogCard product={p} {...cardProps(p)} /> : <div className="h-[200px] rounded-2xl bg-white border border-border animate-pulse" />}

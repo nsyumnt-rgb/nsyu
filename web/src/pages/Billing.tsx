@@ -324,7 +324,7 @@ function BillingInner() {
       </div>
 
       {/* Horizontal Scrollable Category Bar (Mobile-first app navigation) */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+      <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
         <button
           type="button"
           onClick={() => setCategory("all")}

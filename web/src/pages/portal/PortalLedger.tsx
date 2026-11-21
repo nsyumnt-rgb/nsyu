@@ -200,107 +200,191 @@ export default function PortalLedger() {
           ledgerEntries.length === 0 ? (
             <div className="p-12 text-center text-xs text-gray-400">No ledger transactions in this period.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#047857] text-white uppercase text-[10px] tracking-wider font-bold">
-                  <tr>
-                    <th className="p-3.5">Date</th>
-                    <th className="p-3.5">Type / Particulars</th>
-                    <th className="p-3.5">Reference</th>
-                    <th className="p-3.5 text-right">Debit (+)</th>
-                    <th className="p-3.5 text-right">Credit (-)</th>
-                    <th className="p-3.5 text-right pr-4">Running Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {ledgerEntries.map((row) => {
-                    const isDebit = Number(row.debit_amount) > 0;
-                    const runningBal = Number(row.running_balance ?? 0);
+            <>
+              {/* Desktop statement table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#047857] text-white uppercase text-[10px] tracking-wider font-bold">
+                    <tr>
+                      <th className="p-3.5">Date</th>
+                      <th className="p-3.5">Type / Particulars</th>
+                      <th className="p-3.5">Reference</th>
+                      <th className="p-3.5 text-right">Debit (+)</th>
+                      <th className="p-3.5 text-right">Credit (-)</th>
+                      <th className="p-3.5 text-right pr-4">Running Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {ledgerEntries.map((row) => {
+                      const isDebit = Number(row.debit_amount) > 0;
+                      const runningBal = Number(row.running_balance ?? 0);
 
-                    return (
-                      <tr key={row.id} className="hover:bg-gray-50 transition">
-                        <td className="p-3.5 text-gray-500 whitespace-nowrap">
-                          {new Date(row.entry_date || row.createdAt).toLocaleDateString("en-IN", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </td>
-                        <td className="p-3.5">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mr-2 ${
-                              isDebit ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"
+                      return (
+                        <tr key={row.id} className="hover:bg-gray-50 transition">
+                          <td className="p-3.5 text-gray-500 whitespace-nowrap">
+                            {new Date(row.entry_date || row.createdAt).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td className="p-3.5">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mr-2 ${
+                                isDebit ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"
+                              }`}
+                            >
+                              {row.entry_type || (isDebit ? "Debit" : "Credit")}
+                            </span>
+                            <span className="font-medium text-gray-800">{row.description || "—"}</span>
+                          </td>
+                          <td className="p-3.5 font-mono text-gray-500">{row.reference_number || "—"}</td>
+                          <td className="p-3.5 text-right font-bold text-gray-900">
+                            {isDebit
+                              ? `₹${Number(row.debit_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                              : "—"}
+                          </td>
+                          <td className="p-3.5 text-right font-bold text-emerald-600">
+                            {!isDebit && Number(row.credit_amount) > 0
+                              ? `₹${Number(row.credit_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                              : "—"}
+                          </td>
+                          <td
+                            className={`p-3.5 text-right font-black pr-4 ${
+                              runningBal > 0 ? "text-rose-600" : runningBal < 0 ? "text-emerald-600" : "text-gray-700"
                             }`}
                           >
-                            {row.entry_type || (isDebit ? "Debit" : "Credit")}
-                          </span>
-                          <span className="font-medium text-gray-800">{row.description || "—"}</span>
-                        </td>
-                        <td className="p-3.5 font-mono text-gray-500">{row.reference_number || "—"}</td>
-                        <td className="p-3.5 text-right font-bold text-gray-900">
-                          {isDebit
-                            ? `₹${Number(row.debit_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
-                            : "—"}
-                        </td>
-                        <td className="p-3.5 text-right font-bold text-emerald-600">
-                          {!isDebit && Number(row.credit_amount) > 0
-                            ? `₹${Number(row.credit_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
-                            : "—"}
-                        </td>
-                        <td
-                          className={`p-3.5 text-right font-black pr-4 ${
-                            runningBal > 0 ? "text-rose-600" : runningBal < 0 ? "text-emerald-600" : "text-gray-700"
-                          }`}
-                        >
-                          ₹{Math.abs(runningBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          <span className="text-[10px] font-medium ml-1 text-gray-400">
-                            {runningBal > 0 ? "Dr" : runningBal < 0 ? "Cr" : ""}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            ₹{Math.abs(runningBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            <span className="text-[10px] font-medium ml-1 text-gray-400">
+                              {runningBal > 0 ? "Dr" : runningBal < 0 ? "Cr" : ""}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile statement cards */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {ledgerEntries.map((row) => {
+                  const isDebit = Number(row.debit_amount) > 0;
+                  const runningBal = Number(row.running_balance ?? 0);
+
+                  return (
+                    <div key={row.id} className="p-3.5 space-y-2 bg-white">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase ${
+                                isDebit ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"
+                              }`}
+                            >
+                              {row.entry_type || (isDebit ? "Debit" : "Credit")}
+                            </span>
+                            <span className="text-[11px] text-gray-400">
+                              {new Date(row.entry_date || row.createdAt).toLocaleDateString("en-IN", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                            </span>
+                          </div>
+                          <div className="font-semibold text-gray-900 text-xs mt-1">{row.description || "—"}</div>
+                          {row.reference_number && (
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">Ref: {row.reference_number}</div>
+                          )}
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <div className={`font-black text-sm ${isDebit ? "text-rose-600" : "text-emerald-600"}`}>
+                            {isDebit ? "+" : "-"}₹{Number(isDebit ? row.debit_amount : row.credit_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5 font-medium">
+                            Bal: ₹{Math.abs(runningBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{" "}
+                            <span className="text-[9px] text-gray-400">{runningBal > 0 ? "Dr" : runningBal < 0 ? "Cr" : ""}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )
         ) : (
           /* Payments Table */
           payments.length === 0 ? (
             <div className="p-12 text-center text-xs text-gray-400">No payment records found.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#047857] text-white uppercase text-[10px] tracking-wider font-bold">
-                  <tr>
-                    <th className="p-3.5">Date</th>
-                    <th className="p-3.5">Payment Method</th>
-                    <th className="p-3.5">Reference #</th>
-                    <th className="p-3.5">Notes</th>
-                    <th className="p-3.5 text-right pr-4">Amount Paid</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {payments.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50 transition">
-                      <td className="p-3.5 text-gray-500 whitespace-nowrap">
-                        {new Date(p.payment_date || p.createdAt).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="p-3.5 font-bold text-gray-800 uppercase tracking-wide">{p.payment_method}</td>
-                      <td className="p-3.5 font-mono text-gray-500">{p.reference_number || "—"}</td>
-                      <td className="p-3.5 text-gray-600">{p.notes || "—"}</td>
-                      <td className="p-3.5 text-right font-black text-emerald-600 text-sm pr-4">
-                        ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                      </td>
+            <>
+              {/* Desktop payments table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#047857] text-white uppercase text-[10px] tracking-wider font-bold">
+                    <tr>
+                      <th className="p-3.5">Date</th>
+                      <th className="p-3.5">Payment Method</th>
+                      <th className="p-3.5">Reference #</th>
+                      <th className="p-3.5">Notes</th>
+                      <th className="p-3.5 text-right pr-4">Amount Paid</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {payments.map((p) => (
+                      <tr key={p.id} className="hover:bg-gray-50 transition">
+                        <td className="p-3.5 text-gray-500 whitespace-nowrap">
+                          {new Date(p.payment_date || p.createdAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="p-3.5 font-bold text-gray-800 uppercase tracking-wide">{p.payment_method}</td>
+                        <td className="p-3.5 font-mono text-gray-500">{p.reference_number || "—"}</td>
+                        <td className="p-3.5 text-gray-600">{p.notes || "—"}</td>
+                        <td className="p-3.5 text-right font-black text-emerald-600 text-sm pr-4">
+                          ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile payments cards */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {payments.map((p) => (
+                  <div key={p.id} className="p-3.5 space-y-1.5 bg-white">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-bold text-gray-800 uppercase text-xs tracking-wide">{p.payment_method}</div>
+                        <div className="text-[11px] text-gray-400 mt-0.5">
+                          {new Date(p.payment_date || p.createdAt).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-black text-emerald-600 text-sm">
+                          ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                    {(p.reference_number || p.notes) && (
+                      <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-50">
+                        {p.reference_number && <span className="font-mono text-[10px]">Ref: {p.reference_number}</span>}
+                        {p.notes && <span className="truncate">{p.notes}</span>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )
         )}
       </div>

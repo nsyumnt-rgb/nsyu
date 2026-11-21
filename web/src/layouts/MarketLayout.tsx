@@ -52,7 +52,7 @@ export default function MarketLayout() {
   ];
 
   return (
-    <div className="market-shell min-h-screen flex flex-col bg-white">
+    <div className="market-shell min-h-screen flex flex-col bg-white w-full max-w-full overflow-x-clip">
       {/* 1. TOP NOTICE / ANNOUNCEMENT BAR (Emerald Green) */}
       <div className="bg-[#064E3B] text-white text-[11px] sm:text-xs font-semibold py-1.5 px-4 shadow-xs">
         <div className="max-w-[1340px] mx-auto flex items-center justify-between gap-3">
@@ -246,7 +246,7 @@ export default function MarketLayout() {
       </header>
 
       {/* 3. MAIN CONTENT (Outlet) */}
-      <main className="flex-1 w-full max-w-[1340px] mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 md:pb-8">
+      <main className="flex-1 w-full max-w-[1340px] mx-auto px-3 sm:px-6 lg:px-8 py-5 pb-24 md:pb-8 min-w-0 overflow-x-clip">
         <Outlet />
       </main>
 

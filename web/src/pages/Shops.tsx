@@ -90,7 +90,8 @@ function ShopsInner() {
         </form>
       )}
 
-      <div className="table-wrap">
+      {/* Desktop table */}
+      <div className="hidden md:block table-wrap">
         <table>
           <thead>
             <tr>
@@ -125,6 +126,30 @@ function ShopsInner() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards view */}
+      <div className="md:hidden space-y-3">
+        {loading && <div className="card p-6 text-center text-muted text-sm">Loading shops…</div>}
+        {!loading && shops.length === 0 && <div className="card p-6 text-center text-muted text-sm">No shops yet.</div>}
+        {shops.map((shop) => (
+          <div key={shop.id} className="card p-4 space-y-2 bg-white">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-gray-900 text-sm">{shop.name}</span>
+              <span className={shop.status === "active" ? "badge-active" : "badge-inactive"}>{shop.status}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted">
+              <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">{shop.code}</span>
+              <span>{shop.roleName || (isOwner ? "Owner" : "—")}</span>
+            </div>
+            {(shop.phone || shop.email) && (
+              <div className="text-xs text-muted pt-1 border-t border-gray-50 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                <span>{shop.phone || shop.email}</span>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

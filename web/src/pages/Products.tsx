@@ -854,7 +854,7 @@ function ProductsInner() {
       {/* ============================================================== */}
       {/* 3.5. HORIZONTAL SCROLLABLE CATEGORY NAVIGATION (Mobile-First)   */}
       {/* ============================================================== */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
+      <div className="w-full flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
         <button
           type="button"
           onClick={() => { setCategoryFilter("All"); setCurrentPage(1); }}

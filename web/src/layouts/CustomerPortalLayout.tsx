@@ -137,7 +137,7 @@ export default function CustomerPortalLayout() {
   );
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
+    <div className="min-h-screen bg-white flex flex-col font-sans w-full max-w-full overflow-x-clip">
       {/* ───────────── Top Announcement / Promotional Bar ───────────── */}
       {policies?.announcement && !dismissedAnnouncement && (
         <div className="bg-brand-900 text-brand-50 text-[12px] sm:text-[13px] py-2 px-4 text-center font-semibold border-b border-brand-700/50 flex items-center justify-between relative shadow-xs z-50">
@@ -318,7 +318,7 @@ export default function CustomerPortalLayout() {
         </div>
       )}
 
-      <main key={location.pathname} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 pb-24 md:pb-12 animate-fade-in">
+      <main key={location.pathname} className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-7 pb-24 md:pb-12 animate-fade-in min-w-0 overflow-x-clip">
         <Outlet />
       </main>
 

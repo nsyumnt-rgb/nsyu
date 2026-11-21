@@ -166,8 +166,8 @@ export default function PortalCatalog() {
 
       {/* ── Category tiles ─────────────────────────────────── */}
       {categories.length > 0 && (
-        <section className="-mx-4 sm:mx-0">
-          <div className="flex gap-3 overflow-x-auto px-4 sm:px-0 pb-1 snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <section className="w-full">
+          <div className="w-full flex gap-3 overflow-x-auto pb-1 snap-x no-scrollbar">
             <CategoryTile label="All Products" count={allCount || totalCount} active={selectedCategory === null} onClick={() => pickCategory(null)} icon={<GridIcon className="w-8 h-8" />} />
             {categories.map((cat: any) => (
               <CategoryTile
