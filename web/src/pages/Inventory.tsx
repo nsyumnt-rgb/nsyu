@@ -250,14 +250,18 @@ export default function Inventory({
   // Helper to reliably read current stock for active shop
   const getProductStock = useCallback(
     (p: any) => {
+      if (p?.current_stock !== undefined && p?.current_stock !== null) {
+        return Number(p.current_stock);
+      }
       if (!p?.stocks || p.stocks.length === 0) return 0;
-      if (shopId) {
-        const match = p.stocks.find((s: any) => s.shop_id === shopId);
+      const targetShopId = effectiveShopId || shopId;
+      if (targetShopId) {
+        const match = p.stocks.find((s: any) => Number(s.shop_id) === Number(targetShopId));
         if (match) return Number(match.current_stock || 0);
       }
       return Number(p.stocks[0]?.current_stock || 0);
     },
-    [shopId]
+    [effectiveShopId, shopId]
   );
 
   // Load centralized inventory data
@@ -266,7 +270,7 @@ export default function Inventory({
     setError(null);
     try {
       const [prodRes, catRes, histRes] = await Promise.all([
-        listProducts({ shopId: shopId || undefined } as any),
+        listProducts({ shopId: effectiveShopId || undefined } as any),
         listCategories(),
         getInventoryHistory({ limit: 120 }),
       ]);
@@ -282,7 +286,7 @@ export default function Inventory({
 
   useEffect(() => {
     loadData();
-  }, [shopId]);
+  }, [effectiveShopId, shopId]);
 
   useEffect(() => {
     if (!toastMsg) return;
@@ -757,8 +761,8 @@ export default function Inventory({
         live_price: addLivePrice ? Number(addLivePrice) : null,
         category_id: catId,
         min_stock: Number(addMinStock) || 5,
-        opening_stock: shopId
-          ? { shopId, quantity: Number(addOpeningStock) || 0 }
+        opening_stock: (effectiveShopId || shopId)
+          ? { shopId: Number(effectiveShopId || shopId), quantity: Number(addOpeningStock) || 0 }
           : undefined,
       });
       setShowAddModal(false);
@@ -3327,7 +3331,7 @@ export default function Inventory({
                 const file = e.target.files?.[0];
                 if (!file) return;
                 try {
-                  await importProductsApi({ file, shopId: shopId || undefined });
+                  await importProductsApi({ file, shopId: effectiveShopId || undefined });
                   alert("Inventory CSV imported successfully!");
                   setShowImportModal(false);
                   loadData();
