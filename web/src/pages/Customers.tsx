@@ -356,6 +356,10 @@ function CustomersInner() {
               <label className="label">Mobile number * <span className="font-normal text-slate-400">(10 digits)</span></label>
               <input required type="tel" maxLength={10} className="input tabular" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "") })} placeholder="9876543210" />
             </div>
+            <div className="sm:col-span-2">
+              <label className="label">Shop name <span className="font-normal text-slate-400">(optional — the customer's business)</span></label>
+              <input className="input" maxLength={150} value={form.shopName} onChange={(e) => setForm({ ...form, shopName: e.target.value })} placeholder="e.g. Sharma Mobile Store" />
+            </div>
             <div>
               <label className="label">Email * <span className="font-normal text-slate-400">(portal login)</span></label>
               <input required type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="customer@example.com" />

@@ -19,7 +19,9 @@ import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { usePosStore } from "../store/posStore";
 import { getCategoryAlias } from "../utils/categoryAlias";
-import type { Category, InventoryTransaction, Product } from "../types";
+import type { Category, InventoryTransaction, Product, ProductVisibility } from "../types";
+import VisibilityBadge from "../components/VisibilityBadge";
+import { VISIBILITY_META, effectiveVisibility, isPosVisible, visibilityPatch } from "../utils/productVisibility";
 
 // Helper for formatting INR currency
 function formatINR(amount?: number | null): string {
@@ -208,7 +210,8 @@ export default function Inventory({
   const [savingViewEdit, setSavingViewEdit] = useState(false);
 
   // 2. Live On/Off toggle loading state (Requirement 2)
-  const [togglingLiveId, setTogglingLiveId] = useState<number | null>(null);
+  const [savingVisibilityId, setSavingVisibilityId] = useState<number | null>(null);
+  const canEditProducts = useAuthStore((s) => s.can("products", "edit"));
 
   // 3. Inline Row Edit state (Requirement 3)
   const [editingRowId, setEditingRowId] = useState<number | null>(null);
@@ -382,38 +385,23 @@ export default function Inventory({
   }, [history, searchQuery]);
 
   // -------------------------------------------------------------
-  // Requirement 2: Live On/Off Toggle Handler
+  // SHOW column: change where a product is offered (BOTH / MKT / POS / HIDE)
   // -------------------------------------------------------------
-  async function handleToggleLive(product: Product) {
-    const nextStatus = product.status === "active" ? "inactive" : "active";
-    setTogglingLiveId(product.id);
-
-    // Optimistic UI update
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, status: nextStatus } : p))
-    );
-    if (viewProduct && viewProduct.id === product.id) {
-      setViewProduct({ ...viewProduct, status: nextStatus });
-    }
-
+  async function handleSetVisibility(product: Product, next: ProductVisibility) {
+    if (!canEditProducts) return;
+    const patch = visibilityPatch(product, next);
+    setSavingVisibilityId(product.id);
     try {
-      await updateProduct(product.id, { status: nextStatus });
-      setToastMsg(
-        `✓ "${product.name}" is now ${
-          nextStatus === "active" ? "Live (Active)" : "Offline (Inactive)"
-        }`
-      );
+      const res = await updateProduct(product.id, patch);
+      const saved = res.data?.data;
+      const merged = { ...patch, ...(saved ? { status: saved.status, visibility: saved.visibility ?? next, updated_at: saved.updated_at } : {}) };
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, ...merged } : p)));
+      setViewProduct((vp) => (vp && vp.id === product.id ? { ...vp, ...merged } : vp));
+      setToastMsg(`✓ "${product.name}" — ${VISIBILITY_META[next].label}`);
     } catch (err: any) {
-      // Revert optimistic state on failure
-      setProducts((prev) =>
-        prev.map((p) => (p.id === product.id ? { ...p, status: product.status } : p))
-      );
-      if (viewProduct && viewProduct.id === product.id) {
-        setViewProduct({ ...viewProduct, status: product.status });
-      }
-      alert(apiErrorMessage(err, "Failed to update product status"));
+      alert(apiErrorMessage(err, "Failed to update product visibility"));
     } finally {
-      setTogglingLiveId(null);
+      setSavingVisibilityId(null);
     }
   }
 
@@ -1650,8 +1638,8 @@ export default function Inventory({
                 {/* Requirement 4: Category column moved left immediately next to product */}
                 <th className="p-3 text-center w-16">Category</th>
                 <th className="p-3 w-20">SKU</th>
-                {/* Requirement 2: Live status ON/OFF toggle switch column */}
-                <th className="p-3 text-center w-14">Live</th>
+                {/* SHOW: Marketplace / POS visibility badge (click to change) */}
+                <th className="p-3 text-center w-16" title="BOTH = Marketplace + POS · MKT = Marketplace only · POS = POS billing only · HIDE = hidden">Show</th>
                 {/* Requirement 3: Editable fields: Quantity, Purchase, Selling, Margin */}
                 <th className="p-3 text-center w-20">Stock</th>
                 <th className="p-3 text-right w-24">Purchase Price</th>
@@ -1799,40 +1787,14 @@ export default function Inventory({
                         {p.sku}
                       </td>
 
-                      {/* Requirement 2: Live Product On/Off Toggle Button in Table */}
+                      {/* SHOW: where the product is offered (BOTH / MKT / POS / HIDE) */}
                       <td className="p-2.5 text-center">
-                        <div className="flex items-center justify-center flex-col gap-1">
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={p.status === "active"}
-                            disabled={togglingLiveId === p.id}
-                            onClick={() => handleToggleLive(p)}
-                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                              p.status === "active" ? "bg-emerald-600" : "bg-gray-300"
-                            } ${togglingLiveId === p.id ? "opacity-50" : ""}`}
-                            title={
-                              p.status === "active"
-                                ? "Product is Live — Click to turn Offline"
-                                : "Product is Offline — Click to turn Live"
-                            }
-                          >
-                            <span
-                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                p.status === "active" ? "translate-x-4" : "translate-x-0"
-                              }`}
-                            />
-                          </button>
-                          <span
-                            className={`text-[9.5px] font-black uppercase tracking-wider ${
-                              p.status === "active"
-                                ? "text-emerald-700"
-                                : "text-gray-400"
-                            }`}
-                          >
-                            {p.status === "active" ? "Live" : "Off"}
-                          </span>
-                        </div>
+                        <VisibilityBadge
+                          value={effectiveVisibility(p)}
+                          editable={canEditProducts}
+                          saving={savingVisibilityId === p.id}
+                          onChange={(v) => handleSetVisibility(p, v)}
+                        />
                       </td>
 
                       {/* Quantity (Stock) - Direct Input */}
@@ -2242,26 +2204,16 @@ export default function Inventory({
                       <div className="text-[11px] text-slate-400 mt-0.5 font-medium">{p.brand || "—"}</div>
                     </div>
 
-                    {/* Live Toggle */}
+                    {/* SHOW badge */}
                     <div className="flex flex-col items-end shrink-0 gap-1">
-                      <button
-                        type="button"
-                        disabled={togglingLiveId === p.id}
-                        onClick={() => handleToggleLive(p)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                          p.status === "active" ? "bg-emerald-600" : "bg-gray-300"
-                        }`}
-                        title="Toggle Live Online"
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            p.status === "active" ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
-                      <span className={`text-[10px] font-bold ${p.status === "active" ? "text-emerald-700" : "text-slate-400"}`}>
-                        {p.status === "active" ? "LIVE" : "OFF"}
-                      </span>
+                      <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Show</span>
+                      <VisibilityBadge
+                        value={effectiveVisibility(p)}
+                        editable={canEditProducts}
+                        saving={savingVisibilityId === p.id}
+                        onChange={(v) => handleSetVisibility(p, v)}
+                        size="md"
+                      />
                     </div>
                   </div>
 
@@ -2545,31 +2497,20 @@ export default function Inventory({
                       </div>
 
                       {/* Catalog Visibility Toggle in Modal */}
-                      <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-2xl shadow-xs">
-                        <div>
-                          <div className="font-bold text-gray-800">Catalog Visibility</div>
+                      <div className="flex items-center justify-between gap-3 p-3 bg-white border border-gray-200 rounded-2xl shadow-xs">
+                        <div className="min-w-0">
+                          <div className="font-bold text-gray-800">Show in</div>
                           <div className="text-[10px] text-gray-500">
-                            {viewProduct.status === "active"
-                              ? "Product is Live in shop & catalog"
-                              : "Product is Offline / Hidden"}
+                            {VISIBILITY_META[effectiveVisibility(viewProduct)].hint}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={viewProduct.status === "active"}
-                          disabled={togglingLiveId === viewProduct.id}
-                          onClick={() => handleToggleLive(viewProduct)}
-                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            viewProduct.status === "active" ? "bg-emerald-600" : "bg-gray-300"
-                          } ${togglingLiveId === viewProduct.id ? "opacity-50" : ""}`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              viewProduct.status === "active" ? "translate-x-5" : "translate-x-0"
-                            }`}
-                          />
-                        </button>
+                        <VisibilityBadge
+                          value={effectiveVisibility(viewProduct)}
+                          editable={canEditProducts}
+                          saving={savingVisibilityId === viewProduct.id}
+                          onChange={(v) => handleSetVisibility(viewProduct, v)}
+                          size="md"
+                        />
                       </div>
                     </div>
                   </div>
@@ -2653,12 +2594,13 @@ export default function Inventory({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
+                        disabled={!isPosVisible(viewProduct)}
                         onClick={() => {
                           addItemToPos(viewProduct, 1);
                           setToastMsg(`✓ Added "${viewProduct.name}" to POS cart`);
                         }}
-                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                        title="Add this product to Current POS Bill"
+                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600"
+                        title={isPosVisible(viewProduct) ? "Add this product to Current POS Bill" : "Not available in POS billing — change SHOW to BOTH or POS"}
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <circle cx="9" cy="21" r="1" />

@@ -38,6 +38,7 @@ interface ProductAttributes {
   min_stock: number; // default reorder threshold; ProductStock can override per shop
   supplier_id?: number | null;
   status: "active" | "inactive";
+  visibility: "both" | "marketplace" | "pos" | "hidden";
   reference_code?: string | null;
 }
 
@@ -56,6 +57,7 @@ interface ProductCreationAttributes
     | "min_stock"
     | "supplier_id"
     | "status"
+    | "visibility"
     | "reference_code"
   > {}
 
@@ -81,6 +83,7 @@ export class Product
   public min_stock!: number;
   public supplier_id?: number | null;
   public status!: "active" | "inactive";
+  public visibility!: "both" | "marketplace" | "pos" | "hidden";
   public reference_code?: string | null;
 }
 
@@ -105,6 +108,8 @@ Product.init(
     supplier_id: { type: DataTypes.INTEGER, allowNull: true },
     status: { type: DataTypes.ENUM("active", "inactive"), defaultValue: "active" },
     reference_code: { type: DataTypes.STRING(50), allowNull: true },
+    // both | marketplace | pos | hidden — see utils/productVisibility.ts
+    visibility: { type: DataTypes.STRING(12), allowNull: false, defaultValue: "both" },
   },
   {
     sequelize,

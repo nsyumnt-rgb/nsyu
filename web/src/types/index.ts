@@ -201,6 +201,8 @@ export interface ProductStockEntry {
 // stock and location are tracked per shop separately. See api's
 // models/Product.ts for the reasoning (stock transfers between shops
 // require one catalog record, not a duplicated per-shop row).
+export type ProductVisibility = "both" | "marketplace" | "pos" | "hidden";
+
 export interface Product {
   id: number;
   owner_id: number;
@@ -224,6 +226,8 @@ export interface Product {
   supplier?: Supplier; // omitted entirely if role can't view it
   profit?: number; // present only if role can view it
   status: "active" | "inactive";
+  /** Where the product is offered: BOTH / MKT / POS / HIDE. Missing on older APIs = "both". */
+  visibility?: ProductVisibility;
   images?: ProductImage[];
   stocks?: ProductStockEntry[]; // filtered to the active shop when browsing normally
   created_at?: string;

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { marketplaceVisibleWhere } from "../utils/productVisibility";
 import { CustomerCart, CustomerCartItem, Product, ProductStock, ProductImage, Category, Shop } from "../models";
 
 function round2(n: number): number {
@@ -160,7 +161,7 @@ export async function setCartItem(req: Request, res: Response) {
 
     // Verify product exists and is active for this owner
     const product = await Product.findOne({
-      where: { id: productId, owner_id: ownerId, status: "active" },
+      where: { id: productId, owner_id: ownerId, status: "active", ...marketplaceVisibleWhere() },
     });
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });

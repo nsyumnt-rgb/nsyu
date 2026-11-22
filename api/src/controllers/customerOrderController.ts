@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { marketplaceVisibleWhere } from "../utils/productVisibility";
 import { Op } from "sequelize";
 import {
   sequelize,
@@ -113,7 +114,7 @@ export async function placeOrder(req: Request, res: Response) {
 
       for (const ci of cartItems) {
         const product = await Product.findOne({
-          where: { id: ci.product_id, owner_id: ownerId, status: "active" },
+          where: { id: ci.product_id, owner_id: ownerId, status: "active", ...marketplaceVisibleWhere() },
           transaction: t,
         });
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { listProducts } from "../api/products";
+import { isPosVisible } from "../utils/productVisibility";
 import { listSales, downloadInvoicePdf } from "../api/sales";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import { usePosStore } from "../store/posStore";
@@ -11,9 +12,10 @@ import RequireModule from "../components/RequireModule";
 import ProductItemIcon from "../components/ProductItemIcon";
 import type { Product, Sale } from "../types";
 import Cart from "./Cart";
+import ReceivePaymentModal from "../components/ReceivePaymentModal";
 import { ToastNotification, type ToastProps } from "../components/AnimatedFeedback";
 
-/** The POS cart / checkout, as a panel sliding in from the right of the billing screen. */
+/** The POS Cart & Checkout, full-screen over the billing screen. */
 function CartPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -28,21 +30,8 @@ function CartPanel({ onClose }: { onClose: () => void }) {
 
   // Portalled to <body> so the page's transform/overflow wrappers can't clip it.
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex justify-end" role="dialog" aria-modal="true" aria-label="Current bill">
-      <div className="absolute inset-0 bg-navy-950/40 backdrop-blur-xs animate-fade-in" onClick={onClose} />
-      <aside className="relative h-full w-full max-w-[1080px] bg-slate-50 shadow-2xl flex flex-col animate-slide-left">
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 h-14 border-b border-slate-200 bg-white shrink-0">
-          <div className="flex items-center gap-2 text-[14px] font-bold text-navy-900">
-            <Icon name="cart" className="w-4 h-4 text-emerald-700" /> Current bill
-          </div>
-          <button type="button" onClick={onClose} className="btn-ghost btn-sm" aria-label="Close current bill">
-            <Icon name="x" className="w-4 h-4" /> Close
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto overflow-x-clip px-3 py-4 sm:px-6 sm:py-6">
-          <Cart onClose={onClose} />
-        </div>
-      </aside>
+    <div className="fixed inset-0 z-[70] bg-slate-50 animate-fade-in" role="dialog" aria-modal="true" aria-label="Cart and checkout">
+      <Cart onClose={onClose} />
     </div>,
     document.body
   );
@@ -58,6 +47,7 @@ function BillingInner() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
+  const [payingSale, setPayingSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
 
   // POS Store State
@@ -105,7 +95,8 @@ function BillingInner() {
       listSales({ limit: 15, shopId: targetShopId || undefined }),
     ])
       .then(([p, s]) => {
-        setProducts(p.data.data ?? []);
+        // POS billing only offers products whose SHOW is BOTH or POS.
+        setProducts((p.data.data ?? []).filter(isPosVisible));
         setRecentSales(s.data.data ?? []);
       })
       .finally(() => setLoading(false));
@@ -231,6 +222,10 @@ function BillingInner() {
   }
 
   // Filter recent bills by tab & search query
+  /** Bills with money still owed (not cancelled, not EMI-managed). */
+  const billDue = (s: Sale) =>
+    s.status === "cancelled" || s.status === "paid" || (s as any).is_emi ? 0 : Math.max(0, Number(s.due_amount) || 0);
+
   const filteredRecentBills = recentSales.filter((s) => {
     if (billListTab === "paid" && s.status !== "paid") return false;
     if (billListTab === "pending" && s.status !== "partially_paid" && s.status !== "unpaid") return false;
@@ -578,6 +573,9 @@ function BillingInner() {
                       <td className="font-medium text-navy-900">{s.customer?.name || "Customer"}</td>
                       <td className="text-right font-bold text-navy-900 tabular whitespace-nowrap">
                         ₹{Number(s.total_amount).toFixed(2)}
+                        {billDue(s) > 0 && (
+                          <div className="text-[11px] font-semibold text-rose-600">Due ₹{billDue(s).toFixed(2)}</div>
+                        )}
                       </td>
                       <td>
                         <span
@@ -601,7 +599,12 @@ function BillingInner() {
                         </span>
                       </td>
                       <td className="text-right whitespace-nowrap">
-                        <div className="inline-flex gap-1">
+                        <div className="inline-flex items-center gap-1">
+                          {billDue(s) > 0 && (
+                            <button type="button" onClick={() => setPayingSale(s)} className="btn-soft btn-sm">
+                              <Icon name="wallet" className="w-3.5 h-3.5" /> Receive payment
+                            </button>
+                          )}
                           <IconButton title="View bill" icon="eye" to={`/app/sales/${s.id}`} />
                           <IconButton
                             title="Download PDF"
@@ -638,6 +641,9 @@ function BillingInner() {
                       <div className="font-black text-navy-900 text-[15px] tabular">
                         ₹{Number(s.total_amount).toFixed(2)}
                       </div>
+                      {billDue(s) > 0 && (
+                        <div className="text-[11px] font-semibold text-rose-600 tabular">Due ₹{billDue(s).toFixed(2)}</div>
+                      )}
                       <span
                         className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           s.status === "paid"
@@ -664,7 +670,12 @@ function BillingInner() {
                     <span className="font-medium text-navy-900 truncate">
                       {s.customer?.name || "Customer"}
                     </span>
-                    <div className="inline-flex gap-1.5 shrink-0">
+                    <div className="inline-flex items-center gap-1.5 shrink-0">
+                      {billDue(s) > 0 && (
+                        <button type="button" onClick={() => setPayingSale(s)} className="btn-soft btn-sm">
+                          <Icon name="wallet" className="w-3.5 h-3.5" /> Receive
+                        </button>
+                      )}
                       <IconButton title="View bill" icon="eye" to={`/app/sales/${s.id}`} />
                       <IconButton
                         title="Download PDF"
@@ -701,6 +712,22 @@ function BillingInner() {
       {cartOpen && <CartPanel onClose={closeCart} />}
 
       {/* Toast Feedback */}
+      {payingSale && (
+        <ReceivePaymentModal
+          sale={payingSale}
+          onClose={() => setPayingSale(null)}
+          onSaved={(amt) => {
+            const bill = payingSale;
+            setPayingSale(null);
+            loadData();
+            setToast({
+              type: "success",
+              title: amt >= billDue(bill) - 0.005 ? "Bill marked paid" : "Payment recorded",
+              subtitle: `₹${amt.toLocaleString("en-IN", { minimumFractionDigits: 2 })} received for ${bill.invoice_number}${bill.customer?.name ? ` · ${bill.customer.name}` : ""}.`,
+            });
+          }}
+        />
+      )}
       {toast && (
         <ToastNotification
           type={toast.type}

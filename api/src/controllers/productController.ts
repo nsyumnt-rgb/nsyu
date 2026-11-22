@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { PRODUCT_VISIBILITIES, isProductVisibility, visibilityColumnReady } from "../utils/productVisibility";
 import fs from "fs";
 import path from "path";
 import {
@@ -132,6 +133,13 @@ export async function updateProduct(req: Request, res: Response) {
     "purchase_price", "selling_price", "live_price", "mrp", "discount", "tax_percent", "min_stock",
     "supplier_id", "status",
   ] as const;
+
+  if (req.body.visibility !== undefined) {
+    if (!isProductVisibility(req.body.visibility)) {
+      return res.status(400).json({ success: false, message: `visibility must be one of: ${PRODUCT_VISIBILITIES.join(", ")}` });
+    }
+    if (visibilityColumnReady()) product.visibility = req.body.visibility;
+  }
 
   const priceFields = ["purchase_price", "selling_price", "live_price", "mrp"] as const;
   const oldPrices: Record<string, number> = {};

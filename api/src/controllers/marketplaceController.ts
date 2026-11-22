@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { marketplaceVisibleSql } from "../utils/productVisibility";
 import { QueryTypes } from "sequelize";
 import { sequelize, Shop, ShopPortalSettings, ProductImage } from "../models";
 
@@ -76,7 +77,7 @@ function toListing(r: any) {
 export async function searchListings(req: Request, res: Response) {
   try {
     const { limit, page, offset } = pageParams(req);
-    const where: string[] = ["p.status = 'active'"];
+    const where: string[] = [`p.status = 'active'${marketplaceVisibleSql("p")}`];
     const rep: Record<string, any> = { limit, offset };
 
     const q = String(req.query.q || "").trim().toLowerCase();
@@ -145,7 +146,7 @@ export async function listMarketCategories(_req: Request, res: Response) {
               COALESCE(c.image_url, MIN((SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC, pi.id ASC LIMIT 1))) AS image_url,
               c.icon AS icon
        ${LISTING_FROM}
-       WHERE p.status = 'active' AND c.name IS NOT NULL
+       WHERE p.status = 'active'${marketplaceVisibleSql("p")} AND c.name IS NOT NULL
        GROUP BY c.name, c.image_url, c.icon
        ORDER BY COUNT(*) DESC, c.name ASC`,
       { type: QueryTypes.SELECT }
@@ -177,9 +178,9 @@ export async function listMarketShops(req: Request, res: Response) {
     }
     const rows = await sequelize.query(
       `SELECT s.id, s.name, s.code, s.address, s.phone, s.logo,
-              (SELECT COUNT(*) FROM products p WHERE p.owner_id = s.owner_id AND p.status = 'active') AS product_count,
+              (SELECT COUNT(*) FROM products p WHERE p.owner_id = s.owner_id AND p.status = 'active'${marketplaceVisibleSql("p")}) AS product_count,
               (SELECT COUNT(*) FROM products p JOIN product_stocks ps ON ps.product_id = p.id AND ps.shop_id = s.id
-                 WHERE p.owner_id = s.owner_id AND p.status = 'active' AND ps.current_stock > 0) AS in_stock_count
+                 WHERE p.owner_id = s.owner_id AND p.status = 'active'${marketplaceVisibleSql("p")} AND ps.current_stock > 0) AS in_stock_count
        FROM shops s ${where}
        ORDER BY in_stock_count DESC, s.name ASC
        LIMIT :limit OFFSET :offset`,
@@ -215,7 +216,7 @@ export async function getMarketShop(req: Request, res: Response) {
     const settings = await ShopPortalSettings.findOne({ where: { shop_id: shop.id } });
     const cats = await sequelize.query(
       `SELECT c.name AS name, COUNT(*) AS count ${LISTING_FROM}
-       WHERE p.status = 'active' AND s.id = :shopId AND c.name IS NOT NULL
+       WHERE p.status = 'active'${marketplaceVisibleSql("p")} AND s.id = :shopId AND c.name IS NOT NULL
        GROUP BY c.name ORDER BY c.name ASC`,
       { replacements: { shopId: shop.id }, type: QueryTypes.SELECT }
     );
@@ -255,7 +256,7 @@ export async function getListing(req: Request, res: Response) {
   try {
     const shopId = Number(req.params.shopId);
     const productId = Number(req.params.productId);
-    const rows = (await sequelize.query(`SELECT ${LISTING_SELECT} ${LISTING_FROM} WHERE p.status = 'active' AND s.id = :shopId AND p.id = :productId`, {
+    const rows = (await sequelize.query(`SELECT ${LISTING_SELECT} ${LISTING_FROM} WHERE p.status = 'active'${marketplaceVisibleSql("p")} AND s.id = :shopId AND p.id = :productId`, {
       replacements: { shopId, productId },
       type: QueryTypes.SELECT,
     })) as any[];
@@ -275,7 +276,7 @@ export async function getListing(req: Request, res: Response) {
     const firstWord = String(base.name || "").toLowerCase().trim().split(/\s+/)[0] || "";
     const candidates = (await sequelize.query(
       `SELECT ${LISTING_SELECT} ${LISTING_FROM}
-       WHERE p.status = 'active' AND NOT (s.id = :shopId AND p.id = :productId)
+       WHERE p.status = 'active'${marketplaceVisibleSql("p")} AND NOT (s.id = :shopId AND p.id = :productId)
          AND (
            (:barcode <> '' AND p.barcode = :barcode)
            OR (LOWER(TRIM(COALESCE(p.brand, ''))) = :brand AND LOWER(TRIM(p.name)) LIKE :firstWord)

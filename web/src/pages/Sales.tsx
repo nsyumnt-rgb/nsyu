@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { isPosVisible } from "../utils/productVisibility";
 import { Link } from "react-router-dom";
 import { listSales, createSale, recordSalePayment, cancelSale, returnSale, downloadInvoicePdf } from "../api/sales";
 import { listCustomers } from "../api/customers";
@@ -109,7 +110,8 @@ function SalesInner() {
   useEffect(() => {
     Promise.all([listCustomers(), listProducts()]).then(([c, p]) => {
       setCustomers(c.data.data ?? []);
-      setProducts(p.data.data ?? []);
+      // Counter invoices follow POS visibility (SHOW = BOTH or POS).
+      setProducts((p.data.data ?? []).filter(isPosVisible));
     });
   }, [shopId]);
 

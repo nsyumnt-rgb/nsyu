@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { marketplaceVisibleWhere } from "../utils/productVisibility";
 import { Op, col, fn, literal } from "sequelize";
 import { Product, ProductStock, Category, ProductImage, ShopPortalSettings, Shop } from "../models";
 
@@ -25,7 +26,7 @@ export async function getPortalCategories(req: Request, res: Response) {
       categories.map(async (c) => {
         try {
           const p = await Product.findOne({
-            where: { owner_id: ownerId, category_id: c.id, status: "active" },
+            where: { owner_id: ownerId, category_id: c.id, status: "active", ...marketplaceVisibleWhere() },
             include: [{ model: ProductImage, as: "images", attributes: ["url", "is_primary"], required: true }],
             order: [["created_at", "DESC"]],
             subQuery: false,
@@ -40,7 +41,7 @@ export async function getPortalCategories(req: Request, res: Response) {
 
     // Active products per category, for "Cables (32)" style tiles. One grouped query.
     const countRows = (await Product.findAll({
-      where: { owner_id: ownerId, status: "active" },
+      where: { owner_id: ownerId, status: "active", ...marketplaceVisibleWhere() },
       attributes: ["category_id", [fn("COUNT", col("id")), "n"]],
       group: ["category_id"],
       raw: true,
@@ -87,6 +88,7 @@ export async function getPortalProducts(req: Request, res: Response) {
     const where: any = {
       owner_id: ownerId,
       status: "active",
+      ...marketplaceVisibleWhere(),
     };
 
     if (categoryId) {
@@ -263,7 +265,7 @@ export async function getPortalProduct(req: Request, res: Response) {
     const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
 
     const product = await Product.findOne({
-      where: { id: productId, owner_id: ownerId, status: "active" },
+      where: { id: productId, owner_id: ownerId, status: "active", ...marketplaceVisibleWhere() },
       include: [
         { model: Category, as: "category", attributes: ["id", "name"] },
         { model: ProductImage, as: "images", attributes: ["id", "url", "is_primary"] },

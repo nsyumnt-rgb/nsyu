@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { isPosVisible, visibilityColumnReady } from "../utils/productVisibility";
 import { Op } from "sequelize";
 import {
   sequelize,
@@ -198,6 +199,11 @@ export async function createSale(req: Request, res: Response) {
           product = await Product.findOne({ where: { name: searchName, owner_id: ownerId }, transaction: t });
         }
         if (!product) throw Object.assign(new Error(`Product "${rawProductId}" not found`), { status: 404 });
+        // Counter (POS) sales only offer products visible in POS. Bills converted
+        // from an online order (orderId) keep the items the customer ordered.
+        if (!req.body.orderId && visibilityColumnReady() && !isPosVisible(product)) {
+          throw Object.assign(new Error(`"${product.name}" is not available in POS billing`), { status: 400 });
+        }
 
         const qty = Math.max(1, Math.floor(Number(rawQuantity)));
         const rate = raw.rate !== undefined ? Number(raw.rate) : (raw.unitPrice !== undefined ? Number(raw.unitPrice) : Number(product.selling_price));

@@ -4,7 +4,9 @@ import path from "path";
 dotenv.config();
 
 import app from "./app";
-import { sequelize } from "./models";
+import { DataTypes } from "sequelize";
+import { sequelize, Product } from "./models";
+import { setVisibilityColumnReady } from "./utils/productVisibility";
 
 const PORT = process.env.PORT || 5000;
 
@@ -132,6 +134,31 @@ async function ensureReturnsSchema() {
   await runSqlMigration("10_returns_workflow.sql", "Returns workflow schema verified");
 }
 
+/**
+ * products.visibility (both | marketplace | pos | hidden). Works on MySQL,
+ * Postgres and SQLite. If the column can't be added, the attribute is dropped
+ * from the model so product queries keep working without it.
+ */
+async function ensureProductVisibilitySchema() {
+  try {
+    const qi = sequelize.getQueryInterface();
+    const cols = await qi.describeTable("products");
+    if (!cols.visibility) {
+      await qi.addColumn("products", "visibility", {
+        type: DataTypes.STRING(12),
+        allowNull: false,
+        defaultValue: "both",
+      });
+      console.log("✅ products.visibility column added");
+    }
+    setVisibilityColumnReady(true);
+  } catch (err) {
+    setVisibilityColumnReady(false);
+    Product.removeAttribute("visibility");
+    console.warn("⚠️ products.visibility unavailable — product visibility rules are off:", err);
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -144,6 +171,7 @@ async function start() {
     await ensureShopPoliciesSchema();
     await ensurePromotionsAndSuppliersSchema();
     await ensureReturnsSchema();
+    await ensureProductVisibilitySchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);
