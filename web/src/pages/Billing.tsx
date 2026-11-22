@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Link, useSearchParams } from "react-router-dom";
 import { listProducts } from "../api/products";
 import { isPosVisible } from "../utils/productVisibility";
@@ -15,25 +14,26 @@ import Cart from "./Cart";
 import ReceivePaymentModal from "../components/ReceivePaymentModal";
 import { ToastNotification, type ToastProps } from "../components/AnimatedFeedback";
 
-/** The POS Cart & Checkout, full-screen over the billing screen. */
+/**
+ * The POS Cart & Checkout, shown in place of the billing screen inside the
+ * normal app layout, so the top bar, sidebar and mobile menu stay available.
+ */
 function CartPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    window.scrollTo({ top: 0 });
+    return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Portalled to <body> so the page's transform/overflow wrappers can't clip it.
-  return createPortal(
-    <div className="fixed inset-0 z-[70] bg-slate-50 animate-fade-in" role="dialog" aria-modal="true" aria-label="Cart and checkout">
+  // Negative margins cancel <main>'s padding so the cart fills the content area edge to edge.
+  return (
+    <section
+      aria-label="Cart and checkout"
+      className="-mx-3 -mt-4 sm:-mx-6 sm:-mt-6 lg:-mx-8 -mb-24 md:-mb-8 min-h-[calc(100dvh-4rem)] flex flex-col bg-slate-50 animate-fade-in"
+    >
       <Cart onClose={onClose} />
-    </div>,
-    document.body
+    </section>
   );
 }
 
@@ -238,6 +238,8 @@ function BillingInner() {
     }
     return true;
   });
+
+  if (cartOpen) return <CartPanel onClose={closeCart} />;
 
   return (
     <div className="space-y-6 pb-24 lg:pb-12 max-w-7xl mx-auto">
@@ -709,7 +711,6 @@ function BillingInner() {
         </div>
       )}
 
-      {cartOpen && <CartPanel onClose={closeCart} />}
 
       {/* Toast Feedback */}
       {payingSale && (

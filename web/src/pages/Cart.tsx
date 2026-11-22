@@ -452,7 +452,7 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
   );
 
   return (
-    <div className="h-full flex flex-col bg-slate-50">
+    <div className="flex-1 min-h-full flex flex-col bg-slate-50">
       {/* Header */}
       <header className="shrink-0 bg-white border-b border-slate-200/80">
         <div className="flex items-center justify-between gap-3 px-4 sm:px-8 h-16">
@@ -480,8 +480,8 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
         </div>
       </header>
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto overflow-x-clip">
+      {/* Body (the page scrolls; the bottom bar sticks above the mobile menu) */}
+      <div className="flex-1 overflow-x-clip">
         {items.length === 0 ? (
           <div className="max-w-lg mx-auto px-4 py-16">
             <div className={`${CARD} p-10 text-center`}>
@@ -964,7 +964,7 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
 
       {/* Bottom bar */}
       {items.length > 0 && (
-        <footer className="shrink-0 bg-white border-t border-slate-200/80 pb-[env(safe-area-inset-bottom)]">
+        <footer className="sticky bottom-[62px] md:bottom-0 z-30 shrink-0 bg-white border-t border-slate-200/80 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]">
           <div className="max-w-[1440px] mx-auto px-3 sm:px-8 py-3 flex items-center justify-between gap-3">
             <div className="hidden sm:flex items-center gap-2.5 text-[15px] text-slate-700">
               <Icon name="cart" className="w-5 h-5" />
