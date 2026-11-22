@@ -1,411 +1,554 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getCustomerLedger, recordLedgerPayment } from "../api/ledger";
+import { getCustomerLedger, recordLedgerPayment, type CustomerLedgerResponse } from "../api/ledger";
 import { listCustomers } from "../api/customers";
 import { apiErrorMessage } from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { usePermission } from "../hooks/usePermission";
 import RequireModule from "../components/RequireModule";
 import ReferenceLink from "../components/ReferenceLink";
+import CustomerViewModal, { BalanceText, CustomerStatusBadge } from "../components/CustomerViewModal";
 import type { Customer } from "../types";
 import { Avatar, ChoiceGroup, EmptyState, Icon, Modal, PageHeader, SearchInput, Segmented, Switch } from "../components/ui";
 
-function LedgerInner() {
-  const [searchParams, setSearchParams] = useSearchParams();
+type Entry = CustomerLedgerResponse["entries"][number];
+
+const inr = (n: number) => "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+/** Local calendar date (YYYY-MM-DD) of an entry, for the date-range filter. */
+const dayKey = (d: string) => {
+  const x = new Date(d);
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+};
+
+/** Which column an entry belongs in — mirrors the backend balance rules. */
+function sideOf(e: Entry): "debit" | "credit" | null {
+  if (e.entry_type === "debit") return "debit";
+  if (e.entry_type === "credit") return "credit";
+  if (e.entry_type === "reversal") {
+    if (e.reference_type === "PaymentReversal") return "debit";
+    if (["SaleCancellation", "Return", "SaleReturn"].includes(e.reference_type)) return "credit";
+  }
+  return null;
+}
+
+function EntryReference({ entry }: { entry: Entry }) {
+  if ((entry.reference_type === "Sale" || entry.reference_type === "SalePayment") && entry.reference_id) {
+    return <ReferenceLink type="sale" id={entry.reference_id} refNumber={entry.reference_code || `Bill #${entry.reference_id}`} />;
+  }
+  return <span className="font-mono text-slate-600">{entry.reference_code || `${entry.reference_type} #${entry.reference_id ?? entry.id}`}</span>;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   1. Customer list: Customer | Contact | Balance | Status | Actions
+   ───────────────────────────────────────────────────────────── */
+
+function CustomerLedgerList({ onView, onLedger }: { onView: (id: number) => void; onLedger: (id: number) => void }) {
+  const shopId = useAuthStore((s) => s.shopId);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
+  const [onlyDue, setOnlyDue] = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    listCustomers()
+      .then((res) => setCustomers(res.data.data ?? []))
+      .catch((err) => setError(apiErrorMessage(err, "Could not load customers")))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load, shopId]);
+
+  const q = search.trim().toLowerCase();
+  const rows = customers
+    .filter((c) => !q || c.name.toLowerCase().includes(q) || String(c.phone || "").includes(q) || String(c.email || "").toLowerCase().includes(q) || String(c.id) === q)
+    .filter((c) => status === "all" || (status === "inactive" ? c.status === "inactive" : c.status !== "inactive"))
+    .filter((c) => !onlyDue || Number(c.current_balance) > 0)
+    .sort((a, b) => Number(b.current_balance || 0) - Number(a.current_balance || 0));
+
+  const totalDue = customers.reduce((s, c) => s + Math.max(0, Number(c.current_balance) || 0), 0);
+  const withDue = customers.filter((c) => Number(c.current_balance) > 0).length;
+  const inactive = customers.filter((c) => c.status === "inactive").length;
+
+  return (
+    <div className="space-y-5 pb-10">
+      <PageHeader eyebrow="Khata" title="Customer ledger" subtitle="Balances, bills and payments for every customer." />
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="card p-4 col-span-2 lg:col-span-1">
+          <div className="stat-label">Total outstanding</div>
+          <div className="mt-1.5 text-[22px] font-bold text-rose-600 tabular">{loading ? "—" : inr(totalDue)}</div>
+        </div>
+        <div className="card p-4">
+          <div className="stat-label">Customers with dues</div>
+          <div className="mt-1.5 stat-value">{loading ? "—" : withDue}</div>
+        </div>
+        <div className="card p-4">
+          <div className="stat-label">Customers</div>
+          <div className="mt-1.5 stat-value">{loading ? "—" : customers.length}<span className="ml-1.5 text-[12px] font-medium text-slate-400">{inactive ? `${inactive} inactive` : ""}</span></div>
+        </div>
+      </div>
+
+      <section className="card overflow-hidden">
+        <div className="p-4 sm:px-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center gap-3">
+          <SearchInput className="md:flex-1 md:max-w-sm" value={search} onChange={setSearch} placeholder="Name, mobile, email or ID…" />
+          <div className="flex flex-wrap items-center gap-3 md:ml-auto">
+            <Segmented
+              size="sm"
+              value={status}
+              onChange={setStatus}
+              options={[
+                { key: "all", label: "All" },
+                { key: "active", label: "Active" },
+                { key: "inactive", label: "Inactive" },
+              ]}
+            />
+            <Switch checked={onlyDue} onChange={setOnlyDue} label="Only dues" />
+          </div>
+        </div>
+
+        {error ? (
+          <div className="p-5">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+              <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
+              <button type="button" onClick={load} className="btn-secondary btn-sm ml-auto">Retry</button>
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="p-5 space-y-3" aria-busy="true">
+            {Array.from({ length: 6 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-slate-100" />
+                <div className="flex-1 h-3 rounded bg-slate-100" />
+                <div className="w-24 h-3 rounded bg-slate-100" />
+              </div>
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          customers.length === 0 ? (
+            <EmptyState icon="users" tone="brand" title="No customers yet" text="Customers appear here once you add them or bill them." />
+          ) : (
+            <EmptyState icon="search" title="No customers match" text="Try another name, status or turn off “Only dues”." />
+          )
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Contact</th>
+                    <th className="!text-right">Balance</th>
+                    <th>Status</th>
+                    <th className="!text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((c) => (
+                    <tr key={c.id}>
+                      <td>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Avatar name={c.name} size="sm" />
+                          <div className="min-w-0">
+                            <div className="font-semibold text-navy-900 truncate max-w-[200px] 2xl:max-w-[280px]">{c.name}</div>
+                            <div className="text-[11.5px] text-slate-400 truncate max-w-[200px] 2xl:max-w-[280px]">{c.shop_name ? `${c.shop_name} · ` : ""}ID {c.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="tabular text-navy-900">{c.phone || "—"}</div>
+                        {c.email && <div className="text-[11.5px] text-slate-400 truncate max-w-[180px] 2xl:max-w-[240px]">{c.email}</div>}
+                      </td>
+                      <td className="text-right"><BalanceText value={Number(c.current_balance) || 0} /></td>
+                      <td><CustomerStatusBadge status={c.status} /></td>
+                      <td className="text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button type="button" onClick={() => onView(c.id)} className="btn-secondary btn-sm">
+                            <Icon name="eye" className="w-3.5 h-3.5" /> View
+                          </button>
+                          <button type="button" onClick={() => onLedger(c.id)} className="btn-soft btn-sm">
+                            <Icon name="book" className="w-3.5 h-3.5" /> Ledger
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <ul className="md:hidden divide-y divide-slate-100">
+              {rows.map((c) => (
+                <li key={c.id} className="px-4 py-3.5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Avatar name={c.name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-[14px] text-navy-900 [overflow-wrap:anywhere]">{c.name}</div>
+                          <div className="text-[12px] text-slate-500 tabular">{c.phone || "—"}</div>
+                        </div>
+                        <BalanceText value={Number(c.current_balance) || 0} className="text-[14px]" />
+                      </div>
+                      <div className="mt-1.5"><CustomerStatusBadge status={c.status} /></div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => onView(c.id)} className="btn-secondary btn-sm h-10">
+                      <Icon name="eye" className="w-3.5 h-3.5" /> View
+                    </button>
+                    <button type="button" onClick={() => onLedger(c.id)} className="btn-soft btn-sm h-10">
+                      <Icon name="book" className="w-3.5 h-3.5" /> Ledger
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="px-4 sm:px-5 py-3 border-t border-slate-100 text-[12px] text-slate-500">
+              Showing <b className="text-navy-900">{rows.length}</b> of {customers.length} customers
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   2. One customer's statement
+   ───────────────────────────────────────────────────────────── */
+
+function CustomerStatement({ customerId, onBack, onView }: { customerId: number; onBack: () => void; onView: (id: number) => void }) {
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
   const { isOwner, can } = usePermission();
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number | "">("");
-  const [allShopsToggle, setAllShopsToggle] = useState(false);
-  const [entryFilter, setEntryFilter] = useState<"all" | "debit" | "credit">("all");
-  const [custSearch, setCustSearch] = useState("");
-  const [onlyDue, setOnlyDue] = useState(false);
-
-  const [customerLedgerData, setCustomerLedgerData] = useState<any | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [allShops, setAllShops] = useState(false);
+  const [data, setData] = useState<CustomerLedgerResponse | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Record payment modal state
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [side, setSide] = useState<"all" | "debit" | "credit">("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [q, setQ] = useState("");
+
+  const [showPay, setShowPay] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [payMethod, setPayMethod] = useState("cash");
   const [payNotes, setPayNotes] = useState("");
-  const [submittingPay, setSubmittingPay] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
-  const loadLedger = useCallback(async () => {
-    if (!selectedCustomerId) return;
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getCustomerLedger(Number(selectedCustomerId), {
-        allShops: isOwner && allShopsToggle ? true : undefined,
-      });
-      setCustomerLedgerData(res.data.data);
+      const res = await getCustomerLedger(customerId, { allShops: isOwner && allShops ? true : undefined });
+      setData(res.data.data ?? null);
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not load customer ledger"));
+      setError(apiErrorMessage(err, "Could not load this customer's ledger"));
     } finally {
       setLoading(false);
     }
-  }, [selectedCustomerId, isOwner, allShopsToggle]);
+  }, [customerId, isOwner, allShops]);
 
   useEffect(() => {
-    listCustomers()
-      .then((c) => {
-        const custList = c.data.data ?? [];
-        setCustomers(custList);
+    load();
+  }, [load, shopId]);
 
-        const urlCustId = searchParams.get("customerId");
-        if (urlCustId) {
-          setSelectedCustomerId(Number(urlCustId));
-        } else if (custList.length > 0 && !selectedCustomerId) {
-          setSelectedCustomerId(custList[0].id);
-        }
-      })
-      .catch((err) => setError(apiErrorMessage(err, "Could not load customers")));
-  }, [shopId]);
+  const entries = useMemo(() => data?.entries ?? [], [data]);
+  const customer = data?.customer;
+  const summary = data?.summary ?? {
+    openingBalance: 0,
+    totalDebit: Number(data?.totalDebit ?? 0),
+    totalCredit: Number(data?.totalCredit ?? 0),
+    currentBalance: Number(data?.currentBalance ?? 0),
+  };
+  const balance = summary.currentBalance;
 
-  useEffect(() => {
-    loadLedger();
-  }, [loadLedger, shopId]);
-
-  async function handleRecordPayment(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedCustomerId) return;
-    const amt = Number(payAmount);
-    if (!amt || amt <= 0) {
-      setPayError("Please enter a valid positive payment amount.");
-      return;
+  const needle = q.trim().toLowerCase();
+  const visible = entries.filter((e) => {
+    const s = sideOf(e);
+    if (side !== "all" && s !== side) return false;
+    const day = dayKey(e.entry_date);
+    if (from && day < from) return false;
+    if (to && day > to) return false;
+    if (needle) {
+      const hay = [e.description, e.reference_code, e.reference_type, e.payment_method, e.notes, String(e.reference_id ?? "")].join(" ").toLowerCase();
+      if (!hay.includes(needle)) return false;
     }
-    setSubmittingPay(true);
+    return true;
+  });
+  const filtered = side !== "all" || from || to || needle;
+  const debitCount = entries.filter((e) => sideOf(e) === "debit").length;
+  const creditCount = entries.filter((e) => sideOf(e) === "credit").length;
+
+  function openPayment() {
+    setPayAmount(balance > 0 ? balance.toFixed(2) : "");
+    setPayMethod("cash");
+    setPayNotes("");
     setPayError(null);
-    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ledg-${selectedCustomerId}-${Date.now()}`;
+    setShowPay(true);
+  }
+
+  async function savePayment(e: React.FormEvent) {
+    e.preventDefault();
+    const amt = Number(payAmount);
+    if (!amt || amt <= 0) return setPayError("Enter a payment amount greater than zero.");
+    setPaying(true);
+    setPayError(null);
+    const idempotencyKey = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `ledg-${customerId}-${Date.now()}`;
     try {
       await recordLedgerPayment({
-        customerId: Number(selectedCustomerId),
+        customerId,
         amount: amt,
         paymentMethod: payMethod,
         notes: payNotes.trim() || `Payment received (${payMethod.toUpperCase()})`,
         idempotencyKey,
       });
-      setShowPaymentModal(false);
-      setPayAmount("");
-      setPayNotes("");
-      setPayMethod("cash");
-      await loadLedger();
+      setShowPay(false);
+      setToast(`Payment of ${inr(amt)} recorded`);
+      setTimeout(() => setToast(null), 3000);
+      await load();
     } catch (err) {
-      setPayError(apiErrorMessage(err, "Failed to record payment in ledger"));
+      setPayError(apiErrorMessage(err, "Could not record the payment"));
     } finally {
-      setSubmittingPay(false);
+      setPaying(false);
     }
   }
 
-  const allEntries = customerLedgerData?.entries ?? [];
-  const filteredEntries = allEntries.filter((entry: any) => {
-    if (entryFilter === "debit") return entry.entry_type === "debit";
-    if (entryFilter === "credit") return entry.entry_type === "credit";
-    return true;
-  });
-
-  const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
-  const balance = Number(customerLedgerData?.currentBalance ?? 0);
-  const shopBalance = Number(customerLedgerData?.shopBalance ?? 0);
-  const debitCount = allEntries.filter((e: any) => e.entry_type === "debit").length;
-  const creditCount = allEntries.filter((e: any) => e.entry_type === "credit").length;
-  const inr = (n: number) =>
-    "₹" + Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const balanceTag = (n: number) => (n > 0 ? "Due" : n < 0 ? "Advance" : "Settled");
-  const fmtMonth = (d: string) => new Date(d).toLocaleDateString("en-IN", { month: "short", year: "numeric" });
-  const tabs: { key: "all" | "debit" | "credit"; label: string; count: number }[] = [
-    { key: "all", label: "All entries", count: allEntries.length },
-    { key: "debit", label: "Bills", count: debitCount },
-    { key: "credit", label: "Payments", count: creditCount },
+  const tiles: { label: string; value: number; tone: string; hint: string }[] = [
+    { label: "Opening balance", value: summary.openingBalance, tone: "text-navy-900", hint: "Before the first bill" },
+    { label: "Total debit", value: summary.totalDebit, tone: "text-rose-600", hint: "Bills raised" },
+    { label: "Total credit", value: summary.totalCredit, tone: "text-emerald-600", hint: "Payments & returns" },
+    { label: "Current balance", value: balance, tone: balance > 0 ? "text-rose-600" : balance < 0 ? "text-emerald-600" : "text-navy-900", hint: balance > 0 ? "Due from customer" : balance < 0 ? "Advance with you" : "Settled" },
   ];
 
-  const cq = custSearch.trim().toLowerCase();
-  const listCustomersView = customers
-    .filter((c) => !cq || c.name.toLowerCase().includes(cq) || String(c.phone || "").includes(cq))
-    .filter((c) => !onlyDue || Number(c.current_balance) > 0)
-    .sort((a, b) => Number(b.current_balance || 0) - Number(a.current_balance || 0));
-
-  function selectCustomer(id: number | "") {
-    setSelectedCustomerId(id);
-    setSearchParams(id ? { customerId: String(id) } : {});
-  }
-
-  function openPayment() {
-    const due = Number(customerLedgerData?.currentBalance || 0);
-    setPayAmount(due > 0 ? due.toFixed(2) : "");
-    setPayError(null);
-    setShowPaymentModal(true);
-  }
-
   return (
-    <div className="space-y-6 pb-10">
-      <PageHeader
-        eyebrow="Khata"
-        title="Customer ledger"
-        subtitle="Bills, payments received and the running balance for each customer."
-        actions={
-          <>
-            {isOwner && <Switch checked={allShopsToggle} onChange={setAllShopsToggle} label="All shops" />}
-            {selectedCustomerId && can("ledger", "create") && (
-              <button type="button" onClick={openPayment} className="btn-primary">
+    <div className="space-y-5 pb-10">
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 hover:text-navy-900">
+        <Icon name="left" className="w-4 h-4" /> All customers
+      </button>
+
+      {/* Customer header */}
+      <section className="card p-4 sm:p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Avatar name={customer?.name || "Customer"} />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <h1 className="text-[19px] sm:text-[22px] font-bold text-navy-900 tracking-tight [overflow-wrap:anywhere]">{customer?.name || (loading ? "Loading…" : "Customer")}</h1>
+                {customer && <CustomerStatusBadge status={customer.status} />}
+              </div>
+              <div className="text-[12.5px] text-slate-500 tabular">
+                {customer?.phone || "—"}
+                <span className="text-slate-300"> · </span>
+                {data?.isShopScoped ? `This shop${activeShop?.name ? ` (${activeShop.name})` : ""}` : "All shops"}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {isOwner && <Switch checked={allShops} onChange={setAllShops} label="All shops" />}
+            <button type="button" onClick={() => onView(customerId)} className="btn-secondary">
+              <Icon name="eye" /> View
+            </button>
+            {can("ledger", "create") && (
+              <button type="button" onClick={openPayment} disabled={!data} className="btn-primary">
                 <Icon name="wallet" /> Record payment
               </button>
             )}
-          </>
-        }
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Customer list */}
-        <section className="card overflow-hidden lg:col-span-4 lg:sticky lg:top-24">
-          <div className="p-4 border-b border-slate-100 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="card-title text-[14px]">Customers</h2>
-              <Switch checked={onlyDue} onChange={setOnlyDue} label="Only dues" />
-            </div>
-            <SearchInput value={custSearch} onChange={setCustSearch} placeholder="Name or phone…" />
           </div>
-          {/* Phones: compact select instead of a long list */}
-          <div className="lg:hidden p-4">
-            <select className="input" value={selectedCustomerId} onChange={(e) => selectCustomer(Number(e.target.value) || "")}>
-              <option value="">Select customer</option>
-              {listCustomersView.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.phone})
-                </option>
-              ))}
-            </select>
-          </div>
-          <ul className="hidden lg:block max-h-[calc(100vh-260px)] overflow-y-auto divide-y divide-slate-100">
-            {listCustomersView.length === 0 ? (
-              <li><EmptyState compact icon="users" title="No customers" text={cq || onlyDue ? "Nothing matches." : "Add customers first."} /></li>
-            ) : (
-              listCustomersView.map((c) => {
-                const b = Number(c.current_balance) || 0;
-                const on = c.id === selectedCustomerId;
-                return (
-                  <li key={c.id}>
-                    <button
-                      type="button"
-                      onClick={() => selectCustomer(c.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition ${on ? "bg-brand-50/80 shadow-[inset_3px_0_0_#047857]" : "hover:bg-slate-50"}`}
-                    >
-                      <Avatar name={c.name} size="sm" />
-                      <span className="min-w-0 flex-1">
-                        <span className={`block truncate text-[13px] font-semibold ${on ? "text-brand-800" : "text-navy-900"}`}>{c.name}</span>
-                        <span className="block text-[11.5px] text-slate-400 tabular">{c.phone}</span>
-                      </span>
-                      <span className={`text-[12.5px] font-bold tabular ${b > 0 ? "text-rose-600" : b < 0 ? "text-emerald-600" : "text-slate-300"}`}>
-                        {b === 0 ? "—" : inr(b)}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </section>
-
-        <div className="lg:col-span-8 space-y-5 min-w-0">
-          {/* Balance hero */}
-          <div className="hero-brand p-5 sm:p-6">
-            <div aria-hidden className="pointer-events-none absolute -right-12 -bottom-20 w-64 h-64 rounded-full bg-white/[0.04]" />
-            <div className="relative">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  {selectedCustomer && (
-                    <span className="w-11 h-11 rounded-full bg-white/15 ring-1 ring-inset ring-white/20 text-white flex items-center justify-center text-[14px] font-bold shrink-0">
-                      {(selectedCustomer.name || "C").charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                  <div className="min-w-0">
-                    {selectedCustomer ? (
-                      <ReferenceLink type="customer" id={selectedCustomer.id} refNumber={selectedCustomer.name} className="!font-sans !text-white text-[15px] font-semibold hover:underline truncate block">
-                        {selectedCustomer.name}
-                      </ReferenceLink>
-                    ) : (
-                      <div className="text-[15px] font-semibold text-white">Choose a customer</div>
-                    )}
-                    <div className="text-[12px] text-emerald-50/70 truncate">
-                      {selectedCustomer?.phone || "Their statement will appear here"}
-                      {allShopsToggle ? " · all shops" : ""}
-                    </div>
-                  </div>
-                </div>
-                {customerLedgerData && (
-                  <span
-                    className={`badge ring-1 ring-inset ${
-                      balance > 0 ? "bg-rose-500/15 text-rose-100 ring-rose-300/30" : balance < 0 ? "bg-emerald-500/15 text-emerald-100 ring-emerald-300/30" : "bg-white/10 text-white/80 ring-white/20"
-                    }`}
-                  >
-                    {balanceTag(balance)}
-                  </span>
-                )}
-              </div>
-              <div className="mt-5 text-[12px] font-medium text-emerald-50/70">{balance < 0 ? "Advance with you" : "Outstanding balance"}</div>
-              <div className={`mt-1 text-[32px] sm:text-[38px] font-bold tracking-tight leading-none tabular text-white ${loading ? "opacity-40 animate-pulse" : ""}`}>
-                {customerLedgerData ? inr(balance) : "—"}
-              </div>
-              <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
-                <HeroFig label={`This shop${activeShop?.name ? ` · ${activeShop.name}` : ""}`} value={customerLedgerData ? `${inr(shopBalance)}${shopBalance !== 0 ? (shopBalance > 0 ? " Dr" : " Cr") : ""}` : "—"} />
-                <HeroFig label="Total billed" value={customerLedgerData ? inr(Number(customerLedgerData.totalDebit || 0)) : "—"} />
-                <HeroFig label="Total paid" value={customerLedgerData ? inr(Number(customerLedgerData.totalCredit || 0)) : "—"} accent="text-emerald-200" />
-              </div>
-              {customerLedgerData && balance > 0 && can("ledger", "create") && (
-                <button type="button" onClick={openPayment} className="mt-5 btn bg-white text-navy-900 hover:bg-emerald-50 shadow-sm">
-                  <Icon name="wallet" /> Collect {inr(balance)}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
-              <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
-            </div>
-          )}
-
-          {/* Statement */}
-          <section className="card overflow-hidden">
-            <div className="p-4 sm:px-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h2 className="card-title text-[14.5px]">Statement</h2>
-              <Segmented size="sm" value={entryFilter} onChange={setEntryFilter} options={tabs.map((t) => ({ key: t.key, label: t.label, count: t.count, tone: t.key === "debit" ? "rose" : t.key === "credit" ? "emerald" : undefined }))} />
-            </div>
-
-            {loading ? (
-              <div className="p-5 space-y-3">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <div key={i} className="flex items-center gap-3 animate-pulse">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100" />
-                    <div className="flex-1 h-3 rounded bg-slate-100" />
-                    <div className="w-20 h-3 rounded bg-slate-100" />
-                  </div>
-                ))}
-              </div>
-            ) : !selectedCustomerId ? (
-              <EmptyState icon="users" tone="brand" title="Pick a customer" text="Choose someone from the list to see their bills and payments." />
-            ) : !customerLedgerData || filteredEntries.length === 0 ? (
-              <EmptyState icon="file" title="No ledger entries" text="Nothing recorded for this customer in the selected scope." />
-            ) : (
-              <>
-                {/* Desktop table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        {allShopsToggle && <th>Shop</th>}
-                        <th className="!text-right">Debit</th>
-                        <th className="!text-right">Credit</th>
-                        <th className="!text-right">Balance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredEntries.map((entry: any) => {
-                        const amt = Number(entry.amount);
-                        const bal = Number(entry.running_balance ?? 0);
-                        const isReversed = entry.status === "reversed";
-                        const isDebit = entry.entry_type === "debit";
-                        return (
-                          <tr key={entry.id} className={isReversed ? "opacity-50 line-through" : ""}>
-                            <td className="whitespace-nowrap">
-                              <div className="flex items-center gap-3">
-                                <DateTile date={entry.entry_date} debit={isDebit} />
-                                <span className="text-[12px] text-slate-500">{fmtMonth(entry.entry_date)}</span>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-medium text-[13px] text-navy-900">{entry.description || entry.reference_type}</span>
-                                {!isDebit && entry.payment_method && <span className="badge-inactive uppercase text-[10px]">{entry.payment_method.replace("_", " ")}</span>}
-                              </div>
-                              <div className="font-mono text-[11.5px] text-slate-400 mt-0.5">
-                                {entry.reference_type === "Sale" || entry.reference_type === "SalePayment" ? (
-                                  <ReferenceLink type="sale" id={entry.reference_id} refNumber={`Sale #${entry.reference_id}`} />
-                                ) : entry.reference_code ? (
-                                  <span>{entry.reference_code}</span>
-                                ) : (
-                                  <span>{entry.reference_type} #{entry.reference_id ?? entry.id}</span>
-                                )}
-                              </div>
-                            </td>
-                            {allShopsToggle && (
-                              <td>
-                                <span className="badge-inactive">{entry.shop?.name || `Shop #${entry.shop_id}`}</span>
-                              </td>
-                            )}
-                            <td className="text-right font-semibold text-rose-600 whitespace-nowrap tabular">{isDebit ? inr(amt) : <span className="text-slate-300">—</span>}</td>
-                            <td className="text-right font-semibold text-emerald-600 whitespace-nowrap tabular">{!isDebit ? inr(amt) : <span className="text-slate-300">—</span>}</td>
-                            <td className="text-right whitespace-nowrap">
-                              <span className="font-bold text-navy-900 tabular">{inr(bal)}</span>
-                              <span className={`ml-1.5 text-[11px] font-semibold ${bal > 0 ? "text-rose-500" : bal < 0 ? "text-emerald-600" : "text-slate-400"}`}>{bal > 0 ? "Dr" : bal < 0 ? "Cr" : ""}</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile timeline */}
-                <ul className="md:hidden divide-y divide-slate-100">
-                  {filteredEntries.map((entry: any) => {
-                    const amt = Number(entry.amount);
-                    const bal = Number(entry.running_balance ?? 0);
-                    const isReversed = entry.status === "reversed";
-                    const isDebit = entry.entry_type === "debit";
-                    return (
-                      <li key={entry.id} className={`px-4 py-3.5 flex gap-3 ${isReversed ? "opacity-50 line-through" : ""}`}>
-                        <DateTile date={entry.entry_date} debit={isDebit} withMonth />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="text-[13px] font-medium text-navy-900 line-clamp-2">{entry.description || entry.reference_type}</div>
-                            <div className={`text-[14px] font-bold tabular whitespace-nowrap ${isDebit ? "text-rose-600" : "text-emerald-600"}`}>
-                              {isDebit ? "+" : "−"}{inr(amt)}
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between gap-2 mt-1.5">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className={isDebit ? "badge-danger" : "badge-active"}>{isDebit ? "Bill" : "Payment"}</span>
-                              {!isDebit && entry.payment_method && <span className="badge-inactive uppercase text-[10px]">{entry.payment_method.replace("_", " ")}</span>}
-                            </div>
-                            <div className="text-[11.5px] text-slate-500 whitespace-nowrap">
-                              Bal <span className="font-semibold text-navy-900">{inr(bal)}</span> {bal > 0 ? "Dr" : bal < 0 ? "Cr" : ""}
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
-          </section>
         </div>
+      </section>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {tiles.map((t) => (
+          <div key={t.label} className={`card p-4 min-w-0 ${t.label === "Current balance" ? "ring-1 ring-inset ring-brand-600/20 bg-brand-50/30" : ""}`}>
+            <div className="stat-label truncate">{t.label}</div>
+            <div className={`mt-1.5 text-[17px] sm:text-[21px] font-bold tabular truncate ${t.tone} ${loading ? "opacity-40 animate-pulse" : ""}`}>
+              {data ? `${t.value < 0 ? "-" : ""}${inr(t.value)}` : "—"}
+            </div>
+            <div className="text-[11px] text-slate-400 mt-0.5 truncate">{t.hint}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Record payment */}
-      {showPaymentModal && (
+      {toast && (
+        <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] text-emerald-800">
+          <Icon name="checkCircle" className="w-4 h-4 shrink-0" /> {toast}
+        </div>
+      )}
+      {error && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] text-rose-700">
+          <Icon name="alert" className="w-4 h-4 shrink-0" /> {error}
+          <button type="button" onClick={load} className="btn-secondary btn-sm ml-auto">Retry</button>
+        </div>
+      )}
+
+      {/* Transaction history */}
+      <section className="card overflow-hidden">
+        <div className="p-4 sm:px-5 border-b border-slate-100 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="card-title text-[14.5px]">Transaction history</h2>
+            <Segmented
+              size="sm"
+              value={side}
+              onChange={setSide}
+              options={[
+                { key: "all", label: "All", count: entries.length },
+                { key: "debit", label: "Bills", count: debitCount, tone: "rose" },
+                { key: "credit", label: "Payments", count: creditCount, tone: "emerald" },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col md:flex-row md:items-center gap-2">
+            <SearchInput className="md:flex-1" value={q} onChange={setQ} placeholder="Search reference, description or method…" />
+            <div className="grid grid-cols-2 md:flex md:items-center gap-2">
+              <label className="flex flex-col md:flex-row md:items-center gap-1 text-[11.5px] text-slate-500">
+                From
+                <input type="date" aria-label="From date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="input py-1.5 text-[13px] md:w-auto" />
+              </label>
+              <label className="flex flex-col md:flex-row md:items-center gap-1 text-[11.5px] text-slate-500">
+                To
+                <input type="date" aria-label="To date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="input py-1.5 text-[13px] md:w-auto" />
+              </label>
+            </div>
+            {filtered && (
+              <button type="button" onClick={() => { setSide("all"); setFrom(""); setTo(""); setQ(""); }} className="btn-ghost btn-sm self-start md:self-auto">
+                Clear filters
+              </button>
+            )}
+          </div>
+        </div>
+
+        {loading && !data ? (
+          <div className="p-5 space-y-3" aria-busy="true">
+            {Array.from({ length: 5 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-20 h-3 rounded bg-slate-100" />
+                <div className="flex-1 h-3 rounded bg-slate-100" />
+                <div className="w-20 h-3 rounded bg-slate-100" />
+              </div>
+            ))}
+          </div>
+        ) : entries.length === 0 ? (
+          <EmptyState icon="file" title="No transactions yet" text="Bills and payments for this customer will appear here." />
+        ) : visible.length === 0 ? (
+          <EmptyState icon="search" title="No transactions match" text="Try a different date range or search." />
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Description</th>
+                    {allShops && <th>Shop</th>}
+                    <th className="!text-right">Debit</th>
+                    <th className="!text-right">Credit</th>
+                    <th className="!text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.map((e) => {
+                    const s = sideOf(e);
+                    const reversed = e.status === "reversed";
+                    const amt = Number(e.amount);
+                    const bal = Number(e.running_balance ?? 0);
+                    return (
+                      <tr key={e.id} className={reversed ? "bg-slate-50/60" : ""}>
+                        <td className="whitespace-nowrap text-slate-600">{fmtDate(e.entry_date)}</td>
+                        <td className="whitespace-nowrap text-[12.5px]"><EntryReference entry={e} /></td>
+                        <td>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`font-medium text-navy-900 ${reversed ? "line-through text-slate-400" : ""}`}>{e.description || e.reference_type}</span>
+                            {s === "credit" && e.payment_method && <span className="badge-inactive uppercase !text-[10px]">{e.payment_method.replace("_", " ")}</span>}
+                            {reversed && <span className="badge-warn !text-[10px]">Reversed</span>}
+                          </div>
+                          {e.notes && e.notes !== e.description && <div className="text-[11.5px] text-slate-400 mt-0.5 max-w-[340px] truncate">{e.notes}</div>}
+                        </td>
+                        {allShops && <td><span className="badge-inactive">{e.shop?.name || `Shop #${e.shop_id}`}</span></td>}
+                        <td className={`text-right whitespace-nowrap tabular font-semibold ${reversed ? "text-slate-400 line-through" : "text-rose-600"}`}>{s === "debit" ? inr(amt) : <span className="text-slate-300 no-underline">—</span>}</td>
+                        <td className={`text-right whitespace-nowrap tabular font-semibold ${reversed ? "text-slate-400 line-through" : "text-emerald-600"}`}>{s === "credit" ? inr(amt) : <span className="text-slate-300">—</span>}</td>
+                        <td className="text-right whitespace-nowrap">
+                          <span className="font-bold text-navy-900 tabular">{bal < 0 ? "-" : ""}{inr(bal)}</span>
+                          <span className={`ml-1.5 text-[11px] font-semibold ${bal > 0 ? "text-rose-500" : bal < 0 ? "text-emerald-600" : "text-slate-400"}`}>{bal > 0 ? "Dr" : bal < 0 ? "Cr" : ""}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <ul className="md:hidden divide-y divide-slate-100">
+              {visible.map((e) => {
+                const s = sideOf(e);
+                const reversed = e.status === "reversed";
+                const amt = Number(e.amount);
+                const bal = Number(e.running_balance ?? 0);
+                return (
+                  <li key={e.id} className={`px-4 py-3.5 ${reversed ? "bg-slate-50/60" : ""}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className={`text-[13.5px] font-medium text-navy-900 [overflow-wrap:anywhere] ${reversed ? "line-through text-slate-400" : ""}`}>{e.description || e.reference_type}</div>
+                        <div className="text-[11.5px] text-slate-500 mt-0.5">{fmtDate(e.entry_date)} · <EntryReference entry={e} /></div>
+                      </div>
+                      <div className={`text-[14px] font-bold tabular whitespace-nowrap ${reversed ? "text-slate-400 line-through" : s === "debit" ? "text-rose-600" : s === "credit" ? "text-emerald-600" : "text-slate-500"}`}>
+                        {s === "debit" ? "+" : s === "credit" ? "−" : ""}{inr(amt)}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                        <span className={s === "debit" ? "badge-danger" : s === "credit" ? "badge-active" : "badge-inactive"}>{s === "debit" ? "Debit" : s === "credit" ? "Credit" : "Entry"}</span>
+                        {s === "credit" && e.payment_method && <span className="badge-inactive uppercase !text-[10px]">{e.payment_method.replace("_", " ")}</span>}
+                        {reversed && <span className="badge-warn !text-[10px]">Reversed</span>}
+                      </div>
+                      <div className="text-[11.5px] text-slate-500 whitespace-nowrap">
+                        Bal <span className="font-semibold text-navy-900 tabular">{bal < 0 ? "-" : ""}{inr(bal)}</span> {bal > 0 ? "Dr" : bal < 0 ? "Cr" : ""}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="px-4 sm:px-5 py-3 border-t border-slate-100 text-[12px] text-slate-500 flex flex-wrap justify-between gap-2">
+              <span>Showing <b className="text-navy-900">{visible.length}</b> of {entries.length} transactions</span>
+              <span>Balance is a running total of all transactions, including those hidden by filters.</span>
+            </div>
+          </>
+        )}
+      </section>
+
+      {showPay && (
         <Modal
           size="sm"
           icon="wallet"
           title="Record payment"
-          subtitle={selectedCustomer?.name}
-          onClose={() => setShowPaymentModal(false)}
+          subtitle={customer?.name}
+          onClose={() => setShowPay(false)}
           footer={
             <>
-              <button type="button" onClick={() => setShowPaymentModal(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" form="ledger-pay-form" disabled={submittingPay} className="btn-primary">{submittingPay ? "Saving…" : "Save payment"}</button>
+              <button type="button" onClick={() => setShowPay(false)} className="btn-secondary">Cancel</button>
+              <button type="submit" form="ledger-pay-form" disabled={paying} className="btn-primary">{paying ? "Saving…" : "Save payment"}</button>
             </>
           }
         >
-          <form id="ledger-pay-form" onSubmit={handleRecordPayment} className="space-y-4">
+          <form id="ledger-pay-form" onSubmit={savePayment} className="space-y-4">
             {balance > 0 && (
               <div className="flex items-center justify-between rounded-xl bg-rose-50 border border-rose-100 px-4 py-3">
                 <span className="text-[12.5px] font-medium text-rose-700">Current due</span>
@@ -413,8 +556,8 @@ function LedgerInner() {
               </div>
             )}
             <div>
-              <label className="label">Amount received (₹)</label>
-              <input type="number" step="0.01" min="0.01" required autoFocus className="input text-[16px] font-semibold tabular" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="Enter amount" />
+              <label className="label" htmlFor="pay-amount">Amount received (₹)</label>
+              <input id="pay-amount" type="number" inputMode="decimal" step="0.01" min="0.01" required autoFocus className="input text-[16px] font-semibold tabular" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="Enter amount" />
             </div>
             <div>
               <label className="label">Payment method</label>
@@ -433,12 +576,12 @@ function LedgerInner() {
               />
             </div>
             <div>
-              <label className="label">Notes (optional)</label>
-              <input type="text" className="input" value={payNotes} onChange={(e) => setPayNotes(e.target.value)} placeholder="Receipt note or reference" />
+              <label className="label" htmlFor="pay-notes">Notes (optional)</label>
+              <input id="pay-notes" type="text" className="input" value={payNotes} onChange={(e) => setPayNotes(e.target.value)} placeholder="Receipt note or reference" />
             </div>
-            <p className="text-[11.5px] text-slate-500">Credits the customer&apos;s ledger and settles unpaid bills automatically.</p>
+            <p className="text-[11.5px] text-slate-500">Adds a credit entry to the ledger and settles unpaid bills automatically.</p>
             {payError && (
-              <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {payError}</p>
+              <p role="alert" className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {payError}</p>
             )}
           </form>
         </Modal>
@@ -447,24 +590,32 @@ function LedgerInner() {
   );
 }
 
-function HeroFig({ label, value, accent }: { label: string; value: string; accent?: string }) {
+/* ───────────────────────────────────────────────────────────── */
+
+function LedgerInner() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const customerId = Number(searchParams.get("customerId")) || null;
+  const [viewId, setViewId] = useState<number | null>(null);
+
+  const openLedger = (id: number) => {
+    setViewId(null);
+    setSearchParams({ customerId: String(id) });
+    window.scrollTo({ top: 0 });
+  };
+
   return (
-    <div className="rounded-xl bg-white/[0.07] ring-1 ring-inset ring-white/10 px-3 py-2.5 min-w-0">
-      <div className="text-[10.5px] sm:text-[11px] text-emerald-50/70 truncate">{label}</div>
-      <div className={`mt-0.5 text-[13px] sm:text-[16px] font-semibold tabular truncate ${accent || "text-white"}`}>{value}</div>
-    </div>
+    <>
+      {customerId ? (
+        <CustomerStatement key={customerId} customerId={customerId} onBack={() => setSearchParams({})} onView={setViewId} />
+      ) : (
+        <CustomerLedgerList onView={setViewId} onLedger={openLedger} />
+      )}
+      {viewId !== null && (
+        <CustomerViewModal customerId={viewId} onClose={() => setViewId(null)} onOpenLedger={viewId === customerId ? undefined : openLedger} />
+      )}
+    </>
   );
 }
-
-function DateTile({ date, debit, withMonth }: { date: string; debit: boolean; withMonth?: boolean }) {
-  return (
-    <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center leading-none shrink-0 ring-1 ring-inset ${debit ? "bg-rose-50 text-rose-600 ring-rose-600/10" : "bg-emerald-50 text-emerald-600 ring-emerald-600/10"}`}>
-      <span className="text-[14px] font-bold">{new Date(date).toLocaleDateString("en-IN", { day: "2-digit" })}</span>
-      {withMonth && <span className="text-[9px] font-semibold uppercase mt-0.5">{new Date(date).toLocaleDateString("en-IN", { month: "short" })}</span>}
-    </div>
-  );
-}
-
 
 export default function Ledger() {
   return (

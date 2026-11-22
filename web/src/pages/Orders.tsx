@@ -7,6 +7,8 @@ import {
   updateOrderStatus,
   convertOrderToBill,
   getOrderById,
+  getOrderChannel,
+  type OrderChannel,
   type OrderRecord,
   type OrderStats,
 } from "../api/orders";
@@ -51,7 +53,9 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | OrderChannel>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [listPage, setListPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
@@ -226,6 +230,8 @@ export default function Orders() {
         search: search || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
         paymentStatus: paymentFilter !== "all" ? paymentFilter : undefined,
+        startDate: dateFrom || undefined,
+        endDate: dateTo || undefined,
         shopId: shopId || undefined,
       } as any).catch(() => ({ data: { data: [] } })),
       listProducts({ shopId: shopId || undefined } as any).catch(() => ({ data: { data: [] } })),
@@ -250,7 +256,7 @@ export default function Orders() {
 
   useEffect(() => {
     loadOrdersData();
-  }, [statusFilter, paymentFilter, shopId]);
+  }, [statusFilter, paymentFilter, dateFrom, dateTo, shopId]);
 
   // Calculations for Step 2
   const calcSubtotal = cartItems.reduce((acc, it) => acc + it.price * it.qty, 0);
@@ -416,12 +422,9 @@ export default function Orders() {
         {step === "list" && (() => {
           const isBilledOrder = (o: OrderRecord) =>
             String(o.status || "").toUpperCase() === "BILLED" || String(o.status || "").toLowerCase() === "converted_to_bill" || Boolean(o.converted_sale_id || o.billed_bill_id);
-          const portalPending = orders.filter((o) => (o as any).placed_by === "customer" && String(o.status).toLowerCase() === "pending").length;
-          const sourced = orders.filter((ord) => {
-            if (sourceFilter === "customer") return (ord as any).placed_by === "customer";
-            if (sourceFilter === "staff") return (ord as any).placed_by !== "customer";
-            return true;
-          });
+          const portalPending = orders.filter((o) => getOrderChannel(o) === "online" && String(o.status).toLowerCase() === "pending").length;
+          const onlineCount = orders.filter((o) => getOrderChannel(o) === "online").length;
+          const sourced = sourceFilter === "all" ? orders : orders.filter((ord) => getOrderChannel(ord) === sourceFilter);
           const pages = Math.max(1, Math.ceil(sourced.length / pageSize));
           const page = Math.min(listPage, pages);
           const pageRows = sourced.slice((page - 1) * pageSize, page * pageSize);
@@ -469,14 +472,14 @@ export default function Orders() {
                   <div className="flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse" />
                     <span className="font-semibold">
-                      {portalPending} new customer portal order{portalPending > 1 ? "s" : ""} waiting for review
+                      {portalPending} new online order{portalPending > 1 ? "s" : ""} waiting for review
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
                       setStatusFilter("pending");
-                      setSourceFilter("customer");
+                      setSourceFilter("online");
                     }}
                     className="btn-soft btn-sm self-start sm:self-auto"
                   >
@@ -487,6 +490,19 @@ export default function Orders() {
 
               <section className="card overflow-hidden">
                 <div className="p-4 sm:px-5 border-b border-slate-100 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400 mr-1">Order type</span>
+                    <Segmented
+                      size="sm"
+                      value={sourceFilter}
+                      onChange={(v) => { setSourceFilter(v); setListPage(1); }}
+                      options={[
+                        { key: "all", label: "All", count: orders.length },
+                        { key: "online", label: "Online", count: onlineCount },
+                        { key: "offline", label: "Offline", count: orders.length - onlineCount },
+                      ]}
+                    />
+                  </div>
                   <Segmented
                     size="sm"
                     value={statusFilter}
@@ -521,11 +537,17 @@ export default function Orders() {
                         <option value="Pending">Payment pending</option>
                         <option value="Failed">Failed</option>
                       </select>
-                      <select value={sourceFilter} onChange={(e) => { setSourceFilter(e.target.value); setListPage(1); }} className={`input w-auto py-1.5 pr-8 text-[12.5px] ${sourceFilter !== "all" ? "border-brand-400 bg-brand-50/50 text-brand-800 font-semibold" : ""}`}>
-                        <option value="all">Any source</option>
-                        <option value="customer">Customer portal</option>
-                        <option value="staff">Staff / counter</option>
-                      </select>
+                      <label className="flex items-center gap-1.5 text-[12px] text-slate-500">
+                        <span className="sr-only sm:not-sr-only">From</span>
+                        <input type="date" aria-label="Orders from date" value={dateFrom} max={dateTo || undefined} onChange={(e) => { setDateFrom(e.target.value); setListPage(1); }} className="input w-auto py-1.5 text-[12.5px]" />
+                      </label>
+                      <label className="flex items-center gap-1.5 text-[12px] text-slate-500">
+                        <span className="sr-only sm:not-sr-only">To</span>
+                        <input type="date" aria-label="Orders to date" value={dateTo} min={dateFrom || undefined} onChange={(e) => { setDateTo(e.target.value); setListPage(1); }} className="input w-auto py-1.5 text-[12.5px]" />
+                      </label>
+                      {(dateFrom || dateTo) && (
+                        <button type="button" onClick={() => { setDateFrom(""); setDateTo(""); }} className="btn-ghost btn-sm">Clear dates</button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -548,7 +570,7 @@ export default function Orders() {
                     ))}
                   </div>
                 ) : sourced.length === 0 ? (
-                  orders.length === 0 && statusFilter === "all" && paymentFilter === "all" && !search ? (
+                  orders.length === 0 && statusFilter === "all" && paymentFilter === "all" && !search && !dateFrom && !dateTo ? (
                     <EmptyState
                       icon="cart"
                       tone="brand"
@@ -557,7 +579,7 @@ export default function Orders() {
                       action={<button type="button" onClick={() => setStep("create")} className="btn-primary btn-sm"><Icon name="plus" className="w-3.5 h-3.5" /> New order</button>}
                     />
                   ) : (
-                    <EmptyState icon="search" title="No orders match" text="Try another status, source or search." />
+                    <EmptyState icon="search" title="No orders match" text="Try another order type, status, date or search." />
                   )
                 ) : (
                   <>
@@ -569,6 +591,7 @@ export default function Orders() {
                             <th>Order</th>
                             <th>Customer</th>
                             <th className="!text-right">Amount</th>
+                            <th className="whitespace-nowrap">Order type</th>
                             <th>Payment</th>
                             <th>Status</th>
                             <th className="!text-right">Actions</th>
@@ -595,7 +618,6 @@ export default function Orders() {
                                     >
                                       {ord.order_number}
                                     </button>
-                                    {(ord as any).placed_by === "customer" && <span className="badge-brand !text-[10px] uppercase">Portal</span>}
                                   </div>
                                   <div className="text-[11.5px] text-slate-400">
                                     {new Date(ord.order_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
@@ -607,7 +629,7 @@ export default function Orders() {
                                   <div className="flex items-center gap-2.5 min-w-[160px]">
                                     <Avatar name={ord.customer?.name || "Walk in"} size="sm" />
                                     <div className="min-w-0">
-                                      <div className="font-semibold text-navy-900 truncate max-w-[200px]">{ord.customer?.name || "Walk-in customer"}</div>
+                                      <div className="font-semibold text-navy-900 truncate max-w-[150px] 2xl:max-w-[220px]">{ord.customer?.name || "Walk-in customer"}</div>
                                       {ord.customer?.phone && <div className="text-[11.5px] text-slate-400 tabular">{ord.customer.phone}</div>}
                                     </div>
                                   </div>
@@ -616,6 +638,7 @@ export default function Orders() {
                                   <div className="font-bold text-navy-900 tabular">₹{Number(ord.total_amount).toLocaleString("en-IN")}</div>
                                   {itemCount > 0 && <div className="text-[11px] text-slate-400">{itemCount} item{itemCount > 1 ? "s" : ""}</div>}
                                 </td>
+                                <td><OrderChannelBadge channel={getOrderChannel(ord)} /></td>
                                 <td><span className={payChip(ord.payment_status)}>{ord.payment_status || "Pending"}</span></td>
                                 <td><span className={st.cls}>{st.label}</span></td>
                                 <td className="text-right whitespace-nowrap">
@@ -682,9 +705,7 @@ export default function Orders() {
                                   >
                                     {ord.order_number}
                                   </button>
-                                  {(ord as any).placed_by === "customer" && (
-                                    <span className="badge-brand !text-[9.5px] uppercase font-bold">Portal</span>
-                                  )}
+                                  <OrderChannelBadge channel={getOrderChannel(ord)} />
                                 </div>
                                 <div className="text-[11px] text-slate-400 mt-0.5">
                                   {new Date(ord.order_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
@@ -1151,7 +1172,8 @@ export default function Orders() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <InfoCard title="Order">
-                  <InfoRow k="Type" v={o.order_type || "—"} />
+                  <InfoRow k="Order type" v={<OrderChannelBadge channel={getOrderChannel(o)} />} />
+                  <InfoRow k="Fulfilment" v={o.order_type || "—"} />
                   <InfoRow k="Payment method" v={o.payment_method || "—"} />
                   <InfoRow k="Payment" v={<span className={o.payment_status === "Paid" ? "badge-active" : "badge-warn"}>{o.payment_status || "Pending"}</span>} />
                   {o.expected_delivery_date && <InfoRow k="Expected" v={fmtDateTime(o.expected_delivery_date, false)} />}
@@ -1752,5 +1774,18 @@ function InfoRow({ k, v }: { k: string; v: React.ReactNode }) {
       <span className="text-slate-500">{k}</span>
       <span className="text-navy-900 text-right">{v}</span>
     </div>
+  );
+}
+
+/** Online = placed by the customer (portal/marketplace); Offline = entered at the shop counter. */
+function OrderChannelBadge({ channel }: { channel: OrderChannel }) {
+  return channel === "online" ? (
+    <span className="badge bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/20" title="Placed by the customer online">
+      <Icon name="globe" className="w-3 h-3" /> Online
+    </span>
+  ) : (
+    <span className="badge bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-500/20" title="Entered at the shop counter">
+      <Icon name="store" className="w-3 h-3" /> Offline
+    </span>
   );
 }

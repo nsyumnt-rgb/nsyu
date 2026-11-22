@@ -9,7 +9,9 @@ export interface CustomerLedgerResponse {
   scopedShopId: number | null;
   totalDebit: number;
   totalCredit: number;
-  entries: CustomerLedgerEntry[];
+  /** opening + totalDebit - totalCredit = currentBalance (bills/payments exclude the opening entry). */
+  summary?: { openingBalance: number; totalDebit: number; totalCredit: number; currentBalance: number };
+  entries: (CustomerLedgerEntry & { affects_balance?: boolean })[];
 }
 
 export function getCustomerLedger(customerId: number, params?: { shopId?: number; allShops?: boolean }) {

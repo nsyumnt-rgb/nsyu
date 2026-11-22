@@ -376,6 +376,88 @@ export async function inviteCustomerToPortal(req: Request, res: Response) {
   }
 }
 
+/** Server-side rule for customer portal passwords (mirrored in the web form). */
+export function validateCustomerPassword(raw: unknown): string | null {
+  if (typeof raw !== "string") return "Password is required";
+  if (raw !== raw.trim()) return "Password cannot start or end with a space";
+  if (raw.length < 8) return "Password must be at least 8 characters";
+  if (Buffer.byteLength(raw, "utf8") > 72) return "Password is too long (max 72 characters)";
+  if (!/[A-Za-z]/.test(raw) || !/[0-9]/.test(raw)) return "Password must contain at least one letter and one number";
+  return null;
+}
+
+/**
+ * POST /api/customers/:customerId/password
+ * Sets or resets a customer's portal password. Only a bcrypt hash is stored; the plain
+ * password is never returned or logged. All existing portal sessions are signed out.
+ */
+export async function setCustomerPassword(req: Request, res: Response) {
+  const ownerId = req.auth!.ownerId;
+  const customerId = Number(req.params.customerId);
+  if (!Number.isInteger(customerId) || customerId <= 0) {
+    return res.status(400).json({ success: false, message: "Invalid customer id" });
+  }
+
+  const { password, confirmPassword } = req.body ?? {};
+  const invalid = validateCustomerPassword(password);
+  if (invalid) return res.status(400).json({ success: false, message: invalid });
+  if (confirmPassword !== undefined && confirmPassword !== password) {
+    return res.status(400).json({ success: false, message: "Passwords do not match" });
+  }
+
+  // Tenant isolation: the customer must belong to the caller's business.
+  const customer = await Customer.findOne({ where: { id: customerId, owner_id: ownerId } });
+  if (!customer) return res.status(404).json({ success: false, message: "Customer not found" });
+  if (!customer.phone) {
+    return res.status(400).json({ success: false, message: "Add a mobile number for this customer before setting a password" });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+    const [account, created] = await CustomerAccount.findOrCreate({
+      where: { customer_id: customer.id },
+      defaults: {
+        customer_id: customer.id,
+        shop_id: req.auth!.shopId!,
+        owner_id: ownerId,
+        phone: normalizePhone(customer.phone),
+        email: customer.email || null,
+        password_hash: passwordHash,
+        status: "active",
+        created_by: req.auth!.employeeId || ownerId,
+      },
+    });
+    if (!created) {
+      if (account.owner_id !== ownerId) return res.status(404).json({ success: false, message: "Customer not found" });
+      account.password_hash = passwordHash;
+      await account.save();
+      // Force re-login everywhere with the new password.
+      await CustomerRefreshToken.update({ revoked_at: new Date() }, { where: { account_id: account.id, revoked_at: null } });
+    }
+    if (customer.email) {
+      await updateSupabaseAuthPassword(customer.email, passwordHash).catch(() => {});
+    }
+
+    await logAudit({
+      req,
+      module: "customers",
+      action: created ? "portal_password_set" : "portal_password_reset",
+      entityType: "CustomerAccount",
+      entityId: account.id,
+      details: { customerId: customer.id, sessionsRevoked: !created },
+    });
+
+    return res.json({
+      success: true,
+      message: created ? "Password set. The customer can now sign in to the portal." : "Password updated. The customer has been signed out of other sessions.",
+      data: { customerId: customer.id, accountStatus: account.status, created },
+    });
+  } catch (err: any) {
+    console.error("setCustomerPassword failed:", err?.message);
+    return res.status(500).json({ success: false, message: "Could not update the password. Please try again." });
+  }
+}
+
 /**
  * POST /api/customers/:customerId/portal/disable
  */

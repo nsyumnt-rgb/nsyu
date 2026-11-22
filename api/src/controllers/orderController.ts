@@ -21,6 +21,20 @@ import { generateUniqueReceiptCode, recordLedgerEntry } from "../utils/ledger";
 import { nextInvoiceNumber } from "../utils/invoice";
 import { sendBillEmail, sendPaymentReceiptEmail } from "../utils/mailer";
 
+/**
+ * Sales channel of an order, derived from who placed it (persisted as orders.placed_by):
+ * customer portal / marketplace orders are "online", staff/counter orders are "offline".
+ * Legacy rows without placed_by were created by staff (the column defaults to "staff").
+ */
+export type OrderChannel = "online" | "offline";
+export function orderChannel(placedBy?: string | null): OrderChannel {
+  return placedBy === "customer" ? "online" : "offline";
+}
+function withChannel(order: any) {
+  const json = typeof order?.toJSON === "function" ? order.toJSON() : order;
+  return { ...json, channel: orderChannel(json?.placed_by) };
+}
+
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
@@ -113,7 +127,7 @@ export async function getOrderStats(req: Request, res: Response) {
  */
 export async function getOrders(req: Request, res: Response) {
   const ownerId = req.auth!.ownerId;
-  const { status, paymentStatus, customerId, search, startDate, endDate, shopId: queryShopId, allShops } = req.query;
+  const { status, paymentStatus, customerId, search, startDate, endDate, channel, shopId: queryShopId, allShops } = req.query;
 
   let targetShopId: number | undefined = req.auth!.shopId ?? undefined;
   if (req.auth!.isOwner) {
@@ -150,7 +164,21 @@ export async function getOrders(req: Request, res: Response) {
   if (startDate || endDate) {
     where.order_date = {};
     if (startDate) where.order_date[Op.gte] = new Date(String(startDate));
-    if (endDate) where.order_date[Op.lte] = new Date(String(endDate));
+    if (endDate) {
+      const end = new Date(String(endDate));
+      // A plain date ("2026-11-22") means "through the end of that day".
+      if (/^\d{4}-\d{2}-\d{2}$/.test(String(endDate))) end.setHours(23, 59, 59, 999);
+      where.order_date[Op.lte] = end;
+    }
+  }
+
+  const andConditions: any[] = [];
+  if (channel === "online") {
+    where.placed_by = "customer";
+  } else if (channel === "offline") {
+    andConditions.push({ [Op.or]: [{ placed_by: "staff" }, { placed_by: null }] });
+  } else if (channel !== undefined && channel !== "all") {
+    return res.status(400).json({ success: false, message: "channel must be online, offline or all" });
   }
 
   const customerWhere: any = {};
@@ -165,6 +193,7 @@ export async function getOrders(req: Request, res: Response) {
       { "$customer.email$": { [Op.iLike]: q } },
     ];
   }
+  if (andConditions.length) where[Op.and] = andConditions;
 
   try {
     const orders = await Order.findAll({
@@ -178,7 +207,7 @@ export async function getOrders(req: Request, res: Response) {
       order: [["order_date", "DESC"], ["created_at", "DESC"]],
     });
 
-    return res.json({ success: true, count: orders.length, data: orders });
+    return res.json({ success: true, count: orders.length, data: orders.map(withChannel) });
   } catch (err: any) {
     console.error("❌ getOrders failed:", err);
     return res.status(500).json({ success: false, message: err.message || "Failed to fetch orders" });
@@ -210,7 +239,7 @@ export async function getOrderById(req: Request, res: Response) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    return res.json({ success: true, data: order });
+    return res.json({ success: true, data: withChannel(order) });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Failed to fetch order" });
   }

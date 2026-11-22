@@ -37,33 +37,52 @@ export async function getCustomerLedger(req: Request, res: Response) {
     ],
   });
 
-  const totalDebit = entries
-    .filter(
-      (e) =>
-        (e.entry_type === "debit" ||
-          (e.entry_type === "reversal" && e.reference_type === "PaymentReversal")) &&
-        e.status === "active"
-    )
-    .reduce((sum, e) => sum + Number(e.amount), 0);
-  const totalCredit = entries
-    .filter(
-      (e) =>
-        (e.entry_type === "credit" ||
-          (e.entry_type === "reversal" &&
-            (e.reference_type === "SaleCancellation" ||
-              e.reference_type === "Return" ||
-              e.reference_type === "SaleReturn"))) &&
-        e.status === "active"
-    )
-    .reduce((sum, e) => sum + Number(e.amount), 0);
+  // Each active entry moves the balance up (+1, customer owes more) or down (-1).
+  // Reversed entries stay visible for audit but no longer affect the balance.
+  const effect = (e: CustomerLedger): 1 | -1 | 0 => {
+    if (e.status !== "active") return 0;
+    if (e.entry_type === "debit") return 1;
+    if (e.entry_type === "credit") return -1;
+    if (e.entry_type === "reversal") {
+      if (e.reference_type === "PaymentReversal") return 1;
+      if (e.reference_type === "SaleCancellation" || e.reference_type === "Return" || e.reference_type === "SaleReturn") return -1;
+    }
+    return 0;
+  };
+  const isOpeningEntry = (e: CustomerLedger) =>
+    e.reference_type === "Opening_Balance" || Boolean(e.description?.toLowerCase().includes("opening"));
 
-  const hasOpeningEntry = entries.some((e) => e.reference_type === "Opening_Balance" || e.description?.toLowerCase().includes("opening"));
+  const totalDebit = entries.filter((e) => effect(e) === 1).reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalCredit = entries.filter((e) => effect(e) === -1).reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const hasOpeningEntry = entries.some(isOpeningEntry);
   const openingOffset = hasOpeningEntry ? 0 : Number(customer.opening_balance) || 0;
-  const calculatedBalance = Math.round((openingOffset + totalDebit - totalCredit) * 100) / 100;
+  const calculatedBalance = round2(openingOffset + totalDebit - totalCredit);
   const shopBalance = calculatedBalance;
 
-  // Auto-reconcile customer.current_balance if it drifts from actual active entries
-  if (Math.abs(Number(customer.current_balance) - calculatedBalance) > 0.01) {
+  // Statement summary: opening balance shown separately from bills/payments so the
+  // four figures always satisfy  opening + debit - credit = current.
+  const openingFromEntries = entries
+    .filter((e) => isOpeningEntry(e) && effect(e) !== 0)
+    .reduce((sum, e) => sum + effect(e) * Number(e.amount), 0);
+  const openingBalance = round2(openingOffset + openingFromEntries);
+  const summary = {
+    openingBalance,
+    totalDebit: round2(entries.filter((e) => effect(e) === 1 && !isOpeningEntry(e)).reduce((sum, e) => sum + Number(e.amount), 0)),
+    totalCredit: round2(entries.filter((e) => effect(e) === -1 && !isOpeningEntry(e)).reduce((sum, e) => sum + Number(e.amount), 0)),
+    currentBalance: calculatedBalance,
+  };
+
+  // Running balance recomputed from the entries in this view (chronological order).
+  let running = openingOffset;
+  const entriesWithBalance = entries.map((e) => {
+    running = round2(running + effect(e) * Number(e.amount));
+    return { ...e.toJSON(), running_balance: running, affects_balance: effect(e) !== 0 };
+  });
+
+  // Auto-reconcile customer.current_balance only from the complete (all-shop) ledger.
+  // A shop-scoped view sees just part of the history and must never overwrite it.
+  if (!targetShopId && Math.abs(Number(customer.current_balance) - calculatedBalance) > 0.01) {
     customer.current_balance = calculatedBalance;
     await customer.save().catch(() => {});
   }
@@ -76,9 +95,10 @@ export async function getCustomerLedger(req: Request, res: Response) {
       shopBalance,
       isShopScoped: !!targetShopId,
       scopedShopId: targetShopId ?? null,
-      totalDebit: Math.round(totalDebit * 100) / 100,
-      totalCredit: Math.round(totalCredit * 100) / 100,
-      entries,
+      totalDebit: round2(totalDebit),
+      totalCredit: round2(totalCredit),
+      summary,
+      entries: entriesWithBalance,
     },
   });
 }

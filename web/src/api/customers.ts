@@ -46,6 +46,11 @@ export function updateCustomerPortalAccess(id: number, enabled: boolean) {
   return api.post<ApiEnvelope<any>>(`/customers/${id}/portal/${enabled ? "enable" : "disable"}`);
 }
 
+/** Sets/resets the customer's portal password (stored as a hash server-side). */
+export function setCustomerPassword(id: number, password: string, confirmPassword: string) {
+  return api.post<ApiEnvelope<{ customerId: number; accountStatus: string; created: boolean }>>(`/customers/${id}/password`, { password, confirmPassword });
+}
+
 export function sendCustomerReminder(customerId: number) {
   return api.post<ApiEnvelope<any>>(`/customers/${customerId}/send-reminder`);
 }

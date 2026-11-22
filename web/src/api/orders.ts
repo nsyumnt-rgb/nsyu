@@ -41,6 +41,14 @@ export interface OrderStats {
   cancelledOrders: number;
 }
 
+export type OrderChannel = "online" | "offline";
+
+/** Online/offline from the order's persisted data (API channel, falling back to placed_by). */
+export function getOrderChannel(o: Pick<OrderRecord, "channel" | "placed_by">): OrderChannel {
+  if (o.channel === "online" || o.channel === "offline") return o.channel;
+  return o.placed_by === "customer" ? "online" : "offline";
+}
+
 export interface OrderRecord {
   id: number;
   order_number: string;
@@ -54,6 +62,10 @@ export interface OrderRecord {
   order_type?: string;
   payment_method?: string;
   payment_status?: string;
+  /** Persisted origin: "customer" (portal/marketplace) or "staff" (counter). */
+  placed_by?: "customer" | "staff" | null;
+  /** Derived by the API from placed_by: online = customer portal/marketplace, offline = counter. */
+  channel?: OrderChannel;
   shipping_address?: string;
   remarks?: string | null;
   converted_sale_id?: number | null;
@@ -112,6 +124,7 @@ export function getOrders(params?: {
   search?: string;
   startDate?: string;
   endDate?: string;
+  channel?: OrderChannel;
 }) {
   return api.get<ApiEnvelope<OrderRecord[]>>("/orders", { params });
 }
