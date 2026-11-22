@@ -103,6 +103,9 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   /** Amount the customer handed over. "" = exactly the bill total. */
   const [amountReceived, setAmountReceived] = useState<number | "">("");
+  // "partial" = customer pays only part now; the rest goes to their khata.
+  const [payMode, setPayMode] = useState<"full" | "partial">("full");
+  const partialInputRef = useRef<HTMLInputElement>(null);
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [editingDiscount, setEditingDiscount] = useState(false);
 
@@ -249,7 +252,8 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
 
   // Payment figures
   const isCredit = paymentMethod === "unpaid";
-  const received = isCredit ? 0 : amountReceived === "" ? grandTotal : Number(amountReceived);
+  const isPartial = !isCredit && payMode === "partial";
+  const received = isCredit ? 0 : amountReceived === "" ? (isPartial ? 0 : grandTotal) : Number(amountReceived);
   const paidNow = Math.min(Math.max(0, received), grandTotal);
   const changeDue = paymentMethod === "cash" ? Math.max(0, received - grandTotal) : 0;
   const balanceDue = Math.max(0, grandTotal - paidNow);
@@ -296,6 +300,16 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
     if (!isCredit && received < 0) {
       errors.push("Amount received cannot be negative.");
     }
+    if (isPartial) {
+      if (amountReceived === "" || received <= 0) {
+        errors.push("Enter the amount the customer paid now (partial payment).");
+      } else if (received >= grandTotal - 0.005) {
+        errors.push(`Partial amount must be less than the total ${formatINR(grandTotal)}. Choose "Full payment" if the customer paid everything.`);
+      }
+      if (!selectedCustomer) {
+        errors.push("Select a customer — the balance of a partial payment goes to their khata.");
+      }
+    }
     if (!isCredit && paymentMethod !== "cash" && received > grandTotal + 0.01) {
       errors.push(`Amount received (${formatINR(received)}) cannot be more than the total (${formatINR(grandTotal)}) for ${paymentMethod.toUpperCase()}.`);
     }
@@ -326,6 +340,7 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
       const newSale = res.data.data!;
       clearCart();
       setAmountReceived("");
+      setPayMode("full");
       setDiscountAmount(0);
       setSavedModalSale(newSale);
     } catch (err: any) {
@@ -916,6 +931,65 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
                   </p>
                 ) : (
                   <>
+                    <div className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Payment amount">
+                      {([
+                        ["full", "Full payment"],
+                        ["partial", "Partial payment"],
+                      ] as const).map(([k, l]) => (
+                        <button
+                          key={k}
+                          type="button"
+                          role="radio"
+                          aria-checked={payMode === k}
+                          onClick={() => {
+                            setPayMode(k);
+                            setAmountReceived("");
+                            if (k === "partial") setTimeout(() => partialInputRef.current?.focus(), 0);
+                          }}
+                          className={`h-9 rounded-lg text-[13px] font-semibold transition ${
+                            payMode === k ? "bg-white text-emerald-800 shadow-sm ring-1 ring-emerald-600/30" : "text-slate-600 hover:text-navy-900"
+                          }`}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+
+                    {isPartial ? (
+                      <div className="mt-3">
+                        <label htmlFor="partial-received" className="block text-[12.5px] text-slate-600 mb-1">Amount paid now</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-slate-700">₹</span>
+                          <input
+                            ref={partialInputRef}
+                            id="partial-received"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            value={amountReceived}
+                            placeholder="Enter amount received"
+                            onChange={(e) => setAmountReceived(e.target.value === "" ? "" : Number(e.target.value))}
+                            className="w-full h-11 rounded-xl border border-slate-200 bg-white pl-7 pr-3 text-[15px] font-semibold text-navy-900 tabular outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 placeholder:font-normal placeholder:text-slate-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                        </div>
+                        <dl className="mt-3 grid grid-cols-2 gap-2 text-center">
+                          <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-2 py-2">
+                            <dt className="text-[11px] text-emerald-700">Paid now</dt>
+                            <dd className="text-[14px] font-bold text-emerald-700 tabular">{formatINR(paidNow)}</dd>
+                          </div>
+                          <div className="rounded-xl bg-amber-50 border border-amber-100 px-2 py-2">
+                            <dt className="text-[11px] text-amber-700">Balance to khata</dt>
+                            <dd className="text-[14px] font-bold text-amber-700 tabular">{formatINR(balanceDue)}</dd>
+                          </div>
+                        </dl>
+                        <p className="mt-2 text-[12px] text-slate-500">
+                          {selectedCustomer
+                            ? <>Balance is added to <b>{selectedCustomer.name}</b>'s khata. Collect it later with "Receive payment" on the bill.</>
+                            : <span className="text-rose-600">Select a customer above — the balance goes to their khata.</span>}
+                        </p>
+                      </div>
+                    ) : (
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <div>
                         <label htmlFor="amount-received" className="block text-[12.5px] text-slate-600 mb-1">Amount received</label>
@@ -949,7 +1023,8 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
                         />
                       </div>
                     </div>
-                    {balanceDue > 0.005 && (
+                    )}
+                    {!isPartial && balanceDue > 0.005 && (
                       <p className="mt-2.5 text-[12.5px] text-amber-700">
                         Balance <b className="tabular">{formatINR(balanceDue)}</b> will be added to the customer's khata.
                       </p>
