@@ -625,13 +625,17 @@ export default function Inventory({
       setSavingStockId(product.id);
       try {
         const targetShopId = effectiveShopId || product.stocks?.[0]?.shop_id;
-        await recordMovement({
+        const res = await recordMovement({
           productId: product.id,
           shopId: targetShopId,
           type: "adjustment",
           quantity: delta,
+          expectedStock: oldStock,
           notes: `Direct inventory stock change (${oldStock} -> ${newStock})`,
         });
+        // Trust the server's balance (it may differ if stock moved meanwhile).
+        const d: any = res.data?.data;
+        const saved = Number(d?.stock?.current_stock ?? d?.currentStock ?? d?.transaction?.balance_after ?? newStock);
 
         // Non-blocking UI update with startTransition so paint happens immediately (0ms INP block)
         startTransition(() => {
@@ -645,20 +649,28 @@ export default function Inventory({
               let nextStocks;
               if (matchIdx >= 0) {
                 nextStocks = currentStocks.map((s, idx) =>
-                  idx === matchIdx ? { ...s, current_stock: newStock } : s
+                  idx === matchIdx ? { ...s, current_stock: saved } : s
                 );
               } else {
                 nextStocks = [
                   ...currentStocks,
-                  { shop_id: targetShopId || 1, current_stock: newStock } as any,
+                  { shop_id: targetShopId || 1, current_stock: saved } as any,
                 ];
               }
-              return { ...p, stocks: nextStocks };
+              // current_stock is what the list displays — it must change too, or the
+              // box snaps back to the old number and the next edit uses a stale base.
+              return { ...p, current_stock: saved, stocks: nextStocks } as Product;
             })
           );
-          setToastMsg(`✓ Stock for "${product.name}" updated to ${newStock}`);
+          setViewProduct((vp: any) => (vp && vp.id === product.id ? { ...vp, current_stock: saved } : vp));
+          setToastMsg(`✓ Stock for "${product.name}" updated to ${saved}`);
         });
       } catch (err: any) {
+        if (err?.response?.status === 409) {
+          alert(apiErrorMessage(err, "Stock changed meanwhile.") + " The list has been refreshed.");
+          loadData();
+          return;
+        }
         alert(apiErrorMessage(err, "Failed to update stock"));
       } finally {
         setSavingStockId(null);
@@ -724,6 +736,8 @@ export default function Inventory({
         shopId: targetShopId,
         type,
         quantity: quantityToRecord,
+        // "Set counted stock" depends on the current number, so guard it against a stale screen.
+        ...(adjustMode === "set" && type === "adjustment" ? { expectedStock: curr } : {}),
         notes: `[Reason: ${adjustReason}] ${adjustNotes.trim()}`.trim(),
       });
       setShowAdjustModal(false);

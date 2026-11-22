@@ -9,8 +9,10 @@ export function recordMovement(payload: {
   quantity: number;
   notes?: string;
   shopId?: number;
+  /** Stock shown on screen; the server refuses (409) if the real stock differs. */
+  expectedStock?: number;
 }) {
-  return api.post<ApiEnvelope<{ currentStock: number; transaction: InventoryTransaction }>>("/inventory/movement", payload);
+  return api.post<ApiEnvelope<{ currentStock?: number; stock?: { current_stock: number }; transaction: InventoryTransaction }>>("/inventory/movement", payload);
 }
 
 export function transferStock(payload: { productId: number; fromShopId: number; toShopId: number; quantity: number; notes?: string }) {

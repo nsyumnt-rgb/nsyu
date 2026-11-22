@@ -15,6 +15,8 @@ interface RecordMovementParams {
   notes?: string;
   allowNegative?: boolean; // only ever true for corrective "adjustment" entries, and only if explicitly opted in
   externalTransaction?: Transaction; // pass in when this call must be atomic with other writes (e.g. a transfer's two legs)
+  /** The stock the caller based this change on. If the real stock differs, the change is refused (409) instead of applied to a stale base. */
+  expectedCurrent?: number;
 }
 
 const DECREASING_TYPES: MovementType[] = [
@@ -70,6 +72,7 @@ export async function recordStockMovement(params: RecordMovementParams) {
     notes,
     allowNegative = false,
     externalTransaction,
+    expectedCurrent,
   } = params;
 
   const run = async (t: Transaction) => {
@@ -86,6 +89,13 @@ export async function recordStockMovement(params: RecordMovementParams) {
       transaction: t,
       lock: t.LOCK.UPDATE,
     }))!;
+
+    if (expectedCurrent !== undefined && Number(stock.current_stock) !== Number(expectedCurrent)) {
+      throw Object.assign(
+        new Error(`Stock has changed to ${stock.current_stock} (you saw ${expectedCurrent}). Refresh and try again.`),
+        { status: 409, currentStock: Number(stock.current_stock) }
+      );
+    }
 
     let signedQuantity: number;
     if (type === "adjustment") {

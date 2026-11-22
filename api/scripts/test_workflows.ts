@@ -258,6 +258,19 @@ async function main() {
     ok(adj.status < 300 && (await stockOf(newId)) === s0 + 12, "stock correction (−3)", await stockOf(newId));
     const sold = await call("POST", "/sales", tokA, { customerId: c2.id, items: [{ productId: newId, quantity: 4, rate: 150 }], paymentMethod: "cash", paidAmount: 600 });
     ok(sold.status === 201 && (await stockOf(newId)) === s0 + 8, "sale deducts 4 from stock", await stockOf(newId));
+    // Inline stock edit: the screen sends the stock it showed; a stale sBase must be refused, not added on top.
+    const sBase = await stockOf(newId);
+    const setOk = await call("POST", "/inventory/movement", tokA, { productId: newId, type: "adjustment", quantity: 25 - sBase, expectedStock: sBase });
+    ok(setOk.status === 201 && (await stockOf(newId)) === 25, "set stock to 25 with matching expectedStock", { status: setOk.status, now: await stockOf(newId) });
+    ok(Number(setOk.json?.data?.stock?.current_stock) === 25, "response returns the saved stock (25)", setOk.json?.data?.stock?.current_stock);
+    // Second edit from a screen that still shows the old number (the original bug): 30 typed, sBase still `sBase`.
+    const stale = await call("POST", "/inventory/movement", tokA, { productId: newId, type: "adjustment", quantity: 30 - sBase, expectedStock: sBase });
+    ok(stale.status === 409 && (await stockOf(newId)) === 25, "stale expectedStock is refused (409) and stock is unchanged", { status: stale.status, now: await stockOf(newId) });
+    ok(stale.json?.currentStock === 25, "409 tells the screen the real stock", stale.json?.currentStock);
+    const fresh = await call("POST", "/inventory/movement", tokA, { productId: newId, type: "adjustment", quantity: 5, expectedStock: 25 });
+    ok(fresh.status === 201 && (await stockOf(newId)) === 30, "retry from the fresh stock sets 30", await stockOf(newId));
+    const back = await call("POST", "/inventory/movement", tokA, { productId: newId, type: "adjustment", quantity: sBase - 30 });
+    ok(back.status === 201 && (await stockOf(newId)) === sBase, "movement without expectedStock still works", await stockOf(newId));
     const moves = await InventoryTransaction.count({ where: { product_id: newId } });
     ok(moves >= 3, "stock history records every movement", moves);
     const hist = await call("GET", `/inventory/history?productId=${newId}`, tokA);

@@ -63,11 +63,20 @@ export async function recordMovement(req: Request, res: Response) {
       notes,
       actorType,
       actorId,
+      // Optional optimistic check: the stock the screen showed when the change was made.
+      expectedCurrent:
+        req.body.expectedStock !== undefined && req.body.expectedStock !== null && Number.isFinite(Number(req.body.expectedStock))
+          ? Number(req.body.expectedStock)
+          : undefined,
     });
     return res.status(201).json({ success: true, data: movement });
   } catch (err: any) {
     // e.g. "Insufficient stock" — previously unhandled, which left the request hanging
-    return res.status(err.status || 500).json({ success: false, message: err.message || "Stock movement failed" });
+    return res.status(err.status || 500).json({
+      success: false,
+      message: err.message || "Stock movement failed",
+      ...(err.currentStock !== undefined ? { currentStock: err.currentStock } : {}),
+    });
   }
 }
 
