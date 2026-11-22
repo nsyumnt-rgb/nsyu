@@ -25,8 +25,8 @@ const GITHUB_APK_RAW_URL =
 const LOCAL_APK_URL = "./downloads/nsyu-business-release.apk";
 
 const TABS = [
-  { k: "staff", id: "staff-tab-btn", label: "🏪 Owner & Staff" },
-  { k: "customer", id: "customer-tab-btn", label: "👤 Customer" },
+  { k: "staff", id: "staff-tab-btn", label: "Owner & Staff", d: "M3 9l1.5-5h15L21 9M3 9v1a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9M5 13v8h14v-8" },
+  { k: "customer", id: "customer-tab-btn", label: "Customer", d: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
 ] as const;
 
 export default function Login() {
@@ -442,8 +442,9 @@ export default function Login() {
   return (
     <>
       <AuthShell
+        variant={isCustomer ? "customer" : "owner"}
         extra={
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[12.5px] text-slate-500">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[12.5px] text-slate-500">
             <button
               type="button"
               id="supabase-status-pill"
@@ -473,14 +474,10 @@ export default function Login() {
           </div>
         }
       >
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-brand-700 ring-1 ring-inset ring-brand-100">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-          Single Unified Sign In
-        </div>
-        <h1 className="font-serif text-[30px] sm:text-[34px] font-semibold tracking-[-0.035em] leading-tight text-navy-900">
-          Welcome to NSYU
+        <h1 className="text-[26px] sm:text-[28px] font-bold tracking-[-0.02em] leading-tight text-navy-900">
+          Sign in to NSYU
         </h1>
-        <p className="mt-1.5 text-[13.5px] text-slate-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-500">
           {isCustomer
             ? "Sign in to view your orders, bills, khata ledger and shop online."
             : "Sign in with your owner, manager or staff account to manage your store."}
@@ -490,7 +487,7 @@ export default function Login() {
         <div
           role="tablist"
           aria-label="Account type"
-          className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1"
+          className="mt-7 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1"
         >
           {TABS.map((t) => (
             <button
@@ -500,12 +497,15 @@ export default function Login() {
               role="tab"
               aria-selected={activeTab === t.k}
               onClick={() => handleTabChange(t.k)}
-              className={`min-h-[42px] rounded-lg text-[13.5px] font-semibold transition-all cursor-pointer ${
+              className={`min-h-[40px] inline-flex items-center justify-center gap-2 rounded-md text-[13.5px] font-semibold transition-all cursor-pointer ${
                 activeTab === t.k
                   ? "bg-white text-navy-900 shadow-sm ring-1 ring-slate-200"
                   : "text-slate-500 hover:text-navy-900"
               }`}
             >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d={t.d} />
+              </svg>
               {t.label}
             </button>
           ))}
@@ -513,20 +513,20 @@ export default function Login() {
 
         {/* ── Customer Sub-tabs: Password Login vs OTP Code ── */}
         {isCustomer && (
-          <div className="mt-4 flex items-center justify-center gap-2 bg-emerald-50/70 p-1 rounded-xl border border-emerald-100 text-xs font-bold text-gray-600">
+          <div className="mt-4 flex items-center gap-5 border-b border-slate-200 text-[13px] font-semibold">
             <button
               type="button"
               onClick={() => {
                 setCustomerMode("password");
                 setError(null);
               }}
-              className={`flex-1 py-1.5 rounded-lg transition text-center cursor-pointer ${
+              className={`-mb-px pb-2.5 border-b-2 transition cursor-pointer ${
                 customerMode === "password"
-                  ? "bg-[#047857] text-white shadow-xs"
-                  : "text-emerald-900 hover:bg-emerald-100/60"
+                  ? "border-brand-600 text-brand-800"
+                  : "border-transparent text-slate-500 hover:text-navy-900"
               }`}
             >
-              🔑 Password Login
+              Password
             </button>
             <button
               type="button"
@@ -534,13 +534,13 @@ export default function Login() {
                 setCustomerMode("otp");
                 setError(null);
               }}
-              className={`flex-1 py-1.5 rounded-lg transition text-center cursor-pointer ${
+              className={`-mb-px pb-2.5 border-b-2 transition cursor-pointer ${
                 customerMode === "otp"
-                  ? "bg-[#047857] text-white shadow-xs"
-                  : "text-emerald-900 hover:bg-emerald-100/60"
+                  ? "border-brand-600 text-brand-800"
+                  : "border-transparent text-slate-500 hover:text-navy-900"
               }`}
             >
-              ✉️ Email OTP Code
+              Email code
             </button>
           </div>
         )}
@@ -576,7 +576,7 @@ export default function Login() {
         )}
 
         {/* ── Main Form ── */}
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
           <div>
             <label htmlFor="identifier-input" className="block text-[13px] font-semibold text-slate-700 mb-1.5">
               {isCustomer
@@ -655,7 +655,7 @@ export default function Login() {
             type="submit"
             id="login-submit-btn"
             disabled={loading}
-            className={`${PRIMARY} w-full h-12 text-[15px] cursor-pointer`}
+            className={`${PRIMARY} w-full h-11 text-[14.5px] cursor-pointer`}
           >
             {loading && (
               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -672,7 +672,7 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-5 pt-4 border-t border-slate-200 text-center text-[13px] text-slate-500">
+        <div className="mt-6 text-center text-[13.5px] text-slate-500">
           {isCustomer ? (
             <>
               New customer?{" "}
@@ -742,7 +742,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={otpLoading || otpCode.length !== 6}
-              className={`${PRIMARY} w-full h-12 text-[15px] cursor-pointer`}
+              className={`${PRIMARY} w-full h-11 text-[14.5px] cursor-pointer`}
             >
               {otpLoading ? "Verifying…" : "Verify & Sign In"}
             </button>
@@ -1069,9 +1069,9 @@ export default function Login() {
 }
 
 const FIELD =
-  "w-full h-12 rounded-xl border border-slate-300 bg-white px-3.5 text-[15px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15";
+  "w-full h-11 rounded-lg border border-slate-300 bg-white px-3.5 text-[14.5px] text-navy-900 placeholder:text-slate-400 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15";
 const PRIMARY =
-  "inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100 text-white font-semibold shadow-brand transition";
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 hover:bg-brand-700 active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100 text-white font-semibold shadow-sm transition";
 
 function Modal({
   title,

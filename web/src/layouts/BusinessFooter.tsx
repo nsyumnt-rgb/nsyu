@@ -28,9 +28,9 @@ export default function BusinessFooter() {
             <span>support@nsyu.com</span>
           </a>
           <span className="hidden sm:inline text-emerald-700">|</span>
-          <a href="https://www.nsyu.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition">
+          <a href="https://www.nsyu.in" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition">
             <span>🌐</span>
-            <span>www.nsyu.com</span>
+            <span>www.nsyu.in</span>
           </a>
         </div>
 
