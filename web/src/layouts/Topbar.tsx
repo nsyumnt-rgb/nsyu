@@ -594,7 +594,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
                     type="button"
                     onClick={() => {
                       setShopMenuOpen(false);
-                      navigate("/app/shops");
+                      navigate("/app/settings/shop");
                     }}
                     className="w-full text-left px-3.5 py-2 text-xs font-semibold text-brand-600 hover:bg-brand-50 transition-colors flex items-center gap-1.5"
                   >
@@ -609,7 +609,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
         {/* POS Cart / Current Bill Button (Desktop - on mobile it is in MobileBottomNav) */}
         <button
           type="button"
-          onClick={() => navigate("/app/cart")}
+          onClick={() => navigate("/app/billing?cart=1")}
           className={`hidden sm:flex relative h-10 px-3 rounded-xl transition-colors items-center ${
             posCount && posCount > 0
               ? "bg-brand-50 text-brand-700 hover:bg-brand-100 ring-1 ring-brand-200"
@@ -831,7 +831,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
                 }}
                 className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
               >
-                <span>⚙️</span> Settings & Profile
+                <span>⚙️</span> Settings
               </button>
               <button
                 onClick={() => {
@@ -929,8 +929,8 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
                       setSelectedNotif(null);
                       if (ref === "sale") navigate("/app/sales");
                       else if (ref === "order") navigate("/app/orders");
-                      else if (ref === "payment" || ref === "customerledger") navigate("/app/ledger");
-                      else if (ref === "product") navigate("/app/inventory");
+                      else if (ref === "payment" || ref === "customerledger") navigate("/app/customers?tab=ledger");
+                      else if (ref === "product") navigate("/app/settings/inventory");
                     }}
                     className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-xs"
                   >

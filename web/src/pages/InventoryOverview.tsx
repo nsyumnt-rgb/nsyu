@@ -206,7 +206,7 @@ function InventoryInner() {
         subtitle="Stock on hand, what's held by open orders, and every movement."
         actions={
           <>
-            <Link to="/app/inventory/manage?tab=Stock%20Transfer" className="btn-ghost">
+            <Link to="/app/settings/inventory" className="btn-ghost">
               <Icon name="layers" /> Transfers & advanced
             </Link>
             <button type="button" onClick={exportCsv} className="btn-secondary">

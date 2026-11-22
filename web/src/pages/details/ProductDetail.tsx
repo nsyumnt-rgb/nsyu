@@ -105,7 +105,7 @@ export default function ProductDetail() {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => navigate("/app/inventory")}
+            onClick={() => navigate("/app/settings/inventory")}
             className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-colors"
           >
             Adjust Stock

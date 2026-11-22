@@ -7,6 +7,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import CustomerPortalLayout from "./layouts/CustomerPortalLayout";
 import MarketLayout from "./layouts/MarketLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import { RedirectWithQuery } from "./components/PageTabs";
 
 /* Lazy-loaded Pages */
 // Market Pages (Customer B2C Ordering)
@@ -25,20 +26,15 @@ const SelectShop = lazy(() => import("./pages/SelectShop"));
 
 // 6 Core Modules for Shop Owner: Bill, Ledger, Inventory, Customer, Product, Order
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Shops = lazy(() => import("./pages/Shops"));
-const Products = lazy(() => import("./pages/Products"));
-const Categories = lazy(() => import("./pages/Categories"));
+const ProductsHub = lazy(() => import("./pages/ProductsHub"));
 const ProductDetail = lazy(() => import("./pages/details/ProductDetail"));
-const Inventory = lazy(() => import("./pages/Inventory"));
 const InventoryOverview = lazy(() => import("./pages/InventoryOverview"));
 const Billing = lazy(() => import("./pages/Billing"));
-const Cart = lazy(() => import("./pages/Cart"));
 const Sales = lazy(() => import("./pages/Sales"));
 const SaleDetail = lazy(() => import("./pages/details/SaleDetail"));
 const Orders = lazy(() => import("./pages/Orders"));
-const Customers = lazy(() => import("./pages/Customers"));
+const CustomersHub = lazy(() => import("./pages/CustomersHub"));
 const CustomerDetail = lazy(() => import("./pages/details/CustomerDetail"));
-const Ledger = lazy(() => import("./pages/Ledger"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -141,51 +137,43 @@ export default function App() {
             <Route path="/select-shop" element={<SelectShop />} />
 
             <Route path="/app" element={<DashboardLayout />}>
-              {/* Dashboard */}
+              {/* ── Main menu ─────────────────────────────────────────── */}
               <Route index element={<Dashboard />} />
-              <Route path="shops" element={<Shops />} />
-
-              {/* Product */}
-              <Route path="products" element={<Products />} />
-              <Route path="categories" element={<Categories />} />
-              <Route path="products/:id" element={<ProductDetail />} />
-              <Route path="catalog" element={<Navigate to="/app/products" replace />} />
-
-              {/* Inventory */}
-              <Route path="inventory" element={<Inventory />} />
-              <Route path="inventory/overview" element={<InventoryOverview />} />
-              <Route path="inventory/manage" element={<Inventory />} />
-              <Route path="low-stock" element={<Navigate to="/app/inventory" replace />} />
-
-              {/* Bill & Sales */}
               <Route path="billing" element={<Billing />} />
-              <Route path="cart" element={<Cart />} />
               <Route path="sales" element={<Sales />} />
               <Route path="sales/:id" element={<SaleDetail />} />
-
-              {/* Order */}
-              <Route path="orders" element={<Orders />} />
-
-              {/* Customer */}
-              <Route path="customers" element={<Customers />} />
+              {/* Products page: Products | Categories tabs */}
+              <Route path="products" element={<ProductsHub />} />
+              <Route path="products/:id" element={<ProductDetail />} />
+              {/* Customers page: Details | Ledger tabs */}
+              <Route path="customers" element={<CustomersHub />} />
               <Route path="customers/:id" element={<CustomerDetail />} />
-
-              {/* Ledger */}
-              <Route path="ledger" element={<Ledger />} />
-              <Route path="khata" element={<Navigate to="/app/ledger" replace />} />
-              <Route path="payments" element={<Navigate to="/app/ledger" replace />} />
-              <Route path="payments/:id" element={<Navigate to="/app/ledger" replace />} />
-
-              {/* Settings */}
+              {/* Settings: shop profile, inventory, preferences, … */}
               <Route path="settings" element={<Settings />} />
+              <Route path="settings/:section" element={<Settings />} />
 
-              {/* Deprecated module redirects */}
-              <Route path="purchase" element={<Navigate to="/app/inventory" replace />} />
-              <Route path="purchase/:id" element={<Navigate to="/app/inventory" replace />} />
-              <Route path="suppliers" element={<Navigate to="/app/inventory" replace />} />
-              <Route path="suppliers/:id" element={<Navigate to="/app/inventory" replace />} />
+              {/* Orders: hidden from the menu (FEATURES.showOrdersMenu) but still routable */}
+              <Route path="orders" element={<Orders />} />
+              <Route path="inventory/overview" element={<InventoryOverview />} />
+
+              {/* ── Old links → their new home (query string kept) ─────── */}
+              <Route path="categories" element={<RedirectWithQuery to="/app/products" params={{ tab: "categories" }} />} />
+              <Route path="catalog" element={<Navigate to="/app/products" replace />} />
+              <Route path="ledger" element={<RedirectWithQuery to="/app/customers" params={{ tab: "ledger" }} />} />
+              <Route path="khata" element={<RedirectWithQuery to="/app/customers" params={{ tab: "ledger" }} />} />
+              <Route path="payments" element={<RedirectWithQuery to="/app/customers" params={{ tab: "ledger" }} />} />
+              <Route path="payments/:id" element={<Navigate to="/app/customers?tab=ledger" replace />} />
+              <Route path="expenses" element={<Navigate to="/app/customers?tab=ledger" replace />} />
+              <Route path="cart" element={<Navigate to="/app/billing?cart=1" replace />} />
+              <Route path="inventory" element={<Navigate to="/app/settings/inventory" replace />} />
+              <Route path="inventory/manage" element={<Navigate to="/app/settings/inventory" replace />} />
+              <Route path="low-stock" element={<Navigate to="/app/settings/inventory" replace />} />
+              <Route path="purchase" element={<Navigate to="/app/settings/inventory" replace />} />
+              <Route path="purchase/:id" element={<Navigate to="/app/settings/inventory" replace />} />
+              <Route path="suppliers" element={<Navigate to="/app/settings/inventory" replace />} />
+              <Route path="suppliers/:id" element={<Navigate to="/app/settings/inventory" replace />} />
+              <Route path="shops" element={<Navigate to="/app/settings/shop" replace />} />
               <Route path="reports" element={<Navigate to="/app" replace />} />
-              <Route path="expenses" element={<Navigate to="/app/ledger" replace />} />
               <Route path="roles" element={<Navigate to="/app/settings" replace />} />
               <Route path="staff" element={<Navigate to="/app/settings" replace />} />
             </Route>

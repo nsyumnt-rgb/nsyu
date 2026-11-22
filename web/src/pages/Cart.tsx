@@ -25,8 +25,13 @@ function formatINR(val: number): string {
   });
 }
 
-export default function Cart() {
+/**
+ * Checkout for the POS cart. Rendered as the right-side panel of POS Billing
+ * (`onClose` given); "add products" then closes the panel instead of navigating.
+ */
+export default function Cart({ onClose }: { onClose?: () => void } = {}) {
   const navigate = useNavigate();
+  const backToProducts = onClose ?? (() => navigate("/app/billing"));
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
 
@@ -406,7 +411,7 @@ export default function Cart() {
           )}
           <button
             type="button"
-            onClick={() => navigate("/app/billing")}
+            onClick={backToProducts}
             className="px-4 py-2 text-xs font-bold text-white bg-brand-700 hover:bg-brand-800 rounded-xl transition shadow-xs flex items-center gap-1.5"
           >
             <Icon name="plus" className="w-4 h-4" />
@@ -432,12 +437,13 @@ export default function Cart() {
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link
-              to="/app/billing"
+            <button
+              type="button"
+              onClick={backToProducts}
               className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition"
             >
-              Open POS Billing Terminal
-            </Link>
+              Add products
+            </button>
             <Link
               to="/app/products"
               className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 shadow-2xs transition"
@@ -445,7 +451,7 @@ export default function Cart() {
               Browse Products Catalog
             </Link>
             <Link
-              to="/app/inventory"
+              to="/app/settings/inventory"
               className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition"
             >
               Check Inventory
@@ -758,7 +764,7 @@ export default function Cart() {
               <div className="p-3.5 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between text-xs">
                 <button
                   type="button"
-                  onClick={() => navigate("/app/billing")}
+                  onClick={backToProducts}
                   className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-xl border border-slate-200 transition shadow-2xs flex items-center gap-1.5"
                 >
                   <Icon name="plus" className="w-3.5 h-3.5" />

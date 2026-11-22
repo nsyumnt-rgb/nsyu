@@ -311,6 +311,25 @@
   animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Side panels: the POS cart slides in from the right, the mobile menu from the left. */
+@keyframes slideFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-left {
+  animation: slideFromRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-right {
+  animation: slideFromLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @keyframes toastCountdown {
   from { width: 100%; }
   to { width: 0%; }

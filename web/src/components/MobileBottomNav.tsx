@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/authStore";
 import { usePortalStore } from "../store/portalStore";
 import { usePosStore } from "../store/posStore";
+import { FEATURES } from "../config/features";
 
 interface MobileBottomNavProps {
   mode: "dashboard" | "portal" | "market";
@@ -14,8 +14,6 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
 
   // Stores
-  const accountType = useAuthStore((s) => s.accountType);
-  const isOwner = accountType === "owner" || (useAuthStore.getState().owner !== null);
   const portalCart = usePortalStore((s) => s.cart);
   const posCartItems = usePosStore((s) => s.items);
 
@@ -57,24 +55,24 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
       ),
     },
     {
-      to: "/app/inventory",
-      label: "Inventory",
+      to: "/app/products",
+      label: "Products",
       icon: (active: boolean) => (
         <svg className={`w-5 h-5 transition-transform ${active ? "scale-110 text-emerald-800" : "text-slate-500"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-          <line x1="12" y1="22.08" x2="12" y2="12" />
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+          <line x1="7" y1="7" x2="7.01" y2="7" />
         </svg>
       ),
     },
     {
-      to: "/app/orders",
-      label: "Orders",
+      to: "/app/customers",
+      label: "Customers",
       icon: (active: boolean) => (
         <svg className={`w-5 h-5 transition-transform ${active ? "scale-110 text-emerald-800" : "text-slate-500"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <path d="M16 10a4 4 0 0 1-8 0" />
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
     },
@@ -220,6 +218,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.exact}
                 className={`mobile-nav-btn flex-1 ${isActive ? "active" : ""}`}
               >
                 <div className="mb-0.5">{item.icon(isActive)}</div>
@@ -279,61 +278,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
 
             {/* Grid of Action Links */}
             <div className="p-4 grid grid-cols-2 gap-3">
-              {/* Products */}
-              <button
-                type="button"
-                onClick={() => { navigate("/app/products"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                    <line x1="7" y1="7" x2="7.01" y2="7" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Products</div>
-                  <div className="text-[11px] text-slate-500 truncate">Master catalog</div>
-                </div>
-              </button>
-
-              {/* Customers */}
-              <button
-                type="button"
-                onClick={() => { navigate("/app/customers"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-blue-100/80 text-blue-800 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Customers</div>
-                  <div className="text-[11px] text-slate-500 truncate">Clients & balances</div>
-                </div>
-              </button>
-
-              {/* Customer Ledger */}
-              <button
-                type="button"
-                onClick={() => { navigate("/app/ledger"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
-              >
-                <div className="w-10 h-10 rounded-xl bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Ledger (Khata)</div>
-                  <div className="text-[11px] text-slate-500 truncate">Debits & credits</div>
-                </div>
-              </button>
-
-              {/* Sales Invoices */}
+              {/* Sales invoices */}
               <button
                 type="button"
                 onClick={() => { navigate("/app/sales"); setMoreOpen(false); }}
@@ -346,48 +291,50 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Invoices</div>
+                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Sales invoices</div>
                   <div className="text-[11px] text-slate-500 truncate">Bill history & PDFs</div>
                 </div>
               </button>
 
-              {/* Categories */}
+              {/* Settings › Inventory */}
               <button
                 type="button"
-                onClick={() => { navigate("/app/categories"); setMoreOpen(false); }}
+                onClick={() => { navigate("/app/settings/inventory"); setMoreOpen(false); }}
                 className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
               >
-                <div className="w-10 h-10 rounded-xl bg-teal-100/80 text-teal-800 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-sky-100/80 text-sky-800 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z" />
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Categories</div>
-                  <div className="text-[11px] text-slate-500 truncate">Catalog groups</div>
+                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Inventory</div>
+                  <div className="text-[11px] text-slate-500 truncate">Stock in/out & alerts</div>
                 </div>
               </button>
 
-              {/* POS Cart */}
+              {/* Settings › Shop profile */}
               <button
                 type="button"
-                onClick={() => { navigate("/app/cart"); setMoreOpen(false); }}
+                onClick={() => { navigate("/app/settings/shop"); setMoreOpen(false); }}
                 className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100/80 text-indigo-800 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="9" cy="21" r="1" />
-                    <circle cx="20" cy="21" r="1" />
-                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                    <path d="M3 9l1.5-5h15L21 9" />
+                    <path d="M3 9v1a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9" />
+                    <path d="M5 13v8h14v-8" />
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">POS Cart</div>
-                  <div className="text-[11px] text-slate-500 truncate">{posCount} items pending</div>
+                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Shop profile</div>
+                  <div className="text-[11px] text-slate-500 truncate">Shops, banner & details</div>
                 </div>
               </button>
 
-              {/* Shop Settings */}
+              {/* Settings */}
               <button
                 type="button"
                 onClick={() => { navigate("/app/settings"); setMoreOpen(false); }}
@@ -396,34 +343,34 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
                 <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="3" />
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Shop Settings</div>
-                  <div className="text-[11px] text-slate-500 truncate">Store profile & taxes</div>
+                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Settings</div>
+                  <div className="text-[11px] text-slate-500 truncate">Preferences, tax & more</div>
                 </div>
               </button>
 
-              {/* My Shops (Owner only) */}
-              {isOwner && (
-                <button
-                  type="button"
-                  onClick={() => { navigate("/app/shops"); setMoreOpen(false); }}
-                  className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100/80 text-indigo-800 flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 9l1.5-5h15L21 9" />
-                      <path d="M3 9v1a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0V9" />
-                      <path d="M5 13v8h14v-8" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[13.5px] font-bold text-navy-900 leading-snug">My Shops</div>
-                    <div className="text-[11px] text-slate-500 truncate">Branch management</div>
-                  </div>
-                </button>
+              {/* Orders: only when the menu flag is on */}
+              {FEATURES.showOrdersMenu && (
+              <button
+                type="button"
+                onClick={() => { navigate("/app/orders"); setMoreOpen(false); }}
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                    <path d="M3 6h18" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Orders</div>
+                  <div className="text-[11px] text-slate-500 truncate">Online orders</div>
+                </div>
+              </button>
               )}
             </div>
 

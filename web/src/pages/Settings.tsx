@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import RequireModule from "../components/RequireModule";
 import { useAuthStore } from "../store/authStore";
 import { api } from "../api/client";
 import ShopBannerCard from "../components/ShopBannerCard";
 import ShopPortalSettingsCard from "../components/ShopPortalSettingsCard";
 import Inventory from "./Inventory";
+import Shops from "./Shops";
 
 interface FullSettingsState {
   // 1. General (Account, Preferences, Theme)
@@ -151,9 +152,12 @@ function SettingsInner() {
   const accountType = useAuthStore((s) => s.accountType);
   const activeShop = useAuthStore((s) => s.activeShop);
   const setActiveShop = useAuthStore((s) => s.setActiveShop);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { section } = useParams();
 
   const validTabs = [
+    "preferences",
     "general",
     "business",
     "shop",
@@ -168,16 +172,13 @@ function SettingsInner() {
     "security",
   ];
 
+  // Each section has its own URL: /app/settings/shop, /app/settings/inventory, …
+  // The older /app/settings?tab=… form still works.
   const urlTab = searchParams.get("tab");
-  const activeTab = urlTab && validTabs.includes(urlTab) ? urlTab : "general";
+  const activeTab =
+    section && validTabs.includes(section) ? section : urlTab && validTabs.includes(urlTab) ? urlTab : "shop";
 
-  const handleTabChange = (tabId: string) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      next.set("tab", tabId);
-      return next;
-    });
-  };
+  const handleTabChange = (tabId: string) => navigate(`/app/settings/${tabId}`);
 
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -529,13 +530,14 @@ function SettingsInner() {
       {/* Horizontal Tabs Bar matching Reference Screenshot */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-200">
         {[
+          { id: "shop", label: "Shop profile", icon: "🏪" },
+          { id: "inventory", label: "Inventory", icon: "📦" },
+          { id: "preferences", label: "Preferences", icon: "🌐" },
           { id: "general", label: "General", icon: "⚙️" },
           { id: "business", label: "Business", icon: "🏬" },
-          { id: "shop", label: "Shop & Banner", icon: "🏪" },
           { id: "invoice", label: "Invoice", icon: "📄" },
           { id: "tax", label: "Tax & GST", icon: "⚖️" },
           { id: "payment", label: "Payment", icon: "💳" },
-          { id: "inventory", label: "Inventory", icon: "📦" },
           { id: "notifications", label: "Notifications", icon: "🔔" },
           { id: "security", label: "Security", icon: "🛡️" },
         ].map((tab) => {
@@ -561,6 +563,8 @@ function SettingsInner() {
       {/* ========================================================================= */}
       {/* 1. GENERAL TAB                                                            */}
       {/* ========================================================================= */}
+      {activeTab === "preferences" && <PreferencesSection />}
+
       {activeTab === "general" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-6">
@@ -1228,6 +1232,12 @@ function SettingsInner() {
       {/* ========================================================================= */}
       {/* 3. SHOP TAB                                                               */}
       {/* ========================================================================= */}
+      {/* Shop profile: the shops list (formerly "My shops") for the owner, then this shop's profile. */}
+      {activeTab === "shop" && accountType === "owner" && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+          <Shops />
+        </div>
+      )}
       {activeTab === "shop" && <ShopBannerCard />}
 
       {activeTab === "shop" && (
@@ -1240,7 +1250,7 @@ function SettingsInner() {
                 <p className="text-xs text-slate-500">Manage individual outlet properties, branch code, and daily business hours.</p>
               </div>
             </div>
-            <span className="badge bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-lg border border-blue-200">
+            <span className="badge bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1 rounded-lg border border-blue-200 max-w-full min-w-0 truncate block">
               Active: {settings.shopName} ({settings.shopCode})
             </span>
           </div>
@@ -2117,10 +2127,70 @@ function SettingsInner() {
 }
 
 export default function Settings() {
+  const { section } = useParams();
+  // Inventory lives under Settings but keeps its own permission, so staff who
+  // manage stock don't also need access to the rest of the shop settings.
   return (
-    <RequireModule module="settings">
+    <RequireModule module={section === "inventory" ? "inventory" : "settings"}>
       <SettingsInner />
     </RequireModule>
+  );
+}
+
+/** App display language for this device (same switch as the header globe icon). */
+function PreferencesSection() {
+  const read = () => {
+    try {
+      return localStorage.getItem("nsyu_language") === "Hindi" ? "Hindi" : "English";
+    } catch {
+      return "English";
+    }
+  };
+  const [lang, setLang] = useState<"English" | "Hindi">(read);
+
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d === "English" || d === "Hindi") setLang(d);
+    };
+    window.addEventListener("nsyu_language_change", onChange);
+    return () => window.removeEventListener("nsyu_language_change", onChange);
+  }, []);
+
+  const choose = (next: "English" | "Hindi") => {
+    try {
+      localStorage.setItem("nsyu_language", next);
+    } catch {}
+    setLang(next);
+    window.dispatchEvent(new CustomEvent("nsyu_language_change", { detail: next }));
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-xs space-y-4">
+      <div>
+        <h2 className="text-sm font-bold text-slate-900">Language</h2>
+        <p className="text-xs text-slate-500 mt-0.5">Language of the app screens on this device. Bills and invoices are not affected.</p>
+      </div>
+      <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 max-w-md">
+        {([
+          ["English", "EN", "English"],
+          ["Hindi", "हिं", "हिंदी / Hinglish"],
+        ] as const).map(([key, badge, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => choose(key)}
+            aria-pressed={lang === key}
+            className={`flex items-center gap-3 p-3 rounded-xl border text-left transition ${
+              lang === key ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500" : "border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            <span className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-700">{badge}</span>
+            <span className="text-sm font-semibold text-slate-800">{label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

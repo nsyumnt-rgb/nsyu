@@ -1489,7 +1489,7 @@ export default function Orders() {
                 subtitle={custId ? `${mine.length} order${mine.length === 1 ? "" : "s"} in the current list · ₹${Math.round(spent).toLocaleString("en-IN")} ordered (excluding cancelled)` : "Pick an order first to see that customer's other orders."}
                 actions={
                   custId ? (
-                    <Link to={`/app/ledger?customerId=${custId}`} className="btn-secondary">
+                    <Link to={`/app/customers?tab=ledger&customerId=${custId}`} className="btn-secondary">
                       <Icon name="file" className="w-4 h-4 text-slate-500" /> Ledger
                     </Link>
                   ) : undefined

@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { listCustomers, createCustomer, updateCustomer, updateCustomerPortalAccess } from "../api/customers";
 import { apiErrorMessage } from "../api/client";
 import { usePermission } from "../hooks/usePermission";
 import RequireModule from "../components/RequireModule";
-import ReferenceLink from "../components/ReferenceLink";
 import type { Customer } from "../types";
 import { Avatar, EmptyState, Icon, IconButton, Meter, Modal, PageHeader, SearchInput, Segmented, StatCard } from "../components/ui";
 
+/** The customer's ledger, inside the Customers page's Ledger tab. */
+const ledgerUrl = (id: number) => `/app/customers?tab=ledger&customerId=${id}`;
+
+/** Row click opens the ledger, unless the click was on a link or button inside the row. */
+const fromControl = (e: React.MouseEvent) => Boolean((e.target as HTMLElement).closest("a,button,input,select,label"));
+
 function CustomersInner() {
+  const navigate = useNavigate();
   const { can } = usePermission();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -251,14 +257,14 @@ function CustomersInner() {
                   {visible.map((c) => {
                     const bal = Number(c.current_balance) || 0;
                     return (
-                      <tr key={c.id}>
+                      <tr key={c.id} className="cursor-pointer hover:bg-slate-50/70" title="Open ledger" onClick={(e) => !fromControl(e) && navigate(ledgerUrl(c.id))}>
                         <td>
                           <div className="flex items-center gap-3">
                             <Avatar name={c.name} />
                             <div className="min-w-0">
-                              <ReferenceLink type="customer" id={c.id} className="!font-sans !no-underline block truncate max-w-[220px] text-[13.5px] font-semibold text-navy-900 hover:text-brand-600">
+                              <Link to={ledgerUrl(c.id)} className="block truncate max-w-[220px] text-[13.5px] font-semibold text-navy-900 hover:text-brand-600">
                                 {c.name}
-                              </ReferenceLink>
+                              </Link>
                               <div className="text-[12px] text-slate-500 truncate">{c.shop_name || "Individual"}</div>
                             </div>
                           </div>
@@ -280,7 +286,7 @@ function CustomersInner() {
                         </td>
                         <td className="text-right whitespace-nowrap">
                           <div className="inline-flex items-center gap-1">
-                            <Link to={`/app/ledger?customerId=${c.id}`} className="btn-soft btn-sm">
+                            <Link to={ledgerUrl(c.id)} className="btn-soft btn-sm">
                               <Icon name="file" className="w-3.5 h-3.5" /> Ledger
                             </Link>
                             <IconButton title="Open profile" icon="eye" to={`/app/customers/${c.id}`} />
@@ -299,11 +305,11 @@ function CustomersInner() {
               {visible.map((c) => {
                 const bal = Number(c.current_balance) || 0;
                 return (
-                  <li key={c.id} className="px-4 py-4">
+                  <li key={c.id} className="px-4 py-4 cursor-pointer active:bg-slate-50" onClick={(e) => !fromControl(e) && navigate(ledgerUrl(c.id))}>
                     <div className="flex items-center gap-3">
                       <Avatar name={c.name} />
                       <div className="min-w-0 flex-1">
-                        <Link to={`/app/customers/${c.id}`} className="text-[14px] font-semibold text-navy-900 truncate block">{c.name}</Link>
+                        <Link to={ledgerUrl(c.id)} className="text-[14px] font-semibold text-navy-900 truncate block">{c.name}</Link>
                         <div className="text-[12px] text-slate-500 truncate">{c.phone}{c.shop_name ? ` · ${c.shop_name}` : ""}</div>
                       </div>
                       <div className="text-right shrink-0">
@@ -317,7 +323,7 @@ function CustomersInner() {
                       <div className="flex-1" />
                       {can("customers", "edit") && <IconButton title="Set portal password" icon="sliders" onClick={() => openPasswordDialog(c)} />}
                       <IconButton title="Open profile" icon="eye" to={`/app/customers/${c.id}`} />
-                      <Link to={`/app/ledger?customerId=${c.id}`} className="btn-soft btn-sm">Ledger</Link>
+                      <Link to={ledgerUrl(c.id)} className="btn-soft btn-sm">Ledger</Link>
                     </div>
                   </li>
                 );

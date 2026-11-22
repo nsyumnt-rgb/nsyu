@@ -597,16 +597,25 @@ function LedgerInner() {
   const customerId = Number(searchParams.get("customerId")) || null;
   const [viewId, setViewId] = useState<number | null>(null);
 
+  // Keep other params (e.g. the Customers page's `tab=ledger`) when switching customer.
+  const setCustomer = (id: number | null) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (id) next.set("customerId", String(id));
+      else next.delete("customerId");
+      return next;
+    });
+
   const openLedger = (id: number) => {
     setViewId(null);
-    setSearchParams({ customerId: String(id) });
+    setCustomer(id);
     window.scrollTo({ top: 0 });
   };
 
   return (
     <>
       {customerId ? (
-        <CustomerStatement key={customerId} customerId={customerId} onBack={() => setSearchParams({})} onView={setViewId} />
+        <CustomerStatement key={customerId} customerId={customerId} onBack={() => setCustomer(null)} onView={setViewId} />
       ) : (
         <CustomerLedgerList onView={setViewId} onLedger={openLedger} />
       )}

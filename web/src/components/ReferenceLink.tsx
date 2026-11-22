@@ -95,7 +95,7 @@ export default function ReferenceLink({
       route = `/app/purchase/${targetId}`;
       break;
     case "payment":
-      route = `/app/ledger`;
+      route = `/app/customers?tab=ledger`;
       break;
     case "transfer":
       route = `/app/inventory/transfers/${targetId}`;

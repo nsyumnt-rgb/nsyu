@@ -227,7 +227,7 @@ export default function Dashboard() {
               <Link to="/app/customers" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15 text-center justify-center">
                 <Icon name="users" /> Customers
               </Link>
-              <Link to="/app/ledger" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15 text-center justify-center">
+              <Link to="/app/customers?tab=ledger" className="btn bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15 text-center justify-center">
                 <Icon name="wallet" /> Customer Ledger
               </Link>
             </div>
@@ -239,6 +239,26 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* Low-stock alert → Settings › Inventory */}
+      {!loading && lowStock.length > 0 && (
+        <Link
+          to="/app/settings/inventory"
+          className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 hover:bg-amber-100/70 transition-colors"
+        >
+          <span className="w-10 h-10 rounded-xl bg-white text-amber-600 ring-1 ring-inset ring-amber-200 flex items-center justify-center shrink-0">
+            <Icon name="alert" className="w-5 h-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-bold text-amber-900">
+              {lowStock.length} product{lowStock.length === 1 ? "" : "s"} low on stock
+              {outCount > 0 && <span className="font-semibold text-rose-600"> · {outCount} out of stock</span>}
+            </span>
+            <span className="block text-[12px] text-amber-800/80 truncate">Restock from Settings › Inventory</span>
+          </span>
+          <Icon name="arrowRight" className="w-4 h-4 text-amber-700 shrink-0" />
+        </Link>
+      )}
 
       {/* Period + KPIs (2-Column Mobile App Grid) */}
       <div className="space-y-3">
@@ -262,7 +282,7 @@ export default function Dashboard() {
             value={dues.denied ? "—" : inr(dues.total)}
             valueClass={dues.denied ? "text-slate-400" : "text-rose-600"}
             loading={loading}
-            to="/app/ledger"
+            to="/app/customers?tab=ledger"
             hint={dues.denied ? "No permission" : `${dues.top.length ? `${dues.top.length} pending` : "Cleared"}`}
           />
         </div>
@@ -292,7 +312,7 @@ export default function Dashboard() {
               {lowStock.length > 0 && <span className="badge-danger px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700">{lowStock.length}</span>}
               {outCount > 0 && <span className="text-[11.5px] text-slate-400">{outCount} out</span>}
             </div>
-            <Link to="/app/inventory" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1">
+            <Link to="/app/settings/inventory" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800 inline-flex items-center gap-1">
               Inventory →
             </Link>
           </div>
@@ -317,7 +337,7 @@ export default function Dashboard() {
             </ul>
           )}
           <div className="pt-3 mt-auto">
-            <Link to="/app/inventory" className="btn-soft w-full text-center block py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-800">
+            <Link to="/app/settings/inventory" className="btn-soft w-full text-center block py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-800">
               Manage Stock in Inventory →
             </Link>
           </div>
@@ -421,7 +441,7 @@ export default function Dashboard() {
         <section className="card bg-white p-5 rounded-2xl border border-gray-200">
           <div className="card-header flex items-center justify-between pb-3 border-b border-gray-100">
             <h2 className="card-title text-[14.5px] font-bold text-navy-950">Customer Khata Dues</h2>
-            <Link to="/app/ledger" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">
+            <Link to="/app/customers?tab=ledger" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">
               Open Ledger →
             </Link>
           </div>
@@ -435,7 +455,7 @@ export default function Dashboard() {
                 <li key={`${c.id}-${c.name}`} className="py-3 flex items-center gap-3">
                   <Avatar name={c.name} />
                   <div className="flex-1 min-w-0">
-                    <Link to={`/app/ledger?customerId=${c.id}`} className="block text-[13.5px] font-medium text-navy-900 hover:text-brand-700 truncate">{c.name}</Link>
+                    <Link to={`/app/customers?tab=ledger&customerId=${c.id}`} className="block text-[13.5px] font-medium text-navy-900 hover:text-brand-700 truncate">{c.name}</Link>
                     <Meter value={c.amount} max={maxDue} tone="rose" className="mt-1.5" />
                   </div>
                   <span className="text-[13.5px] font-bold text-rose-600 tabular whitespace-nowrap">{inr(c.amount)}</span>
@@ -455,9 +475,9 @@ export default function Dashboard() {
             {[
               { label: "POS Billing", desc: "Ring up retail sale", to: "/app/billing", icon: "receipt", tone: "brand" as const },
               { label: "Sales Invoices", desc: "Past bills & GST", to: "/app/sales", icon: "trend" as const, tone: "emerald" as const },
-              { label: "Live Inventory", desc: "Stock management", to: "/app/inventory", icon: "layers" as const, tone: "sky" as const },
+              { label: "Live Inventory", desc: "Stock management", to: "/app/settings/inventory", icon: "layers" as const, tone: "sky" as const },
               { label: "Products Catalog", desc: "Add & edit products", to: "/app/products", icon: "plus" as const, tone: "violet" as const },
-              { label: "Customer Ledger", desc: "Udhaar & statements", to: "/app/ledger", icon: "wallet" as const, tone: "amber" as const },
+              { label: "Customer Ledger", desc: "Udhaar & statements", to: "/app/customers?tab=ledger", icon: "wallet" as const, tone: "amber" as const },
               { label: "Store Orders", desc: "Dispatch & tracking", to: "/app/orders", icon: "cart" as const, tone: "sky" as const },
             ].map((m) => (
               <Link

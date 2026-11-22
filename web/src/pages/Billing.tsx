@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { listProducts } from "../api/products";
 import { listSales, downloadInvoicePdf } from "../api/sales";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
@@ -9,10 +10,49 @@ import { useAuthStore } from "../store/authStore";
 import RequireModule from "../components/RequireModule";
 import ProductItemIcon from "../components/ProductItemIcon";
 import type { Product, Sale } from "../types";
+import Cart from "./Cart";
 import { ToastNotification, type ToastProps } from "../components/AnimatedFeedback";
 
+/** The POS cart / checkout, as a panel sliding in from the right of the billing screen. */
+function CartPanel({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  // Portalled to <body> so the page's transform/overflow wrappers can't clip it.
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex justify-end" role="dialog" aria-modal="true" aria-label="Current bill">
+      <div className="absolute inset-0 bg-navy-950/40 backdrop-blur-xs animate-fade-in" onClick={onClose} />
+      <aside className="relative h-full w-full max-w-[1080px] bg-slate-50 shadow-2xl flex flex-col animate-slide-left">
+        <div className="flex items-center justify-between gap-3 px-4 sm:px-6 h-14 border-b border-slate-200 bg-white shrink-0">
+          <div className="flex items-center gap-2 text-[14px] font-bold text-navy-900">
+            <Icon name="cart" className="w-4 h-4 text-emerald-700" /> Current bill
+          </div>
+          <button type="button" onClick={onClose} className="btn-ghost btn-sm" aria-label="Close current bill">
+            <Icon name="x" className="w-4 h-4" /> Close
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto overflow-x-clip px-3 py-4 sm:px-6 sm:py-6">
+          <Cart onClose={onClose} />
+        </div>
+      </aside>
+    </div>,
+    document.body
+  );
+}
+
 function BillingInner() {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const cartOpen = searchParams.get("cart") === "1";
+  const openCart = () => setSearchParams({ cart: "1" });
+  const closeCart = useCallback(() => setSearchParams({}, { replace: true }), [setSearchParams]);
   const shopId = useAuthStore((s) => s.shopId);
   const activeShop = useAuthStore((s) => s.activeShop);
 
@@ -131,7 +171,7 @@ function BillingInner() {
       title: `Added "${p.name}" to Cart`,
       subtitle: `Rate: ₹${rate.toFixed(2)} (${priceSource === "live" && p.live_price ? "Live Online Price" : "Selling Price"})`,
       actionLabel: "View Cart & Bill",
-      onAction: () => navigate("/app/cart"),
+      onAction: openCart,
     });
   }
 
@@ -225,7 +265,7 @@ function BillingInner() {
           </div>
           <button
             type="button"
-            onClick={() => navigate("/app/cart")}
+            onClick={openCart}
             className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-2"
           >
             <span>Go to Cart & Create Bill</span>
@@ -274,13 +314,14 @@ function BillingInner() {
               Standard Shop Counter Rate
             </span>
           )}
-          <Link
-            to="/app/cart"
+          <button
+            type="button"
+            onClick={openCart}
             className="px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-2xs flex items-center gap-1.5"
           >
             <Icon name="cart" className="w-3.5 h-3.5 text-slate-500" />
             <span>View Cart ({posCount})</span>
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -644,7 +685,7 @@ function BillingInner() {
         <div className="lg:hidden fixed inset-x-3 bottom-[74px] z-30 pb-safe">
           <button
             type="button"
-            onClick={() => navigate("/app/cart")}
+            onClick={openCart}
             className="w-full flex items-center justify-between gap-3 rounded-2xl bg-navy-900 text-white px-4 py-3 shadow-lift active:scale-[0.99] transition"
           >
             <span className="text-[13.5px] font-semibold">
@@ -656,6 +697,8 @@ function BillingInner() {
           </button>
         </div>
       )}
+
+      {cartOpen && <CartPanel onClose={closeCart} />}
 
       {/* Toast Feedback */}
       {toast && (
