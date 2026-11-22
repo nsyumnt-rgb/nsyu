@@ -1696,7 +1696,7 @@ function OrderTimeline({ order, history, loading }: { order: OrderRecord; histor
   const timeOf = (key: string) => {
     if (key === "pending") return order.order_date;
     const row = [...(history || [])].reverse().find((h) => String(h.to_status).toLowerCase() === key);
-    return row?.created_at;
+    return row?.created_at ?? (row as any)?.createdAt;
   };
   const pct = cancelled ? 0 : (reached / (TRACK_STAGES.length - 1)) * 100;
 
@@ -1747,7 +1747,7 @@ function OrderTimeline({ order, history, loading }: { order: OrderRecord; histor
                   <span className="capitalize">{String(h.from_status).replace(/_/g, " ")}</span> → <b className="capitalize text-navy-900">{String(h.to_status).replace(/_/g, " ")}</b>
                   {h.note ? <span className="text-slate-500"> · {h.note}</span> : null}
                 </span>
-                <span className="text-slate-400 whitespace-nowrap">{fmtDateTime(h.created_at)}</span>
+                <span className="text-slate-400 whitespace-nowrap">{fmtDateTime(h.created_at ?? (h as any).createdAt)}</span>
               </li>
             ))}
           </ul>
@@ -1917,7 +1917,7 @@ function UpdateStatusModal({ order, onClose, onSaved }: { order: OrderRecord; on
   }, [order.id]);
 
   const step = FLOW.indexOf(f.status);
-  const rows = [...(history ?? [])].sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""));
+  const rows = [...(history ?? [])].sort((a, b) => Date.parse(b.created_at || (b as any).createdAt || "") - Date.parse(a.created_at || (a as any).createdAt || ""));
 
   return (
     <Modal
@@ -1993,7 +1993,7 @@ function UpdateStatusModal({ order, onClose, onSaved }: { order: OrderRecord; on
                     </div>
                     {h.note && <div className="text-slate-500 truncate">{h.note}</div>}
                   </div>
-                  <div className="shrink-0 text-right text-slate-400 tabular">{h.created_at ? fmtDateTime(h.created_at) : "—"}</div>
+                  <div className="shrink-0 text-right text-slate-400 tabular">{h.created_at || (h as any).createdAt ? fmtDateTime(h.created_at || (h as any).createdAt) : "—"}</div>
                 </li>
               ))}
             </ul>

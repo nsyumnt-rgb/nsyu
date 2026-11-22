@@ -146,7 +146,8 @@ export default function CustomerViewModal({ customerId, onClose, onOpenLedger }:
   }
 
   const balance = Number(customer?.current_balance ?? 0);
-  const created = customer?.created_at ? new Date(customer.created_at) : null;
+  const createdRaw = customer?.created_at ?? (customer as any)?.createdAt;
+  const created = createdRaw ? new Date(createdRaw) : null;
 
   return (
     <Modal

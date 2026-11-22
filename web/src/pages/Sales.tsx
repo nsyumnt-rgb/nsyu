@@ -474,7 +474,8 @@ function SalesInner() {
           {visible.map((s) => {
             const due = Number(s.due_amount);
             const st = statusChip(s);
-            const dt = s.created_at ? new Date(s.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—";
+            const when = s.invoice_date || s.created_at || (s as any).createdAt;
+            const dt = when ? new Date(when).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—";
 
             return (
               <li key={s.id} className="p-4 space-y-2.5">

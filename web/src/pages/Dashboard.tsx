@@ -167,7 +167,7 @@ export default function Dashboard() {
     const bucket = (rows: any[], dateField: string, val: (r: any) => number) => {
       const map = new Map<string, number>();
       for (const r of rows) {
-        const raw = r[dateField] || r.created_at;
+        const raw = r[dateField] || r.invoice_date || r.createdAt || r.created_at;
         if (!raw) continue;
         const d = new Date(raw);
         const k = chart.monthly ? `${d.getFullYear()}-${d.getMonth()}` : `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;

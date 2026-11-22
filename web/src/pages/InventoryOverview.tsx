@@ -462,7 +462,7 @@ function MovementList({ moves, loading, full = false }: { moves: InventoryTransa
                 {reason && m.type === "adjustment" ? `Adjustment: ${reason.toLowerCase()}` : MOVE_LABEL[m.type] || m.type}
               </div>
               <div className="text-[11.5px] text-slate-400 truncate">
-                {m.product?.name || `Product #${m.product_id}`} · {new Date(m.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                {m.product?.name || `Product #${m.product_id}`} · {new Date(m.created_at || (m as any).createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
                 {full && ` · balance ${m.balance_after}`}
               </div>
             </div>

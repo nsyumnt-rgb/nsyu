@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { withBillPayment, CONVERTED_SALE_ATTRS } from "../utils/orderPayment";
 import { marketplaceVisibleWhere } from "../utils/productVisibility";
 import { Op } from "sequelize";
 import {
@@ -15,6 +16,7 @@ import {
   Notification,
   Shop,
   CustomerAccount,
+  Sale,
 } from "../models";
 
 function round2(n: number): number {
@@ -319,13 +321,14 @@ export async function listPortalOrders(req: Request, res: Response) {
         { model: OrderItem, as: "items" },
         { model: OrderStatusHistory, as: "statusHistory" },
         { model: Shop, as: "shop", attributes: ["id", "name", "code", "phone", "address"] },
+        { model: Sale, as: "convertedSale", attributes: CONVERTED_SALE_ATTRS, required: false },
       ],
       order: [["order_date", "DESC"], ["id", "DESC"]],
     });
 
     return res.json({
       success: true,
-      data: rows,
+      data: rows.map((r) => withBillPayment(r.toJSON())),
       meta: {
         total: count,
         page: pageNum,
@@ -356,6 +359,7 @@ export async function getPortalOrder(req: Request, res: Response) {
         { model: OrderItem, as: "items" },
         { model: OrderStatusHistory, as: "statusHistory" },
         { model: Shop, as: "shop", attributes: ["id", "name", "code", "phone", "address"] },
+        { model: Sale, as: "convertedSale", attributes: CONVERTED_SALE_ATTRS, required: false },
       ],
     });
 
@@ -363,7 +367,7 @@ export async function getPortalOrder(req: Request, res: Response) {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    return res.json({ success: true, data: order });
+    return res.json({ success: true, data: withBillPayment(order.toJSON()) });
   } catch (err: any) {
     return res.status(500).json({ success: false, message: err.message || "Failed to load order" });
   }

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { withBillPayment, CONVERTED_SALE_ATTRS } from "../utils/orderPayment";
 import { Op } from "sequelize";
 import {
   sequelize,
@@ -32,7 +33,7 @@ export function orderChannel(placedBy?: string | null): OrderChannel {
 }
 function withChannel(order: any) {
   const json = typeof order?.toJSON === "function" ? order.toJSON() : order;
-  return { ...json, channel: orderChannel(json?.placed_by) };
+  return withBillPayment({ ...json, channel: orderChannel(json?.placed_by) });
 }
 
 function round2(n: number): number {
@@ -231,6 +232,7 @@ export async function getOrderById(req: Request, res: Response) {
         { model: Shop, as: "shop", attributes: ["id", "name", "address", "phone", "email", "logo"] },
         // Real status timeline for the order view / tracking screen.
         { model: OrderStatusHistory, as: "statusHistory" },
+        { model: Sale, as: "convertedSale", attributes: CONVERTED_SALE_ATTRS, required: false },
       ],
       order: [[{ model: OrderStatusHistory, as: "statusHistory" }, "created_at", "ASC"]],
     });
@@ -920,7 +922,7 @@ export async function convertOrderToBill(req: Request, res: Response) {
 
       // Update order status strictly to BILLED with conversion timestamp
       order.status = "BILLED";
-      order.payment_status = finalDue <= 0 ? "Paid" : paid > 0 ? "Partial" : order.payment_status;
+      order.payment_status = finalDue <= 0 ? "Paid" : paid > 0 ? "Partial" : "Pending";
       order.converted_sale_id = sale.id;
       order.billed_bill_id = sale.id;
       order.billed_at = now;

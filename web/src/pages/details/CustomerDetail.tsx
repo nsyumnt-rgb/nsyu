@@ -242,14 +242,14 @@ export default function CustomerDetail() {
                   customer.ledgerEntries.map((le: any) => (
                     <tr key={le.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-3 px-4 text-slate-500">
-                        {new Date(le.created_at).toLocaleDateString("en-IN")}
+                        {new Date(le.entry_date || le.createdAt || le.created_at).toLocaleDateString("en-IN")}
                       </td>
                       <td className="py-3 px-4 font-medium text-slate-800">{le.description || "Ledger Entry"}</td>
                       <td className="py-3 px-4 font-mono">
                         {le.reference_type === "Sale" ? (
                           <ReferenceLink type="sale" id={le.reference_id} refNumber={`Sale #${le.reference_id}`} />
-                        ) : le.reference_type === "Payment" ? (
-                          <ReferenceLink type="payment" id={le.reference_id} refNumber={`PAY-${le.reference_id}`} />
+                        ) : le.entry_type === "credit" && /payment/i.test(String(le.reference_type || "")) ? (
+                          <ReferenceLink type="payment" id={le.id} refNumber={le.reference_code || `PAY-${le.id}`} />
                         ) : (
                           <span className="text-slate-400">—</span>
                         )}
@@ -261,7 +261,7 @@ export default function CustomerDetail() {
                         {le.entry_type === "credit" ? `₹${Number(le.amount).toLocaleString("en-IN")}` : "—"}
                       </td>
                       <td className="py-3 px-4 text-right font-bold text-slate-900">
-                        ₹{Number(le.balance_after || 0).toLocaleString("en-IN")}
+                        ₹{Number(le.running_balance ?? le.balance_after ?? 0).toLocaleString("en-IN")}
                       </td>
                     </tr>
                   ))

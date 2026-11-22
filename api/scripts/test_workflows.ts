@@ -151,6 +151,9 @@ async function main() {
     ok(early.status === 400 && (await Sale.count({ where: { customer_id: cust.id } })) === 0, "cannot bill an order before it is delivered", early.status);
     const dlv = await call("PUT", `/orders/${order.id}/status`, tokA, { status: "delivered" });
     ok(dlv.status === 200, "owner marks order delivered", dlv.text);
+    // Payment label typed on the order before billing (no money received yet).
+    const mark = await call("PUT", `/orders/${order.id}/status`, tokA, { payment_status: "Paid" });
+    ok(mark.status === 200, "owner sets order payment label to Paid before billing", mark.text);
     const stockBefore = await stockOf(prod.id);
     const ledgerBefore = await CustomerLedger.count({ where: { customer_id: cust.id } });
     const conv = await call("POST", `/orders/${order.id}/convert`, tokA, { paidAmount: 0, paymentMethod: "cash" });
@@ -166,6 +169,26 @@ async function main() {
     ok(await balanceOf(cust.id) === 1000, "outstanding = bill total (₹1000, unpaid)", await balanceOf(cust.id));
     const ord = await Order.findByPk(order.id);
     ok(/bill|completed|converted/i.test(String(ord.status)) || ord.sale_id || ord.bill_id, "order marked billed", ord.status);
+    // Once billed, the order's payment status must follow the bill, not the typed label.
+    const payOf = async () => ({
+      owner: (await call("GET", `/orders/${order.id}`, tokA)).json?.data?.payment_status,
+      list: ((await call("GET", "/orders", tokA)).json?.data || []).find((o: any) => o.id === order.id)?.payment_status,
+      portal: (await call("GET", `/customer-portal/orders/${order.id}`, tokC)).json?.data?.payment_status,
+      portalList: ((await call("GET", "/customer-portal/orders", tokC)).json?.data || []).find((o: any) => o.id === order.id)?.payment_status,
+    });
+    const same = (v: any, want: string) => v.owner === want && v.list === want && v.portal === want && v.portalList === want;
+    let pv = await payOf();
+    ok(same(pv, "Pending"), "unpaid bill → order payment shows Pending everywhere (not the typed 'Paid')", pv);
+    const billId = conv.json?.data?.sale?.id ?? conv.json?.data?.saleId ?? (await Sale.findOne({ where: { order_id: order.id } }))?.id;
+    const part = await call("POST", `/sales/${billId}/payments`, tokA, { amount: 400, method: "cash" }, { "x-idempotency-key": "wf-ord-pay-part-01" });
+    ok(part.status === 200 || part.status === 201, "receive ₹400 on the order's bill", part.text);
+    pv = await payOf();
+    ok(same(pv, "Partial"), "part-paid bill → order payment shows Partial", pv);
+    const rest = await call("POST", `/sales/${billId}/payments`, tokA, { amount: 600, method: "upi" }, { "x-idempotency-key": "wf-ord-pay-rest-01" });
+    ok(rest.status === 200 || rest.status === 201, "receive remaining ₹600", rest.text);
+    pv = await payOf();
+    ok(same(pv, "Paid"), "fully paid bill → order payment shows Paid", pv);
+    ok(await balanceOf(cust.id) === 0, "customer balance back to 0 after both payments", await balanceOf(cust.id));
 
     // ── C: billing & ledger (full / partial / credit / later payment) ───
     console.log("\nWorkflow C — billing and ledger");
