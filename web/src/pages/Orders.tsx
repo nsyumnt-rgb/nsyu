@@ -1125,14 +1125,23 @@ export default function Orders() {
                     <button type="button" onClick={() => setStep("tracking")} className="btn-secondary">
                       <Icon name="truck" className="w-4 h-4 text-slate-500" /> Tracking
                     </button>
-                    {!billed && s !== "cancelled" && (
-                      <button type="button" onClick={() => openUpdate()} className="btn-secondary">
-                        <Icon name="edit" className="w-4 h-4 text-slate-500" /> Update status
-                      </button>
-                    )}
                   </>
                 }
               />
+
+              {!billed && s !== "cancelled" && (
+                <OrderStatusEditor
+                  key={`${o.id}-${o.status}-${o.payment_status}`}
+                  order={o}
+                  onSaved={(updated) => {
+                    setSelectedOrder(updated);
+                    getOrderById(updated.id)
+                      .then((r) => setOrderDetail((r.data.data as any) ?? null))
+                      .catch(() => {});
+                    loadOrdersData();
+                  }}
+                />
+              )}
 
               {/* Next step */}
               {billed ? (
@@ -1787,5 +1796,88 @@ function OrderChannelBadge({ channel }: { channel: OrderChannel }) {
     <span className="badge bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-500/20" title="Entered at the shop counter">
       <Icon name="store" className="w-3 h-3" /> Offline
     </span>
+  );
+}
+
+const STATUS_OPTIONS: [string, string][] = [
+  ["pending", "Pending"],
+  ["confirmed", "Accepted"],
+  ["processing", "Packed"],
+  ["shipped", "Shipped"],
+  ["delivered", "Delivered"],
+  ["cancelled", "Cancelled"],
+];
+const PAYMENT_OPTIONS = ["Pending", "Paid", "Failed"];
+
+/** Inline status + payment dropdowns with Save, shown on the order details page. */
+function OrderStatusEditor({ order, onSaved }: { order: OrderRecord; onSaved: (o: OrderRecord) => void }) {
+  const current = String(order.status || "").toLowerCase();
+  const currentPay = order.payment_status || "Pending";
+  const [status, setStatus] = useState(current);
+  const [payment, setPayment] = useState(currentPay);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const options = STATUS_OPTIONS.some(([k]) => k === current) ? STATUS_OPTIONS : [[current, current.replace(/_/g, " ")] as [string, string], ...STATUS_OPTIONS];
+  const dirty = status !== current || payment !== currentPay || note.trim() !== "";
+
+  async function save() {
+    if (status === "cancelled" && current !== "cancelled" && !window.confirm(`Cancel order #${order.order_number}? The customer will see it as cancelled.`)) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await updateOrderStatus(order.id, {
+        status: status !== current ? status : undefined,
+        payment_status: payment !== currentPay ? payment : undefined,
+        remarks: note.trim() || undefined,
+      });
+      setDone(true);
+      setTimeout(() => setDone(false), 2500);
+      if (res.data.data) onSaved(res.data.data);
+    } catch (e) {
+      setErr(apiErrorMessage(e, "Failed to update order status"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="card p-4 sm:p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_2fr_auto] gap-3 items-end">
+        <div>
+          <label className="label" htmlFor="order-status">Order status</label>
+          <select id="order-status" value={status} onChange={(e) => setStatus(e.target.value)} className="input capitalize">
+            {options.map(([k, label]) => (
+              <option key={k} value={k}>{label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="order-payment">Payment status</label>
+          <select id="order-payment" value={payment} onChange={(e) => setPayment(e.target.value)} className="input">
+            {(PAYMENT_OPTIONS.includes(currentPay) ? PAYMENT_OPTIONS : [currentPay, ...PAYMENT_OPTIONS]).map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="order-note">Note (optional)</label>
+          <input id="order-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. courier tracking ID" className="input" />
+        </div>
+        <button type="button" onClick={save} disabled={!dirty || saving} className="btn-primary">
+          <Icon name={done ? "check" : "edit"} className="w-4 h-4" /> {saving ? "Saving…" : done ? "Saved" : "Save"}
+        </button>
+      </div>
+      {status === "cancelled" && current !== "cancelled" && (
+        <p className="mt-3 flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+          <Icon name="alert" className="w-4 h-4 shrink-0" /> Cancelling stops this order. The customer sees it as cancelled in their portal.
+        </p>
+      )}
+      {err && (
+        <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {err}</p>
+      )}
+    </section>
   );
 }
