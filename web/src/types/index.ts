@@ -194,6 +194,7 @@ export interface ProductStockEntry {
   current_stock: number;
   min_stock?: number | null;
   shop?: Shop;
+  updated_at?: string;
 }
 
 // CHANGED: Product is now an owner-level catalog entry (no shop_id) —
@@ -226,6 +227,7 @@ export interface Product {
   images?: ProductImage[];
   stocks?: ProductStockEntry[]; // filtered to the active shop when browsing normally
   created_at?: string;
+  updated_at?: string;
 }
 
 // Redacted shape returned by the public customer-facing endpoint —

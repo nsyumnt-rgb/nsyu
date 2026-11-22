@@ -351,6 +351,19 @@ function SettingsInner() {
 
   const [settings, setSettings] = useState<FullSettingsState>(getInitialState);
 
+  // The shop name always comes from the registered shop — nobody types it here.
+  // Re-sync when the shop loads or the user switches shop.
+  useEffect(() => {
+    if (!activeShop?.name) return;
+    setSettings((prev) => ({
+      ...prev,
+      businessName: activeShop.name,
+      tradeName: activeShop.name,
+      shopName: activeShop.name,
+      shopCode: activeShop.code || prev.shopCode,
+    }));
+  }, [activeShop?.id, activeShop?.name, activeShop?.code]);
+
   useEffect(() => {
     setSettings(getInitialState());
     if (activeShop?.id) {
@@ -411,7 +424,7 @@ function SettingsInner() {
       if (activeShop?.id) {
         try {
           const res = await api.put(`/shops/${activeShop.id}`, {
-            name: settings.businessName || settings.shopName,
+            name: activeShop.name || settings.businessName || settings.shopName,
             phone: settings.businessPhone || settings.branchPhone,
             email: settings.businessEmail || settings.branchEmail,
             address: settings.address || settings.branchAddress,
@@ -678,14 +691,9 @@ function SettingsInner() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                        Business Name <span className="text-rose-500">*</span>
+                        Business Name
                       </label>
-                      <input
-                        type="text"
-                        value={settings.businessName}
-                        onChange={(e) => handleTextChange("businessName", e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 font-medium text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
-                      />
+                      <ShopNameReadOnly name={settings.businessName} />
                     </div>
                     <div>
                       <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
@@ -1127,21 +1135,11 @@ function SettingsInner() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Legal Business Name</label>
-              <input
-                type="text"
-                value={settings.businessName}
-                onChange={(e) => handleTextChange("businessName", e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
-              />
+              <ShopNameReadOnly name={settings.businessName} />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Trade / Brand Name</label>
-              <input
-                type="text"
-                value={settings.tradeName}
-                onChange={(e) => handleTextChange("tradeName", e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
-              />
+              <ShopNameReadOnly name={settings.tradeName} />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Business Tagline</label>
@@ -1258,12 +1256,7 @@ function SettingsInner() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Branch Name</label>
-              <input
-                type="text"
-                value={settings.shopName}
-                onChange={(e) => handleTextChange("shopName", e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-semibold"
-              />
+              <ShopNameReadOnly name={settings.shopName} />
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Branch Code</label>
@@ -2231,6 +2224,22 @@ function ServerStatusCard() {
       <button type="button" onClick={check} disabled={state.status === "checking"} className="btn-secondary btn-sm">
         Check again
       </button>
+    </div>
+  );
+}
+
+/** Shop name shown from the registered shop; it is not typed in by hand. */
+function ShopNameReadOnly({ name }: { name: string }) {
+  return (
+    <div>
+      <div
+        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-100 font-semibold text-slate-700 truncate"
+        title={name}
+        aria-readonly="true"
+      >
+        {name || "—"}
+      </div>
+      <p className="mt-1 text-[10.5px] text-slate-400">Filled automatically from your shop</p>
     </div>
   );
 }

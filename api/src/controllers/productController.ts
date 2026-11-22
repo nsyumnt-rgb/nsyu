@@ -208,7 +208,8 @@ export async function listProductsOwnerView(req: Request, res: Response) {
         include: [{ model: Shop, as: "shop", attributes: ["id", "name", "code"] }],
       },
     ],
-    order: [["created_at", "DESC"]],
+    // Recently edited products first (new products count as edited when created).
+    order: [["updated_at", "DESC"], ["id", "DESC"]],
   });
 
   const allowedFields = await getAllowedFields(req, ["purchase_price", "profit", "supplier"]);

@@ -14,6 +14,7 @@ import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import ProductPhotos from "../components/ProductPhotos";
 import { useAuthStore } from "../store/authStore";
 import { usePosStore } from "../store/posStore";
+import { byRecentChange } from "../utils/productRecency";
 import RequireModule from "../components/RequireModule";
 import type { Category, Product } from "../types";
 
@@ -150,8 +151,9 @@ function ProductsInner() {
   // Pagination & Sorting
   const pageSize = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState<string>("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Default: most recently added / edited / restocked products on top.
+  const [sortField, setSortField] = useState<string>("recent");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -380,6 +382,7 @@ function ProductsInner() {
 
   // Sorting
   const sortedProducts = useMemo(() => {
+    if (sortField === "recent") return [...filteredProducts].sort(byRecentChange);
     return [...filteredProducts].sort((a, b) => {
       let valA: any = (a as any)[sortField];
       let valB: any = (b as any)[sortField];
@@ -415,9 +418,13 @@ function ProductsInner() {
   const outOfStockCount = products.filter((p) => stockOf(p) <= 0).length;
 
   // Handle Sort Click
+  // Header click cycles: A→Z, Z→A, then back to "recently changed first".
   function handleSort(field: string) {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    if (sortField === field && sortOrder === "desc") {
+      setSortField("recent");
+      setSortOrder("desc");
+    } else if (sortField === field) {
+      setSortOrder("desc");
     } else {
       setSortField(field);
       setSortOrder("asc");

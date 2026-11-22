@@ -1,3 +1,4 @@
+import { byRecentChange } from "../utils/productRecency";
 import { useCallback, useEffect, useMemo, useState, memo, startTransition } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -344,6 +345,7 @@ export default function Inventory({
   }, [products]);
 
   // Filtered Products for Table
+  // Most recently added / edited / restocked products first.
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const stock = getProductStock(p);
@@ -364,7 +366,7 @@ export default function Inventory({
         if (!mName && !mSku && !mBarcode) return false;
       }
       return true;
-    });
+    }).sort(byRecentChange);
   }, [products, activeFilter, categoryFilter, searchQuery, getProductStock]);
 
   // Filtered Movement History

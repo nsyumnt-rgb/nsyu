@@ -8,5 +8,5 @@ export const FEATURES = {
    * Off while the shop runs counter billing only; /app/orders still works.
    * Turn it on when online orders start coming in.
    */
-  showOrdersMenu: false,
+  showOrdersMenu: true,
 } as const;
