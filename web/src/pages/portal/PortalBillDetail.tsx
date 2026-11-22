@@ -117,7 +117,7 @@ export default function PortalBillDetail() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Top action bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           to="/portal/bills"
           className="text-xs font-bold text-gray-600 hover:text-gray-900 flex items-center gap-1.5"
@@ -125,7 +125,7 @@ export default function PortalBillDetail() {
           <span>&larr; Back to Invoices</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {bill.payment_status !== "CANCELLED" && bill.status !== "cancelled" && bill.status !== "returned" && (
             <button
               type="button"

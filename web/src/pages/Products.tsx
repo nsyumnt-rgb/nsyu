@@ -783,11 +783,11 @@ function ProductsInner() {
 
         {/* Filters & View Toggles */}
         <div className="flex items-center gap-2.5 w-full md:w-auto shrink-0 flex-wrap">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0 max-w-full">
             <select
               value={categoryFilter}
               onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none"
+              className="min-w-0 max-w-[60vw] sm:max-w-none px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none"
             >
               <option value="All">All Categories</option>
               {categories.map((c) => (

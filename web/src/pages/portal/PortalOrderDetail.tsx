@@ -222,19 +222,19 @@ export default function PortalOrderDetail() {
 
         <div className="divide-y divide-gray-100">
           {order.items?.map((item: any, idx: number) => (
-            <div key={item.id} className="p-4 sm:px-5 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-3">
-                <span className="text-gray-400 font-mono w-5">{idx + 1}.</span>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">{item.product_name}</h4>
+            <div key={item.id} className="p-4 sm:px-5 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-gray-400 font-mono w-5 shrink-0">{idx + 1}.</span>
+                <div className="min-w-0">
+                  <h4 className="font-bold text-gray-900 text-sm [overflow-wrap:anywhere]">{item.product_name}</h4>
                   <div className="text-gray-400 font-mono text-[11px] mt-0.5">
                     Unit Price: ₹{Number(item.rate ?? item.unit_price ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="font-bold text-gray-700">Qty: {item.quantity}</div>
+              <div className="text-right shrink-0">
+                <div className="font-bold text-gray-700 whitespace-nowrap">Qty: {item.quantity}</div>
                 <div className="text-sm font-black text-gray-900 mt-0.5">
                   ₹{Number(item.amount ?? item.line_total ?? item.quantity * Number(item.rate ?? item.unit_price ?? 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>

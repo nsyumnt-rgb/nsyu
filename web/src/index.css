@@ -24,6 +24,8 @@
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: none;
+    /* Long IDs, emails and product codes wrap instead of widening the page */
+    overflow-wrap: break-word;
   }
   #root {
     width: 100%;

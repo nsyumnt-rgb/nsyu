@@ -780,7 +780,7 @@ export default function Login() {
               {regSuccess}
             </p>
           )}
-          <form onSubmit={handleRegister} className="grid sm:grid-cols-2 gap-3.5">
+          <form onSubmit={handleRegister} className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <RegField
               label="Full name"
               id="reg-name"

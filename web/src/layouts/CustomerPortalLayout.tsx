@@ -226,7 +226,7 @@ export default function CustomerPortalLayout() {
                 <ChevronDownIcon className="hidden xl:block w-4 h-4 text-emerald-100/70" />
               </button>
               {profileOpen && (
-                <div role="menu" className="absolute right-0 mt-2 w-72 rounded-2xl bg-white text-slate-800 shadow-lift border border-border py-2 z-50 animate-fade-in">
+                <div role="menu" className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-16px)] rounded-2xl bg-white text-slate-800 shadow-lift border border-border py-2 z-50 animate-fade-in">
                   <div className="px-4 py-3 border-b border-slate-100">
                     <p className="text-[14px] font-semibold text-navy-900 truncate">{customer?.name}</p>
                     <p className="text-[12px] text-slate-500 mt-0.5">{customer?.phone}</p>

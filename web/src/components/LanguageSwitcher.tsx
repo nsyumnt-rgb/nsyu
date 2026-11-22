@@ -182,7 +182,7 @@ export default function LanguageSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`h-9 px-2 sm:px-2.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer text-xs font-bold ${
+        className={`h-9 w-9 sm:w-auto justify-center px-0 sm:px-2.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer text-xs font-bold ${
           lang === "Hindi"
             ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 shadow-2xs"
             : "bg-white border-slate-200/90 text-slate-700 hover:bg-slate-100/80 shadow-2xs"
@@ -203,11 +203,11 @@ export default function LanguageSwitcher() {
           <line x1="2" y1="12" x2="22" y2="12" />
           <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
         </svg>
-        <span className="text-[11px] font-black uppercase tracking-wider">
+        <span className="hidden sm:inline text-[11px] font-black uppercase tracking-wider">
           {lang === "Hindi" ? "हिंदी" : "EN"}
         </span>
         <svg
-          className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
+          className={`hidden sm:block w-3 h-3 text-slate-400 transition-transform duration-200 ${
             open ? "rotate-180" : ""
           }`}
           viewBox="0 0 24 24"

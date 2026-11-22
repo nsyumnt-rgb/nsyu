@@ -84,7 +84,7 @@ export default function MarketCart() {
           </div>
         </div>
       ) : (
-        <div className="grid lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div className="lg:col-span-8 space-y-4">
             {groups.map((g) => (
               <section key={g.shop.id} className="card overflow-hidden">
@@ -102,18 +102,18 @@ export default function MarketCart() {
                     {g.cart!.items.map((it) => {
                       const key = `${g.shop.id}-${it.productId}`;
                       return (
-                        <li key={key} className="px-5 py-4 flex gap-4">
-                          <Link to={`/market/p/${g.shop.id}/${it.productId}`} className="relative w-20 h-20 rounded-xl bg-[#F3F4F2] flex items-center justify-center shrink-0 overflow-hidden">
+                        <li key={key} className="px-4 sm:px-5 py-4 flex gap-3 sm:gap-4">
+                          <Link to={`/market/p/${g.shop.id}/${it.productId}`} className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-[#F3F4F2] flex items-center justify-center shrink-0 overflow-hidden">
                             {it.imageUrl ? <img src={resolveAssetUrl(it.imageUrl) ?? undefined} alt="" className="w-full h-full object-contain p-2 mix-blend-multiply" /> : <ProductPlaceholder name={it.name} compact />}
                           </Link>
                           <div className="min-w-0 flex-1">
                             <div className="flex justify-between gap-3">
-                              <Link to={`/market/p/${g.shop.id}/${it.productId}`} className="text-[14px] font-semibold text-navy-900 line-clamp-2 hover:text-brand-700">{it.name}</Link>
+                              <Link to={`/market/p/${g.shop.id}/${it.productId}`} className="min-w-0 text-[14px] font-semibold text-navy-900 line-clamp-2 [overflow-wrap:anywhere] hover:text-brand-700">{it.name}</Link>
                               <span className="text-[14px] font-bold tabular whitespace-nowrap">{rupees(it.lineTotal)}</span>
                             </div>
                             <div className="text-[12px] text-slate-500 mt-0.5">{rupees(it.unitPrice)} each{it.gstPercent ? ` · ${it.gstPercent}% GST` : ""}</div>
                             {it.warning && <div className="mt-1 text-[12px] text-amber-700">{it.warning}</div>}
-                            <div className="mt-2.5 flex items-center justify-between">
+                            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                               <div className="flex items-center rounded-lg ring-1 ring-border h-10">
                                 <button type="button" disabled={busy === key} onClick={() => setQty(g.shop.id, it.productId, it.quantity - 1)} className="w-10 h-full font-bold" aria-label="Decrease quantity">−</button>
                                 <span className="w-9 text-center font-bold tabular">{it.quantity}</span>

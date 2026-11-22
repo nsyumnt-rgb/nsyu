@@ -525,7 +525,7 @@ function BarChart({ data, loading }: { data: { label: string; sales: number }[];
             key={d.label + i}
             onMouseEnter={() => setHover(i)}
             onMouseLeave={() => setHover((h) => (h === i ? null : h))}
-            className="group relative flex-1 h-full flex flex-col justify-end items-center cursor-pointer"
+            className="group relative flex-1 min-w-0 h-full flex flex-col justify-end items-center cursor-pointer"
           >
             <div
               className="w-full max-w-[28px] rounded-t-md bg-gradient-to-t from-emerald-600 to-emerald-400 hover:from-emerald-700 hover:to-emerald-500 transition-all duration-300"

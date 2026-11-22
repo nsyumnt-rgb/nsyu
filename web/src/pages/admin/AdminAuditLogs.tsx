@@ -81,13 +81,13 @@ export default function AdminAuditLogs() {
             Immutable system audit trail recording every administrative governance operation
           </p>
         </div>
-        <form onSubmit={handleSearchSubmit} className="flex items-center space-x-2">
+        <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search action, target, actor, IP..."
-            className="input h-10 text-xs w-64 bg-white"
+            className="input h-10 text-xs flex-1 min-w-0 sm:flex-none sm:w-64 bg-white"
           />
           <button
             type="submit"

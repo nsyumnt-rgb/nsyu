@@ -53,33 +53,12 @@ export default function MarketLayout() {
 
   return (
     <div className="market-shell min-h-screen flex flex-col bg-white w-full max-w-full overflow-x-clip">
-      {/* 1. TOP NOTICE / ANNOUNCEMENT BAR (Emerald Green) */}
-      <div className="bg-[#064E3B] text-white text-[11px] sm:text-xs font-semibold py-1.5 px-4 shadow-xs">
-        <div className="max-w-[1340px] mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 truncate">
-            <span className="bg-emerald-700/80 px-2 py-0.5 rounded text-[10px] tracking-wider uppercase font-bold text-emerald-100">
-              NSYU Retail
-            </span>
-            <span className="truncate">India's Multi-Store Consumer Marketplace · Direct Storefront Prices</span>
-          </div>
-          <div className="flex items-center gap-4 shrink-0 text-[11px]">
-            <Link to="/register" className="text-emerald-100 hover:text-white font-medium hover:underline">
-              Register Shop
-            </Link>
-            <span className="text-emerald-500">|</span>
-            <Link to="/login" className="text-white font-bold hover:underline">
-              {customer ? `Hi, ${customer.name}` : owner ? "Merchant Portal" : "Sign In"}
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. MAIN HEADER (Search, Cart, Navigation) */}
+      {/* MAIN HEADER (Search, Cart, Navigation) */}
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-2xs">
-        <div className="max-w-[1340px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-3 sm:gap-6">
+        <div className="max-w-[1340px] mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-6 min-w-0">
           {/* Brand Logo */}
-          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#064E3B] to-[#047857] text-white flex items-center justify-center font-black text-xl shadow-sm group-hover:scale-105 transition-transform">
+          <Link to="/" className="flex items-center gap-2 sm:gap-2.5 shrink-0 group">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#064E3B] to-[#047857] text-white flex items-center justify-center font-black text-xl shadow-sm group-hover:scale-105 transition-transform">
               N
             </div>
             <div>
@@ -117,7 +96,7 @@ export default function MarketLayout() {
           </form>
 
           {/* Right Header Navigation & Actions */}
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-4 min-w-0">
             {/* Desktop Nav Links */}
             <nav className="hidden lg:flex items-center gap-1 text-xs font-semibold text-gray-700">
               {navLinks.map((l) => (
@@ -142,7 +121,7 @@ export default function MarketLayout() {
             {/* Cart Icon Button */}
             <Link
               to="/market/cart"
-              className="relative p-2.5 rounded-xl border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-navy-950 transition flex items-center justify-center group"
+              className="relative shrink-0 p-2 sm:p-2.5 rounded-xl border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50/50 text-navy-950 transition flex items-center justify-center group"
               title="View Cart"
             >
               <svg className="w-5 h-5 group-hover:scale-110 transition-transform text-[#064E3B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,12 +138,12 @@ export default function MarketLayout() {
             {customer ? (
               <Link
                 to="/portal/home"
-                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 hover:bg-emerald-100 transition text-xs font-bold"
+                className="flex items-center gap-2 min-w-0 p-1 min-[400px]:pl-2 min-[400px]:pr-3 min-[400px]:py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 hover:bg-emerald-100 transition text-xs font-bold"
               >
-                <div className="w-6 h-6 rounded-full bg-emerald-800 text-white flex items-center justify-center text-[10px]">
+                <div className="w-7 h-7 min-[400px]:w-6 min-[400px]:h-6 shrink-0 rounded-full bg-emerald-800 text-white flex items-center justify-center text-[10px]">
                   {customer.name?.charAt(0) || "C"}
                 </div>
-                <span className="max-w-[90px] truncate">{customer.name}</span>
+                <span className="hidden min-[400px]:inline max-w-[90px] truncate">{customer.name}</span>
               </Link>
             ) : owner ? (
               <Link
@@ -193,7 +172,7 @@ export default function MarketLayout() {
             <button
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
-              className="lg:hidden p-2 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-700"
+              className="lg:hidden shrink-0 p-2 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-700"
               aria-label="Toggle navigation menu"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

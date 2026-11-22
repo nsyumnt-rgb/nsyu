@@ -126,8 +126,8 @@ export default function ReferenceLink({
   const displayText = children || refNumber || `#${id}`;
 
   const defaultClasses = badge
-    ? "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 transition-colors shadow-2xs cursor-pointer"
-    : "inline-flex items-center gap-1 font-mono font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer";
+    ? "inline-flex max-w-full min-w-0 items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 transition-colors shadow-2xs cursor-pointer"
+    : "inline-flex max-w-full min-w-0 items-center gap-1 font-mono font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer";
 
   return (
     <Link
@@ -137,13 +137,13 @@ export default function ReferenceLink({
       className={`${defaultClasses} ${className}`}
     >
       {showIcon && (
-        <svg className="w-3 h-3 text-blue-500 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg className="w-3 h-3 shrink-0 text-blue-500 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
           <polyline points="15 3 21 3 21 9" />
           <line x1="10" y1="14" x2="21" y2="3" />
         </svg>
       )}
-      <span>{displayText}</span>
+      <span className={`min-w-0 ${/truncate/.test(className) ? "truncate" : "[overflow-wrap:anywhere]"}`}>{displayText}</span>
     </Link>
   );
 }

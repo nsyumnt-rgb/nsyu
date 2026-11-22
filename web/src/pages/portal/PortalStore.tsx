@@ -65,7 +65,7 @@ export default function PortalStore() {
       )}
 
       {/* Banner + store facts */}
-      <section className="grid lg:grid-cols-[minmax(0,1fr)_280px] gap-4">
+      <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-4">
         <BannerSlider slides={slides} shopName={shopName} address={customer?.shop?.address || shop?.address || null} loading={newest.loading && offers.loading} />
         <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
           <Fact tone="emerald" title={shop?.acceptsOrders === false ? "Orders paused" : "Order online"} sub={shop?.acceptsOrders === false ? "The shop isn't taking online orders right now" : "Home delivery or store pickup"} icon={<><path d="M1 3h15v13H1z" /><path d="M16 8h4l3 3v5h-7z" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></>} />
@@ -179,7 +179,7 @@ function BannerSlider({ slides, shopName, address, loading }: { slides: Slide[];
                 </div>
               </div>
             ) : (
-              <div key={k} className="relative shrink-0 w-full min-h-[260px] sm:min-h-[320px] grid sm:grid-cols-[1.1fr_1fr] items-center gap-4 px-6 sm:px-20 py-8 pb-12" aria-hidden={k !== idx}>
+              <div key={k} className="relative shrink-0 w-full min-h-[260px] sm:min-h-[320px] grid grid-cols-1 sm:grid-cols-[1.1fr_1fr] items-center gap-4 px-6 sm:px-20 py-8 pb-12" aria-hidden={k !== idx}>
                 <SlideContent slide={s} shopName={shopName} address={address} />
               </div>
             )

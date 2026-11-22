@@ -1532,7 +1532,7 @@ export default function Inventory({
           )}
 
           {/* Search Input on the right of category */}
-          <div className="relative flex-1">
+          <div className="relative flex-1 min-w-0">
             <input
               type="text"
               value={searchQuery}
@@ -2233,7 +2233,7 @@ export default function Inventory({
                           setViewProduct(p);
                           setActiveDetailImage(coverImg || null);
                         }}
-                        className="text-[13.5px] font-bold text-navy-900 leading-snug text-left line-clamp-2 hover:text-emerald-700"
+                        className="max-w-full text-[13.5px] font-bold text-navy-900 leading-snug text-left line-clamp-2 [overflow-wrap:anywhere] hover:text-emerald-700"
                       >
                         {p.name}
                       </button>

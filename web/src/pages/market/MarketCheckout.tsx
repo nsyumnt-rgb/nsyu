@@ -151,13 +151,13 @@ export default function MarketCheckout() {
       <h1 className="page-title">Checkout</h1>
       {error && <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-[13px] text-rose-700" role="alert">{error}</div>}
 
-      <div className="grid lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <div className="lg:col-span-8 space-y-5">
           {/* 1 Address */}
           <section className="card p-5">
             <h2 className="card-title mb-4"><span className="text-brand-700">1</span> · Delivery address</h2>
             {!needsAddress && <p className="text-[12.5px] text-slate-500 mb-3">All orders are pickups — the shop only needs your name and phone.</p>}
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Field label="Full name" value={address.name} onChange={(v) => setAddress({ ...address, name: v })} autoComplete="name" />
               <Field label="Phone" value={address.phone} onChange={(v) => setAddress({ ...address, phone: v })} autoComplete="tel" inputMode="tel" />
               {needsAddress && (
@@ -195,7 +195,7 @@ export default function MarketCheckout() {
                   </ul>
                   <fieldset>
                     <legend className="label"><span className="text-brand-700">2</span> · Delivery method</legend>
-                    <div className="grid sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {(["delivery", "pickup"] as const).map((d) => (
                         <Option key={d} name={`d-${g.shop.id}`} checked={ch?.deliveryType === d} onChange={() => setChoice(g.shop.id, { deliveryType: d })} title={d === "delivery" ? "Home delivery" : "Pickup from shop"} hint={d === "delivery" ? "To the address above" : "Collect when it's ready"} />
                       ))}
@@ -203,7 +203,7 @@ export default function MarketCheckout() {
                   </fieldset>
                   <fieldset>
                     <legend className="label"><span className="text-brand-700">3</span> · Payment</legend>
-                    <div className="grid sm:grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       {opts.map((m) => (
                         <Option key={m} name={`p-${g.shop.id}`} checked={ch?.paymentMethod === m} onChange={() => setChoice(g.shop.id, { paymentMethod: m })} title={PAY_LABEL[m].title} hint={PAY_LABEL[m].hint} />
                       ))}

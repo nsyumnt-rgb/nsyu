@@ -58,7 +58,7 @@ export default function MarketProduct() {
   }
   if (!item) {
     return (
-      <div className="grid lg:grid-cols-2 gap-8 animate-pulse">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-pulse">
         <div className="aspect-square rounded-[22px] bg-[#EEEEEE]" />
         <div className="space-y-4 pt-4"><div className="h-8 w-3/4 bg-slate-100 rounded" /><div className="h-10 w-1/2 bg-slate-100 rounded" /></div>
       </div>
@@ -108,7 +108,7 @@ export default function MarketProduct() {
         <span className="text-navy-900 font-medium truncate max-w-[50vw]">{item.name}</span>
       </nav>
 
-      <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         <div>
           <div className="relative aspect-square rounded-[22px] bg-[#F3F4F2] overflow-hidden flex items-center justify-center">
             {gallery.length ? <img src={gallery[img]} alt={item.name} className="w-full h-full object-contain p-[10%] mix-blend-multiply" /> : <ProductPlaceholder name={item.name} category={item.category} brand={item.brand} />}
@@ -180,8 +180,8 @@ export default function MarketProduct() {
         {item.otherOffers.length === 0 ? (
           <p className="text-[13px] text-slate-500">No other shop on the marketplace lists this product right now.</p>
         ) : (
-          <div className="card overflow-hidden">
-            <table>
+          <div className="card overflow-x-auto">
+            <table className="min-w-[480px]">
               <thead>
                 <tr>
                   <th>Shop</th>
@@ -219,7 +219,7 @@ export default function MarketProduct() {
           {tab === "description" ? (
             <p className="text-[14px] text-slate-700 leading-relaxed whitespace-pre-line">{item.description && item.description !== item.name ? item.description : "The shop hasn't added a description yet."}</p>
           ) : (
-            <dl className="grid sm:grid-cols-2 border border-border rounded-2xl overflow-hidden">
+            <dl className="grid grid-cols-1 sm:grid-cols-2 border border-border rounded-2xl overflow-hidden">
               {[["SKU", item.sku], ["Brand", item.brand || "—"], ["Category", item.category || "—"], ["MRP", item.mrp ? rupees(item.mrp) : "—"]].map(([k, v]) => (
                 <div key={k} className="flex justify-between px-4 py-3 border-b border-slate-100 text-[13px]"><dt className="text-slate-500">{k}</dt><dd className="font-medium text-navy-900">{v}</dd></div>
               ))}
