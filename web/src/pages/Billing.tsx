@@ -401,14 +401,14 @@ function BillingInner() {
             return (
               <div
                 key={p.id}
-                className={`group bg-white rounded-2xl border p-2.5 sm:p-3.5 flex flex-col sm:flex-row gap-2 sm:gap-3 transition hover:shadow-lift ${
+                className={`group min-w-0 bg-white rounded-2xl border p-2.5 sm:p-3.5 flex flex-col 2xl:flex-row gap-2 sm:gap-3 transition hover:shadow-lift ${
                   inCart ? "border-brand-300 ring-2 ring-brand-500/10" : "border-border hover:border-brand-200"
                 }`}
               >
                 <button
                   type="button"
                   onClick={() => addToCart(p)}
-                  className="w-full h-28 sm:w-22 sm:h-22 shrink-0 rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center p-1"
+                  className="w-full h-28 2xl:w-[88px] 2xl:h-[88px] shrink-0 rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center p-1"
                   aria-label={`Add ${p.name}`}
                 >
                   {img ? (
@@ -456,7 +456,7 @@ function BillingInner() {
                     >
                       <span className="text-xs sm:text-[13px] font-bold leading-none">+ Cart</span>
                       {inCart > 0 && (
-                        <span className="absolute -top-2 -right-2 min-w-[18px] h-4.5 px-1 rounded-full bg-rose-500 text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
+                        <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
                           {inCart}
                         </span>
                       )}

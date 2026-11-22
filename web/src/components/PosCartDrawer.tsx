@@ -166,7 +166,7 @@ export default function PosCartDrawer() {
                   className="p-3 rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 transition-all shadow-xs flex items-center gap-3"
                 >
                   {/* Thumbnail */}
-                  <div className="w-13 h-13 rounded-xl bg-slate-50 overflow-hidden shrink-0 border border-slate-200/60 flex items-center justify-center p-1">
+                  <div className="w-[52px] h-[52px] rounded-xl bg-slate-50 overflow-hidden shrink-0 border border-slate-200/60 flex items-center justify-center p-1">
                     {photo ? (
                       <img
                         src={resolveAssetUrl(photo) ?? undefined}

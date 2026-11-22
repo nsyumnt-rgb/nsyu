@@ -337,7 +337,7 @@ export function SavingProgressModal({ currentStep = 3 }: SavingProgressModalProp
       <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center space-y-5 animate-scale-up">
         {/* Animated Circular Spinner */}
         <div className="relative flex items-center justify-center pt-2">
-          <div className="w-18 h-18 rounded-full border-4 border-slate-100 border-t-blue-600 border-r-blue-400 animate-spin" />
+          <div className="w-[72px] h-[72px] rounded-full border-4 border-slate-100 border-t-blue-600 border-r-blue-400 animate-spin" />
           <svg className="w-8 h-8 text-blue-600 absolute" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <polyline points="14 2 14 8 20 8" />
