@@ -103,6 +103,7 @@ export default function Orders() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [convertingToBill, setConvertingToBill] = useState(false);
   const [orderToConvert, setOrderToConvert] = useState<OrderRecord | null>(null);
+  const [statusModalOrder, setStatusModalOrder] = useState<OrderRecord | null>(null);
   const [convertPaymentMode, setConvertPaymentMode] = useState<"full" | "unpaid" | "custom">("full");
   const [convertPaidAmount, setConvertPaidAmount] = useState<string>("");
   const [convertPaymentMethod, setConvertPaymentMethod] = useState<string>("cash");
@@ -648,21 +649,9 @@ export default function Orders() {
                                         <Icon name="receipt" className="w-3.5 h-3.5" /> Bill it
                                       </button>
                                     )}
-                                    {open && !delivered && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedOrder(ord);
-                                          setStatusUpdateForm({
-                                            status: ord.status.charAt(0).toUpperCase() + ord.status.slice(1),
-                                            payment_status: ord.payment_status || "Paid",
-                                            remarks: ord.remarks || "Status updated.",
-                                          });
-                                          setStep("update_status");
-                                        }}
-                                        className="btn-secondary btn-sm"
-                                      >
-                                        <Icon name="edit" className="w-3.5 h-3.5" /> Update
+                                    {!billed && (
+                                      <button type="button" onClick={() => setStatusModalOrder(ord)} className="btn-soft btn-sm">
+                                        <Icon name="refresh" className="w-3.5 h-3.5" /> Update status
                                       </button>
                                     )}
                                     <IconButton title="View order" icon="eye" onClick={() => { setSelectedOrder(ord); setStep("view"); }} />
@@ -776,21 +765,9 @@ export default function Orders() {
                                     <Icon name="receipt" className="w-3.5 h-3.5" /> Bill it
                                   </button>
                                 )}
-                                {open && !delivered && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedOrder(ord);
-                                      setStatusUpdateForm({
-                                        status: ord.status.charAt(0).toUpperCase() + ord.status.slice(1),
-                                        payment_status: ord.payment_status || "Paid",
-                                        remarks: ord.remarks || "Status updated.",
-                                      });
-                                      setStep("update_status");
-                                    }}
-                                    className="btn-secondary btn-sm text-xs font-bold"
-                                  >
-                                    <Icon name="edit" className="w-3.5 h-3.5" /> Update
+                                {!billed && (
+                                  <button type="button" onClick={() => setStatusModalOrder(ord)} className="btn-soft btn-sm text-xs font-bold">
+                                    <Icon name="refresh" className="w-3.5 h-3.5" /> Update status
                                   </button>
                                 )}
                               </div>
@@ -1600,6 +1577,18 @@ export default function Orders() {
         {/* ================================================================ */}
         {/* CONVERT TO BILL MODAL                                            */}
         {/* ================================================================ */}
+        {statusModalOrder && (
+          <UpdateStatusModal
+            order={statusModalOrder}
+            onClose={() => setStatusModalOrder(null)}
+            onSaved={(updated) => {
+              if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
+              setOrders((list) => list.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)));
+              loadOrdersData();
+            }}
+          />
+        )}
+
         {orderToConvert && (
           <Modal
             size="sm"
@@ -1801,16 +1790,22 @@ function OrderChannelBadge({ channel }: { channel: OrderChannel }) {
 
 const STATUS_OPTIONS: [string, string][] = [
   ["pending", "Pending"],
-  ["confirmed", "Accepted"],
-  ["processing", "Packed"],
+  ["confirmed", "Confirmed"],
+  ["processing", "Processing"],
   ["shipped", "Shipped"],
   ["delivered", "Delivered"],
   ["cancelled", "Cancelled"],
 ];
 const PAYMENT_OPTIONS = ["Pending", "Paid", "Failed"];
+/** Mirrors the server's allowed transitions so the dropdown only offers valid moves. */
+const NEXT_STATUSES: Record<string, string[]> = {
+  cancelled: ["pending", "confirmed"],
+};
+const FLOW = ["pending", "confirmed", "processing", "shipped", "delivered"];
+const statusLabel = (k: string) => STATUS_OPTIONS.find(([v]) => v === k)?.[1] ?? k.replace(/_/g, " ");
 
-/** Inline status + payment dropdowns with Save, shown on the order details page. */
-function OrderStatusEditor({ order, onSaved }: { order: OrderRecord; onSaved: (o: OrderRecord) => void }) {
+/** Shared state + save for the inline editor and the row modal. */
+function useOrderStatusForm(order: OrderRecord, onSaved: (o: OrderRecord) => void) {
   const current = String(order.status || "").toLowerCase();
   const currentPay = order.payment_status || "Pending";
   const [status, setStatus] = useState(current);
@@ -1818,13 +1813,22 @@ function OrderStatusEditor({ order, onSaved }: { order: OrderRecord; onSaved: (o
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
 
-  const options = STATUS_OPTIONS.some(([k]) => k === current) ? STATUS_OPTIONS : [[current, current.replace(/_/g, " ")] as [string, string], ...STATUS_OPTIONS];
+  const allowed = NEXT_STATUSES[current];
+  const rank = (k: string) => {
+    const i = STATUS_OPTIONS.findIndex(([v]) => v === k);
+    return i < 0 ? -1 : i;
+  };
+  const statusOptions: [string, string][] = [
+    [current, statusLabel(current)] as [string, string],
+    ...STATUS_OPTIONS.filter(([k]) => k !== current && (!allowed || allowed.includes(k))),
+  ].sort((a, b) => rank(a[0]) - rank(b[0]));
+  const paymentOptions = PAYMENT_OPTIONS.includes(currentPay) ? PAYMENT_OPTIONS : [currentPay, ...PAYMENT_OPTIONS];
   const dirty = status !== current || payment !== currentPay || note.trim() !== "";
+  const cancelling = status === "cancelled" && current !== "cancelled";
 
-  async function save() {
-    if (status === "cancelled" && current !== "cancelled" && !window.confirm(`Cancel order #${order.order_number}? The customer will see it as cancelled.`)) return;
+  async function save(): Promise<boolean> {
+    if (cancelling && !window.confirm(`Cancel order #${order.order_number}? The customer will see it as cancelled.`)) return false;
     setSaving(true);
     setErr(null);
     try {
@@ -1833,51 +1837,169 @@ function OrderStatusEditor({ order, onSaved }: { order: OrderRecord; onSaved: (o
         payment_status: payment !== currentPay ? payment : undefined,
         remarks: note.trim() || undefined,
       });
-      setDone(true);
-      setTimeout(() => setDone(false), 2500);
       if (res.data.data) onSaved(res.data.data);
+      return true;
     } catch (e) {
       setErr(apiErrorMessage(e, "Failed to update order status"));
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
+  return { current, status, setStatus, payment, setPayment, note, setNote, saving, err, dirty, cancelling, statusOptions, paymentOptions, save };
+}
+
+function CancelWarning() {
+  return (
+    <p className="flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
+      <Icon name="alert" className="w-4 h-4 shrink-0" /> Cancelling stops this order. The customer sees it as cancelled in their portal.
+    </p>
+  );
+}
+
+/** Inline status + payment dropdowns with Save, shown on the order details page. */
+function OrderStatusEditor({ order, onSaved }: { order: OrderRecord; onSaved: (o: OrderRecord) => void }) {
+  const f = useOrderStatusForm(order, onSaved);
+  const [done, setDone] = useState(false);
   return (
     <section className="card p-4 sm:p-5">
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_2fr_auto] gap-3 items-end">
         <div>
           <label className="label" htmlFor="order-status">Order status</label>
-          <select id="order-status" value={status} onChange={(e) => setStatus(e.target.value)} className="input capitalize">
-            {options.map(([k, label]) => (
-              <option key={k} value={k}>{label}</option>
-            ))}
+          <select id="order-status" value={f.status} onChange={(e) => f.setStatus(e.target.value)} className="input capitalize">
+            {f.statusOptions.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
           </select>
         </div>
         <div>
           <label className="label" htmlFor="order-payment">Payment status</label>
-          <select id="order-payment" value={payment} onChange={(e) => setPayment(e.target.value)} className="input">
-            {(PAYMENT_OPTIONS.includes(currentPay) ? PAYMENT_OPTIONS : [currentPay, ...PAYMENT_OPTIONS]).map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
+          <select id="order-payment" value={f.payment} onChange={(e) => f.setPayment(e.target.value)} className="input">
+            {f.paymentOptions.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div>
           <label className="label" htmlFor="order-note">Note (optional)</label>
-          <input id="order-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. courier tracking ID" className="input" />
+          <input id="order-note" value={f.note} onChange={(e) => f.setNote(e.target.value)} placeholder="e.g. courier tracking ID" className="input" />
         </div>
-        <button type="button" onClick={save} disabled={!dirty || saving} className="btn-primary">
-          <Icon name={done ? "check" : "edit"} className="w-4 h-4" /> {saving ? "Saving…" : done ? "Saved" : "Save"}
+        <button
+          type="button"
+          onClick={async () => {
+            if (await f.save()) {
+              setDone(true);
+              setTimeout(() => setDone(false), 2500);
+            }
+          }}
+          disabled={!f.dirty || f.saving}
+          className="btn-primary"
+        >
+          <Icon name={done ? "check" : "edit"} className="w-4 h-4" /> {f.saving ? "Saving…" : done ? "Saved" : "Save"}
         </button>
       </div>
-      {status === "cancelled" && current !== "cancelled" && (
-        <p className="mt-3 flex items-center gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-[12.5px] text-rose-700">
-          <Icon name="alert" className="w-4 h-4 shrink-0" /> Cancelling stops this order. The customer sees it as cancelled in their portal.
-        </p>
-      )}
-      {err && (
-        <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {err}</p>
-      )}
+      {f.cancelling && <div className="mt-3"><CancelWarning /></div>}
+      {f.err && <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {f.err}</p>}
     </section>
+  );
+}
+
+/** Modal opened from the "Update status" button on each order row. */
+function UpdateStatusModal({ order, onClose, onSaved }: { order: OrderRecord; onClose: () => void; onSaved: (o: OrderRecord) => void }) {
+  const f = useOrderStatusForm(order, onSaved);
+  const [history, setHistory] = useState<HistoryRow[] | null>(null);
+
+  useEffect(() => {
+    let gone = false;
+    getOrderById(order.id)
+      .then((r) => !gone && setHistory(((r.data.data as any)?.statusHistory as HistoryRow[]) ?? []))
+      .catch(() => !gone && setHistory([]));
+    return () => {
+      gone = true;
+    };
+  }, [order.id]);
+
+  const step = FLOW.indexOf(f.status);
+  const rows = [...(history ?? [])].sort((a, b) => Date.parse(b.created_at || "") - Date.parse(a.created_at || ""));
+
+  return (
+    <Modal
+      icon="edit"
+      title={`Update status · #${order.order_number}`}
+      subtitle={`${order.customer?.name || "Walk-in customer"} · ₹${Number(order.total_amount).toLocaleString("en-IN")}`}
+      onClose={onClose}
+      footer={
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="btn-secondary">Close</button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (await f.save()) onClose();
+            }}
+            disabled={!f.dirty || f.saving}
+            className="btn-primary"
+          >
+            {f.saving ? "Saving…" : f.cancelling ? "Cancel order" : "Save changes"}
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        {/* Progress: Pending → Confirmed → Processing → Shipped → Delivered */}
+        <ol className="flex items-start gap-1" aria-label="Order progress">
+          {FLOW.map((k, i) => {
+            const on = f.status !== "cancelled" && step >= i;
+            return (
+              <li key={k} className="flex-1 min-w-0">
+                <div className={`h-1.5 rounded-full ${on ? "bg-brand-600" : "bg-slate-200"}`} />
+                <div className={`mt-1.5 text-[10.5px] sm:text-[11.5px] font-semibold truncate ${f.status === k ? "text-brand-700" : on ? "text-slate-600" : "text-slate-400"}`}>{statusLabel(k)}</div>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="label" htmlFor="modal-order-status">Order status</label>
+            <select id="modal-order-status" value={f.status} onChange={(e) => f.setStatus(e.target.value)} className="input">
+              {f.statusOptions.map(([k, label]) => <option key={k} value={k}>{k === f.current ? `${label} (current)` : label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor="modal-order-payment">Payment status</label>
+            <select id="modal-order-payment" value={f.payment} onChange={(e) => f.setPayment(e.target.value)} className="input">
+              {f.paymentOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="label" htmlFor="modal-order-note">Note (optional)</label>
+          <input id="modal-order-note" value={f.note} onChange={(e) => f.setNote(e.target.value)} placeholder="e.g. courier tracking ID" className="input" />
+        </div>
+        {f.cancelling && <CancelWarning />}
+        {f.err && <p className="flex items-center gap-1.5 text-[12.5px] text-rose-600"><Icon name="alert" className="w-3.5 h-3.5" /> {f.err}</p>}
+
+        <div>
+          <h3 className="text-[12px] font-semibold uppercase tracking-wide text-slate-500 mb-2">Status history</h3>
+          {history === null ? (
+            <p className="text-[12.5px] text-slate-400">Loading…</p>
+          ) : rows.length === 0 ? (
+            <p className="text-[12.5px] text-slate-400">No changes yet. Placed {fmtDateTime(order.order_date)}.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 max-h-56 overflow-y-auto">
+              {rows.map((h, i) => (
+                <li key={h.id ?? i} className="flex items-start justify-between gap-3 px-3 py-2 text-[12.5px]">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-navy-900">
+                      {h.from_status ? `${statusLabel(String(h.from_status).toLowerCase())} → ` : ""}
+                      {statusLabel(String(h.to_status).toLowerCase())}
+                    </div>
+                    {h.note && <div className="text-slate-500 truncate">{h.note}</div>}
+                  </div>
+                  <div className="shrink-0 text-right text-slate-400 tabular">{h.created_at ? fmtDateTime(h.created_at) : "—"}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Modal>
   );
 }
