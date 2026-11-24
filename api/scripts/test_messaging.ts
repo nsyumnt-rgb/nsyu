@@ -439,6 +439,53 @@ async function main() {
   const activeA = await getTransporterForShop(shopA.id);
   check("bills, receipts and OTP emails use the same shop mailbox", activeA?.own === true && /asha\.shop@test\.local/.test(activeA.from || ""));
 
+  /* Email relay (Render free blocks SMTP ports, so SMTP goes through an HTTPS relay) */
+  console.log("\nEmail relay");
+  const relayCalls: any[] = [];
+  const relay = http.createServer((req, res) => {
+    let body = "";
+    req.on("data", (c) => (body += c));
+    req.on("end", () => {
+      res.setHeader("content-type", "application/json");
+      if (req.headers.authorization !== "Bearer relay-secret") {
+        res.statusCode = 401;
+        return res.end(JSON.stringify({ ok: false, code: "EUNAUTHORIZED", error: "Relay key is missing or wrong" }));
+      }
+      const b = JSON.parse(body);
+      relayCalls.push(b);
+      if (b.pass === "wrong-pass") {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ ok: false, code: "EAUTH", responseCode: 535, error: "535 5.7.8 Username and Password not accepted" }));
+      }
+      smtpLogins.push(b.user);
+      smtpFroms.push(b.from);
+      mails.push(Buffer.from(b.raw, "base64").toString());
+      res.end(JSON.stringify({ ok: true, response: "250 OK queued" }));
+    });
+  });
+  await new Promise<void>((ok) => relay.listen(0, "127.0.0.1", () => ok()));
+  process.env.EMAIL_RELAY_URL = `http://127.0.0.1:${(relay.address() as any).port}/send`;
+  process.env.EMAIL_RELAY_SECRET = "relay-secret";
+  resetSmtp();
+  r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);
+  const rc = relayCalls[0] || {};
+  check(
+    "with the relay set, email goes through it from the shop's own mailbox",
+    r.status === 200 && relayCalls.length === 1 && rc.user === "asha.shop@test.local" && rc.from === "asha.shop@test.local" && rc.to?.[0] === "owner@test.local" && rc.pass === "app-pass-1",
+    { m: r.json, rc: { ...rc, raw: undefined, pass: rc.pass ? "set" : "" } }
+  );
+  check("the relayed message is complete", /Subject: Test email from/i.test(mails[0] || "") && /From: .*asha\.shop@test\.local/i.test(mails[0] || ""), (mails[0] || "").slice(0, 300));
+  process.env.EMAIL_RELAY_SECRET = "wrong-secret";
+  r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);
+  check("a wrong relay key fails cleanly", r.status === 400 && /relay key/i.test(r.json.message), r.json);
+  process.env.EMAIL_RELAY_URL = "http://127.0.0.1:1/send";
+  process.env.EMAIL_RELAY_SECRET = "relay-secret";
+  r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);
+  check("an unreachable relay fails cleanly", r.status === 400 && /could not reach/i.test(r.json.message), r.json);
+  delete process.env.EMAIL_RELAY_URL;
+  delete process.env.EMAIL_RELAY_SECRET;
+  relay.close();
+
   resetSmtp();
   r = await call("POST", "/messaging/settings/email/test", { to: "owner-b@test.local" }, tokB);
   check("another shop keeps sending from its own setup", r.status === 200 && smtpLogins[0] === "u" && smtpFroms[0] === "shop@test.local", { m: r.json, smtpLogins, smtpFroms });

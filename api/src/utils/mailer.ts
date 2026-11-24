@@ -22,6 +22,73 @@ export function maskEmail(email: string): string {
 
 let transporter: Transporter | null = null;
 
+type SmtpConfig = { host: string; port: number; secure: boolean; user: string; pass: string };
+
+/** True when EMAIL_RELAY_URL/SECRET are set: SMTP goes through the HTTPS relay (Render free blocks SMTP ports). */
+export function relayEnabled(): boolean {
+  return !!(process.env.EMAIL_RELAY_URL && process.env.EMAIL_RELAY_SECRET);
+}
+
+/**
+ * Nodemailer transport that builds the message here and hands it to the email relay
+ * (relay/ Cloudflare Worker) over HTTPS, which does the SMTP part. Errors come back
+ * with the same `code` / `responseCode` nodemailer uses, so callers handle them alike.
+ */
+function relayTransport(c: SmtpConfig) {
+  return {
+    name: "nsyu-relay",
+    version: "1.0.0",
+    send(mail: any, callback: (err: Error | null, info?: any) => void) {
+      const envelope = mail.message.getEnvelope();
+      const messageId = mail.message.messageId();
+      mail.message.build(async (buildErr: Error | null, raw: Buffer) => {
+        if (buildErr) return callback(buildErr);
+        try {
+          const res = await fetch(process.env.EMAIL_RELAY_URL as string, {
+            method: "POST",
+            headers: { "content-type": "application/json", authorization: `Bearer ${process.env.EMAIL_RELAY_SECRET}` },
+            body: JSON.stringify({
+              host: c.host,
+              port: c.port,
+              secure: c.secure,
+              user: c.user,
+              pass: c.pass,
+              from: envelope.from,
+              to: envelope.to,
+              raw: raw.toString("base64"),
+            }),
+            signal: AbortSignal.timeout(40000),
+          });
+          const body: any = await res.json().catch(() => ({}));
+          if (res.ok && body.ok) return callback(null, { envelope, messageId, response: body.response || "250 OK", accepted: envelope.to, rejected: [] });
+          const err: any = new Error(body.error || `Email relay failed (HTTP ${res.status})`);
+          err.code = body.code || (res.status === 401 ? "ERELAYAUTH" : "ECONNECTION");
+          if (body.responseCode) err.responseCode = body.responseCode;
+          callback(err);
+        } catch (e: any) {
+          const err: any = new Error(`Could not reach the email relay: ${e?.message || e}`);
+          err.code = e?.name === "TimeoutError" ? "ETIMEDOUT" : "ECONNECTION";
+          callback(err);
+        }
+      });
+    },
+  };
+}
+
+/** Every SMTP transport is made here: direct SMTP, or through the relay when it is configured. */
+function smtpTransport(c: SmtpConfig): Transporter {
+  if (relayEnabled()) return nodemailer.createTransport(relayTransport(c) as any);
+  return nodemailer.createTransport({
+    host: c.host,
+    port: c.port,
+    secure: c.secure,
+    auth: { user: c.user, pass: c.pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
+  });
+}
+
 function getTransporter(): Transporter | null {
   if (transporter) return transporter;
 
@@ -30,11 +97,12 @@ function getTransporter(): Transporter | null {
   const pass = process.env.SMTP_PASS;
 
   if (host && user && pass) {
-    transporter = nodemailer.createTransport({
+    transporter = smtpTransport({
       host,
       port: Number(process.env.SMTP_PORT) || 587,
       secure: process.env.SMTP_SECURE === "true" || Number(process.env.SMTP_PORT) === 465,
-      auth: { user, pass },
+      user,
+      pass,
     });
     return transporter;
   }
@@ -62,16 +130,8 @@ async function shopOwnSmtp(shopId: number) {
   }
 }
 
-export function buildSmtpTransport(c: { host: string; port: number; secure: boolean; user: string; pass: string }): Transporter {
-  return nodemailer.createTransport({
-    host: c.host,
-    port: c.port,
-    secure: c.secure,
-    auth: { user: c.user, pass: c.pass },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 30000,
-  });
+export function buildSmtpTransport(c: SmtpConfig): Transporter {
+  return smtpTransport(c);
 }
 
 export async function isEmailConfigured(shopId?: number): Promise<boolean> {
@@ -120,11 +180,12 @@ export async function getTransporterForShop(
 
     const smtp = (shop?.settings as any)?.smtp;
     if (smtp?.host && smtp?.user && smtp?.pass) {
-      const t = nodemailer.createTransport({
+      const t = smtpTransport({
         host: smtp.host,
         port: Number(smtp.port) || 587,
         secure: smtp.secure === true || Number(smtp.port) === 465,
-        auth: { user: smtp.user, pass: smtp.pass },
+        user: smtp.user,
+        pass: smtp.pass,
       });
       return { transporter: t, from: smtp.from || smtp.user, shopName };
     }

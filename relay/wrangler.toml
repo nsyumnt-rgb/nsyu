@@ -1,0 +1,7 @@
+name = "nsyu-email-relay"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# RELAY_SECRET is set with `npx wrangler secret put RELAY_SECRET` (never commit it).
+# The same value goes into EMAIL_RELAY_SECRET on Render, with EMAIL_RELAY_URL
+# set to https://nsyu-email-relay.<your-subdomain>.workers.dev/send

@@ -679,10 +679,16 @@ export async function runAutomation(event: AutomationEvent, ctx: AutomationConte
   });
 }
 
+/** A moment's calendar date (YYYY-MM-DD) in the business timezone. */
+function localDate(d: Date) {
+  const tz = process.env.MESSAGING_TIMEZONE || "Asia/Kolkata";
+  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
 /** Today's date (YYYY-MM-DD) and hour in the business timezone. */
 function today() {
   const tz = process.env.MESSAGING_TIMEZONE || "Asia/Kolkata";
-  const date = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const date = localDate(new Date());
   const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hour12: false }).format(new Date()));
   return { date, hour };
 }
@@ -733,7 +739,7 @@ export async function runDailyAutomations(opts: { force?: boolean } = {}) {
         const credit = Math.max(0, Number(s.credit_days ?? 15));
         for (const sale of unpaid) {
           const due = new Date(new Date(sale.invoice_date).getTime() + credit * DAY);
-          const dueDay = Math.floor(new Date(due.toISOString().slice(0, 10) + "T00:00:00Z").getTime() / DAY);
+          const dueDay = Math.floor(new Date(`${localDate(due)}T00:00:00Z`).getTime() / DAY);
           const left = dueDay - dayNo;
           if (left !== before && left !== 0) continue;
           await runAutomation("due_date_reminder", {

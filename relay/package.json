@@ -1,0 +1,13 @@
+{
+  "name": "nsyu-email-relay",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Worker that sends NSYU emails over SMTP (Render free blocks SMTP ports)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.168.0"
+  }
+}

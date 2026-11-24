@@ -33,7 +33,7 @@ import {
   campaignContent,
   type Audience,
 } from "../utils/messaging/engine";
-import { getTransporterForShop } from "../utils/mailer";
+import { getTransporterForShop, relayEnabled } from "../utils/mailer";
 import { decryptSecret } from "../utils/messaging/secrets";
 
 const ctx = (req: Request) => ({ ownerId: req.auth!.ownerId, shopId: Number(req.auth!.shopId) });
@@ -244,6 +244,9 @@ export async function sendTestEmail(req: Request, res: Response) {
       return fail(res, 400, "Your email provider rejected the login. For Gmail, turn on 2-Step Verification and use an App Password, not your normal password.");
     }
     if (["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNREFUSED"].includes(err?.code)) {
+      if (!relayEnabled()) {
+        return fail(res, 400, `Could not reach the mail server (${err.code}). The server's hosting blocks direct mail connections, so the email relay must be set up (EMAIL_RELAY_URL).`);
+      }
       return fail(res, 400, `Could not reach the mail server (${err.code}). Check the SMTP server and port.`);
     }
     return fail(res, 400, `Sending failed: ${err?.message || "SMTP error"}`);
