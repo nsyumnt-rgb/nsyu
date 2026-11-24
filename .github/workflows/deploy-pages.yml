@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -19,7 +20,7 @@ jobs:
   build-and-deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deploy3.outputs.page_url || steps.deploy2.outputs.page_url || steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -51,7 +52,44 @@ jobs:
         with:
           path: 'web/dist'
 
+      # While the repository's Pages source is still "Deploy from a branch",
+      # GitHub also runs its own "pages build and deployment" on every push,
+      # which publishes the raw repo (a 404 for this app) and races this job.
+      # Wait for it to finish so the built app is always deployed last.
+      - name: Wait for GitHub's branch-based Pages build to finish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 40); do
+            busy=$(gh api "repos/${{ github.repository }}/actions/runs?head_sha=${{ github.sha }}&per_page=20" \
+              --jq '[.workflow_runs[] | select(.name == "pages build and deployment" and .status != "completed")] | length' || echo 0)
+            if [ "$busy" = "0" ]; then echo "No branch-based Pages build in progress."; exit 0; fi
+            echo "Branch-based Pages build still running ($busy); waiting..."
+            sleep 10
+          done
+          echo "Timed out waiting; deploying anyway."
+
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Pause before retry
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy to GitHub Pages (retry 1)
+        id: deploy2
+        if: steps.deployment.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Pause before final retry
+        if: steps.deployment.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 90
+
+      - name: Deploy to GitHub Pages (retry 2)
+        id: deploy3
+        if: steps.deployment.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
