@@ -111,7 +111,7 @@ export default function AdminDashboard() {
       )}
 
       {/* KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Card 1: Total Shops */}
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
@@ -122,7 +122,7 @@ export default function AdminDashboard() {
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-black text-navy-900 mb-2 font-mono tabular">{data?.total_shops ?? 0}</div>
+          <div className="text-[26px] sm:text-3xl font-extrabold tracking-tight text-navy-900 mb-2 tabular break-words">{data?.total_shops ?? 0}</div>
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md font-bold">
               {data?.active_shops ?? 0} Active
@@ -151,7 +151,7 @@ export default function AdminDashboard() {
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-black text-navy-900 mb-2 font-mono tabular">{data?.total_users ?? 0}</div>
+          <div className="text-[26px] sm:text-3xl font-extrabold tracking-tight text-navy-900 mb-2 tabular break-words">{data?.total_users ?? 0}</div>
           <div className="text-xs text-slate-500 truncate font-medium">
             {data?.total_owners ?? 0} Owners • {data?.total_employees ?? 0} Staff • {data?.total_customers ?? 0} Customers
           </div>
@@ -167,7 +167,7 @@ export default function AdminDashboard() {
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-black text-emerald-800 mb-2 font-mono tabular">
+          <div className="text-[26px] sm:text-3xl font-extrabold tracking-tight text-emerald-800 mb-2 tabular break-words">
             ₹{Number(data?.total_sales_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
           <div className="text-xs text-slate-500 font-medium">
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
               </svg>
             </div>
           </div>
-          <div className="text-3xl font-black text-navy-900 mb-2 font-mono tabular">
+          <div className="text-[26px] sm:text-3xl font-extrabold tracking-tight text-navy-900 mb-2 tabular break-words">
             {data?.recent_activity?.length ?? 0}
           </div>
           <div className="text-xs text-slate-500 font-medium">
@@ -195,7 +195,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick Access Tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <Link
           to="/admin/shops"
           className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"

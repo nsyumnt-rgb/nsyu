@@ -673,11 +673,11 @@ function ProductsInner() {
       {/* ============================================================== */}
       {/* 2. SUMMARY METRICS CARDS (Matching Image 2)                    */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Products */}
         <div
           onClick={() => { setStockStatusFilter("All"); setCurrentPage(1); }}
-          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
             stockStatusFilter === "All" ? "border-emerald-500 bg-emerald-50/20 ring-1 ring-emerald-500" : "border-gray-200"
           }`}
         >
@@ -690,7 +690,7 @@ function ProductsInner() {
             <div>
               <div className="text-xs text-gray-500 font-bold">Total Products</div>
               <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{totalCount}</div>
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex flex-wrap items-center gap-1.5 mt-1">
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
                   {liveCount} Live
                 </span>
@@ -705,7 +705,7 @@ function ProductsInner() {
         {/* In Stock */}
         <div
           onClick={() => { setStockStatusFilter("In Stock"); setCurrentPage(1); }}
-          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
             stockStatusFilter === "In Stock" ? "border-blue-500 bg-blue-50/20 ring-1 ring-blue-500" : "border-gray-200"
           }`}
         >
@@ -727,7 +727,7 @@ function ProductsInner() {
         {/* Low Stock */}
         <div
           onClick={() => { setStockStatusFilter("Low Stock"); setCurrentPage(1); }}
-          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
             stockStatusFilter === "Low Stock" ? "border-amber-500 bg-amber-50/20 ring-1 ring-amber-500" : "border-gray-200"
           }`}
         >
@@ -749,7 +749,7 @@ function ProductsInner() {
         {/* Out of Stock */}
         <div
           onClick={() => { setStockStatusFilter("Out of Stock"); setCurrentPage(1); }}
-          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
+          className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
             stockStatusFilter === "Out of Stock" ? "border-rose-500 bg-rose-50/20 ring-1 ring-rose-500" : "border-gray-200"
           }`}
         >

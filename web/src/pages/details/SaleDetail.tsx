@@ -513,34 +513,36 @@ export default function SaleDetail() {
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Linked Payment Receipts</span>
             <span className="text-xs text-slate-500">{sale.payments.length} payment(s)</span>
           </div>
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                <th className="py-2.5 px-4">Receipt #</th>
-                <th className="py-2.5 px-4">Date</th>
-                <th className="py-2.5 px-4">Method</th>
-                <th className="py-2.5 px-4">Transaction Ref</th>
-                <th className="py-2.5 px-4 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {sale.payments.map((p: any) => (
-                <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="py-2.5 px-4 font-mono font-medium">
-                    <ReferenceLink type="payment" id={p.id} refNumber={p.reference_code || `PAY-${p.id}`} />
-                  </td>
-                  <td className="py-2.5 px-4 text-slate-600">
-                    {new Date(p.entry_date || p.payment_date || p.created_at).toLocaleDateString("en-IN")}
-                  </td>
-                  <td className="py-2.5 px-4 uppercase text-slate-700 font-medium">{(p.payment_method || p.method || "cash").replace("_", " ")}</td>
-                  <td className="py-2.5 px-4 font-mono text-slate-500">{p.reference_code || p.transaction_id || "—"}</td>
-                  <td className="py-2.5 px-4 text-right font-semibold text-emerald-700">
-                    ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </td>
+          <div className="table-scroll">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                  <th className="py-2.5 px-4">Receipt #</th>
+                  <th className="py-2.5 px-4">Date</th>
+                  <th className="py-2.5 px-4">Method</th>
+                  <th className="py-2.5 px-4">Transaction Ref</th>
+                  <th className="py-2.5 px-4 text-right">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sale.payments.map((p: any) => (
+                  <tr key={p.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-2.5 px-4 font-mono font-medium">
+                      <ReferenceLink type="payment" id={p.id} refNumber={p.reference_code || `PAY-${p.id}`} />
+                    </td>
+                    <td className="py-2.5 px-4 text-slate-600">
+                      {new Date(p.entry_date || p.payment_date || p.created_at).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="py-2.5 px-4 uppercase text-slate-700 font-medium">{(p.payment_method || p.method || "cash").replace("_", " ")}</td>
+                    <td className="py-2.5 px-4 font-mono text-slate-500">{p.reference_code || p.transaction_id || "—"}</td>
+                    <td className="py-2.5 px-4 text-right font-semibold text-emerald-700">
+                      ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

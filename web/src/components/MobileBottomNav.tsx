@@ -207,8 +207,8 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
   return (
     <>
       {/* ── Fixed Native App Bottom Navigation ── */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] md:hidden">
-        <div className="flex items-center justify-around h-[62px] px-1 pb-safe">
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/90 backdrop-blur-xl border-t border-border/80 shadow-[0_-10px_30px_-18px_rgba(15,42,35,0.35)] md:hidden pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-stretch justify-around h-[64px] px-1.5 py-1.5">
           {currentItems.map((item) => {
             const isActive = item.exact
               ? location.pathname === item.to
@@ -221,8 +221,10 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
                 end={item.exact}
                 className={`mobile-nav-btn flex-1 ${isActive ? "active" : ""}`}
               >
-                <div className="mb-0.5">{item.icon(isActive)}</div>
-                <span className="truncate max-w-[64px]">{item.label}</span>
+                <span className={`mb-0.5 flex h-7 w-12 items-center justify-center rounded-full transition-all duration-300 ease-smooth ${isActive ? "bg-brand-50 ring-1 ring-inset ring-brand-600/10" : ""}`}>
+                  {item.icon(isActive)}
+                </span>
+                <span className="truncate max-w-[64px] leading-tight">{item.label}</span>
               </NavLink>
             );
           })}
@@ -234,7 +236,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
               onClick={() => setMoreOpen(true)}
               className={`mobile-nav-btn flex-1 ${moreOpen ? "active" : ""}`}
             >
-              <div className="mb-0.5">
+              <div className={`mb-0.5 flex h-7 w-12 items-center justify-center rounded-full transition-all duration-300 ${moreOpen ? "bg-brand-50" : ""}`}>
                 <svg className={`w-5 h-5 transition-transform ${moreOpen ? "scale-110 text-emerald-800" : "text-slate-500"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="1" />
                   <circle cx="19" cy="12" r="1" />
@@ -252,7 +254,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
         <div className="fixed inset-0 z-50 md:hidden animate-fade-in">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-navy-950/60 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-navy-950/50 backdrop-blur-sm transition-opacity"
             onClick={() => setMoreOpen(false)}
           />
 
@@ -282,7 +284,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
               <button
                 type="button"
                 onClick={() => { navigate("/app/sales"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-border shadow-xs active:scale-[0.98] active:bg-brand-50 hover:border-brand-200 text-left transition-all duration-200"
               >
                 <div className="w-10 h-10 rounded-xl bg-purple-100/80 text-purple-800 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -300,7 +302,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
               <button
                 type="button"
                 onClick={() => { navigate("/app/settings/inventory"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-border shadow-xs active:scale-[0.98] active:bg-brand-50 hover:border-brand-200 text-left transition-all duration-200"
               >
                 <div className="w-10 h-10 rounded-xl bg-sky-100/80 text-sky-800 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -319,7 +321,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
               <button
                 type="button"
                 onClick={() => { navigate("/app/settings/shop"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-border shadow-xs active:scale-[0.98] active:bg-brand-50 hover:border-brand-200 text-left transition-all duration-200"
               >
                 <div className="w-10 h-10 rounded-xl bg-indigo-100/80 text-indigo-800 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -338,7 +340,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
               <button
                 type="button"
                 onClick={() => { navigate("/app/settings"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-border shadow-xs active:scale-[0.98] active:bg-brand-50 hover:border-brand-200 text-left transition-all duration-200"
               >
                 <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -357,7 +359,7 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
               <button
                 type="button"
                 onClick={() => { navigate("/app/orders"); setMoreOpen(false); }}
-                className="flex items-center gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 active:bg-emerald-50 text-left transition-colors"
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-border shadow-xs active:scale-[0.98] active:bg-brand-50 hover:border-brand-200 text-left transition-all duration-200"
               >
                 <div className="w-10 h-10 rounded-xl bg-amber-100/80 text-amber-800 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

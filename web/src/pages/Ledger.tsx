@@ -372,7 +372,7 @@ function CustomerStatement({ customerId, onBack, onView }: { customerId: number;
       </section>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {tiles.map((t) => (
           <div key={t.label} className={`card p-4 min-w-0 ${t.label === "Current balance" ? "ring-1 ring-inset ring-brand-600/20 bg-brand-50/30" : ""}`}>
             <div className="stat-label truncate">{t.label}</div>

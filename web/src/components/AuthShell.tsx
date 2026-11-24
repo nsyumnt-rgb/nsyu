@@ -18,8 +18,8 @@ function Logo({ inverted = false }: { inverted?: boolean }) {
   return (
     <Link to="/" className="inline-flex items-center gap-2.5" aria-label="NSYU home">
       <span
-        className={`w-9 h-9 rounded-lg flex items-center justify-center font-black text-[17px] ${
-          inverted ? "bg-white text-[#064E3B]" : "bg-[#064E3B] text-white"
+        className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-[17px] ${
+          inverted ? "bg-white text-navy-900 shadow-lg shadow-black/20" : "bg-brand-gradient text-white shadow-brand"
         }`}
       >
         N
@@ -59,7 +59,7 @@ export default function AuthShell({
   return (
     <div className="min-h-screen grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] bg-white">
       {/* Brand panel */}
-      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-[#053B2E] text-white px-12 py-10 xl:px-16 xl:py-12">
+      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-brand-gradient text-white px-12 py-10 xl:px-16 xl:py-12">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-[0.07]"
@@ -79,8 +79,8 @@ export default function AuthShell({
           <h2 className="text-[34px] xl:text-[40px] font-bold leading-[1.12] tracking-[-0.02em] text-white">{title}</h2>
           <ul className="mt-10 space-y-6">
             {features.map((f) => (
-              <li key={f.title} className="flex gap-4">
-                <span className="w-10 h-10 shrink-0 rounded-xl bg-white/10 ring-1 ring-inset ring-white/15 flex items-center justify-center">
+              <li key={f.title} className="flex gap-4 animate-fade-up">
+                <span className="w-11 h-11 shrink-0 rounded-xl bg-white/10 ring-1 ring-inset ring-white/20 backdrop-blur flex items-center justify-center shadow-inner-top">
                   <svg className="w-5 h-5 text-emerald-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d={f.d} />
                   </svg>
@@ -104,14 +104,14 @@ export default function AuthShell({
       </aside>
 
       {/* Form column */}
-      <div className="flex min-h-screen flex-col min-w-0">
+      <div className="flex min-h-screen flex-col min-w-0 bg-[radial-gradient(700px_380px_at_100%_0%,rgba(209,250,229,0.45),transparent_60%)]">
         <header className="flex items-center justify-between gap-4 px-5 sm:px-10 py-5">
           <div className="lg:hidden">
             <Logo />
           </div>
           <Link
             to="/"
-            className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-600 hover:text-navy-900 transition-colors"
+            className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-[13px] font-semibold text-slate-600 hover:text-navy-900 hover:bg-white hover:shadow-soft ring-1 ring-transparent hover:ring-border transition-all"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -121,7 +121,7 @@ export default function AuthShell({
         </header>
 
         <main className="flex-1 flex items-center justify-center px-5 sm:px-10 py-6 sm:py-10">
-          <div className="w-full max-w-[420px] animate-fadeIn">
+          <div className="w-full max-w-[420px] animate-fade-up">
             {children}
             {extra && <div className="mt-6">{extra}</div>}
           </div>
@@ -132,7 +132,7 @@ export default function AuthShell({
 }
 
 export const AUTH_FIELD =
-  "w-full h-11 rounded-lg border border-slate-300 bg-white px-3.5 text-[14px] text-gray-900 placeholder:text-slate-400 outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/15";
+  "w-full h-12 rounded-xl border border-border bg-white px-3.5 text-[16px] sm:text-[14px] text-gray-900 placeholder:text-slate-400 shadow-xs outline-none transition-all duration-200 hover:border-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15";
 export const AUTH_PRIMARY =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-[#047857] hover:bg-[#065F46] active:scale-[0.99] disabled:opacity-50 disabled:active:scale-100 text-white font-semibold shadow-sm transition";
+  "inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 hover:-translate-y-px active:scale-[0.99] disabled:opacity-50 disabled:hover:translate-y-0 disabled:active:scale-100 text-white font-semibold shadow-brand transition-all duration-200";
 export const AUTH_LABEL = "block text-[13px] font-semibold text-slate-700 mb-1.5";

@@ -190,48 +190,50 @@ export default function ProductDetail() {
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Shop-wise Stock Breakdown</span>
           <span className="text-xs text-slate-500">Inventory across all authorized shops</span>
         </div>
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              <th className="py-2.5 px-4">Shop Name</th>
-              <th className="py-2.5 px-4">Shop Code</th>
-              <th className="py-2.5 px-4 text-right">Available Quantity</th>
-              <th className="py-2.5 px-4 text-right">Stock Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {product.stocks && product.stocks.length > 0 ? (
-              product.stocks.map((st: any) => {
-                const qty = Number(st.current_stock ?? st.quantity ?? 0);
-                const isLow = qty <= (st.min_stock || product.min_stock || 5);
-                return (
-                  <tr key={st.id || st.shop_id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4 font-semibold text-slate-800">{st.shop?.name || `Shop #${st.shop_id}`}</td>
-                    <td className="py-3 px-4 font-mono text-slate-500">{st.shop?.code || "—"}</td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">{qty}</td>
-                    <td className="py-3 px-4 text-right">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${
-                          qty === 0
-                            ? "bg-rose-50 text-rose-700 border border-rose-200"
-                            : isLow
-                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        }`}
-                      >
-                        {qty === 0 ? "Out of Stock" : isLow ? "Low Stock" : "Sufficient"}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={4} className="py-8 text-center text-slate-400 italic">No stock records found for this product</td>
+        <div className="table-scroll">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                <th className="py-2.5 px-4">Shop Name</th>
+                <th className="py-2.5 px-4">Shop Code</th>
+                <th className="py-2.5 px-4 text-right">Available Quantity</th>
+                <th className="py-2.5 px-4 text-right">Stock Status</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {product.stocks && product.stocks.length > 0 ? (
+                product.stocks.map((st: any) => {
+                  const qty = Number(st.current_stock ?? st.quantity ?? 0);
+                  const isLow = qty <= (st.min_stock || product.min_stock || 5);
+                  return (
+                    <tr key={st.id || st.shop_id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-4 font-semibold text-slate-800">{st.shop?.name || `Shop #${st.shop_id}`}</td>
+                      <td className="py-3 px-4 font-mono text-slate-500">{st.shop?.code || "—"}</td>
+                      <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">{qty}</td>
+                      <td className="py-3 px-4 text-right">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider ${
+                            qty === 0
+                              ? "bg-rose-50 text-rose-700 border border-rose-200"
+                              : isLow
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          }`}
+                        >
+                          {qty === 0 ? "Out of Stock" : isLow ? "Low Stock" : "Sufficient"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-slate-400 italic">No stock records found for this product</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {product.description && (

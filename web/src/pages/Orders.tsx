@@ -460,7 +460,7 @@ export default function Orders() {
                 }
               />
 
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
                 <StatCard label="Total" icon="cart" tone="brand" value={stats.totalOrders.toLocaleString("en-IN")} loading={loading} active={statusFilter === "all"} onClick={() => setStatusFilter("all")} hint="All-time orders" />
                 <StatCard label="Pending" icon="clock" tone="amber" value={stats.pendingOrders.toLocaleString("en-IN")} valueClass={stats.pendingOrders ? "text-amber-600" : undefined} loading={loading} active={statusFilter === "pending"} onClick={() => setStatusFilter(statusFilter === "pending" ? "all" : "pending")} hint="Needs action" />
                 <StatCard label="Processing" icon="box" tone="sky" value={stats.processingOrders.toLocaleString("en-IN")} loading={loading} active={statusFilter === "processing"} onClick={() => setStatusFilter(statusFilter === "processing" ? "all" : "processing")} hint="Being packed" />

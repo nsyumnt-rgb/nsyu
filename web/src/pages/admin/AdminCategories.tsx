@@ -217,7 +217,7 @@ export default function AdminCategories() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs">
           <div className="text-slate-400 text-xs font-bold uppercase">Total Categories</div>
           <div className="text-2xl font-black text-navy-900 mt-1">{totalCategories}</div>

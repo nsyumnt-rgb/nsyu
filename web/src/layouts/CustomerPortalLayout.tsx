@@ -156,7 +156,7 @@ export default function CustomerPortalLayout() {
       )}
 
       {/* ───────────── Header ───────────── */}
-      <header className="sticky top-0 z-40 bg-navy-900 text-white shadow-[0_2px_12px_-4px_rgba(2,26,19,0.5)]">
+      <header className="sticky top-0 z-40 bg-navy-900 bg-[radial-gradient(80%_140%_at_100%_0%,rgba(16,185,129,0.22),transparent_60%)] text-white shadow-[0_10px_30px_-12px_rgba(2,26,19,0.55)] border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[72px] flex items-center gap-3 lg:gap-6">
           <button type="button" onClick={() => setMenuOpen(true)} className="lg:hidden -ml-1 w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10" aria-label="Open menu">
             <MenuIcon className="w-6 h-6" />
@@ -173,12 +173,12 @@ export default function CustomerPortalLayout() {
                 type="button"
                 onClick={() => setCatsOpen((v) => !v)}
                 aria-expanded={catsOpen}
-                className={`h-11 px-4 rounded-xl inline-flex items-center gap-2 text-[14.5px] font-semibold transition ${catsOpen ? "bg-brand-600 text-white" : "text-emerald-50/90 hover:bg-white/10 hover:text-white"}`}
+                className={`h-11 px-4 rounded-xl inline-flex items-center gap-2 text-[14px] font-semibold transition-all duration-200 ${catsOpen ? "bg-white/15 text-white ring-1 ring-inset ring-white/15" : "text-emerald-50/85 hover:bg-white/10 hover:text-white"}`}
               >
                 <GridIcon className="w-[18px] h-[18px]" /> Categories <ChevronDownIcon className={`w-4 h-4 transition ${catsOpen ? "rotate-180" : ""}`} />
               </button>
               {catsOpen && (
-                <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-[min(560px,90vw)] rounded-2xl bg-white text-slate-800 shadow-lift border border-border p-3 z-50 animate-fade-in">
+                <div className="absolute left-1/2 -translate-x-1/2 mt-2 w-[min(560px,90vw)] rounded-2xl bg-white text-slate-800 shadow-pop border border-border p-3 z-50 animate-fade-in">
                   {categories.length === 0 ? (
                     <div className="px-3 py-6 text-center text-[13px] text-slate-500">No categories yet.</div>
                   ) : (
@@ -218,7 +218,7 @@ export default function CustomerPortalLayout() {
             </IconBtn>
             <div className="relative sm:ml-1" ref={profileRef}>
               <button type="button" onClick={() => setProfileOpen((v) => !v)} className="flex items-center gap-2 p-1 lg:pr-2 rounded-xl hover:bg-white/10" aria-haspopup="menu" aria-expanded={profileOpen} aria-label="Account menu">
-                <span className="w-9 h-9 rounded-full bg-white text-navy-900 flex items-center justify-center font-bold text-[13px]">{initialsOf(customer?.name || "C")}</span>
+                <span className="w-9 h-9 rounded-full bg-white text-navy-900 flex items-center justify-center font-bold text-[13px] ring-2 ring-white/20 shadow-md">{initialsOf(customer?.name || "C")}</span>
                 <span className="hidden xl:block text-left">
                   <span className="block text-[13px] font-semibold leading-none max-w-[120px] truncate">{customer?.name || "Customer"}</span>
                   <span className="block text-[11px] text-emerald-100/70 mt-1">Customer</span>
@@ -226,7 +226,7 @@ export default function CustomerPortalLayout() {
                 <ChevronDownIcon className="hidden xl:block w-4 h-4 text-emerald-100/70" />
               </button>
               {profileOpen && (
-                <div role="menu" className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-16px)] rounded-2xl bg-white text-slate-800 shadow-lift border border-border py-2 z-50 animate-fade-in">
+                <div role="menu" className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-16px)] rounded-2xl bg-white text-slate-800 shadow-pop border border-border py-2 z-50 animate-scale-in origin-top-right">
                   <div className="px-4 py-3 border-b border-slate-100">
                     <p className="text-[14px] font-semibold text-navy-900 truncate">{customer?.name}</p>
                     <p className="text-[12px] text-slate-500 mt-0.5">{customer?.phone}</p>
@@ -276,8 +276,8 @@ export default function CustomerPortalLayout() {
 
       {/* ───────────── Phone menu ───────────── */}
       {menuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-navy-950/50 animate-fade-in" onMouseDown={(e) => e.target === e.currentTarget && setMenuOpen(false)}>
-          <aside className="h-full w-[min(320px,86vw)] bg-white shadow-2xl flex flex-col" aria-label="Menu">
+        <div className="lg:hidden fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm animate-fade-in" onMouseDown={(e) => e.target === e.currentTarget && setMenuOpen(false)}>
+          <aside className="h-full w-[min(320px,86vw)] bg-white shadow-2xl flex flex-col animate-slide-right" aria-label="Menu">
             <div className="bg-navy-900 px-4 py-4 flex items-center justify-between">
               {Brand}
               <button type="button" onClick={() => setMenuOpen(false)} className="w-9 h-9 rounded-lg flex items-center justify-center text-white hover:bg-white/10" aria-label="Close menu">
@@ -323,7 +323,7 @@ export default function CustomerPortalLayout() {
       </main>
 
       {/* ───────────── Footer (Desktop only) ───────────── */}
-      <footer className="hidden md:block bg-navy-900 text-emerald-50/75">
+      <footer className="hidden md:block relative bg-navy-950 text-emerald-50/75 bg-[radial-gradient(60%_120%_at_100%_0%,rgba(16,185,129,0.14),transparent_60%)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] gap-8 text-[13.5px]">
           <div>
             <div className="flex items-center gap-3">
@@ -409,7 +409,7 @@ export default function CustomerPortalLayout() {
 
       {policyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in text-navy-900">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85dvh] flex flex-col shadow-pop overflow-hidden animate-scale-in text-navy-900">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-base font-bold text-navy-900">{policyModal.title}</h3>
               <button
@@ -426,15 +426,15 @@ export default function CustomerPortalLayout() {
                 <div className="whitespace-pre-wrap">{policyModal.text}</div>
               ) : (
                 <div className="text-center py-6">
-                  <div className="text-3xl mb-2">📜</div>
+                  <div className="mx-auto mb-3 w-12 h-12 rounded-2xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-600/10 flex items-center justify-center"><OrdersIcon className="w-6 h-6" /></div>
                   <p className="font-semibold text-slate-800">No published policy text yet</p>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
                     {shopName} has not published a specific {policyModal.title.toLowerCase()} yet. Please contact the shop directly for details or assistance.
                   </p>
                   {(customer?.shop?.phone || customer?.shop?.email) && (
                     <div className="mt-4 text-xs text-brand-700 font-semibold space-y-1">
-                      {customer?.shop?.phone && <div>📞 {customer.shop.phone}</div>}
-                      {customer?.shop?.email && <div>✉️ {customer.shop.email}</div>}
+                      {customer?.shop?.phone && <div className="flex items-center justify-center gap-1.5"><PhoneIcon className="w-3.5 h-3.5" /> {customer.shop.phone}</div>}
+                      {customer?.shop?.email && <div className="flex items-center justify-center gap-1.5"><MailIcon className="w-3.5 h-3.5" /> {customer.shop.email}</div>}
                     </div>
                   )}
                 </div>
@@ -471,7 +471,7 @@ function NavItem({ to, label, active, icon }: { to: string; label: string; activ
   return (
     <NavLink
       to={to}
-      className={`h-11 px-4 rounded-xl inline-flex items-center gap-2 text-[14.5px] font-semibold transition ${active ? "bg-brand-600 text-white shadow-sm" : "text-emerald-50/90 hover:bg-white/10 hover:text-white"}`}
+      className={`h-11 px-4 rounded-xl inline-flex items-center gap-2 text-[14px] font-semibold transition-all duration-200 ${active ? "bg-brand-600 text-white shadow-brand ring-1 ring-inset ring-white/15" : "text-emerald-50/85 hover:bg-white/10 hover:text-white"}`}
     >
       {icon}
       {label}

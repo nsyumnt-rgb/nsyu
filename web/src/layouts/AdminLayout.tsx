@@ -95,10 +95,10 @@ export default function AdminLayout() {
     <>
       <div className="h-16 px-5 border-b border-white/10 flex items-center justify-between shrink-0">
         <Link to="/admin" className="flex items-center gap-3 min-w-0" onClick={() => setOpen(false)}>
-          <span className="w-9 h-9 rounded-lg bg-white p-1 shrink-0"><img src="/nsyu_logo.png" alt="" className="w-full h-full object-contain" /></span>
+          <span className="w-10 h-10 rounded-xl bg-white p-1 shrink-0 shadow-lg shadow-black/20 ring-1 ring-white/20"><img src="/nsyu_logo.png" alt="" className="w-full h-full object-contain" /></span>
           <span className="min-w-0">
             <span className="block text-[14px] font-bold tracking-tight text-white">NSYU Platform</span>
-            <span className="block text-[10.5px] font-semibold uppercase tracking-[0.12em] text-emerald-300/90">Super admin</span>
+            <span className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-300/90">Super admin</span>
           </span>
         </Link>
         <button type="button" onClick={() => setOpen(false)} className="lg:hidden w-9 h-9 rounded-lg text-slate-300 hover:bg-white/10 flex items-center justify-center" aria-label="Close menu">
@@ -107,7 +107,7 @@ export default function AdminLayout() {
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        <div className="px-3 pt-2 pb-2 text-[11px] font-semibold tracking-[0.12em] text-slate-400 uppercase">Platform governance</div>
+        <div className="px-3 pt-2 pb-2 text-[10.5px] font-bold tracking-[0.14em] text-brand-200/50 uppercase">Platform governance</div>
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -115,20 +115,22 @@ export default function AdminLayout() {
             end={item.end}
             onClick={() => setOpen(false)}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 h-11 rounded-lg text-[13.5px] font-medium transition ${
-                isActive ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40" : "text-slate-300 hover:bg-white/5 hover:text-white"
+              `group relative flex items-center gap-3 px-3 h-11 rounded-xl text-[13.5px] font-semibold transition-all duration-200 ${
+                isActive
+                  ? "bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-lg shadow-black/25 ring-1 ring-inset ring-white/15"
+                  : "text-brand-50/70 hover:bg-white/[0.06] hover:text-white hover:translate-x-0.5"
               }`
             }
           >
-            {item.icon}
-            <span>{item.label}</span>
+            <span className="shrink-0 opacity-90 [&>svg]:w-[18px] [&>svg]:h-[18px]">{item.icon}</span>
+            <span className="truncate">{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
       <div className="p-4 border-t border-white/10">
         <div className="flex items-center gap-3 mb-3 min-w-0">
-          <span className="w-9 h-9 rounded-full bg-emerald-600/20 text-emerald-200 text-[12px] font-bold flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-full bg-brand-gradient ring-1 ring-white/20 text-white text-[12px] font-bold flex items-center justify-center shrink-0">
             {(owner?.name || "SA").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
           </span>
           <span className="min-w-0">
@@ -138,14 +140,14 @@ export default function AdminLayout() {
         </div>
         <Link
           to="/app"
-          className="w-full h-10 mb-2 flex items-center justify-center gap-2 text-[12.5px] font-semibold text-slate-200 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition"
+          className="w-full h-10 mb-2 flex items-center justify-center gap-2 text-[12.5px] font-semibold text-brand-50 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition"
         >
           View shop app
         </Link>
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full h-10 flex items-center justify-center gap-2 text-[12.5px] font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 rounded-lg border border-rose-500/20 transition"
+          className="w-full h-10 flex items-center justify-center gap-2 text-[12.5px] font-semibold text-rose-200 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl border border-rose-400/20 transition"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></svg>
           Log out
@@ -155,34 +157,40 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-white text-navy-900">
+    <div className="app-canvas flex min-h-[100dvh] flex-col text-navy-900">
       <div className="flex min-h-0 flex-1">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-64 bg-[#04261D] flex-col shrink-0 sticky top-0 h-[100dvh]">{sidebar}</aside>
+      <aside className="hidden lg:flex w-[264px] bg-navy-950 bg-[radial-gradient(120%_60%_at_0%_0%,rgba(16,185,129,0.18),transparent_60%)] flex-col shrink-0 sticky top-0 h-[100dvh]">{sidebar}</aside>
 
       {/* Mobile drawer */}
       <div className={`lg:hidden fixed inset-0 z-50 transition-[visibility] duration-300 ${open ? "visible" : "invisible"}`} aria-hidden={!open}>
-        <div onClick={() => setOpen(false)} className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} />
-        <aside className={`absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-[#04261D] flex flex-col shadow-2xl transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"}`}>{sidebar}</aside>
+        <div onClick={() => setOpen(false)} className={`absolute inset-0 bg-navy-950/50 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`} />
+        <aside className={`absolute left-0 top-0 h-full w-72 max-w-[85vw] bg-navy-950 flex flex-col shadow-2xl transition-transform duration-300 ease-smooth ${open ? "translate-x-0" : "-translate-x-full"}`}>{sidebar}</aside>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
-        <header className="h-14 sm:h-16 border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between gap-3 bg-white/95 backdrop-blur sticky top-0 z-30 shadow-2xs">
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 sm:h-16 border-b border-border/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 bg-white/80 backdrop-blur-xl sticky top-0 z-30 shadow-[0_6px_20px_-16px_rgba(15,42,35,0.25)]">
           <div className="flex items-center gap-3 min-w-0">
             <button type="button" onClick={() => setOpen(true)} className="lg:hidden w-10 h-10 -ml-1 rounded-lg text-slate-500 hover:bg-slate-100 flex items-center justify-center" aria-label="Open menu">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
-            <span className="text-[14px] font-bold text-navy-900 truncate">{current?.label || "Platform"}</span>
+            <span className="min-w-0">
+              <span className="block text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-400 leading-none">Super admin</span>
+              <span className="block mt-1 text-[15px] font-extrabold tracking-tight text-navy-900 truncate leading-none">{current?.label || "Platform"}</span>
+            </span>
           </div>
-          <span className="shrink-0 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[11px] font-bold flex items-center gap-1.5">
+          <span className="shrink-0 px-2.5 py-1 bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-600/15 rounded-full text-[11px] font-bold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span>Super Admin Governance</span>
+            <span className="hidden min-[420px]:inline">Super Admin Governance</span>
+            <span className="min-[420px]:hidden">Admin</span>
           </span>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 min-w-0 bg-white">
-          <Outlet />
+        <main className="flex-1 px-3 py-4 sm:p-6 lg:p-8 min-w-0 overflow-x-clip">
+          <div className="mx-auto w-full max-w-[1500px] page-enter">
+            <Outlet />
+          </div>
         </main>
         </div>
       </div>

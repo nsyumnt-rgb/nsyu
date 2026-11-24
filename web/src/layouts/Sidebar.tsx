@@ -17,7 +17,7 @@ export interface NavItem {
 /** Stroke icon from one or more SVG path strings. */
 const ico = (...paths: string[]) => (active: boolean) => (
   <svg
-    className={clsx("w-[18px] h-[18px] shrink-0 transition-colors", active ? "text-emerald-700" : "text-slate-400 group-hover:text-navy-900")}
+    className={clsx("w-[18px] h-[18px] shrink-0 transition-all duration-200", active ? "text-brand-700" : "text-slate-400 group-hover:text-navy-900 group-hover:scale-110")}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -69,17 +69,16 @@ function NavItemLink({ item }: { item: NavItem }) {
       to={item.to}
       end={item.to === "/app"}
       className={({ isActive }) =>
-        clsx(
-          "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-colors",
-          isActive ? "bg-emerald-50 text-emerald-900 ring-1 ring-inset ring-emerald-100" : "text-slate-600 hover:bg-slate-50 hover:text-navy-950"
-        )
+        clsx("group nav-link", isActive && "nav-link-active")
       }
     >
       {({ isActive }) => (
         <>
-          {item.icon(isActive)}
+          {isActive && <span className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-600" aria-hidden />}
+          <span className={clsx("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors", isActive ? "bg-white shadow-xs ring-1 ring-brand-600/10" : "bg-transparent group-hover:bg-white")}>
+            {item.icon(isActive)}
+          </span>
           <span className="truncate">{item.label}</span>
-          {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-600" aria-hidden />}
         </>
       )}
     </NavLink>
@@ -130,12 +129,23 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
 
   const navList = (
     <nav aria-label="Main menu" className="flex-1 overflow-y-auto px-3 py-4 flex flex-col">
+      <div className="hidden lg:flex items-center gap-2.5 mb-4 p-2.5 rounded-xl bg-gradient-to-br from-brand-50 to-white ring-1 ring-inset ring-brand-600/10">
+        <span className="w-9 h-9 rounded-lg bg-brand-gradient text-white flex items-center justify-center font-extrabold text-[13px] shadow-brand shrink-0">
+          {(activeShop?.name || "N").trim().charAt(0).toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <div className="text-[12.5px] font-bold text-navy-900 truncate">{activeShop?.name || "NSYU Store"}</div>
+          <div className="text-[10.5px] text-slate-500 font-mono truncate">{activeShop?.code || "NSYU-01"}</div>
+        </div>
+      </div>
+      <div className="px-3 pb-2 section-label">Menu</div>
       <div className="space-y-1">
         {items.map((item) => (
           <NavItemLink key={item.to} item={item} />
         ))}
       </div>
       <div className="mt-auto pt-4 border-t border-slate-100">
+        <div className="px-3 pb-2 section-label">Account</div>
         <NavItemLink item={SETTINGS_ITEM} />
       </div>
     </nav>
@@ -144,18 +154,18 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop static sidebar */}
-      <aside className="hidden lg:block w-60 shrink-0 sticky top-16 h-[calc(100vh-4rem)]">
-        <div className="flex flex-col h-full bg-white border-r border-gray-200">{navList}</div>
+      <aside className="hidden lg:block w-64 shrink-0 sticky top-16 h-[calc(100vh-4rem)]">
+        <div className="flex flex-col h-full bg-white/80 backdrop-blur-xl border-r border-border">{navList}</div>
       </aside>
 
       {/* Mobile drawer (opened from the header's hamburger button) */}
       {open && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="fixed inset-0 bg-navy-950/50 backdrop-blur-xs animate-fade-in" onClick={onClose} />
+          <div className="fixed inset-0 bg-navy-950/50 backdrop-blur-sm animate-fade-in" onClick={onClose} />
           <div className="relative w-80 max-w-[85vw] h-full bg-white shadow-2xl z-10 animate-slide-right flex flex-col">
-            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50/60 to-white flex items-center justify-between gap-2">
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-brand-50/80 to-white flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-9 h-9 rounded-xl bg-[#064E3B] text-white flex items-center justify-center font-black text-sm shadow-sm shrink-0">N</span>
+                <span className="w-10 h-10 rounded-xl bg-brand-gradient text-white flex items-center justify-center font-black text-sm shadow-brand shrink-0">N</span>
                 <div className="min-w-0">
                   <div className="font-bold text-navy-900 text-sm truncate">{activeShop?.name || "NSYU Store"}</div>
                   <div className="text-[11px] text-slate-400 font-mono truncate">{activeShop?.code || "NSYU-01"}</div>
@@ -167,7 +177,7 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
                 className="w-8 h-8 rounded-lg text-slate-400 hover:text-navy-900 hover:bg-slate-100 flex items-center justify-center transition shrink-0"
                 aria-label="Close menu"
               >
-                ✕
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
             </div>
 

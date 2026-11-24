@@ -80,13 +80,13 @@ export const TONE: Record<Tone, { tile: string; text: string; bar: string; soft:
 
 export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 animate-fade-up">
       <div className="min-w-0">
-        {eyebrow && <div className="section-label mb-1">{eyebrow}</div>}
-        <h1 className="text-[22px] sm:text-[26px] font-bold text-navy-900 tracking-tight leading-tight">{title}</h1>
-        {subtitle && <p className="text-[13.5px] text-slate-500 mt-1 max-w-2xl">{subtitle}</p>}
+        {eyebrow && <div className="section-label mb-1.5 text-brand-700/80">{eyebrow}</div>}
+        <h1 className="text-[22px] sm:text-[28px] font-extrabold text-navy-900 tracking-tight leading-[1.15] break-words">{title}</h1>
+        {subtitle && <p className="text-[13.5px] text-slate-500 mt-1.5 max-w-2xl leading-relaxed">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 [&>*]:max-w-full">{actions}</div>}
     </div>
   );
 }
@@ -110,20 +110,21 @@ export function StatCard({
 }) {
   const t = TONE[tone];
   const interactive = Boolean(onClick || to);
-  const cls = `group relative overflow-hidden text-left w-full bg-white border rounded-card shadow-card p-4 sm:p-5 transition-all duration-200 ${
-    active ? "border-brand-400 ring-4 ring-brand-500/10" : "border-border"
+  const cls = `group relative overflow-hidden text-left w-full min-w-0 bg-white border rounded-card shadow-card p-4 sm:p-5 transition-all duration-300 ease-smooth ${
+    active ? "border-brand-400 ring-4 ring-brand-500/10" : "border-border/90"
   } ${interactive ? "hover:shadow-lift hover:-translate-y-0.5 hover:border-brand-200 cursor-pointer" : ""}`;
   const body = (
     <>
       <span className={`absolute inset-x-0 top-0 h-[3px] ${t.bar} opacity-80`} />
+      <span className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${t.soft} opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100`} aria-hidden />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[11.5px] font-semibold uppercase tracking-[0.07em] text-slate-500 truncate">{label}</div>
-          <div className={`mt-2 text-[22px] sm:text-[26px] font-bold tracking-tight tabular leading-none truncate ${valueClass || "text-navy-900"} ${loading ? "opacity-40 animate-pulse" : ""}`}>
+          <div className="text-[11px] sm:text-[11.5px] font-bold uppercase tracking-[0.08em] text-slate-500 truncate">{label}</div>
+          <div className={`mt-2.5 text-[20px] sm:text-[26px] font-extrabold tracking-tight tabular leading-none truncate ${valueClass || "text-navy-900"} ${loading ? "opacity-40 animate-pulse" : ""}`}>
             {value}
           </div>
         </div>
-        <span className={`w-10 h-10 rounded-xl ring-1 ring-inset flex items-center justify-center shrink-0 ${t.tile}`}>
+        <span className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-xl ring-1 ring-inset flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105 ${t.tile}`}>
           <Icon name={icon} className="w-[18px] h-[18px]" />
         </span>
       </div>
@@ -158,7 +159,7 @@ export function Segmented<K extends string>({
   options, value, onChange, size = "md",
 }: { options: { key: K; label: string; count?: number; tone?: Tone }[]; value: K; onChange: (k: K) => void; size?: "sm" | "md" }) {
   return (
-    <div className="inline-flex max-w-full p-1 rounded-xl bg-slate-100/90 overflow-x-auto">
+    <div className="inline-flex max-w-full p-1 rounded-xl bg-slate-100/90 ring-1 ring-inset ring-slate-200/60 overflow-x-auto no-scrollbar">
       {options.map((o) => {
         const on = o.key === value;
         return (
@@ -166,8 +167,8 @@ export function Segmented<K extends string>({
             key={o.key}
             type="button"
             onClick={() => onChange(o.key)}
-            className={`inline-flex items-center gap-1.5 rounded-lg font-semibold whitespace-nowrap transition ${size === "sm" ? "px-2.5 py-1 text-[12px]" : "px-3 py-1.5 text-[12.5px]"} ${
-              on ? "bg-white text-navy-900 shadow-sm" : "text-slate-500 hover:text-navy-900"
+            className={`inline-flex items-center gap-1.5 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${size === "sm" ? "px-2.5 py-1 text-[12px]" : "px-3 py-1.5 text-[12.5px]"} ${
+              on ? "bg-white text-navy-900 shadow-soft ring-1 ring-slate-200/70" : "text-slate-500 hover:text-navy-900 hover:bg-white/60"
             }`}
           >
             {o.label}
@@ -206,10 +207,13 @@ export function SearchInput({ value, onChange, placeholder = "Search…", classN
 export function EmptyState({ icon = "box", title, text, action, tone = "slate", compact }: { icon?: IconName; title: string; text?: ReactNode; action?: ReactNode; tone?: Tone; compact?: boolean }) {
   return (
     <div className={`flex flex-col items-center text-center px-6 ${compact ? "py-8" : "py-14"}`}>
-      <span className={`w-12 h-12 rounded-2xl ring-1 ring-inset flex items-center justify-center ${TONE[tone].tile}`}>
-        <Icon name={icon} className="w-5 h-5" />
+      <span className="relative">
+        <span className={`absolute inset-0 -m-2 rounded-3xl opacity-60 blur-md ${TONE[tone].soft}`} aria-hidden />
+        <span className={`relative w-14 h-14 rounded-2xl ring-1 ring-inset flex items-center justify-center bg-white ${TONE[tone].tile}`}>
+          <Icon name={icon} className="w-6 h-6" />
+        </span>
       </span>
-      <div className="mt-3 text-[14px] font-semibold text-navy-900">{title}</div>
+      <div className="mt-4 text-[15px] font-bold text-navy-900">{title}</div>
       {text && <div className="mt-1 text-[12.5px] text-slate-500 max-w-sm">{text}</div>}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -234,16 +238,16 @@ export function Pagination({ page, pages, total, pageSize, onPage, noun = "items
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-slate-100 text-[12.5px] text-slate-500">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-slate-100 bg-slate-50/40 text-[12.5px] text-slate-500">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         {left}
         <span>
           Showing <b className="text-navy-900 tabular">{from.toLocaleString("en-IN")}–{to.toLocaleString("en-IN")}</b> of <b className="text-navy-900 tabular">{total.toLocaleString("en-IN")}</b> {noun}
         </span>
       </div>
       {pages > 1 && (
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => onPage(page - 1)} disabled={page <= 1} className="w-8 h-8 rounded-lg border border-border bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Previous page">
+        <div className="flex flex-wrap items-center justify-center gap-1">
+          <button type="button" onClick={() => onPage(page - 1)} disabled={page <= 1} className="w-8 h-8 rounded-lg border border-border bg-white flex items-center justify-center text-slate-600 transition hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-white" aria-label="Previous page">
             <Icon name="left" className="w-3.5 h-3.5" />
           </button>
           {pageWindow(page, pages).map((p, i) =>
@@ -260,7 +264,7 @@ export function Pagination({ page, pages, total, pageSize, onPage, noun = "items
               </button>
             )
           )}
-          <button type="button" onClick={() => onPage(page + 1)} disabled={page >= pages} className="w-8 h-8 rounded-lg border border-border bg-white flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Next page">
+          <button type="button" onClick={() => onPage(page + 1)} disabled={page >= pages} className="w-8 h-8 rounded-lg border border-border bg-white flex items-center justify-center text-slate-600 transition hover:bg-slate-50 hover:border-slate-300 disabled:opacity-40 disabled:hover:bg-white" aria-label="Next page">
             <Icon name="right" className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -295,8 +299,8 @@ export function Modal({ title, subtitle, icon, onClose, children, footer, size =
   }, [onClose]);
   const w = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : "max-w-2xl";
   return (
-    <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-[2px] flex items-end sm:items-center justify-center sm:p-4 animate-fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={`bg-white w-full ${w} rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col animate-slide-up sm:animate-scale-up`}>
+    <div className="fixed inset-0 z-50 bg-navy-950/45 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 animate-fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" className={`bg-white w-full ${w} rounded-t-4xl sm:rounded-2xl shadow-pop ring-1 ring-black/5 max-h-[92dvh] flex flex-col animate-slide-up sm:animate-scale-in`}>
         {/* Mobile Drag Handle */}
         <div className="sm:hidden w-10 h-1 bg-slate-300 rounded-full mx-auto my-2.5 shrink-0" />
         <div className="flex items-start gap-3 px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100">
@@ -306,14 +310,14 @@ export function Modal({ title, subtitle, icon, onClose, children, footer, size =
             </span>
           )}
           <div className="flex-1 min-w-0">
-            <h2 className="text-[16px] font-bold text-navy-900 truncate">{title}</h2>
+            <h2 className="text-[16px] sm:text-[17px] font-bold text-navy-900 truncate">{title}</h2>
             {subtitle && <p className="text-[12.5px] text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
-          <button type="button" onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close">
+          <button type="button" onClick={onClose} className="w-9 h-9 -mr-1 rounded-xl flex items-center justify-center text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-700 hover:rotate-90" aria-label="Close">
             <Icon name="x" />
           </button>
         </div>
-        <div className="px-5 sm:px-6 py-5 overflow-y-auto">{children}</div>
+        <div className="px-5 sm:px-6 py-5 overflow-y-auto overscroll-contain min-h-0">{children}</div>
         {footer && <div className="px-5 sm:px-6 py-3.5 pb-safe sm:pb-3.5 border-t border-slate-100 bg-slate-50/60 rounded-b-2xl flex flex-wrap justify-end gap-2">{footer}</div>}
       </div>
     </div>
@@ -353,9 +357,9 @@ export function IconButton({ title, icon, onClick, to, tone }: { title: string; 
 export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <label className="inline-flex items-center gap-2 text-[12.5px] font-medium text-slate-600 cursor-pointer select-none">
-      <span className={`relative w-9 h-5 rounded-full transition ${checked ? "bg-brand-600" : "bg-slate-300"}`}>
+      <span className={`relative w-9 h-5 shrink-0 rounded-full transition-colors duration-200 ${checked ? "bg-brand-600" : "bg-slate-300"}`}>
         <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ease-smooth ${checked ? "translate-x-4" : ""}`} />
       </span>
       {label}
     </label>
@@ -372,7 +376,7 @@ export function ChoiceGroup<K extends string>({ value, onChange, options, cols =
           key={k}
           type="button"
           onClick={() => onChange(k)}
-          className={`rounded-lg px-3 py-2 text-[12.5px] font-semibold ring-1 transition ${value === k ? "ring-2 ring-brand-500 bg-brand-50 text-brand-800" : "ring-border text-slate-600 hover:ring-slate-300"}`}
+          className={`rounded-xl px-3 py-2.5 text-[12.5px] font-semibold ring-1 transition-all duration-200 active:scale-[0.97] ${value === k ? "ring-2 ring-brand-500 bg-brand-50 text-brand-800 shadow-xs" : "ring-border bg-white text-slate-600 hover:ring-slate-300 hover:bg-slate-50"}`}
         >
           {l}
         </button>
@@ -383,7 +387,7 @@ export function ChoiceGroup<K extends string>({ value, onChange, options, cols =
 
 export function Toast({ text, ok = true }: { text: string; ok?: boolean }) {
   return (
-    <div className={`fixed bottom-5 right-5 left-5 sm:left-auto z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lift text-[13px] font-medium animate-fade-in ${ok ? "bg-navy-900 text-white" : "bg-rose-600 text-white"}`}>
+    <div role="status" className={`fixed bottom-24 md:bottom-6 right-4 left-4 sm:left-auto sm:right-6 sm:max-w-sm z-[60] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-pop ring-1 ring-white/10 text-[13px] font-medium animate-fade-up ${ok ? "bg-navy-900 text-white" : "bg-rose-600 text-white"}`}>
       <Icon name={ok ? "checkCircle" : "alert"} className="w-4 h-4 shrink-0" />
       {text}
     </div>

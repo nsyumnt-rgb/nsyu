@@ -1220,7 +1220,7 @@ export default function Inventory({
       {/* ============================================================== */}
       {/* 2. SUMMARY METRIC CARDS                                         */}
       {/* ============================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Total Products */}
         <div
           onClick={() => setActiveFilter("All")}

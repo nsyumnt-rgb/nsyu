@@ -366,7 +366,19 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
       : notifications;
 
   return (
-    <header className="h-16 bg-white/85 backdrop-blur-md supports-[backdrop-filter]:bg-white/75 border-b border-border flex items-center justify-between gap-1.5 sm:gap-3 px-2.5 sm:px-6 lg:px-8 sticky top-0 z-30 w-full max-w-full min-w-0">
+    <header className="h-16 bg-white/85 backdrop-blur-xl supports-[backdrop-filter]:bg-white/70 border-b border-border/80 shadow-[0_6px_20px_-16px_rgba(15,42,35,0.25)] flex items-center justify-between gap-1.5 sm:gap-3 px-2.5 sm:px-6 lg:pl-5 lg:pr-8 sticky top-0 z-30 w-full max-w-full min-w-0">
+      {/* Desktop: brand mark aligned with the sidebar */}
+      <Link to="/app" className="hidden lg:flex items-center gap-2.5 w-[232px] shrink-0 group">
+        <span className="w-9 h-9 rounded-xl bg-brand-gradient text-white flex items-center justify-center font-black text-[15px] shadow-brand transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3">
+          N
+        </span>
+        <span className="leading-none">
+          <span className="block font-extrabold text-[17px] tracking-tight text-navy-900">
+            NSYU<span className="text-brand-500">.</span>
+          </span>
+          <span className="block mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Business suite</span>
+        </span>
+      </Link>
       {/* Mobile: open navigation drawer */}
       <button
         type="button"
@@ -384,7 +396,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
       {/* Mobile: Brand Logo / Monogram */}
       <div className="lg:hidden hidden min-[380px]:flex items-center gap-1.5 shrink-0">
         <Link to="/app" className="flex items-center gap-1.5 active:scale-95 transition">
-          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#064E3B] to-[#047857] text-white flex items-center justify-center font-black text-xs shadow-2xs">
+          <span className="w-8 h-8 rounded-lg bg-brand-gradient text-white flex items-center justify-center font-black text-xs shadow-brand">
             N
           </span>
           <span className="font-black text-sm tracking-tight text-navy-900 hidden sm:inline">
@@ -427,12 +439,12 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
             if (searchResult) setSearchOpen(true);
           }}
           placeholder="Search reference (INV-..., PUR-..., TRF-..., SKU...)"
-          className="w-full pl-9 pr-4 py-2 text-[13px] rounded-xl border border-border bg-slate-50/80 hover:bg-white focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:outline-none transition-all placeholder:text-slate-400 text-slate-700"
+          className="w-full h-10 pl-9 pr-4 text-[13px] rounded-xl border border-border bg-slate-50/80 hover:bg-white hover:border-slate-300 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 focus:outline-none transition-all duration-200 placeholder:text-slate-400 text-slate-700"
         />
 
         {/* Live Search Quick Result Dropdown */}
         {searchOpen && searchResult && (
-          <div className="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-slate-200/90 p-2 z-50">
+          <div className="absolute left-0 right-0 mt-2 bg-white rounded-2xl shadow-pop border border-slate-200/90 p-2 z-50 animate-scale-in origin-top">
             <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex justify-between items-center">
               <span>Matching Record</span>
               <span className="text-[10px] lowercase text-slate-400">Press Enter ↵ to open</span>
@@ -525,7 +537,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           <button
             type="button"
             onClick={() => setShopMenuOpen((v) => !v)}
-            className="flex items-center min-w-0 max-w-full gap-1.5 sm:gap-2 pl-2 sm:pl-2.5 pr-2 sm:pr-3 py-1.5 bg-brand-50/80 hover:bg-brand-100/90 border border-brand-200/70 rounded-xl text-[11.5px] sm:text-[13px] font-semibold text-navy-900 transition-colors shadow-2xs cursor-pointer"
+            className="flex items-center min-w-0 max-w-full h-10 gap-1.5 sm:gap-2 pl-2 sm:pl-2.5 pr-2 sm:pr-3 bg-brand-50/80 hover:bg-brand-100/90 border border-brand-200/70 rounded-xl text-[11.5px] sm:text-[13px] font-semibold text-navy-900 transition-colors shadow-2xs cursor-pointer"
             title="Click to switch shop"
             aria-expanded={shopMenuOpen}
           >
@@ -541,7 +553,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           </button>
 
           {shopMenuOpen && (
-            <div className="fixed left-2 right-2 top-[68px] sm:absolute sm:top-auto sm:left-0 sm:right-auto mt-0 sm:mt-2 sm:w-64 bg-white rounded-xl shadow-lift border border-border py-1.5 z-50 animate-fade-in divide-y divide-slate-100">
+            <div className="fixed left-2 right-2 top-[68px] sm:absolute sm:top-auto sm:left-0 sm:right-auto mt-0 sm:mt-2 sm:w-72 bg-white rounded-2xl shadow-pop border border-border py-1.5 z-50 animate-scale-in origin-top-left divide-y divide-slate-100">
               <div className="px-3.5 py-2">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Assigned Shops</div>
                 <div className="text-[11px] text-slate-500 mt-0.5">Switch branch to manage its inventory & billing</div>
@@ -634,8 +646,8 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
         <div className="relative" ref={notifMenuRef}>
           <button
             onClick={toggleNotifDropdown}
-            className={`relative p-2 rounded-lg transition-colors ${
-              notifOpen ? "bg-slate-100 text-blue-600" : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+            className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-colors ${
+              notifOpen ? "bg-brand-50 text-brand-700 ring-1 ring-brand-200" : "text-slate-500 hover:text-navy-900 hover:bg-slate-100"
             }`}
             title="Notifications"
             aria-label="Notifications"
@@ -645,7 +657,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 flex min-w-[16px] h-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white shadow-xs leading-none">
+              <span className="absolute top-1 right-1 flex min-w-[16px] h-4 px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-white leading-none">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
@@ -653,7 +665,7 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
 
           {/* Interactive Notifications Dropdown */}
           {notifOpen && (
-            <div className="fixed left-2 right-2 top-[68px] sm:absolute sm:top-auto sm:left-auto sm:right-0 mt-0 sm:mt-2 sm:w-96 max-h-[calc(100dvh-90px)] bg-white rounded-2xl shadow-2xl border border-slate-200/90 flex flex-col z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="fixed left-2 right-2 top-[68px] sm:absolute sm:top-auto sm:left-auto sm:right-0 mt-0 sm:mt-2 sm:w-96 max-h-[calc(100dvh-90px)] bg-white rounded-2xl shadow-pop border border-slate-200/90 flex flex-col z-50 overflow-hidden animate-scale-in origin-top-right">
               {/* Header */}
               <div className="px-4 py-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -779,8 +791,9 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
         {/* Fullscreen Expand Icon */}
         <button
           onClick={toggleFullscreen}
-          className="hidden sm:inline-flex p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          className="hidden md:inline-flex w-10 h-10 items-center justify-center rounded-xl text-slate-500 hover:text-navy-900 hover:bg-slate-100 transition-colors"
           title="Toggle Fullscreen"
+          aria-label="Toggle fullscreen"
         >
           <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -794,12 +807,14 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
         <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setUserOpen((v) => !v)}
-            className="flex items-center gap-2.5 p-1 sm:pr-2.5 rounded-xl hover:bg-slate-100/80 transition-colors"
+            className="flex items-center gap-2.5 p-1 xl:pr-2.5 rounded-xl hover:bg-slate-100/80 transition-colors"
+            aria-haspopup="menu"
+            aria-expanded={userOpen}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-navy-800 text-white flex items-center justify-center font-semibold text-[12px] ring-2 ring-white shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-brand-gradient text-white flex items-center justify-center font-bold text-[12.5px] ring-2 ring-white shadow-brand">
               {(displayName || "U").trim().charAt(0).toUpperCase()}
             </div>
-            <div className="text-left hidden sm:block">
+            <div className="text-left hidden xl:block">
               <div className="text-[13px] font-semibold text-slate-800 leading-tight">
                 {displayName}
               </div>
@@ -810,28 +825,33 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
           </button>
 
           {userOpen && (
-            <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-16px)] bg-white rounded-xl shadow-lift border border-border py-1.5 z-50 animate-fade-in">
-              <div className="px-3.5 py-2 border-b border-slate-100">
-                <div className="text-xs font-semibold text-slate-800">{displayName}</div>
-                <div className="text-[11px] text-slate-400">{displayRole}</div>
+            <div role="menu" className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-16px)] bg-white rounded-2xl shadow-pop border border-border p-1.5 z-50 animate-scale-in origin-top-right">
+              <div className="flex items-center gap-3 px-2.5 py-2.5 mb-1 rounded-xl bg-slate-50">
+                <div className="w-9 h-9 rounded-full bg-brand-gradient text-white flex items-center justify-center font-bold text-[12.5px] shrink-0">
+                  {(displayName || "U").trim().charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13px] font-bold text-navy-900 truncate">{displayName}</div>
+                  <div className="text-[11px] text-slate-500 truncate">{displayRole}</div>
+                </div>
               </div>
               <button
                 onClick={() => {
                   setUserOpen(false);
                   setShopMenuOpen(true);
                 }}
-                className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                className="w-full text-left px-2.5 py-2 rounded-lg text-[12.5px] font-medium text-slate-700 hover:bg-slate-100 hover:text-navy-900 transition-colors flex items-center gap-2.5"
               >
-                <span>🏪</span> Switch Shop
+                <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 22V12h6v10" /></svg> Switch Shop
               </button>
               <button
                 onClick={() => {
                   setUserOpen(false);
                   navigate("/app/settings");
                 }}
-                className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                className="w-full text-left px-2.5 py-2 rounded-lg text-[12.5px] font-medium text-slate-700 hover:bg-slate-100 hover:text-navy-900 transition-colors flex items-center gap-2.5"
               >
-                <span>⚙️</span> Settings
+                <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></svg> Settings
               </button>
               <button
                 onClick={() => {
@@ -843,10 +863,10 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
                   window.dispatchEvent(new CustomEvent("nsyu_language_change", { detail: nextLang }));
                   setUserOpen(false);
                 }}
-                className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-between"
+                className="w-full text-left px-2.5 py-2 rounded-lg text-[12.5px] font-medium text-slate-700 hover:bg-slate-100 hover:text-navy-900 transition-colors flex items-center justify-between"
               >
-                <span className="flex items-center gap-2">
-                  <span>🌐</span> Language / भाषा
+                <span className="flex items-center gap-2.5">
+                  <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> Language / भाषा
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                   {localStorage.getItem("nsyu_language") === "Hindi" ? "हिंदी" : "English"}
@@ -854,9 +874,9 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
               </button>
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2 border-t border-slate-100 mt-1"
+                className="w-full text-left px-2.5 py-2 rounded-lg text-[12.5px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2.5 mt-1 border-t border-slate-100"
               >
-                <span>🚪</span> Log out
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5M21 12H9" /></svg> Log out
               </button>
             </div>
           )}
@@ -866,8 +886,8 @@ export default function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {
       {/* Notification Detail Modal */}
       {selectedNotif &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in font-sans">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in font-sans">
+            <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
               {/* Header */}
               <div className="flex items-start justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-3">
