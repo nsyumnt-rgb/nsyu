@@ -1931,6 +1931,17 @@ function SettingsInner() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2 p-5 rounded-xl border border-emerald-200 bg-emerald-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">WhatsApp & Email sender</h3>
+                <p className="text-[11.5px] text-slate-600">
+                  Send this shop's bills, reminders and offers from the shop's own WhatsApp number and email address.
+                </p>
+              </div>
+              <button type="button" className="btn btn-primary btn-sm shrink-0" onClick={() => navigate("/app/messaging/channels")}>
+                Set up sender
+              </button>
+            </div>
             <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-4">
               <div className="flex items-center justify-between">
                 <div>

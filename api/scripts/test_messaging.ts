@@ -71,6 +71,8 @@ const wa = http.createServer((req, res) => {
 
 /* ---------- Minimal SMTP server ---------- */
 const mails: string[] = [];
+const smtpLogins: string[] = []; // SMTP login used for each AUTH
+const smtpFroms: string[] = []; // envelope sender (MAIL FROM) of each email
 const smtp = net.createServer((sock) => {
   let data = false;
   let buf = "";
@@ -92,9 +94,17 @@ const smtp = net.createServer((sock) => {
       const line = buf.slice(0, i);
       buf = buf.slice(i + 2);
       const cmd = line.slice(0, 4).toUpperCase();
-      if (cmd === "EHLO" || cmd === "HELO") sock.write("250-test\r\n250 AUTH PLAIN LOGIN\r\n");
-      else if (cmd === "AUTH") sock.write("235 ok\r\n");
-      else if (cmd === "MAIL" || cmd === "RCPT" || cmd === "RSET" || cmd === "NOOP") sock.write("250 OK\r\n");
+      if (cmd === "EHLO" || cmd === "HELO") sock.write("250-test\r\n250 AUTH PLAIN\r\n");
+      else if (cmd === "AUTH") {
+        // AUTH PLAIN <base64(\0user\0pass)>; "wrong-pass" is rejected the way Gmail does
+        const [, , b64] = line.split(" ");
+        const [, user, password] = Buffer.from(b64 || "", "base64").toString().split("\0");
+        smtpLogins.push(user || "");
+        sock.write(password === "wrong-pass" ? "535 5.7.8 Username and Password not accepted\r\n" : "235 ok\r\n");
+      } else if (cmd === "MAIL") {
+        smtpFroms.push((line.match(/<([^>]*)>/) || [])[1] || "");
+        sock.write("250 OK\r\n");
+      } else if (cmd === "RCPT" || cmd === "RSET" || cmd === "NOOP") sock.write("250 OK\r\n");
       else if (cmd === "DATA") {
         data = true;
         sock.write("354 go\r\n");
@@ -371,6 +381,77 @@ async function main() {
   r = await call("GET", `/messaging/customers/${ravi.id}/preferences`, undefined, tokB);
   check("B cannot read A's customer preferences", r.status === 404);
   void bCust;
+
+  console.log("\nEach shop sends from its own email");
+  const { MessagingSettings } = models;
+  const { getTransporterForShop } = require("../src/utils/mailer");
+  const ownAccount = { host: "127.0.0.1", port: smtpPort, secure: false, user: "asha.shop@test.local", password: "app-pass-1" };
+  r = await call("PUT", "/messaging/settings/email", { account: ownAccount }, tokA);
+  check("owner saves the shop's own mailbox", r.status === 200 && r.json.data.email.account.connected && r.json.data.email.account.user === "asha.shop@test.local", r.json);
+  check("password is never sent back", !JSON.stringify(r.json).includes("app-pass-1") && r.json.data.email.account.passwordSet === true);
+  const rowA = await MessagingSettings.findOne({ where: { shop_id: shopA.id } });
+  check("password is stored encrypted", rowA.email_smtp_pass_enc && !rowA.email_smtp_pass_enc.includes("app-pass-1") && rowA.email_smtp_pass_enc.startsWith("v1:"));
+  r = await call("GET", "/messaging/settings", undefined, tokA);
+  check("settings read never includes the password", r.status === 200 && !JSON.stringify(r.json).includes("app-pass-1") && r.json.data.readiness.email.ready, r.json.data.email);
+
+  const resetSmtp = () => {
+    mails.length = 0;
+    smtpLogins.length = 0;
+    smtpFroms.length = 0;
+  };
+  resetSmtp();
+  r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);
+  check(
+    "test email goes out from the shop's own address",
+    r.status === 200 && /from asha\.shop@test\.local/.test(r.json.message) && smtpLogins[0] === "asha.shop@test.local" && smtpFroms[0] === "asha.shop@test.local",
+    { m: r.json, smtpLogins, smtpFroms }
+  );
+
+  resetSmtp();
+  r = await call("POST", "/messaging/send", { channels: "email", templateId: tplId, audience: { mode: "selected", customerIds: [ravi.id] } }, tokA);
+  const ownCamp = r.json?.data?.campaign?.id;
+  await drain();
+  r = await call("GET", `/messaging/campaigns/${ownCamp}`, undefined, tokA);
+  check(
+    "customer message is sent from the shop's own email",
+    r.json.data.deliveries[0]?.status === "sent" &&
+      smtpLogins.includes("asha.shop@test.local") &&
+      smtpFroms.length > 0 &&
+      smtpFroms.every((f) => f === "asha.shop@test.local") &&
+      /From: .*asha\.shop@test\.local/i.test(mails[0] || ""),
+    { d: r.json.data.deliveries, smtpLogins, smtpFroms, head: (mails[0] || "").slice(0, 300) }
+  );
+  const activeA = await getTransporterForShop(shopA.id);
+  check("bills, receipts and OTP emails use the same shop mailbox", activeA?.own === true && /asha\.shop@test\.local/.test(activeA.from || ""));
+
+  resetSmtp();
+  r = await call("POST", "/messaging/settings/email/test", { to: "owner-b@test.local" }, tokB);
+  check("another shop keeps sending from its own setup", r.status === 200 && smtpLogins[0] === "u" && smtpFroms[0] === "shop@test.local", { m: r.json, smtpLogins, smtpFroms });
+  r = await call("GET", "/messaging/settings", undefined, tokB);
+  check("another shop cannot see this shop's mailbox", r.json.data.email.account.connected === false && !JSON.stringify(r.json).includes("asha.shop"), r.json.data.email);
+
+  r = await call("PUT", "/messaging/settings/email", { account: { host: "not a host", port: 465, user: "x@test.local", password: "p" } }, tokB);
+  check("rejects a bad SMTP server", r.status === 400, r.json);
+  r = await call("PUT", "/messaging/settings/email", { account: { host: "smtp.gmail.com", port: 465, user: "not-an-email", password: "p" } }, tokB);
+  check("rejects a login that isn't an email address", r.status === 400, r.json);
+  r = await call("PUT", "/messaging/settings/email", { account: { host: "smtp.gmail.com", port: 465, user: "b.shop@gmail.com" } }, tokB);
+  check("first save needs a password", r.status === 400, r.json);
+  r = await call("PUT", "/messaging/settings/email", { account: { host: "smtp.gmail.com", port: 99999, user: "b.shop@gmail.com", password: "p" } }, tokB);
+  check("rejects a bad port", r.status === 400, r.json);
+
+  r = await call("PUT", "/messaging/settings/email", { senderName: "Asha", account: { ...ownAccount, password: undefined } }, tokA);
+  const rowA2 = await MessagingSettings.findOne({ where: { shop_id: shopA.id } });
+  check("saving without a password keeps the saved one", r.status === 200 && rowA2.email_smtp_pass_enc === rowA.email_smtp_pass_enc, r.json);
+
+  await call("PUT", "/messaging/settings/email", { account: { ...ownAccount, password: "wrong-pass" } }, tokA);
+  r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);
+  check("a rejected login gives the App Password hint", r.status === 400 && /App Password/.test(r.json.message), r.json);
+
+  r = await call("PUT", "/messaging/settings/email", { clearAccount: true }, tokA);
+  check("switching back to the platform email removes the login", r.status === 200 && r.json.data.email.account.connected === false && r.json.data.email.account.passwordSet === false, r.json.data?.email);
+  resetSmtp();
+  r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);
+  check("then it sends from the previous setup again", r.status === 200 && smtpLogins[0] === "u", { m: r.json, smtpLogins });
 
   server.close();
   wa.close();

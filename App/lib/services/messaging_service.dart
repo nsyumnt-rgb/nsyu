@@ -101,6 +101,19 @@ class MessagingService {
   Future<String> saveAutomations(Map<String, dynamic> automations) async =>
       _data(await _api.authedPut(_u('/automations'), {'automations': automations}))['message']?.toString() ?? 'Saved';
 
+  /// Shop sender setup (owner): WhatsApp Cloud API number and the shop's own mailbox.
+  Future<String> saveWhatsApp(Map<String, dynamic> body) async =>
+      _data(await _api.authedPut(_u('/settings/whatsapp'), body))['message']?.toString() ?? 'Saved';
+
+  Future<String> verifyWhatsApp() async =>
+      _data(await _api.authedPost(_u('/settings/whatsapp/verify'), {}))['message']?.toString() ?? 'Connected';
+
+  Future<String> saveEmail(Map<String, dynamic> body) async =>
+      _data(await _api.authedPut(_u('/settings/email'), body))['message']?.toString() ?? 'Saved';
+
+  Future<String> testEmail(String to) async =>
+      _data(await _api.authedPost(_u('/settings/email/test'), {'to': to}))['message']?.toString() ?? 'Sent';
+
   /// Customer portal: the signed-in customer's own channel choices.
   Future<Map<String, dynamic>> myPreferences() async {
     final portal = CustomerPortalService();

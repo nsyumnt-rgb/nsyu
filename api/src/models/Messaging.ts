@@ -61,6 +61,12 @@ export class MessagingSettings extends Model {
   declare email_sender_name: string | null;
   declare email_sender_address: string | null;
   declare email_reply_to: string | null;
+  /** The shop's own mailbox (e.g. Gmail + app password). Unset = platform Gmail/SMTP. */
+  declare email_smtp_host: string | null;
+  declare email_smtp_port: number | null;
+  declare email_smtp_secure: boolean | null;
+  declare email_smtp_user: string | null;
+  declare email_smtp_pass_enc: string | null;
   declare automations: Record<string, AutomationRule> | null;
   declare festivals: Array<{ name: string; date: string }> | null;
   declare credit_days: number;
@@ -83,6 +89,11 @@ MessagingSettings.init(
     email_sender_name: { type: DataTypes.STRING(120), allowNull: true },
     email_sender_address: { type: DataTypes.STRING(160), allowNull: true },
     email_reply_to: { type: DataTypes.STRING(160), allowNull: true },
+    email_smtp_host: { type: DataTypes.STRING(160), allowNull: true },
+    email_smtp_port: { type: DataTypes.INTEGER, allowNull: true },
+    email_smtp_secure: { type: DataTypes.BOOLEAN, allowNull: true },
+    email_smtp_user: { type: DataTypes.STRING(160), allowNull: true },
+    email_smtp_pass_enc: { type: DataTypes.TEXT, allowNull: true },
     automations: { type: DataTypes.JSON, allowNull: true },
     festivals: { type: DataTypes.JSON, allowNull: true },
     credit_days: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 15 },

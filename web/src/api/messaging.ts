@@ -28,7 +28,13 @@ export interface MessagingSettings {
     verifyToken: string;
     webhookUrl: string;
   };
-  email: { enabled: boolean; senderName: string; senderAddress: string; replyTo: string };
+  email: {
+    enabled: boolean;
+    senderName: string;
+    senderAddress: string;
+    replyTo: string;
+    account?: { host: string; port: number | null; secure: boolean | null; user: string; passwordSet: boolean; connected: boolean };
+  };
   automations: Record<string, AutomationRule>;
   legacyEmailEvents: string[];
   festivals: { name: string; date: string }[];

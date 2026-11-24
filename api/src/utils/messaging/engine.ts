@@ -399,7 +399,7 @@ export async function sendDelivery(d: MessageDelivery): Promise<void> {
   if (!active) return finish(d, { ok: false, error: "Gmail/SMTP is not configured", permanent: true });
   const baseFrom = active.from || process.env.SMTP_FROM || "";
   const baseAddress = (baseFrom.match(/<([^>]+)>/)?.[1] || baseFrom).trim();
-  const address = settings?.email_sender_address || baseAddress;
+  const address = active.own ? active.ownAddress : settings?.email_sender_address || baseAddress;
   const name = settings?.email_sender_name || active.shopName || "";
   const from = address ? (name ? `"${name.replace(/"/g, "")}" <${address}>` : address) : undefined;
   try {

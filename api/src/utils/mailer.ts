@@ -5,6 +5,8 @@ import { Customer } from "../models/Customer";
 import { CustomerAccount } from "../models/CustomerAccount";
 import { Shop } from "../models/Shop";
 import { legacyEmailAllowed } from "./messaging/settings";
+import { MessagingSettings } from "../models/Messaging";
+import { decryptSecret } from "./messaging/secrets";
 
 export function maskEmail(email: string): string {
   if (!email || !email.includes("@")) return email || "";
@@ -40,7 +42,40 @@ function getTransporter(): Transporter | null {
   return null;
 }
 
+/** The shop's own mailbox from Messaging › Channels (Gmail app password or any SMTP), if set. */
+async function shopOwnSmtp(shopId: number) {
+  try {
+    const row = await MessagingSettings.findOne({ where: { shop_id: shopId } });
+    if (!row?.email_smtp_host || !row.email_smtp_user || !row.email_smtp_pass_enc) return null;
+    const pass = decryptSecret(row.email_smtp_pass_enc);
+    if (!pass) return null;
+    const port = Number(row.email_smtp_port) || 587;
+    return {
+      host: row.email_smtp_host,
+      port,
+      secure: row.email_smtp_secure === true || port === 465,
+      user: row.email_smtp_user,
+      pass,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+export function buildSmtpTransport(c: { host: string; port: number; secure: boolean; user: string; pass: string }): Transporter {
+  return nodemailer.createTransport({
+    host: c.host,
+    port: c.port,
+    secure: c.secure,
+    auth: { user: c.user, pass: c.pass },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
+  });
+}
+
 export async function isEmailConfigured(shopId?: number): Promise<boolean> {
+  if (shopId && (await shopOwnSmtp(shopId))) return true;
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return true;
   try {
     const targetShopId = shopId || 1;
@@ -51,12 +86,32 @@ export async function isEmailConfigured(shopId?: number): Promise<boolean> {
   return false;
 }
 
-export async function getTransporterForShop(shopId?: number): Promise<{ transporter: Transporter; from?: string; shopName?: string } | null> {
+/**
+ * Picks the mailbox an email for this shop goes out from:
+ *  1. the shop's own mailbox (set by the owner in Messaging › Channels) — mail comes from the shop's address;
+ *  2. the platform Gmail/SMTP from the server environment (unchanged default);
+ *  3. a legacy shop.settings.smtp block.
+ * `own` tells callers the From address is the shop's login, so they must not replace it.
+ */
+export async function getTransporterForShop(
+  shopId?: number
+): Promise<{ transporter: Transporter; from?: string; shopName?: string; own?: boolean; ownAddress?: string } | null> {
   let shopName = "NSYU Business";
   try {
     const targetShopId = shopId || 1;
     const shop = await Shop.findByPk(targetShopId);
     if (shop?.name) shopName = shop.name;
+
+    const own = await shopOwnSmtp(targetShopId);
+    if (own) {
+      return {
+        transporter: buildSmtpTransport(own),
+        from: `"${shopName.replace(/"/g, "")}" <${own.user}>`,
+        shopName,
+        own: true,
+        ownAddress: own.user,
+      };
+    }
 
     const envTransporter = getTransporter();
     if (envTransporter) {

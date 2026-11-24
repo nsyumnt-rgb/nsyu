@@ -12,6 +12,7 @@ import '../screens/business/categories_screen.dart';
 import '../screens/business/purchases_screen.dart';
 import '../screens/business/roles_screen.dart';
 import '../screens/business/shop_settings_screen.dart';
+import '../screens/business/sender_settings_screen.dart';
 import '../screens/business/stock_screen.dart';
 import '../screens/business/suppliers_screen.dart';
 import '../screens/business/transfers_screen.dart';
@@ -393,6 +394,18 @@ class MoreMenuSheet extends StatelessWidget {
                           onTap: () {
                             Navigator.pop(context);
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopSettingsScreen()));
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
+                        _buildListTile(
+                          icon: Icons.forward_to_inbox_rounded,
+                          title: 'WhatsApp & email sender',
+                          subtitle: "Send from this shop's own number and email",
+                          iconColor: const Color(0xFF047857),
+                          bgColor: const Color(0xFFECFDF5),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const SenderSettingsScreen()));
                           },
                         ),
                         const Divider(height: 1, indent: 56, color: AppColors.border),

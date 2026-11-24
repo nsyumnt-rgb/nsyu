@@ -71,6 +71,15 @@ function publicSettings(row: MessagingSettings | null, req: Request) {
       senderName: row?.email_sender_name || "",
       senderAddress: row?.email_sender_address || "",
       replyTo: row?.email_reply_to || "",
+      // The shop's own mailbox. Password is write-only: only "is set" + hint go back.
+      account: {
+        host: row?.email_smtp_host || "",
+        port: row?.email_smtp_port || null,
+        secure: row?.email_smtp_secure ?? null,
+        user: row?.email_smtp_user || "",
+        passwordSet: !!row?.email_smtp_pass_enc,
+        connected: !!(row?.email_smtp_host && row?.email_smtp_user && row?.email_smtp_pass_enc),
+      },
     },
     automations: resolveRules(row),
     legacyEmailEvents: LEGACY_EMAIL_EVENTS,
@@ -166,6 +175,25 @@ export async function updateEmailSettings(req: Request, res: Response) {
       patch[col] = v || null;
     }
   }
+  // The shop's own mailbox (send from the shop's Gmail/SMTP instead of the platform one)
+  if (b.clearAccount) {
+    Object.assign(patch, { email_smtp_host: null, email_smtp_port: null, email_smtp_secure: null, email_smtp_user: null, email_smtp_pass_enc: null });
+  } else if (b.account && typeof b.account === "object") {
+    const a = b.account;
+    const host = String(a.host ?? row.email_smtp_host ?? "").trim().toLowerCase();
+    const user = String(a.user ?? row.email_smtp_user ?? "").trim();
+    const port = a.port === undefined || a.port === null || a.port === "" ? row.email_smtp_port || 587 : Number(a.port);
+    const newPass = typeof a.password === "string" ? a.password.replace(/\s+/g, host === "smtp.gmail.com" ? "" : " ").trim() : "";
+    if (!/^([a-z0-9-]+\.)+[a-z]{2,}$|^\d{1,3}(\.\d{1,3}){3}$|^localhost$/.test(host)) return fail(res, 400, "Enter a valid SMTP server, e.g. smtp.gmail.com");
+    if (!Number.isInteger(port) || port < 1 || port > 65535) return fail(res, 400, "SMTP port must be a number like 465 or 587");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user)) return fail(res, 400, "Email login must be a full email address");
+    if (!newPass && !row.email_smtp_pass_enc) return fail(res, 400, "Enter the email password (for Gmail, an App Password)");
+    patch.email_smtp_host = host;
+    patch.email_smtp_port = port;
+    patch.email_smtp_secure = a.secure === undefined ? port === 465 : !!a.secure;
+    patch.email_smtp_user = user;
+    if (newPass) patch.email_smtp_pass_enc = encryptSecret(newPass.slice(0, 256));
+  }
   await row.update(patch);
   return res.json({ success: true, message: "Email settings saved", data: publicSettings(row, req) });
 }
@@ -178,7 +206,7 @@ export async function sendTestEmail(req: Request, res: Response) {
   if (!active) return fail(res, 400, "Gmail/SMTP is not configured on the server or for this shop");
   const row = await settingsFor(ownerId, shopId);
   const baseFrom = active.from || process.env.SMTP_FROM || "";
-  const address = row.email_sender_address || (baseFrom.match(/<([^>]+)>/)?.[1] || baseFrom).trim();
+  const address = active.own ? active.ownAddress : row.email_sender_address || (baseFrom.match(/<([^>]+)>/)?.[1] || baseFrom).trim();
   const name = row.email_sender_name || active.shopName || "";
   try {
     await active.transporter.sendMail({
@@ -189,8 +217,15 @@ export async function sendTestEmail(req: Request, res: Response) {
       text: "Your email channel is working.",
       html: wrapEmail({ shopName: active.shopName || "Your shop", bodyHtml: "<p>Your email channel is working.</p>" }),
     });
-    return res.json({ success: true, message: `Test email sent to ${to}` });
+    return res.json({ success: true, message: `Test email sent to ${to}${address ? ` from ${address}` : ""}` });
   } catch (err: any) {
+    const code = Number(err?.responseCode || 0);
+    if (active.own && (code === 535 || code === 534 || err?.code === "EAUTH")) {
+      return fail(res, 400, "Your email provider rejected the login. For Gmail, turn on 2-Step Verification and use an App Password, not your normal password.");
+    }
+    if (["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNREFUSED"].includes(err?.code)) {
+      return fail(res, 400, `Could not reach the mail server (${err.code}). Check the SMTP server and port.`);
+    }
     return fail(res, 400, `Sending failed: ${err?.message || "SMTP error"}`);
   }
 }

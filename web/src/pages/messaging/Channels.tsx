@@ -19,6 +19,9 @@ export default function Channels({ ctx }: { ctx: MessagingCtx }) {
   const s = ctx.settings;
   const [wa, setWa] = useState({ enabled: false, phoneNumberId: "", businessAccountId: "", displayNumber: "", apiVersion: "v21.0", accessToken: "", appSecret: "", verifyToken: "" });
   const [em, setEm] = useState({ enabled: true, senderName: "", senderAddress: "", replyTo: "" });
+  // Where emails go out from: the platform Gmail (default), the shop's own Gmail, or any SMTP mailbox
+  const [mode, setMode] = useState<"platform" | "gmail" | "smtp">("platform");
+  const [acct, setAcct] = useState({ host: "", port: "587", secure: false, user: "", password: "" });
   const [busy, setBusy] = useState("");
   const [testTo, setTestTo] = useState("");
   const [waTpls, setWaTpls] = useState<Awaited<ReturnType<typeof messagingApi.waTemplates>> | null>(null);
@@ -26,8 +29,30 @@ export default function Channels({ ctx }: { ctx: MessagingCtx }) {
   useEffect(() => {
     if (!s) return;
     setWa({ ...s.whatsapp, accessToken: "", appSecret: "" } as any);
-    setEm(s.email);
+    const { account, ...emailRest } = s.email;
+    setEm(emailRest);
+    if (account?.connected) {
+      setMode(account.host === "smtp.gmail.com" ? "gmail" : "smtp");
+      setAcct({ host: account.host, port: String(account.port || 587), secure: !!account.secure, user: account.user, password: "" });
+    } else {
+      setMode("platform");
+      setAcct({ host: "", port: "587", secure: false, user: "", password: "" });
+    }
   }, [s]);
+
+  const saveEmail = () => {
+    const body: any = { ...em };
+    if (mode === "platform") {
+      if (s?.email.account?.connected) body.clearAccount = true;
+    } else if (mode === "gmail") {
+      body.account = { host: "smtp.gmail.com", port: 465, secure: true, user: acct.user.trim(), password: acct.password || undefined };
+    } else {
+      body.account = { host: acct.host.trim(), port: Number(acct.port), secure: acct.secure, user: acct.user.trim(), password: acct.password || undefined };
+    }
+    return run("email", () => messagingApi.saveEmail(body));
+  };
+  const account = s?.email.account;
+  const passHint = account?.passwordSet && mode !== "platform" ? "Saved. Leave empty to keep it." : undefined;
 
   const run = async (key: string, fn: () => Promise<any>, after?: () => void) => {
     setBusy(key);
@@ -189,25 +214,110 @@ export default function Channels({ ctx }: { ctx: MessagingCtx }) {
             </span>
             <div className="min-w-0">
               <h2 className="card-title">Email</h2>
-              <p className="text-[12.5px] text-slate-500">Uses your existing Gmail / SMTP setup — nothing to reconnect</p>
+              <p className="text-[12.5px] text-slate-500">From the platform email, or from this shop's own Gmail / mailbox</p>
             </div>
           </div>
           {ctx.readiness && <ChannelPill label="Email" ready={ctx.readiness.email.ready} reason={ctx.readiness.email.reason} />}
         </div>
         <Switch checked={em.enabled} onChange={(v) => setEm({ ...em, enabled: v })} label="Send messages by email" />
+        <div>
+          <span className="label">Send emails from</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {(
+              [
+                ["platform", "Platform email", "Default, nothing to set up"],
+                ["gmail", "This shop's Gmail", "Gmail + App Password"],
+                ["smtp", "Other mailbox", "Any SMTP email"],
+              ] as const
+            ).map(([key, title, sub]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMode(key)}
+                aria-pressed={mode === key}
+                className={`text-left rounded-xl px-3 py-2.5 ring-1 ring-inset transition ${
+                  mode === key ? "bg-sky-50 ring-sky-500 text-navy-900" : "bg-white ring-slate-200 text-slate-600 hover:ring-slate-300"
+                }`}
+              >
+                <div className="text-[13px] font-semibold">{title}</div>
+                <div className="text-[11.5px] text-slate-500">{sub}</div>
+              </button>
+            ))}
+          </div>
+          {account?.connected && (
+            <p className="field-hint">
+              Currently sending from <b>{account.user}</b>.
+            </p>
+          )}
+        </div>
+
+        {mode === "gmail" && (
+          <div className="rounded-2xl bg-slate-50 ring-1 ring-inset ring-slate-200/70 p-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Shop Gmail address">
+                <input className="input" type="email" autoComplete="off" placeholder="yourshop@gmail.com" value={acct.user} onChange={(e) => setAcct({ ...acct, user: e.target.value })} />
+              </Field>
+              <Field label="Gmail App Password" hint={passHint || "16 letters from Google, not your Gmail password"}>
+                <input className="input font-mono" type="password" autoComplete="new-password" placeholder={account?.passwordSet ? "••••••••" : "abcd efgh ijkl mnop"} value={acct.password} onChange={(e) => setAcct({ ...acct, password: e.target.value })} />
+              </Field>
+            </div>
+            <ol className="text-[11.5px] text-slate-600 list-decimal pl-4 space-y-0.5">
+              <li>Turn on 2-Step Verification for this Gmail account.</li>
+              <li>
+                Open{" "}
+                <a className="text-sky-700 underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">
+                  Google App Passwords
+                </a>
+                , create one named “NSYU” and paste it here.
+              </li>
+              <li>Save, then send a test email below.</li>
+            </ol>
+          </div>
+        )}
+
+        {mode === "smtp" && (
+          <div className="rounded-2xl bg-slate-50 ring-1 ring-inset ring-slate-200/70 p-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="SMTP server" hint="e.g. smtp.hostinger.com, smtp.zoho.in">
+                <input className="input" value={acct.host} onChange={(e) => setAcct({ ...acct, host: e.target.value })} />
+              </Field>
+              <Field label="Port" hint="465 (SSL) or 587 (STARTTLS)">
+                <input
+                  className="input"
+                  inputMode="numeric"
+                  value={acct.port}
+                  onChange={(e) => {
+                    const port = e.target.value.replace(/\D/g, "").slice(0, 5);
+                    setAcct({ ...acct, port, secure: port === "465" ? true : port === "587" ? false : acct.secure });
+                  }}
+                />
+              </Field>
+              <Field label="Email login" hint="Emails are sent from this address">
+                <input className="input" type="email" autoComplete="off" value={acct.user} onChange={(e) => setAcct({ ...acct, user: e.target.value })} />
+              </Field>
+              <Field label="Password" hint={passHint}>
+                <input className="input" type="password" autoComplete="new-password" placeholder={account?.passwordSet ? "••••••••" : ""} value={acct.password} onChange={(e) => setAcct({ ...acct, password: e.target.value })} />
+              </Field>
+            </div>
+            <Switch checked={acct.secure} onChange={(v) => setAcct({ ...acct, secure: v })} label="Use SSL (port 465)" />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Sender name" hint="Shown as “From” in the inbox">
             <input className="input" value={em.senderName} onChange={(e) => setEm({ ...em, senderName: e.target.value })} />
           </Field>
-          <Field label="Sender email" hint="Gmail may send as the signed-in address">
-            <input className="input" type="email" value={em.senderAddress} onChange={(e) => setEm({ ...em, senderAddress: e.target.value })} />
-          </Field>
+          {mode === "platform" && (
+            <Field label="Sender email" hint="Gmail may send as the signed-in address">
+              <input className="input" type="email" value={em.senderAddress} onChange={(e) => setEm({ ...em, senderAddress: e.target.value })} />
+            </Field>
+          )}
           <Field label="Reply-to email">
             <input className="input" type="email" value={em.replyTo} onChange={(e) => setEm({ ...em, replyTo: e.target.value })} />
           </Field>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn btn-primary" disabled={busy === "email"} onClick={() => run("email", () => messagingApi.saveEmail(em))}>
+          <button type="button" className="btn btn-primary" disabled={busy === "email"} onClick={saveEmail}>
             {busy === "email" ? "Saving…" : "Save email"}
           </button>
         </div>

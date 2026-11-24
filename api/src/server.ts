@@ -165,6 +165,26 @@ async function ensureMessagingSchema() {
   }
 }
 
+/** Per-shop email login columns (added after 12_messaging). Works on MySQL, Postgres and SQLite. */
+async function ensureShopEmailColumns() {
+  try {
+    const qi = sequelize.getQueryInterface();
+    const cols = await qi.describeTable("messaging_settings");
+    const wanted: Record<string, any> = {
+      email_smtp_host: { type: DataTypes.STRING(160), allowNull: true },
+      email_smtp_port: { type: DataTypes.INTEGER, allowNull: true },
+      email_smtp_secure: { type: DataTypes.BOOLEAN, allowNull: true },
+      email_smtp_user: { type: DataTypes.STRING(160), allowNull: true },
+      email_smtp_pass_enc: { type: DataTypes.TEXT, allowNull: true },
+    };
+    for (const [name, spec] of Object.entries(wanted)) {
+      if (!cols[name]) await qi.addColumn("messaging_settings", name, spec);
+    }
+  } catch (err) {
+    console.warn("⚠️ messaging_settings email columns — check warning:", err);
+  }
+}
+
 /**
  * products.visibility (both | marketplace | pos | hidden). Works on MySQL,
  * Postgres and SQLite. If the column can't be added, the attribute is dropped
@@ -204,6 +224,7 @@ async function start() {
     await ensureReturnsSchema();
     await ensureProductVisibilitySchema();
     await ensureMessagingSchema();
+    await ensureShopEmailColumns();
     await ensureStockTransferSchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {

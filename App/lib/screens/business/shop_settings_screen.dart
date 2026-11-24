@@ -8,6 +8,7 @@ import '../../providers/settings_provider.dart';
 import '../../services/business_service.dart';
 import '../../theme/app_theme.dart';
 import 'business_ui.dart';
+import 'sender_settings_screen.dart';
 
 /// Invoice numbering, tax, payment and stock rules for the current shop.
 /// Same settings as the website's Settings › Invoice / Tax & GST / Payment / Inventory rules.
@@ -201,6 +202,16 @@ class _ShopSettingsScreenState extends State<ShopSettingsScreen> {
                         _switch('UPI', 'Accept UPI payments', _upi, (v) => _upi = v),
                         _switch('Bank transfer / card', 'Accept bank and card payments', _bank, (v) => _bank = v),
                         _switch('Customer credit (udhaar)', 'Allow unpaid or part-paid bills', _credit, (v) => _credit = v),
+                      ]),
+                      _section('MESSAGES', [
+                        ListTile(
+                          contentPadding: const EdgeInsets.only(right: 4),
+                          leading: const Icon(Icons.forward_to_inbox_rounded, color: AppColors.emerald),
+                          title: const Text('WhatsApp & email sender', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          subtitle: const Text("Bills and reminders go from this shop's own number and email", style: TextStyle(fontSize: 12)),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SenderSettingsScreen())),
+                        ),
                       ]),
                       _section('STOCK', [
                         _switch('Sell when stock is 0', 'Allow billing below zero stock', _allowNegative, (v) => _allowNegative = v),
