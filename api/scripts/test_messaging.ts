@@ -443,6 +443,29 @@ async function main() {
   const rowA2 = await MessagingSettings.findOne({ where: { shop_id: shopA.id } });
   check("saving without a password keeps the saved one", r.status === 200 && rowA2.email_smtp_pass_enc === rowA.email_smtp_pass_enc, r.json);
 
+  r = await call("PUT", "/messaging/settings/email", { account: { ...ownAccount, user: "other.mailbox@test.local", password: undefined } }, tokA);
+  check("changing the mailbox needs that mailbox's password", r.status === 400, r.json);
+  r = await call("PUT", "/messaging/settings/email", { account: { host: "smtp.gmail.com", port: 465, user: "asha.shop@test.local" } }, tokA);
+  check("switching provider needs a new password", r.status === 400, r.json);
+  r = await call("PUT", "/messaging/settings/email", { account: { host: "smtp.gmail.com", port: 465, user: "asha.shop@gmail.com", password: "abcd efgh ijkl mnop" } }, tokA);
+  const { decryptSecret } = require("../src/utils/messaging/secrets");
+  const rowG = await MessagingSettings.findOne({ where: { shop_id: shopA.id } });
+  check("Gmail App Password spaces are removed", r.status === 200 && decryptSecret(rowG.email_smtp_pass_enc) === "abcdefghijklmnop", r.json);
+
+  console.log("\nTest WhatsApp message");
+  waCalls.length = 0;
+  r = await call("POST", "/messaging/settings/whatsapp/test", { to: "98765 43210" }, tokA);
+  const hello = waCalls.find((c) => c.body?.type === "template");
+  check(
+    "test WhatsApp sends Meta's hello_world template to the owner's number",
+    r.status === 200 && hello?.body.to === "919876543210" && hello.body.template.name === "hello_world" && hello.body.template.language.code === "en_US",
+    { m: r.json, hello }
+  );
+  r = await call("POST", "/messaging/settings/whatsapp/test", { to: "12" }, tokA);
+  check("test WhatsApp rejects a bad number", r.status === 400, r.json);
+  r = await call("POST", "/messaging/settings/whatsapp/test", { to: "9876543210" }, tokB);
+  check("test WhatsApp needs this shop's own credentials", r.status === 400, r.json);
+
   await call("PUT", "/messaging/settings/email", { account: { ...ownAccount, password: "wrong-pass" } }, tokA);
   r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);
   check("a rejected login gives the App Password hint", r.status === 400 && /App Password/.test(r.json.message), r.json);

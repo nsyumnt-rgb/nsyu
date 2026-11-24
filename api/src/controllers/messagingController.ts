@@ -15,7 +15,7 @@ import {
 import { encryptSecret, secretHint } from "../utils/messaging/secrets";
 import { TEMPLATE_VARIABLES, renderHtml, renderText, wrapEmail } from "../utils/messaging/render";
 import { getSettingsRow, resolveRules, LEGACY_EMAIL_EVENTS } from "../utils/messaging/settings";
-import { listApprovedTemplates, verifyWhatsAppCredentials, normalizeWhatsAppNumber } from "../utils/messaging/whatsapp";
+import { listApprovedTemplates, verifyWhatsAppCredentials, normalizeWhatsAppNumber, sendWhatsAppTemplate } from "../utils/messaging/whatsapp";
 import {
   audienceSummary,
   baseVars,
@@ -152,6 +152,22 @@ export async function verifyWhatsApp(req: Request, res: Response) {
   return res.json({ success: true, message: `Connected: ${r.verifiedName || ""} ${r.displayNumber || ""}`.trim(), data: r });
 }
 
+/**
+ * Sends Meta's built-in "hello_world" template (present on every new WhatsApp Business
+ * Account) to the owner's own phone, so setup can be checked end to end.
+ */
+export async function sendTestWhatsApp(req: Request, res: Response) {
+  const { ownerId, shopId } = ctx(req);
+  const row = await settingsFor(ownerId, shopId);
+  const creds = whatsappCredentials(row);
+  if (!creds) return fail(res, 400, "Save the Phone number ID and access token first");
+  const to = normalizeWhatsAppNumber(String(req.body?.to || ""));
+  if (!to) return fail(res, 400, "Enter a valid mobile number, e.g. 98765 43210");
+  const r = await sendWhatsAppTemplate(creds, to, { name: "hello_world", language: "en_US", params: [] });
+  if (!r.ok) return fail(res, 400, `WhatsApp did not send the test: ${r.error}`);
+  return res.json({ success: true, message: `Test WhatsApp sent to +${to}. It should arrive in a few seconds.` });
+}
+
 export async function listWhatsAppTemplates(req: Request, res: Response) {
   const { shopId } = ctx(req);
   const creds = whatsappCredentials(await getSettingsRow(shopId));
@@ -183,11 +199,14 @@ export async function updateEmailSettings(req: Request, res: Response) {
     const host = String(a.host ?? row.email_smtp_host ?? "").trim().toLowerCase();
     const user = String(a.user ?? row.email_smtp_user ?? "").trim();
     const port = a.port === undefined || a.port === null || a.port === "" ? row.email_smtp_port || 587 : Number(a.port);
-    const newPass = typeof a.password === "string" ? a.password.replace(/\s+/g, host === "smtp.gmail.com" ? "" : " ").trim() : "";
+    // Gmail shows App Passwords as "abcd efgh ijkl mnop": the spaces are not part of it
+    const newPass = typeof a.password === "string" ? (host === "smtp.gmail.com" ? a.password.replace(/\s+/g, "") : a.password) : "";
     if (!/^([a-z0-9-]+\.)+[a-z]{2,}$|^\d{1,3}(\.\d{1,3}){3}$|^localhost$/.test(host)) return fail(res, 400, "Enter a valid SMTP server, e.g. smtp.gmail.com");
     if (!Number.isInteger(port) || port < 1 || port > 65535) return fail(res, 400, "SMTP port must be a number like 465 or 587");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user)) return fail(res, 400, "Email login must be a full email address");
-    if (!newPass && !row.email_smtp_pass_enc) return fail(res, 400, "Enter the email password (for Gmail, an App Password)");
+    // A saved password only belongs to the mailbox it was saved for
+    const sameMailbox = row.email_smtp_host === host && row.email_smtp_user === user;
+    if (!newPass && !(row.email_smtp_pass_enc && sameMailbox)) return fail(res, 400, "Enter the email password (for Gmail, an App Password)");
     patch.email_smtp_host = host;
     patch.email_smtp_port = port;
     patch.email_smtp_secure = a.secure === undefined ? port === 465 : !!a.secure;

@@ -108,6 +108,9 @@ class MessagingService {
   Future<String> verifyWhatsApp() async =>
       _data(await _api.authedPost(_u('/settings/whatsapp/verify'), {}))['message']?.toString() ?? 'Connected';
 
+  Future<String> testWhatsApp(String to) async =>
+      _data(await _api.authedPost(_u('/settings/whatsapp/test'), {'to': to}))['message']?.toString() ?? 'Sent';
+
   Future<String> saveEmail(Map<String, dynamic> body) async =>
       _data(await _api.authedPut(_u('/settings/email'), body))['message']?.toString() ?? 'Saved';
 

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../services/messaging_service.dart';
 import '../../theme/app_theme.dart';
 import 'business_ui.dart';
 
-/// Which WhatsApp number and which email address this shop's messages go out from.
-/// Same settings as the website's Messaging › Channels.
+/// Guided setup for where this shop's messages come from: its own email
+/// (Gmail App Password or a business mailbox) and its own WhatsApp Business number.
+/// Same settings as the website's Settings › Communication.
 class SenderSettingsScreen extends StatefulWidget {
   const SenderSettingsScreen({super.key});
 
@@ -15,7 +17,21 @@ class SenderSettingsScreen extends StatefulWidget {
   State<SenderSettingsScreen> createState() => _SenderSettingsScreenState();
 }
 
-enum _MailMode { platform, gmail, smtp }
+enum _MailMode { gmail, smtp, platform }
+
+class _Provider {
+  final String label, host;
+  final int port;
+  const _Provider(this.label, this.host, this.port);
+}
+
+const _providers = [
+  _Provider('Hostinger Email', 'smtp.hostinger.com', 465),
+  _Provider('Zoho Mail (India)', 'smtp.zoho.in', 465),
+  _Provider('Outlook / Microsoft 365', 'smtp.office365.com', 587),
+  _Provider('Yahoo Mail', 'smtp.mail.yahoo.com', 465),
+  _Provider('Other (enter details)', '', 465),
+];
 
 class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
   final _svc = MessagingService();
@@ -26,20 +42,20 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
   final _waPhoneId = TextEditingController();
   final _waAccountId = TextEditingController();
   final _waToken = TextEditingController();
+  final _waTestTo = TextEditingController();
   bool _waTokenSet = false;
   String? _waTokenHint;
 
   // Email
   bool _emOn = true;
-  _MailMode _mode = _MailMode.platform;
-  bool _accountConnected = false;
-  bool _passwordSet = false;
-  String _connectedUser = '';
+  _MailMode _mode = _MailMode.gmail;
+  Map<String, dynamic> _acct = {};
+  int _provider = 0;
   final _emUser = TextEditingController();
   final _emPass = TextEditingController();
   final _emHost = TextEditingController();
-  final _emPort = TextEditingController(text: '587');
-  bool _emSsl = false;
+  final _emPort = TextEditingController(text: '465');
+  bool _emSsl = true;
   final _senderName = TextEditingController();
   final _replyTo = TextEditingController();
   final _testTo = TextEditingController();
@@ -54,16 +70,21 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _emPass.addListener(() => setState(() {}));
     _load();
   }
 
   @override
   void dispose() {
-    for (final c in [_waNumber, _waPhoneId, _waAccountId, _waToken, _emUser, _emPass, _emHost, _emPort, _senderName, _replyTo, _testTo]) {
+    for (final c in [_waNumber, _waPhoneId, _waAccountId, _waToken, _waTestTo, _emUser, _emPass, _emHost, _emPort, _senderName, _replyTo, _testTo]) {
       c.dispose();
     }
     super.dispose();
   }
+
+  bool get _acctConnected => _acct['connected'] == true;
+  String get _acctHost => '${_acct['host'] ?? ''}';
+  String get _acctUser => '${_acct['user'] ?? ''}';
 
   Future<void> _load() async {
     setState(() {
@@ -74,7 +95,7 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
       final s = await _svc.settings();
       final wa = Map<String, dynamic>.from(s['whatsapp'] ?? {});
       final em = Map<String, dynamic>.from(s['email'] ?? {});
-      final acct = Map<String, dynamic>.from(em['account'] ?? {});
+      _acct = Map<String, dynamic>.from(em['account'] ?? {});
       _readiness = Map<String, dynamic>.from(s['readiness'] ?? {});
 
       _waOn = wa['enabled'] == true;
@@ -84,23 +105,28 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
       _waToken.clear();
       _waTokenSet = wa['accessTokenSet'] == true;
       _waTokenHint = wa['accessTokenHint']?.toString();
+      if (_waTestTo.text.isEmpty) _waTestTo.text = _waNumber.text;
 
       _emOn = em['enabled'] != false;
       _senderName.text = '${em['senderName'] ?? ''}';
       _replyTo.text = '${em['replyTo'] ?? ''}';
-      _accountConnected = acct['connected'] == true;
-      _passwordSet = acct['passwordSet'] == true;
-      _connectedUser = '${acct['user'] ?? ''}';
       _emPass.clear();
-      if (_accountConnected) {
-        final host = '${acct['host'] ?? ''}';
-        _mode = host == 'smtp.gmail.com' ? _MailMode.gmail : _MailMode.smtp;
-        _emUser.text = _connectedUser;
-        _emHost.text = host;
-        _emPort.text = '${acct['port'] ?? 587}';
-        _emSsl = acct['secure'] == true;
+      if (_acctConnected) {
+        _emUser.text = _acctUser;
+        if (_acctHost == 'smtp.gmail.com') {
+          _mode = _MailMode.gmail;
+        } else {
+          _mode = _MailMode.smtp;
+          final i = _providers.indexWhere((p) => p.host == _acctHost);
+          _provider = i >= 0 ? i : _providers.length - 1;
+          _emHost.text = _acctHost;
+          _emPort.text = '${_acct['port'] ?? 465}';
+          _emSsl = _acct['secure'] == true;
+        }
       } else {
-        _mode = _MailMode.platform;
+        final emailReady = (_readiness['email'] as Map?)?['ready'] == true;
+        _mode = emailReady ? _MailMode.platform : _MailMode.gmail;
+        _applyProvider(_provider);
       }
     } catch (e) {
       _error = '$e';
@@ -109,90 +135,150 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
     }
   }
 
-  Future<void> _run(String key, Future<String> Function() fn, {bool reload = true}) async {
+  void _applyProvider(int i) {
+    _provider = i;
+    final p = _providers[i];
+    if (p.host.isNotEmpty) {
+      _emHost.text = p.host;
+      _emPort.text = '${p.port}';
+      _emSsl = p.port == 465;
+    }
+  }
+
+  Future<bool> _run(String key, Future<String> Function() fn, {bool reload = true}) async {
     FocusScope.of(context).unfocus();
     setState(() => _busy = key);
     try {
       final msg = await fn();
-      if (!mounted) return;
+      if (!mounted) return true;
       bizToast(context, msg);
       if (reload) await _load();
+      return true;
     } catch (e) {
       if (mounted) bizToast(context, '$e', ok: false);
+      return false;
     } finally {
       if (mounted) setState(() => _busy = '');
     }
   }
 
-  Future<void> _saveWhatsApp() async {
-    if (_waOn && _waPhoneId.text.trim().isEmpty) {
-      return bizToast(context, 'Enter the Phone number ID from WhatsApp Manager', ok: false);
+  Future<void> _open(String url) async {
+    final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    if (!ok && mounted) bizToast(context, 'Could not open $url', ok: false);
+  }
+
+  /// Builds the email save body, or returns an error message.
+  Object _emailBody() {
+    final body = <String, dynamic>{'enabled': _emOn, 'senderName': _senderName.text.trim(), 'replyTo': _replyTo.text.trim()};
+    if (body['replyTo'] != '' && !_emailRe.hasMatch(body['replyTo'])) return 'Reply-to email is not valid';
+    if (_mode == _MailMode.platform) {
+      if (_acctConnected) body['clearAccount'] = true;
+      return body;
     }
-    await _run('wa', () => _svc.saveWhatsApp({
+    final user = _emUser.text.trim();
+    if (!_emailRe.hasMatch(user)) return _mode == _MailMode.gmail ? "Enter the shop's Gmail address" : 'Enter the full email address';
+    if (_mode == _MailMode.gmail) {
+      final pass = _emPass.text.replaceAll(RegExp(r'\s+'), '');
+      final keep = _acctConnected && _acctHost == 'smtp.gmail.com' && _acctUser == user;
+      if (pass.length != 16 && !(keep && pass.isEmpty)) return 'The App Password from Google has 16 letters';
+      body['account'] = {'host': 'smtp.gmail.com', 'port': 465, 'secure': true, 'user': user, if (pass.isNotEmpty) 'password': pass};
+      return body;
+    }
+    final host = _emHost.text.trim().toLowerCase();
+    final port = int.tryParse(_emPort.text.trim());
+    if (host.isEmpty || port == null) return 'Enter the SMTP server and port';
+    final keep = _acctConnected && _acctHost == host && _acctUser == user;
+    if (_emPass.text.isEmpty && !keep) return 'Enter the email password';
+    body['account'] = {'host': host, 'port': port, 'secure': _emSsl, 'user': user, if (_emPass.text.isNotEmpty) 'password': _emPass.text};
+    return body;
+  }
+
+  Future<void> _saveEmail({required bool thenTest}) async {
+    final body = _emailBody();
+    if (body is String) return bizToast(context, body, ok: false);
+    final to = _testTo.text.trim();
+    if (thenTest && !_emailRe.hasMatch(to)) return bizToast(context, 'Enter an email address to send the test to', ok: false);
+    final ok = await _run('email', () => _svc.saveEmail(body as Map<String, dynamic>));
+    if (ok && thenTest && mounted) await _run('etest', () => _svc.testEmail(to), reload: false);
+  }
+
+  Future<void> _saveWhatsApp({required bool thenVerify}) async {
+    if (_waOn && (_waPhoneId.text.trim().isEmpty || (!_waTokenSet && _waToken.text.trim().isEmpty))) {
+      return bizToast(context, 'Enter the Phone number ID and the permanent access token', ok: false);
+    }
+    final ok = await _run('wa', () => _svc.saveWhatsApp({
           'enabled': _waOn,
           'displayNumber': _waNumber.text.trim(),
           'phoneNumberId': _waPhoneId.text.trim(),
           'businessAccountId': _waAccountId.text.trim(),
           if (_waToken.text.trim().isNotEmpty) 'accessToken': _waToken.text.trim(),
         }));
+    if (ok && thenVerify && mounted) await _run('verify', _svc.verifyWhatsApp);
   }
 
-  Future<void> _saveEmail() async {
-    final body = <String, dynamic>{
-      'enabled': _emOn,
-      'senderName': _senderName.text.trim(),
-      'replyTo': _replyTo.text.trim(),
-    };
-    if (body['replyTo'] != '' && !_emailRe.hasMatch(body['replyTo'])) {
-      return bizToast(context, 'Reply-to email is not valid', ok: false);
-    }
-    if (_mode == _MailMode.platform) {
-      if (_accountConnected) body['clearAccount'] = true;
-    } else {
-      final user = _emUser.text.trim();
-      if (!_emailRe.hasMatch(user)) return bizToast(context, 'Enter the full email address', ok: false);
-      if (!_passwordSet && _emPass.text.trim().isEmpty) {
-        return bizToast(context, _mode == _MailMode.gmail ? 'Enter the Gmail App Password' : 'Enter the email password', ok: false);
-      }
-      if (_mode == _MailMode.gmail) {
-        body['account'] = {'host': 'smtp.gmail.com', 'port': 465, 'secure': true, 'user': user};
-      } else {
-        final port = int.tryParse(_emPort.text.trim());
-        if (_emHost.text.trim().isEmpty || port == null) return bizToast(context, 'Enter the SMTP server and port', ok: false);
-        body['account'] = {'host': _emHost.text.trim(), 'port': port, 'secure': _emSsl, 'user': user};
-      }
-      if (_emPass.text.trim().isNotEmpty) (body['account'] as Map)['password'] = _emPass.text;
-    }
-    await _run('email', () => _svc.saveEmail(body));
-  }
+  // ───────────────────────── UI pieces ─────────────────────────
 
-  Widget _section(String title, String? status, bool ready, List<Widget> children) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 6),
-            child: Row(children: [
-              Expanded(
-                child: Text(title, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 0.6, color: AppColors.textSecondary)),
-              ),
-              BizPill(ready ? 'Ready' : 'Not ready', color: ready ? AppColors.emerald : AppColors.warning),
-            ]),
+  Widget _gap([double h = 10]) => SizedBox(height: h);
+
+  Widget _note(String text, {Color bg = const Color(0xFFF8FAFC), Color fg = AppColors.textSecondary}) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+        child: Text(text, style: TextStyle(fontSize: 12, height: 1.4, color: fg)),
+      );
+
+  Widget _step(int n, String title, {String? sub, String? link, String? linkLabel}) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 22,
+            height: 22,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.silver)),
+            child: Text('$n', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
           ),
-          BizCard(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              if (!ready && status != null && status.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(status, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              if (sub != null) Text(sub, style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+              if (link != null)
+                InkWell(
+                  onTap: () => _open(link),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(linkLabel ?? link, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.emerald, decoration: TextDecoration.underline)),
+                      const SizedBox(width: 3),
+                      const Icon(Icons.open_in_new_rounded, size: 13, color: AppColors.emerald),
+                    ]),
+                  ),
                 ),
-              ...children,
             ]),
           ),
         ]),
       );
 
-  Widget _gap() => const SizedBox(height: 10);
+  Widget _status(IconData icon, String title, bool ready, String line) => Expanded(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: ready ? AppColors.successBg.withValues(alpha: 0.5) : AppColors.warningBg.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(icon, size: 18, color: ready ? AppColors.success : AppColors.warning),
+              const SizedBox(width: 6),
+              Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5))),
+            ]),
+            const SizedBox(height: 4),
+            BizPill(ready ? 'Ready' : 'Not set up', color: ready ? AppColors.success : AppColors.warning),
+            const SizedBox(height: 4),
+            Text(line, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+          ]),
+        ),
+      );
 
   Widget _switch(String title, bool value, ValueChanged<bool> onChanged) => SwitchListTile(
         contentPadding: EdgeInsets.zero,
@@ -203,14 +289,213 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
         onChanged: (v) => setState(() => onChanged(v)),
       );
 
+  Widget _header(String title, String sub, IconData icon, Color color) => Row(children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
+            Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ]),
+        ),
+      ]);
+
+  Widget _emailCard() {
+    final gmailLen = _emPass.text.replaceAll(RegExp(r'\s+'), '').length;
+    final keepGmail = _acctConnected && _acctHost == 'smtp.gmail.com';
+    final keepSmtp = _acctConnected && _acctHost != 'smtp.gmail.com';
+    return BizCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _header('Email', 'Free. About 5 minutes with Gmail.', Icons.mail_outline_rounded, const Color(0xFF0284C7)),
+        _switch('Send email to customers', _emOn, (v) => _emOn = v),
+        const Text('Send emails from', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+        _gap(6),
+        SegmentedButton<_MailMode>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: _MailMode.gmail, label: Text('Gmail')),
+            ButtonSegment(value: _MailMode.smtp, label: Text('Business')),
+            ButtonSegment(value: _MailMode.platform, label: Text('NSYU')),
+          ],
+          selected: {_mode},
+          onSelectionChanged: (v) => setState(() => _mode = v.first),
+        ),
+        _gap(12),
+        if (_mode == _MailMode.gmail) ...[
+          _step(1, "Sign in to the shop's Gmail and turn on 2-Step Verification",
+              link: 'https://myaccount.google.com/signinoptions/twosv', linkLabel: 'Open 2-Step Verification'),
+          _step(2, 'Create an App Password named “NSYU” and copy the 16 letters',
+              sub: 'Your normal Gmail password will not work here.', link: 'https://myaccount.google.com/apppasswords', linkLabel: 'Open App Passwords'),
+          _step(3, 'Paste both below, then Save & send test'),
+          TextField(
+            controller: _emUser,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            decoration: bizInput('Shop Gmail address', hint: 'yourshop@gmail.com'),
+          ),
+          _gap(),
+          TextField(
+            controller: _emPass,
+            obscureText: true,
+            autocorrect: false,
+            enableSuggestions: false,
+            decoration: bizInput(keepGmail ? 'App Password (saved, leave empty to keep)' : 'App Password (16 letters)').copyWith(
+              helperText: _emPass.text.isEmpty && keepGmail ? null : '$gmailLen/16 letters',
+            ),
+          ),
+        ],
+        if (_mode == _MailMode.smtp) ...[
+          DropdownButtonFormField<int>(
+            initialValue: _provider,
+            isExpanded: true,
+            decoration: bizInput('Email provider'),
+            items: [for (var i = 0; i < _providers.length; i++) DropdownMenuItem(value: i, child: Text(_providers[i].label))],
+            onChanged: (i) => setState(() => _applyProvider(i ?? 0)),
+          ),
+          _gap(),
+          TextField(controller: _emUser, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: bizInput('Email address', hint: 'sales@yourshop.in')),
+          _gap(),
+          TextField(
+            controller: _emPass,
+            obscureText: true,
+            autocorrect: false,
+            enableSuggestions: false,
+            decoration: bizInput(keepSmtp ? 'Email password (saved, leave empty to keep)' : 'Email password'),
+          ),
+          if (_providers[_provider].host.isEmpty) ...[
+            _gap(),
+            TextField(controller: _emHost, keyboardType: TextInputType.url, autocorrect: false, decoration: bizInput('SMTP server', hint: 'smtp.example.com')),
+            _gap(),
+            TextField(
+              controller: _emPort,
+              keyboardType: TextInputType.number,
+              decoration: bizInput('Port', hint: '465 or 587'),
+              onChanged: (p) => setState(() => _emSsl = p.trim() == '465' ? true : (p.trim() == '587' ? false : _emSsl)),
+            ),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text('Server ${_emHost.text}, port ${_emPort.text} (filled in for you).', style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+            ),
+        ],
+        if (_mode == _MailMode.platform) _note('Emails go out from the NSYU platform address with your shop name. Customer replies go to the reply-to address below.'),
+        _gap(12),
+        TextField(controller: _senderName, decoration: bizInput('Name shown to customers', hint: 'Sharma Electronics')),
+        _gap(),
+        TextField(controller: _replyTo, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: bizInput('Reply-to email (optional)')),
+        _gap(14),
+        TextField(controller: _testTo, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: bizInput('Send a test email to', hint: 'you@example.com')),
+        _gap(),
+        FilledButton(
+          onPressed: _busy.isEmpty ? () => _saveEmail(thenTest: true) : null,
+          child: Text(_busy == 'email' || _busy == 'etest' ? 'Working…' : 'Save & send test'),
+        ),
+        TextButton(onPressed: _busy.isEmpty ? () => _saveEmail(thenTest: false) : null, child: const Text('Save without testing')),
+      ]),
+    );
+  }
+
+  Widget _whatsAppCard() => BizCard(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _header('WhatsApp Business', 'Official Meta Cloud API. Meta charges per message.', Icons.chat_rounded, AppColors.emerald),
+          _switch('Send WhatsApp to customers', _waOn, (v) => _waOn = v),
+          _note(
+            'Cost (paid to Meta, not NSYU): bills and reminders about ₹0.12–0.15 per message, offers about ₹0.80–0.90. '
+            'Replies within 24 hours of a customer\'s message are free. Use a number that is not already on the WhatsApp app.',
+            bg: AppColors.warningBg.withValues(alpha: 0.6),
+            fg: const Color(0xFF78350F),
+          ),
+          _gap(8),
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(top: 4),
+              initiallyExpanded: !_waTokenSet,
+              title: const Text('How to get these details (about 1 hour)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+              children: [
+                _step(1, 'Create a Meta Business account', link: 'https://business.facebook.com/', linkLabel: 'business.facebook.com'),
+                _step(2, 'Create an app (type “Business”) and add WhatsApp', link: 'https://developers.facebook.com/apps/', linkLabel: 'developers.facebook.com/apps'),
+                _step(3, 'WhatsApp › API Setup: add your number, verify by OTP',
+                    sub: 'Copy the Phone number ID and WhatsApp Business Account ID shown there.'),
+                _step(4, 'Business settings › System users: create an Admin user, generate a token',
+                    sub: 'Tick whatsapp_business_messaging and whatsapp_business_management, never expire.',
+                    link: 'https://business.facebook.com/settings/system-users',
+                    linkLabel: 'Open System users'),
+                _step(5, 'Add a payment method in Meta Business settings'),
+                _step(6, 'Paste the details below, Save, then send a test to your phone'),
+              ],
+            ),
+          ),
+          TextField(controller: _waNumber, keyboardType: TextInputType.phone, decoration: bizInput('Shop WhatsApp number', hint: '+91 98765 43210')),
+          _gap(),
+          TextField(controller: _waPhoneId, keyboardType: TextInputType.number, decoration: bizInput('Phone number ID', hint: 'WhatsApp › API Setup')),
+          _gap(),
+          TextField(controller: _waAccountId, keyboardType: TextInputType.number, decoration: bizInput('WhatsApp Business Account ID')),
+          _gap(),
+          TextField(
+            controller: _waToken,
+            obscureText: true,
+            autocorrect: false,
+            enableSuggestions: false,
+            decoration: bizInput(_waTokenSet ? 'Access token (saved ${_waTokenHint ?? ''}, leave empty to keep)' : 'Permanent access token'),
+          ),
+          _gap(12),
+          FilledButton(
+            onPressed: _busy.isEmpty ? () => _saveWhatsApp(thenVerify: true) : null,
+            child: Text(_busy == 'wa' || _busy == 'verify' ? 'Checking…' : 'Save & check connection'),
+          ),
+          TextButton(onPressed: _busy.isEmpty ? () => _saveWhatsApp(thenVerify: false) : null, child: const Text('Save only')),
+          const Divider(height: 20),
+          Row(children: [
+            Expanded(child: TextField(controller: _waTestTo, keyboardType: TextInputType.phone, decoration: bizInput('Send a test WhatsApp to'))),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: _busy.isEmpty && _waTokenSet
+                  ? () {
+                      final to = _waTestTo.text.trim();
+                      if (to.isEmpty) return bizToast(context, 'Enter a mobile number', ok: false);
+                      _run('watest', () => _svc.testWhatsApp(to), reload: false);
+                    }
+                  : null,
+              child: Text(_busy == 'watest' ? 'Sending…' : 'Send'),
+            ),
+          ]),
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text("Sends Meta's “hello_world” message. Webhook and templates are on the website (Settings › Communication).",
+                style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+          ),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     final isOwner = context.watch<AuthProvider>().isOwner;
     final wa = Map<String, dynamic>.from(_readiness['whatsapp'] ?? {});
     final em = Map<String, dynamic>.from(_readiness['email'] ?? {});
+    final emReady = em['ready'] == true;
+    final waReady = wa['ready'] == true;
+    final emLine = !_emOn
+        ? 'Turned off'
+        : _acctConnected
+            ? 'From $_acctUser'
+            : emReady
+                ? 'From the NSYU platform email'
+                : 'Not connected yet. Add your Gmail below.';
+    final waLine = waReady
+        ? 'From ${_waNumber.text.isEmpty ? 'your business number' : _waNumber.text}'
+        : (!_waOn ? 'Turned off. Optional, Meta charges per message.' : 'Not connected yet. Add the details below.');
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: bizAppBar('WhatsApp & email sender'),
+      appBar: bizAppBar('Communication setup'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -225,141 +510,21 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
                           padding: EdgeInsets.only(bottom: 12),
                           child: Text('Only the shop owner can change these settings.', style: TextStyle(color: AppColors.textSecondary)),
                         ),
-                      _section('WHATSAPP NUMBER', wa['reason']?.toString(), wa['ready'] == true, [
-                        _switch('Send messages on WhatsApp', _waOn, (v) => _waOn = v),
-                        _gap(),
-                        TextField(controller: _waNumber, keyboardType: TextInputType.phone, decoration: bizInput('Shop WhatsApp number', hint: '+91 98765 43210')),
-                        _gap(),
-                        TextField(controller: _waPhoneId, keyboardType: TextInputType.number, decoration: bizInput('Phone number ID', hint: 'WhatsApp Manager → API setup')),
-                        _gap(),
-                        TextField(controller: _waAccountId, keyboardType: TextInputType.number, decoration: bizInput('WhatsApp Business Account ID')),
-                        _gap(),
-                        TextField(
-                          controller: _waToken,
-                          obscureText: true,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          decoration: bizInput(_waTokenSet ? 'Access token (saved ${_waTokenHint ?? ''}, leave empty to keep)' : 'Permanent access token'),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Uses the official WhatsApp Business Cloud API. Webhook and app secret can be set on the website (Messaging › Channels).',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(children: [
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: _busy.isEmpty ? _saveWhatsApp : null,
-                              child: Text(_busy == 'wa' ? 'Saving…' : 'Save WhatsApp'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _busy.isEmpty && _waTokenSet ? () => _run('verify', _svc.verifyWhatsApp, reload: true) : null,
-                              child: Text(_busy == 'verify' ? 'Checking…' : 'Test connection'),
-                            ),
-                          ),
-                        ]),
+                      const Text(
+                        "Bills, reminders and offers go to customers from your shop's own email and WhatsApp number. Both are optional.",
+                        style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                      ),
+                      _gap(12),
+                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        _status(Icons.mail_outline_rounded, 'Email', emReady, emLine),
+                        const SizedBox(width: 10),
+                        _status(Icons.chat_rounded, 'WhatsApp', waReady, waLine),
                       ]),
-                      _section('EMAIL ADDRESS', em['reason']?.toString(), em['ready'] == true, [
-                        _switch('Send messages by email', _emOn, (v) => _emOn = v),
-                        _gap(),
-                        const Text('Send emails from', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 6),
-                        SegmentedButton<_MailMode>(
-                          showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment(value: _MailMode.platform, label: Text('Platform')),
-                            ButtonSegment(value: _MailMode.gmail, label: Text('Shop Gmail')),
-                            ButtonSegment(value: _MailMode.smtp, label: Text('Other')),
-                          ],
-                          selected: {_mode},
-                          onSelectionChanged: (v) => setState(() => _mode = v.first),
-                        ),
-                        if (_accountConnected)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text('Currently sending from $_connectedUser', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          ),
-                        if (_mode == _MailMode.platform)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 8),
-                            child: Text('Emails go out from the NSYU platform address with your shop name.',
-                                style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                          ),
-                        if (_mode == _MailMode.smtp) ...[
-                          _gap(),
-                          TextField(controller: _emHost, keyboardType: TextInputType.url, autocorrect: false, decoration: bizInput('SMTP server', hint: 'smtp.hostinger.com')),
-                          _gap(),
-                          TextField(
-                            controller: _emPort,
-                            keyboardType: TextInputType.number,
-                            decoration: bizInput('Port', hint: '465 or 587'),
-                            onChanged: (p) => setState(() => _emSsl = p.trim() == '465' ? true : (p.trim() == '587' ? false : _emSsl)),
-                          ),
-                          _switch('Use SSL (port 465)', _emSsl, (v) => _emSsl = v),
-                        ],
-                        if (_mode != _MailMode.platform) ...[
-                          _gap(),
-                          TextField(
-                            controller: _emUser,
-                            keyboardType: TextInputType.emailAddress,
-                            autocorrect: false,
-                            decoration: bizInput(_mode == _MailMode.gmail ? 'Shop Gmail address' : 'Email login', hint: 'yourshop@gmail.com'),
-                          ),
-                          _gap(),
-                          TextField(
-                            controller: _emPass,
-                            obscureText: true,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            decoration: bizInput(_passwordSet
-                                ? 'Password saved, leave empty to keep'
-                                : (_mode == _MailMode.gmail ? 'Gmail App Password (16 letters)' : 'Password')),
-                          ),
-                          if (_mode == _MailMode.gmail)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 8),
-                              child: Text(
-                                'Turn on 2-Step Verification in your Google account, then create an App Password at myaccount.google.com/apppasswords. Your normal Gmail password will not work.',
-                                style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
-                              ),
-                            ),
-                        ],
-                        _gap(),
-                        TextField(controller: _senderName, decoration: bizInput('Sender name', hint: 'Shown as “From” in the inbox')),
-                        _gap(),
-                        TextField(controller: _replyTo, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: bizInput('Reply-to email (optional)')),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _busy.isEmpty ? _saveEmail : null,
-                          child: Text(_busy == 'email' ? 'Saving…' : 'Save email'),
-                        ),
-                        const Divider(height: 28),
-                        Row(children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _testTo,
-                              keyboardType: TextInputType.emailAddress,
-                              autocorrect: false,
-                              decoration: bizInput('Send a test email to'),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          OutlinedButton(
-                            onPressed: _busy.isEmpty
-                                ? () {
-                                    final to = _testTo.text.trim();
-                                    if (!_emailRe.hasMatch(to)) return bizToast(context, 'Enter a valid email address', ok: false);
-                                    _run('test', () => _svc.testEmail(to), reload: false);
-                                  }
-                                : null,
-                            child: Text(_busy == 'test' ? 'Sending…' : 'Send'),
-                          ),
-                        ]),
-                      ]),
+                      _gap(16),
+                      _emailCard(),
+                      _gap(16),
+                      _whatsAppCard(),
+                      _gap(24),
                     ]),
                   ),
                 ),

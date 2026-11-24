@@ -207,7 +207,7 @@ class _ShopSettingsScreenState extends State<ShopSettingsScreen> {
                         ListTile(
                           contentPadding: const EdgeInsets.only(right: 4),
                           leading: const Icon(Icons.forward_to_inbox_rounded, color: AppColors.emerald),
-                          title: const Text('WhatsApp & email sender', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          title: const Text('Communication setup', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                           subtitle: const Text("Bills and reminders go from this shop's own number and email", style: TextStyle(fontSize: 12)),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SenderSettingsScreen())),

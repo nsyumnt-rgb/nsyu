@@ -399,8 +399,8 @@ class MoreMenuSheet extends StatelessWidget {
                         const Divider(height: 1, indent: 56, color: AppColors.border),
                         _buildListTile(
                           icon: Icons.forward_to_inbox_rounded,
-                          title: 'WhatsApp & email sender',
-                          subtitle: "Send from this shop's own number and email",
+                          title: 'Communication setup',
+                          subtitle: "Shop's own email & WhatsApp for bills, reminders",
                           iconColor: const Color(0xFF047857),
                           bgColor: const Color(0xFFECFDF5),
                           onTap: () {

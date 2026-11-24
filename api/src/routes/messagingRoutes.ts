@@ -49,6 +49,7 @@ router.get("/overview", view, m.getOverview);
 router.get("/settings", view, m.getSettings);
 router.put("/settings/whatsapp", configure, m.updateWhatsAppSettings);
 router.post("/settings/whatsapp/verify", configure, m.verifyWhatsApp);
+router.post("/settings/whatsapp/test", configure, m.sendTestWhatsApp);
 router.get("/settings/whatsapp/templates", view, m.listWhatsAppTemplates);
 router.put("/settings/email", configure, m.updateEmailSettings);
 router.post("/settings/email/test", configure, m.sendTestEmail);

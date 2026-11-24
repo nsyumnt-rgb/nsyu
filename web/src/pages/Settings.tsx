@@ -7,6 +7,7 @@ import ShopBannerCard from "../components/ShopBannerCard";
 import ShopPortalSettingsCard from "../components/ShopPortalSettingsCard";
 import Inventory from "./Inventory";
 import StockTransfers from "./StockTransfers";
+import CommunicationSetup from "../components/CommunicationSetup";
 import Shops from "./Shops";
 
 interface FullSettingsState {
@@ -171,6 +172,7 @@ function SettingsInner() {
     "backup",
     "integrations",
     "security",
+    "communication",
   ];
 
   // Each section has its own URL: /app/settings/shop, /app/settings/inventory, …
@@ -552,6 +554,7 @@ function SettingsInner() {
           { id: "invoice", label: "Invoice", icon: "📄" },
           { id: "tax", label: "Tax & GST", icon: "⚖️" },
           { id: "payment", label: "Payment", icon: "💳" },
+          { id: "communication", label: "Communication", icon: "💬" },
           { id: "notifications", label: "Notifications", icon: "🔔" },
           { id: "security", label: "Security", icon: "🛡️" },
         ].map((tab) => {
@@ -578,6 +581,9 @@ function SettingsInner() {
       {/* 1. GENERAL TAB                                                            */}
       {/* ========================================================================= */}
       {activeTab === "preferences" && <PreferencesSection />}
+
+      {/* Where this shop's emails and WhatsApp messages come from */}
+      {activeTab === "communication" && <CommunicationSetup />}
 
       {activeTab === "general" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1938,7 +1944,7 @@ function SettingsInner() {
                   Send this shop's bills, reminders and offers from the shop's own WhatsApp number and email address.
                 </p>
               </div>
-              <button type="button" className="btn btn-primary btn-sm shrink-0" onClick={() => navigate("/app/messaging/channels")}>
+              <button type="button" className="btn btn-primary btn-sm shrink-0" onClick={() => handleTabChange("communication")}>
                 Set up sender
               </button>
             </div>

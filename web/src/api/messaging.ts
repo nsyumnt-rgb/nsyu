@@ -133,6 +133,7 @@ export const messagingApi = {
   settings: () => d<MessagingSettings>(api.get("/messaging/settings")),
   saveWhatsApp: (body: any) => api.put("/messaging/settings/whatsapp", body).then((r) => r.data),
   verifyWhatsApp: () => api.post("/messaging/settings/whatsapp/verify").then((r) => r.data),
+  testWhatsApp: (to: string) => api.post("/messaging/settings/whatsapp/test", { to }).then((r) => r.data),
   waTemplates: () => d<{ name: string; language: string; status: string; category: string; body: string; paramCount: number }[]>(api.get("/messaging/settings/whatsapp/templates")),
   saveEmail: (body: any) => api.put("/messaging/settings/email", body).then((r) => r.data),
   testEmail: (to: string) => api.post("/messaging/settings/email/test", { to }).then((r) => r.data),
