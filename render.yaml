@@ -36,3 +36,8 @@ services:
         value: nsyu-media
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      # Email goes through the Cloudflare relay (relay/) because Render free blocks SMTP ports.
+      - key: EMAIL_RELAY_URL
+        value: https://nsyu-email-relay.nsyu-email-relay.workers.dev/send
+      - key: EMAIL_RELAY_SECRET
+        sync: false
