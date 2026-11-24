@@ -61,6 +61,7 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
   final _testTo = TextEditingController();
 
   Map<String, dynamic> _readiness = {};
+  List<Map<String, dynamic>> _library = [];
   bool _loading = true;
   String? _error;
   String _busy = '';
@@ -97,6 +98,11 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
       final em = Map<String, dynamic>.from(s['email'] ?? {});
       _acct = Map<String, dynamic>.from(em['account'] ?? {});
       _readiness = Map<String, dynamic>.from(s['readiness'] ?? {});
+      try {
+        _library = await _svc.templateLibrary();
+      } catch (_) {
+        _library = [];
+      }
 
       _waOn = wa['enabled'] == true;
       _waNumber.text = '${wa['displayNumber'] ?? ''}';
@@ -476,6 +482,47 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
         ]),
       );
 
+  Widget _templatesCard() {
+    final missing = _library.where((t) => t['added'] != true).length;
+    final waReady = (_readiness['whatsapp'] as Map?)?['ready'] == true;
+    return BizCard(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _header('Message templates', 'Ready-made bills, reminders, offers and greetings', Icons.auto_awesome_rounded, const Color(0xFF7C3AED)),
+        _gap(10),
+        Text(
+          _library.isEmpty
+              ? 'Could not load the template list.'
+              : missing > 0
+                  ? '${_library.length} ready-made templates. $missing not added yet. Automatic messages use them, and you can edit them on the website (Messaging › Templates).'
+                  : 'All ${_library.length} ready-made templates are added. Edit them on the website (Messaging › Templates).',
+          style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+        ),
+        if (missing > 0) ...[
+          _gap(10),
+          FilledButton(
+            onPressed: _busy.isEmpty ? () => _run('lib', () => _svc.addTemplateLibrary()) : null,
+            child: Text(_busy == 'lib' ? 'Adding…' : 'Add all $missing templates'),
+          ),
+        ],
+        _gap(6),
+        OutlinedButton(
+          onPressed: _busy.isEmpty && waReady ? () => _run('wasubmit', _svc.submitWhatsAppTemplates) : null,
+          child: Text(_busy == 'wasubmit' ? 'Sending…' : 'Send templates to WhatsApp for approval'),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            waReady
+                ? 'Meta must approve templates before WhatsApp can message customers who have not written to you in 24 hours. Usually a few minutes to a day.'
+                : 'Connect WhatsApp above first.',
+            style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+          ),
+        ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isOwner = context.watch<AuthProvider>().isOwner;
@@ -524,6 +571,8 @@ class _SenderSettingsScreenState extends State<SenderSettingsScreen> {
                       _emailCard(),
                       _gap(16),
                       _whatsAppCard(),
+                      _gap(16),
+                      _templatesCard(),
                       _gap(24),
                     ]),
                   ),

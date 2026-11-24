@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { EmptyState, Icon, Modal, Segmented } from "../../components/ui";
-import { messagingApi, type MessageTemplate } from "../../api/messaging";
+import { messagingApi, type LibraryTemplate, type MessageTemplate } from "../../api/messaging";
 import { apiErrorMessage } from "../../api/client";
 import type { MessagingCtx } from "./Messaging";
 import { Attachments, EmailFrame, VariableChips, WhatsAppBubble, useInsertable } from "./shared";
@@ -188,6 +188,137 @@ function Editor({ ctx, initial, onClose, onSaved }: { ctx: MessagingCtx; initial
   );
 }
 
+/** One-click starter templates for every automation and everyday message. */
+function Library({ ctx, rows, onAdded }: { ctx: MessagingCtx; rows: MessageTemplate[] | null; onAdded: () => void }) {
+  const [items, setItems] = useState<LibraryTemplate[] | null>(null);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [waResults, setWaResults] = useState<{ name: string; ok: boolean; error?: string }[] | null>(null);
+  const load = useCallback(() => messagingApi.templateLibrary().then(setItems).catch(() => setItems([])), []);
+  useEffect(() => {
+    load();
+  }, [load, rows?.length]);
+
+  const missing = items?.filter((t) => !t.added) || [];
+  const waPending = (rows || []).filter((t) => t.whatsapp_body && !t.wa_template_name);
+  const waReady = !!ctx.readiness?.whatsapp.ready;
+
+  const add = async (key: string, keys?: string[]) => {
+    setBusy(key);
+    try {
+      const r = await messagingApi.addLibrary(keys);
+      ctx.toast(r.message);
+      await load();
+      onAdded();
+    } catch (e) {
+      ctx.toast(apiErrorMessage(e), false);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const submitWa = async () => {
+    setBusy("wa");
+    setWaResults(null);
+    try {
+      const r = await messagingApi.submitWhatsAppTemplates();
+      ctx.toast(r.message, r.data.sent > 0);
+      setWaResults(r.data.results);
+      onAdded();
+    } catch (e) {
+      ctx.toast(apiErrorMessage(e), false);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  if (!items) return null;
+  return (
+    <section className="card p-4 sm:p-5 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 ring-1 ring-inset ring-violet-600/10 flex items-center justify-center shrink-0">
+            <Icon name="sparkle" className="w-5 h-5" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="card-title">Ready-made templates</h3>
+            <p className="text-[12.5px] text-slate-500">
+              {missing.length
+                ? `${items.length} templates for bills, payments, reminders, orders, offers and greetings. ${missing.length} not added yet.`
+                : `All ${items.length} ready-made templates are added. Edit any of them below.`}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          {missing.length > 0 && (
+            <button type="button" className="btn btn-primary" disabled={!!busy} onClick={() => add("all")}>
+              {busy === "all" ? "Adding…" : `Add all ${missing.length}`}
+            </button>
+          )}
+          <button type="button" className="btn btn-ghost" onClick={() => setOpen(!open)} aria-expanded={open}>
+            {open ? "Hide list" : "See list"}
+          </button>
+        </div>
+      </div>
+
+      {open && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          {items.map((t) => (
+            <div key={t.key} className="rounded-xl ring-1 ring-inset ring-slate-200 p-3 flex gap-3 items-start min-w-0">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[13px] font-semibold text-navy-900">{t.name}</span>
+                  <span className="chip text-[10.5px] capitalize">{t.category}</span>
+                  {t.event && <span className="chip text-[10.5px]">Automatic</span>}
+                  {t.messageType === "promotional" && <span className="chip text-[10.5px]">Promotional</span>}
+                </div>
+                <p className="text-[12px] text-slate-500 mt-1 line-clamp-2 break-words">{t.whatsappBody}</p>
+              </div>
+              {t.added ? (
+                <span className="badge badge-active shrink-0">Added</span>
+              ) : (
+                <button type="button" className="btn btn-secondary btn-sm shrink-0" disabled={!!busy} onClick={() => add(t.key, [t.key])}>
+                  {busy === t.key ? "…" : "Add"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-[11.5px] text-slate-500">
+        Templates marked <b>Automatic</b> are used for the matching automatic message (Automations tab). Editing the template changes that message too.
+      </p>
+
+      {waPending.length > 0 && (
+        <div className="rounded-2xl bg-emerald-50/60 ring-1 ring-inset ring-emerald-200/70 p-4 space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p className="text-[12.5px] text-slate-700">
+              <b>WhatsApp approval:</b> to message customers who haven't written to you in the last 24 hours, WhatsApp needs each template approved by Meta.{" "}
+              {waPending.length} template{waPending.length === 1 ? "" : "s"} can be sent for approval.
+            </p>
+            <button type="button" className="btn btn-secondary shrink-0" disabled={!!busy || !waReady} onClick={submitWa} title={waReady ? "" : "Connect WhatsApp in Settings › Communication first"}>
+              {busy === "wa" ? "Sending…" : "Send to WhatsApp for approval"}
+            </button>
+          </div>
+          {!waReady && <p className="field-hint">Connect WhatsApp in Settings › Communication first.</p>}
+          {waResults && waResults.some((x) => !x.ok) && (
+            <ul className="text-[12px] text-rose-700 space-y-0.5">
+              {waResults
+                .filter((x) => !x.ok)
+                .map((x) => (
+                  <li key={x.name}>
+                    {x.name}: {x.error}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Templates({ ctx }: { ctx: MessagingCtx }) {
   const [rows, setRows] = useState<MessageTemplate[] | null>(null);
   const [editing, setEditing] = useState<Draft | null>(null);
@@ -213,10 +344,11 @@ export default function Templates({ ctx }: { ctx: MessagingCtx }) {
         <p className="text-[13px] text-slate-500 max-w-xl">Reusable messages with separate WhatsApp and email content, variables like <span className="font-mono text-[12px]">{"{{customer_name}}"}</span>, links and attachments.</p>
         <button type="button" className="btn btn-primary shrink-0" onClick={() => setEditing({ ...empty })}><Icon name="plus" className="w-4 h-4" /> New template</button>
       </div>
+      <Library ctx={ctx} rows={rows} onAdded={load} />
       {!rows ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-36 rounded-2xl" />)}</div>
       ) : rows.length === 0 ? (
-        <div className="card"><EmptyState icon="file" title="No templates yet" text="Create your first template for order updates, payment reminders or offers." action={<button type="button" className="btn btn-primary" onClick={() => setEditing({ ...empty })}>New template</button>} /></div>
+        <div className="card"><EmptyState icon="file" title="No templates yet" text="Add the ready-made templates above in one click, or create your own." action={<button type="button" className="btn btn-primary" onClick={() => setEditing({ ...empty })}>New template</button>} /></div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 stagger">
           {rows.map((t) => (
@@ -236,7 +368,7 @@ export default function Templates({ ctx }: { ctx: MessagingCtx }) {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 text-[11.5px] font-semibold">
-                <span className={`inline-flex items-center gap-1 ${t.whatsapp_body || t.wa_template_name ? "text-emerald-700" : "text-slate-300"}`}><Icon name="message" className="w-3.5 h-3.5" /> WhatsApp{t.wa_template_name ? " · approved" : ""}</span>
+                <span className={`inline-flex items-center gap-1 ${t.whatsapp_body || t.wa_template_name ? "text-emerald-700" : "text-slate-300"}`}><Icon name="message" className="w-3.5 h-3.5" /> WhatsApp{t.wa_template_name ? " · sent to Meta" : ""}</span>
                 <span className={`inline-flex items-center gap-1 ${t.email_html ? "text-sky-700" : "text-slate-300"}`}><Icon name="mail" className="w-3.5 h-3.5" /> Email</span>
                 {(t.attachments?.length || 0) > 0 && <span className="inline-flex items-center gap-1 text-slate-500"><Icon name="paperclip" className="w-3.5 h-3.5" /> {t.attachments!.length}</span>}
               </div>

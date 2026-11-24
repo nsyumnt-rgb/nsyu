@@ -111,6 +111,16 @@ class MessagingService {
   Future<String> testWhatsApp(String to) async =>
       _data(await _api.authedPost(_u('/settings/whatsapp/test'), {'to': to}))['message']?.toString() ?? 'Sent';
 
+  /// Ready-made templates and whether this shop already has each one.
+  Future<List<Map<String, dynamic>>> templateLibrary() async =>
+      List<Map<String, dynamic>>.from(_data(await _api.authedGet(_u('/templates/library')))['data'] ?? []);
+
+  Future<String> addTemplateLibrary({List<String>? keys}) async =>
+      _data(await _api.authedPost(_u('/templates/library'), {if (keys != null) 'keys': keys}))['message']?.toString() ?? 'Added';
+
+  Future<String> submitWhatsAppTemplates() async =>
+      _data(await _api.authedPost(_u('/templates/whatsapp-submit'), {}))['message']?.toString() ?? 'Sent';
+
   Future<String> saveEmail(Map<String, dynamic> body) async =>
       _data(await _api.authedPut(_u('/settings/email'), body))['message']?.toString() ?? 'Saved';
 

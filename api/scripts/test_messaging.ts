@@ -57,6 +57,21 @@ const wa = http.createServer((req, res) => {
       res.statusCode = 401;
       return res.end(JSON.stringify({ error: { message: "Invalid OAuth access token", code: 190 } }));
     }
+    if (req.method === "POST" && /message_templates/.test(req.url || "")) {
+      // Meta rules: body may not start or end with a variable, examples must match the variables
+      const body = json?.components?.[0];
+      const vars = (body?.text.match(/\{\{\d+\}\}/g) || []).length ? new Set(body.text.match(/\{\{\d+\}\}/g)).size : 0;
+      const bad = /^\{\{/.test(body?.text || "") || /\}\}\s*$/.test(body?.text || "") || (vars && body?.example?.body_text?.[0]?.length !== vars) || !/^[a-z0-9_]+$/.test(json?.name || "");
+      if (bad) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ error: { message: "Invalid parameter", error_user_msg: "Template body is not valid" } }));
+      }
+      if (json.name.includes("dup")) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ error: { message: "Message template already exists", error_subcode: 2388024 } }));
+      }
+      return res.end(JSON.stringify({ id: "tpl_" + json.name, status: "PENDING", category: json.category }));
+    }
     if (req.method === "GET" && /message_templates/.test(req.url || "")) {
       return res.end(JSON.stringify({ data: [{ name: "order_update", language: "en", status: "APPROVED", category: "UTILITY", components: [{ type: "BODY", text: "Hi {{1}}, order {{2}}" }] }] }));
     }
@@ -465,6 +480,78 @@ async function main() {
   check("test WhatsApp rejects a bad number", r.status === 400, r.json);
   r = await call("POST", "/messaging/settings/whatsapp/test", { to: "9876543210" }, tokB);
   check("test WhatsApp needs this shop's own credentials", r.status === 400, r.json);
+
+  console.log("\nReady-made templates");
+  const { MessageTemplate } = models;
+  r = await call("GET", "/messaging/templates/library", undefined, tokB);
+  const lib = r.json.data;
+  check("library lists every automation plus everyday templates", r.status === 200 && lib.length >= 19 && lib.filter((t: any) => t.event).length === 11 && lib.every((t: any) => !t.added), lib?.length);
+  check("every library template has WhatsApp and email text", lib.every((t: any) => t.whatsappBody && t.emailSubject && t.emailHtml));
+  const allowedVars = new Set(require("../src/utils/messaging/render").TEMPLATE_VARIABLES.map((v: any) => v.key));
+  const usedVars = lib.flatMap((t: any) => [t.whatsappBody, t.emailSubject, t.emailHtml].join(" ").match(/\{\{\s*([a-z_]+)\s*\}\}/g) || []).map((v: string) => v.replace(/[{}\s]/g, ""));
+  check("library uses only known variables", usedVars.every((v: string) => allowedVars.has(v)), usedVars.filter((v: string) => !allowedVars.has(v)));
+  r = await call("POST", "/messaging/templates/library", {}, tokB);
+  const countB = await MessageTemplate.count({ where: { shop_id: shopB.id } });
+  check("add all creates every template for this shop", r.status === 201 && r.json.data.created === lib.length && countB === lib.length, r.json);
+  const settingsB = await MessagingSettings.findOne({ where: { shop_id: shopB.id } });
+  const linkedTpl = await MessageTemplate.findByPk(settingsB.automations?.payment_received?.templateId);
+  check("automations now use the added templates (and keep their on/off)", r.json.data.linked === 11 && linkedTpl?.name === "Payment received" && settingsB.automations.payment_received.email === true, settingsB.automations);
+  r = await call("POST", "/messaging/templates/library", {}, tokB);
+  check("adding again creates no duplicates", r.status === 200 && r.json.data.created === 0 && (await MessageTemplate.count({ where: { shop_id: shopB.id } })) === lib.length, r.json);
+  r = await call("GET", "/messaging/templates/library", undefined, tokB);
+  check("library marks added templates", r.json.data.every((t: any) => t.added));
+  const countA0 = await MessageTemplate.count({ where: { shop_id: shopA.id } });
+  r = await call("POST", "/messaging/templates/library", { keys: ["sale_discount", "back_in_stock"] }, tokA);
+  check("can add just the chosen templates", r.status === 201 && r.json.data.created === 2 && (await MessageTemplate.count({ where: { shop_id: shopA.id } })) === countA0 + 2, r.json);
+  r = await call("POST", "/messaging/templates/library", { keys: ["nope"] }, tokA);
+  check("unknown template keys are rejected", r.status === 400, r.json);
+  const sale = await MessageTemplate.findOne({ where: { shop_id: shopA.id, name: "Sale / discount offer" } });
+  check("offer templates are promotional (respect opt-outs)", sale?.message_type === "promotional");
+  r = await call("POST", "/messaging/preview", { templateId: sale.id, customerId: ravi.id, variables: { product_name: "Flat 20% off on fans" } }, tokA);
+  check("a ready-made template personalises in preview", r.status === 200 && /Ravi Kumar/.test(r.json.data.whatsapp.text) && /Flat 20% off/.test(r.json.data.whatsapp.text), r.json.data?.whatsapp);
+
+  console.log("\nWhatsApp template approval");
+  const { toWhatsAppTemplateBody } = require("../src/utils/messaging/starterTemplates");
+  const conv = toWhatsAppTemplateBody("{{customer_name}}, order {{order_number}} for {{customer_name}}: {{order_tracking_link}}");
+  check(
+    "converts to Meta's numbered form, never starting or ending on a variable",
+    conv.text === "Hello, {{1}}, order {{2}} for {{1}}: {{3}}\nThank you." && conv.params.join(",") === "{{customer_name}},{{order_number}},{{order_tracking_link}}" && conv.examples.length === 3,
+    conv
+  );
+  r = await call("POST", "/messaging/templates/whatsapp-submit", {}, tokB);
+  check("submitting needs this shop's WhatsApp connected", r.status === 400, r.json);
+  waCalls.length = 0;
+  r = await call("POST", "/messaging/templates/whatsapp-submit", { templateIds: [sale.id] }, tokA);
+  const sub = waCalls.find((c) => c.method === "POST" && /message_templates/.test(c.url));
+  const saleAfter = await MessageTemplate.findByPk(sale.id);
+  check(
+    "template sent to Meta with category, examples and a valid name",
+    r.status === 200 && r.json.data.sent === 1 && sub?.body.category === "MARKETING" && sub.body.language === "en" && /^nsyu_sale_discount_offer_\d+$/.test(sub.body.name) && sub.body.components[0].example.body_text[0][0] === "Ravi Kumar",
+    { m: r.json, sub }
+  );
+  check("template is linked to its WhatsApp version", saleAfter.wa_template_name === sub?.body.name && saleAfter.wa_template_params[0] === "{{customer_name}}", saleAfter?.toJSON());
+  r = await call("POST", "/messaging/templates/whatsapp-submit", { templateIds: [sale.id] }, tokA);
+  check("already-sent templates are not sent twice", r.status === 400, r.json);
+  waCalls.length = 0;
+  r = await call("POST", "/messaging/templates/whatsapp-submit", {}, tokA);
+  const allSubs = waCalls.filter((c) => c.method === "POST" && /message_templates/.test(c.url));
+  check("all remaining templates go in one click, each accepted by Meta's rules", r.status === 200 && r.json.data.failed === 0 && r.json.data.sent === allSubs.length && allSubs.length > 0, r.json.data?.results?.filter((x: any) => !x.ok));
+  const subTpls = await MessageTemplate.findAll({ where: { shop_id: shopA.id } });
+  check(
+    "each template's WhatsApp category matches its type (offers MARKETING, others UTILITY)",
+    allSubs.every((c) => {
+      const t = subTpls.find((x: any) => x.wa_template_name === c.body.name);
+      return t && c.body.category === (t.message_type === "promotional" ? "MARKETING" : "UTILITY");
+    }),
+    allSubs.map((c) => [c.body.name, c.body.category])
+  );
+  // Shop B (all 19) through the same conversion: every one passes Meta's body rules
+  const { toWhatsAppTemplateBody: conv2 } = require("../src/utils/messaging/starterTemplates");
+  const badTexts = (await MessageTemplate.findAll({ where: { shop_id: shopB.id } })).filter((t: any) => {
+    const c = conv2(t.whatsapp_body);
+    return /^\{\{/.test(c.text) || /\}\}\s*$/.test(c.text) || new Set(c.text.match(/\{\{\d+\}\}/g)).size !== c.examples.length;
+  });
+  check("all 19 ready-made WhatsApp texts meet Meta's template rules", badTexts.length === 0, badTexts.map((t: any) => t.name));
 
   await call("PUT", "/messaging/settings/email", { account: { ...ownAccount, password: "wrong-pass" } }, tokA);
   r = await call("POST", "/messaging/settings/email/test", { to: "owner@test.local" }, tokA);

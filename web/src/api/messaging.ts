@@ -42,6 +42,18 @@ export interface MessagingSettings {
   readiness?: Readiness;
 }
 
+export interface LibraryTemplate {
+  key: string;
+  name: string;
+  category: string;
+  messageType: "transactional" | "promotional";
+  event?: string;
+  whatsappBody: string;
+  emailSubject: string;
+  emailHtml: string;
+  added: boolean;
+}
+
 export interface MessageTemplate {
   id: number;
   name: string;
@@ -134,6 +146,13 @@ export const messagingApi = {
   saveWhatsApp: (body: any) => api.put("/messaging/settings/whatsapp", body).then((r) => r.data),
   verifyWhatsApp: () => api.post("/messaging/settings/whatsapp/verify").then((r) => r.data),
   testWhatsApp: (to: string) => api.post("/messaging/settings/whatsapp/test", { to }).then((r) => r.data),
+  templateLibrary: () => d<LibraryTemplate[]>(api.get("/messaging/templates/library")),
+  addLibrary: (keys?: string[]) =>
+    api.post("/messaging/templates/library", keys ? { keys } : {}).then((r) => r.data as { message: string; data: { created: number; skipped: number; linked: number } }),
+  submitWhatsAppTemplates: (templateIds?: number[]) =>
+    api
+      .post("/messaging/templates/whatsapp-submit", templateIds ? { templateIds } : {})
+      .then((r) => r.data as { message: string; data: { sent: number; failed: number; results: { id: number; name: string; ok: boolean; error?: string }[] } }),
   waTemplates: () => d<{ name: string; language: string; status: string; category: string; body: string; paramCount: number }[]>(api.get("/messaging/settings/whatsapp/templates")),
   saveEmail: (body: any) => api.put("/messaging/settings/email", body).then((r) => r.data),
   testEmail: (to: string) => api.post("/messaging/settings/email/test", { to }).then((r) => r.data),

@@ -15,7 +15,8 @@ import {
 import { encryptSecret, secretHint } from "../utils/messaging/secrets";
 import { TEMPLATE_VARIABLES, renderHtml, renderText, wrapEmail } from "../utils/messaging/render";
 import { getSettingsRow, resolveRules, LEGACY_EMAIL_EVENTS } from "../utils/messaging/settings";
-import { listApprovedTemplates, verifyWhatsAppCredentials, normalizeWhatsAppNumber, sendWhatsAppTemplate } from "../utils/messaging/whatsapp";
+import { listApprovedTemplates, verifyWhatsAppCredentials, normalizeWhatsAppNumber, sendWhatsAppTemplate, createWhatsAppTemplate } from "../utils/messaging/whatsapp";
+import { STARTER_TEMPLATES, toWhatsAppTemplateBody, whatsAppTemplateName } from "../utils/messaging/starterTemplates";
 import {
   audienceSummary,
   baseVars,
@@ -348,6 +349,104 @@ export async function deleteTemplate(req: Request, res: Response) {
   }
   await row.destroy();
   return res.json({ success: true, message: "Template deleted" });
+}
+
+/* ---------------- Ready-made template library ---------------- */
+
+export async function listTemplateLibrary(req: Request, res: Response) {
+  const { ownerId, shopId } = ctx(req);
+  const have = new Set(
+    (await MessageTemplate.findAll({ where: { owner_id: ownerId, shop_id: shopId }, attributes: ["name"] })).map((t) => t.name.trim().toLowerCase())
+  );
+  return res.json({ success: true, data: STARTER_TEMPLATES.map((t) => ({ ...t, added: have.has(t.name.toLowerCase()) })) });
+}
+
+/**
+ * Adds ready-made templates (all, or the given keys) that this shop doesn't have yet.
+ * Automations still on the built-in wording are pointed at the new template, so
+ * later edits to it change the automatic message too.
+ */
+export async function addTemplateLibrary(req: Request, res: Response) {
+  const { ownerId, shopId } = ctx(req);
+  const keys: string[] | null = Array.isArray(req.body?.keys) ? req.body.keys.map(String) : null;
+  const wanted = STARTER_TEMPLATES.filter((t) => !keys || keys.includes(t.key));
+  if (!wanted.length) return fail(res, 400, "Pick at least one template");
+  const existing = await MessageTemplate.findAll({ where: { owner_id: ownerId, shop_id: shopId } });
+  const byName = new Map(existing.map((t) => [t.name.trim().toLowerCase(), t]));
+
+  const settings = await settingsFor(ownerId, shopId);
+  const automations: any = { ...(settings.automations || {}) };
+  let created = 0;
+  let linked = 0;
+  for (const t of wanted) {
+    let row = byName.get(t.name.toLowerCase());
+    if (!row) {
+      row = await MessageTemplate.create({
+        owner_id: ownerId,
+        shop_id: shopId,
+        name: t.name,
+        category: t.category,
+        message_type: t.messageType,
+        whatsapp_body: t.whatsappBody,
+        email_subject: t.emailSubject,
+        email_html: t.emailHtml,
+        is_active: true,
+      });
+      created++;
+    }
+    if (t.event && !automations[t.event]?.templateId) {
+      automations[t.event] = { ...resolveRules(settings)[t.event], ...(automations[t.event] || {}), templateId: row.id };
+      linked++;
+    }
+  }
+  if (linked) await settings.update({ automations });
+  const skipped = wanted.length - created;
+  return res.status(created ? 201 : 200).json({
+    success: true,
+    message: created
+      ? `${created} template${created === 1 ? "" : "s"} added${skipped ? `, ${skipped} already there` : ""}`
+      : "All of these templates are already added",
+    data: { created, skipped, linked },
+  });
+}
+
+/**
+ * Sends this shop's templates to Meta for approval as WhatsApp message templates, so
+ * WhatsApp messages can also reach customers outside the 24-hour reply window.
+ */
+export async function submitWhatsAppTemplates(req: Request, res: Response) {
+  const { ownerId, shopId } = ctx(req);
+  const creds = whatsappCredentials(await settingsFor(ownerId, shopId));
+  if (!creds) return fail(res, 400, "Connect WhatsApp first (Settings › Communication)");
+  if (!creds.businessAccountId) return fail(res, 400, "Add the WhatsApp Business Account ID first (Settings › Communication)");
+  const ids: number[] | null = Array.isArray(req.body?.templateIds) ? req.body.templateIds.map(Number) : null;
+  const rows = (await MessageTemplate.findAll({ where: { owner_id: ownerId, shop_id: shopId } })).filter(
+    (t) => t.whatsapp_body && !t.wa_template_name && (!ids || ids.includes(t.id))
+  );
+  if (!rows.length) return fail(res, 400, "No templates waiting to be sent to WhatsApp");
+
+  const results: Array<{ id: number; name: string; ok: boolean; metaName?: string; status?: string; error?: string }> = [];
+  for (const t of rows.slice(0, 30)) {
+    const conv = toWhatsAppTemplateBody(t.whatsapp_body || "");
+    const metaName = whatsAppTemplateName(t.name, t.id);
+    const r = await createWhatsAppTemplate(creds, {
+      name: metaName,
+      language: "en",
+      category: t.message_type === "promotional" ? "MARKETING" : "UTILITY",
+      text: conv.text,
+      examples: conv.examples,
+    });
+    if (r.ok) await t.update({ wa_template_name: metaName, wa_template_language: "en", wa_template_params: conv.params });
+    results.push({ id: t.id, name: t.name, ok: r.ok, metaName: r.ok ? metaName : undefined, status: r.status, error: r.error });
+  }
+  const sent = results.filter((r) => r.ok).length;
+  return res.json({
+    success: true,
+    message: sent
+      ? `${sent} template${sent === 1 ? "" : "s"} sent to WhatsApp for approval. Meta usually approves within a few minutes to a day.`
+      : "WhatsApp did not accept the templates. See the reasons below.",
+    data: { sent, failed: results.length - sent, results },
+  });
 }
 
 export async function uploadAttachment(req: Request, res: Response) {

@@ -56,6 +56,9 @@ router.post("/settings/email/test", configure, m.sendTestEmail);
 router.put("/automations", configure, m.updateAutomations);
 
 router.get("/templates", view, m.listTemplates);
+router.get("/templates/library", view, m.listTemplateLibrary);
+router.post("/templates/library", send, m.addTemplateLibrary);
+router.post("/templates/whatsapp-submit", configure, m.submitWhatsAppTemplates);
 router.post("/templates", send, m.createTemplate);
 router.put("/templates/:id", send, m.updateTemplate);
 router.delete("/templates/:id", send, m.deleteTemplate);

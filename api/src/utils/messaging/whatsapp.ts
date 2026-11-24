@@ -120,6 +120,30 @@ export async function verifyWhatsAppCredentials(creds: WhatsAppCredentials) {
 }
 
 /** Approved message templates on the WhatsApp Business Account. */
+/** Submits a message template to Meta for approval (status starts as PENDING). */
+export async function createWhatsAppTemplate(
+  creds: WhatsAppCredentials,
+  t: { name: string; language: string; category: "UTILITY" | "MARKETING"; text: string; examples: string[] }
+): Promise<{ ok: boolean; status?: string; exists?: boolean; error?: string }> {
+  if (!creds.businessAccountId) return { ok: false, error: "WhatsApp Business Account ID is not set" };
+  try {
+    const body: any = { type: "BODY", text: t.text };
+    if (t.examples.length) body.example = { body_text: [t.examples] };
+    const { status, json } = await graph(creds, `${creds.businessAccountId}/message_templates`, {
+      method: "POST",
+      body: { name: t.name, language: t.language, category: t.category, components: [body] },
+    });
+    if (status >= 200 && status < 300 && json?.id) return { ok: true, status: json.status || "PENDING" };
+    const e = json?.error || {};
+    const msg = [e.error_user_msg || e.message, e.error_data?.details].filter(Boolean).join(" — ") || `HTTP ${status}`;
+    // Same name already submitted earlier: keep using it
+    if (/already exists|duplicate/i.test(msg) || e.error_subcode === 2388024) return { ok: true, exists: true, status: "EXISTS" };
+    return { ok: false, error: msg };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || "Could not reach WhatsApp" };
+  }
+}
+
 export async function listApprovedTemplates(creds: WhatsAppCredentials) {
   if (!creds.businessAccountId) return { ok: false, error: "WhatsApp Business Account ID is not set", templates: [] as any[] };
   try {
