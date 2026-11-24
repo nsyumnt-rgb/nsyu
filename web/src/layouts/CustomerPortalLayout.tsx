@@ -408,7 +408,7 @@ export default function CustomerPortalLayout() {
       </footer>
 
       {policyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/70 backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-navy-950/70 backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true">
           <div className="bg-white rounded-2xl max-w-lg w-full max-h-[85dvh] flex flex-col shadow-pop overflow-hidden animate-scale-in text-navy-900">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-base font-bold text-navy-900">{policyModal.title}</h3>

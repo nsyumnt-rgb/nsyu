@@ -193,15 +193,15 @@ export default function AdminCategories() {
   return (
     <div className="space-y-6">
       {/* Title & Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-up">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="eyebrow">
               Catalog Governance
             </span>
           </div>
-          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Master Platform Categories</h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <h1 className="page-title">Master Platform Categories</h1>
+          <p className="page-subtitle">
             Centrally manage global categories, aliases, and brand icons across all marketplace shops
           </p>
         </div>
@@ -218,36 +218,36 @@ export default function AdminCategories() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs">
+        <div className="card p-4">
           <div className="text-slate-400 text-xs font-bold uppercase">Total Categories</div>
           <div className="text-2xl font-black text-navy-900 mt-1">{totalCategories}</div>
         </div>
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs">
+        <div className="card p-4">
           <div className="text-emerald-700 text-xs font-bold uppercase">Active Categories</div>
           <div className="text-2xl font-black text-emerald-700 mt-1">{activeCount}</div>
         </div>
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs">
+        <div className="card p-4">
           <div className="text-slate-500 text-xs font-bold uppercase">Inactive Categories</div>
           <div className="text-2xl font-black text-slate-600 mt-1">{inactiveCount}</div>
         </div>
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-xs">
+        <div className="card p-4">
           <div className="text-blue-700 text-xs font-bold uppercase">Total Products Mapped</div>
           <div className="text-2xl font-black text-blue-900 mt-1">{totalProductsMapped}</div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 card p-3">
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {(["all", "active", "inactive"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition capitalize ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition capitalize ${
                 statusFilter === tab
-                  ? "bg-emerald-700 text-white shadow-xs"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-brand-600 text-white shadow-brand"
+                  : "bg-white text-slate-600 border border-border hover:border-brand-300 hover:text-brand-700"
               }`}
             >
               {tab === "all" ? `All (${totalCategories})` : tab}
@@ -261,10 +261,10 @@ export default function AdminCategories() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search category name or alias..."
-            className="w-full pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
+            className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
           />
           <svg
-            className="w-4 h-4 text-gray-400 absolute left-3 top-2 pointer-events-none"
+            className="w-4 h-4 text-slate-400 absolute left-3 top-2 pointer-events-none"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -283,10 +283,10 @@ export default function AdminCategories() {
       )}
 
       {/* Table */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+            <thead>
               <tr>
                 <th className="py-3 px-4">Icon</th>
                 <th className="py-3 px-4">Category Name</th>
@@ -386,7 +386,7 @@ export default function AdminCategories() {
                           <button
                             type="button"
                             onClick={() => openUploadModal(cat)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-emerald-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition cursor-pointer"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 hover:border-slate-300 text-emerald-700 font-semibold text-xs rounded-lg border border-border shadow-2xs transition cursor-pointer"
                             title="Upload Icon or PNG"
                           >
                             📷 Icon
@@ -394,7 +394,7 @@ export default function AdminCategories() {
                           <button
                             type="button"
                             onClick={() => openEditModal(cat)}
-                            className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition cursor-pointer"
+                            className="px-2.5 py-1 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-semibold text-xs rounded-lg border border-border shadow-2xs transition cursor-pointer"
                           >
                             Edit
                           </button>
@@ -418,8 +418,8 @@ export default function AdminCategories() {
 
       {/* CREATE MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in font-sans">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in font-sans">
+          <div className="bg-white border border-border rounded-3xl max-w-md w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-bold text-navy-900">Create Master Category</h3>
               <button
@@ -506,8 +506,8 @@ export default function AdminCategories() {
 
       {/* EDIT MODAL */}
       {showEditModal && selectedCat && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in font-sans">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in font-sans">
+          <div className="bg-white border border-border rounded-3xl max-w-md w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-bold text-navy-900">Edit Category: {selectedCat.name}</h3>
               <button
@@ -582,8 +582,8 @@ export default function AdminCategories() {
 
       {/* UPLOAD ICON MODAL */}
       {showUploadModal && selectedCat && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in font-sans">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in font-sans">
+          <div className="bg-white border border-border rounded-3xl max-w-md w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-bold text-navy-900">Upload Icon: {selectedCat.name}</h3>
               <button
@@ -602,17 +602,17 @@ export default function AdminCategories() {
             )}
 
             <form onSubmit={handleUploadSubmit} className="space-y-4 text-xs">
-              <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 hover:bg-gray-100 transition">
+              <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 hover:bg-slate-100 transition">
                 {uploadPreview ? (
                   <div className="relative mb-3">
                     <img
                       src={uploadPreview}
                       alt="Preview"
-                      className="w-20 h-20 object-contain p-2 bg-white rounded-xl border border-gray-200 shadow-2xs"
+                      className="w-20 h-20 object-contain p-2 bg-white rounded-xl border border-slate-200 shadow-2xs"
                     />
                   </div>
                 ) : (
-                  <div className="text-4xl text-gray-300 mb-2">📁</div>
+                  <div className="text-4xl text-slate-300 mb-2">📁</div>
                 )}
                 <input
                   type="file"
@@ -624,9 +624,9 @@ export default function AdminCategories() {
                       setUploadPreview(URL.createObjectURL(file));
                     }
                   }}
-                  className="text-xs text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-800 hover:file:bg-emerald-100 cursor-pointer"
+                  className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-800 hover:file:bg-emerald-100 cursor-pointer"
                 />
-                <span className="text-[10px] text-gray-400 mt-2">
+                <span className="text-[10px] text-slate-400 mt-2">
                   Supports PNG, JPG, WebP transparent icons up to 10MB
                 </span>
               </div>
@@ -654,8 +654,8 @@ export default function AdminCategories() {
 
       {/* DELETE MODAL */}
       {showDeleteModal && selectedCat && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in font-sans">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in font-sans">
+          <div className="bg-white border border-border rounded-3xl max-w-md w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center space-x-3 text-rose-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

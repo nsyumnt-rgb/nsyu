@@ -227,7 +227,7 @@ export default function SaleDetail() {
                 </svg>
               </button>
               {sale.is_emi && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
                   EMI Financed
                 </span>
               )}
@@ -365,24 +365,24 @@ export default function SaleDetail() {
 
       {/* EMI Plan Alert if applicable */}
       {sale.is_emi && sale.emiPlan && (
-        <div className="bg-purple-50/80 border border-purple-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-sky-50/80 border border-sky-200 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 text-purple-700 rounded-lg">
+            <div className="p-2 bg-sky-100 text-sky-700 rounded-lg">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="5" width="20" height="14" rx="2" />
                 <line x1="2" y1="10" x2="22" y2="10" />
               </svg>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-purple-900">EMI Financed Sale</h4>
-              <p className="text-xs text-purple-700">
+              <h4 className="text-sm font-bold text-sky-900">EMI Financed Sale</h4>
+              <p className="text-xs text-sky-700">
                 Down Payment: ₹{Number(sale.emiPlan.down_payment || 0).toLocaleString("en-IN")} • Financed: ₹{Number(sale.emiPlan.financed_amount || 0).toLocaleString("en-IN")} over {sale.emiPlan.tenure_months} months
               </p>
             </div>
           </div>
           <Link
             to={`/app/emi/${sale.emiPlan.id}`}
-            className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 transition-colors shadow-2xs"
+            className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs font-medium hover:bg-sky-700 transition-colors shadow-2xs"
           >
             View EMI Schedule →
           </Link>
@@ -621,8 +621,8 @@ export default function SaleDetail() {
 
       {/* Update Bill Status Modal */}
       {showStatusModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm">Update Bill Status</h3>
               <button
@@ -690,8 +690,8 @@ export default function SaleDetail() {
 
       {/* Receive Payment Modal */}
       {showPayModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm">Record Payment — {sale.invoice_number}</h3>
               <button
@@ -753,8 +753,8 @@ export default function SaleDetail() {
 
       {/* Process Return Modal */}
       {showReturnModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="font-bold text-slate-900 text-sm">Process Return — {sale.invoice_number}</h3>
               <button

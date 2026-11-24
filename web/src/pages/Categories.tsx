@@ -243,17 +243,17 @@ export default function Categories() {
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs">
               📁
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+            <h1 className="page-title">
               Categories & Icons
             </h1>
           </div>
-          <p className="text-xs text-gray-500 mt-1 font-medium">
+          <p className="text-xs text-slate-500 mt-1 font-medium">
             Manage your store categories, customize icon badges, and upload high-resolution PNG / image covers.
           </p>
         </div>
@@ -273,46 +273,46 @@ export default function Categories() {
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-gray-200/80 p-4 shadow-xs">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">Total Categories</span>
+            <span className="text-xs font-bold text-slate-500">Total Categories</span>
             <span className="text-base">🗂️</span>
           </div>
-          <div className="text-2xl font-black text-gray-900 mt-2">{categories.length}</div>
-          <div className="text-[11px] text-gray-400 mt-0.5 font-medium">Organizing your product catalog</div>
+          <div className="text-2xl font-extrabold tracking-tight text-slate-900 tabular mt-2">{categories.length}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5 font-medium">Organizing your product catalog</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200/80 p-4 shadow-xs">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">Active Categories</span>
+            <span className="text-xs font-bold text-slate-500">Active Categories</span>
             <span className="text-base">✅</span>
           </div>
-          <div className="text-2xl font-black text-emerald-700 mt-2">{activeCount}</div>
-          <div className="text-[11px] text-gray-400 mt-0.5 font-medium">Visible on storefront & marketplace</div>
+          <div className="text-2xl font-extrabold tracking-tight text-emerald-700 tabular mt-2">{activeCount}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5 font-medium">Visible on storefront & marketplace</div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200/80 p-4 shadow-xs">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-500">Linked Products</span>
+            <span className="text-xs font-bold text-slate-500">Linked Products</span>
             <span className="text-base">📦</span>
           </div>
-          <div className="text-2xl font-black text-blue-700 mt-2">{totalProducts}</div>
-          <div className="text-[11px] text-gray-400 mt-0.5 font-medium">Items assigned across all categories</div>
+          <div className="text-2xl font-extrabold tracking-tight text-blue-700 tabular mt-2">{totalProducts}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5 font-medium">Items assigned across all categories</div>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 p-3 shadow-xs flex items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-xs flex items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search categories by name..."
-            className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white transition"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 focus:bg-white transition"
           />
           <svg
-            className="w-4 h-4 text-gray-400 absolute left-3 top-2.5"
+            className="w-4 h-4 text-slate-400 absolute left-3 top-2.5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -322,23 +322,23 @@ export default function Categories() {
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </div>
-        <div className="text-xs text-gray-400 font-semibold">
+        <div className="text-xs text-slate-400 font-semibold">
           Showing {filteredCategories.length} of {categories.length} categories
         </div>
       </div>
 
       {/* Categories Table / Card Grid */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 shadow-xs overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-xs text-gray-500 font-medium">
+          <div className="p-12 text-center text-xs text-slate-500 font-medium">
             <div className="w-8 h-8 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin mx-auto mb-3" />
             Loading categories...
           </div>
         ) : filteredCategories.length === 0 ? (
-          <div className="p-12 text-center text-xs text-gray-500 font-medium">
+          <div className="p-12 text-center text-xs text-slate-500 font-medium">
             <div className="text-3xl mb-2">📂</div>
-            <p className="font-bold text-gray-800 text-sm">No categories found</p>
-            <p className="text-gray-400 mt-1 max-w-sm mx-auto">
+            <p className="font-bold text-slate-800 text-sm">No categories found</p>
+            <p className="text-slate-400 mt-1 max-w-sm mx-auto">
               {search
                 ? "No categories match your search term. Try a different query."
                 : "Create your first category to group products and assign icons or images."}
@@ -358,7 +358,7 @@ export default function Categories() {
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50/80 border-b border-gray-100 text-gray-600 uppercase font-black tracking-wider text-[10.5px]">
+                <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-600 uppercase font-black tracking-wider text-[10.5px]">
                   <tr>
                     <th className="py-3 px-4">Image / PNG</th>
                     <th className="py-3 px-4">Icon</th>
@@ -369,14 +369,14 @@ export default function Categories() {
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {filteredCategories.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50/60 transition-colors">
+                    <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
                       {/* PNG / Image Preview & Direct Upload */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           {c.image_url ? (
-                            <div className="relative group w-12 h-12 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
+                            <div className="relative group w-12 h-12 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0">
                               <img
                                 src={resolveAssetUrl(c.image_url) ?? undefined}
                                 alt={c.name}
@@ -392,7 +392,7 @@ export default function Categories() {
                               </button>
                             </div>
                           ) : (
-                            <div className="w-12 h-12 rounded-xl border border-dashed border-gray-300 bg-gray-50/60 flex items-center justify-center text-gray-400 shrink-0 text-[11px]">
+                            <div className="w-12 h-12 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 flex items-center justify-center text-slate-400 shrink-0 text-[11px]">
                               No PNG
                             </div>
                           )}
@@ -400,9 +400,9 @@ export default function Categories() {
                             type="button"
                             onClick={() => triggerTableImageUpload(c.id)}
                             disabled={tableUploading && uploadTargetCatId === c.id}
-                            className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 active:scale-95 text-gray-700 font-bold rounded-lg text-[11px] transition shrink-0 flex items-center gap-1 shadow-2xs"
+                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold rounded-lg text-[11px] transition shrink-0 flex items-center gap-1 shadow-2xs"
                           >
-                            <svg className="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <svg className="w-3 h-3 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                               <polyline points="17 8 12 3 7 8" />
                               <line x1="12" y1="3" x2="12" y2="15" />
@@ -414,15 +414,15 @@ export default function Categories() {
 
                       {/* Icon Badge */}
                       <td className="py-3 px-4">
-                        <div className="w-9 h-9 rounded-xl bg-gray-100 border border-gray-200/80 flex items-center justify-center text-lg shadow-2xs">
+                        <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-lg shadow-2xs">
                           {c.icon || "📦"}
                         </div>
                       </td>
 
                       {/* Category Name */}
                       <td className="py-3 px-4">
-                        <div className="font-bold text-gray-900 text-sm">{c.name}</div>
-                        <div className="text-[11px] text-gray-400">ID: #{c.id}</div>
+                        <div className="font-bold text-slate-900 text-sm">{c.name}</div>
+                        <div className="text-[11px] text-slate-400">ID: #{c.id}</div>
                       </td>
 
                       {/* Alias Badge */}
@@ -445,7 +445,7 @@ export default function Categories() {
                           className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                             c.status === "active"
                               ? "bg-emerald-50 text-emerald-800 border border-emerald-200/60"
-                              : "bg-gray-100 text-gray-600 border border-gray-200"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
                           }`}
                         >
                           {c.status === "active" ? "Active" : "Inactive"}
@@ -489,12 +489,12 @@ export default function Categories() {
             </div>
 
             {/* Mobile App Cards View */}
-            <div className="md:hidden divide-y divide-gray-100">
+            <div className="md:hidden divide-y divide-slate-100">
               {filteredCategories.map((c) => (
                 <div key={c.id} className="p-3.5 space-y-2.5 bg-white">
                   <div className="flex items-center gap-3">
                     {c.image_url ? (
-                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0">
                         <img
                           src={resolveAssetUrl(c.image_url) ?? undefined}
                           alt={c.name}
@@ -502,18 +502,18 @@ export default function Categories() {
                         />
                       </div>
                     ) : (
-                      <div className="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200/80 flex items-center justify-center text-xl shrink-0 shadow-2xs">
+                      <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center text-xl shrink-0 shadow-2xs">
                         {c.icon || "📦"}
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1">
-                        <h4 className="font-bold text-gray-900 text-sm truncate">{c.name}</h4>
+                        <h4 className="font-bold text-slate-900 text-sm truncate">{c.name}</h4>
                         <span
                           className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             c.status === "active"
                               ? "bg-emerald-50 text-emerald-800 border border-emerald-200/60"
-                              : "bg-gray-100 text-gray-600 border border-gray-200"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
                           }`}
                         >
                           {c.status === "active" ? "Active" : "Inactive"}
@@ -523,20 +523,20 @@ export default function Categories() {
                         <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-950 border border-emerald-300">
                           {c.alias || getCategoryAlias(c.name)}
                         </span>
-                        <span className="text-[11px] text-gray-500 font-medium">
+                        <span className="text-[11px] text-slate-500 font-medium">
                           {c.product_count || 0} items
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-gray-50">
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-50">
                     <button
                       type="button"
                       onClick={() => triggerTableImageUpload(c.id)}
                       disabled={tableUploading && uploadTargetCatId === c.id}
-                      className="px-2.5 py-1 text-[11px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-1 active:scale-95"
+                      className="px-2.5 py-1 text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1 active:scale-95"
                     >
-                      <svg className="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <svg className="w-3 h-3 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="17 8 12 3 7 8" />
                         <line x1="12" y1="3" x2="12" y2="15" />
@@ -576,16 +576,16 @@ export default function Categories() {
       {/* Add / Edit Category Modal */}
       {showAddModal &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-scale-up">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="font-black text-gray-900 text-base flex items-center gap-2">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-pop max-h-[92dvh] overflow-y-auto border border-border space-y-5 animate-scale-up">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-black text-slate-900 text-base flex items-center gap-2">
                 <span>{editingCategory ? "✏️ Edit Category" : "✨ Add New Category"}</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600 font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
               >
                 ✕
               </button>
@@ -594,7 +594,7 @@ export default function Categories() {
             <form onSubmit={handleSaveCategory} className="space-y-4">
               {/* Category Name */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -609,15 +609,15 @@ export default function Categories() {
                     }
                   }}
                   placeholder="e.g. Smart Watches, Audio, Groceries..."
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-600 font-medium"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 font-medium"
                 />
               </div>
 
               {/* Category Alias */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-gray-700">
-                    Category Alias / Code <span className="text-gray-400 font-normal">(e.g. CH, PB, NB)</span>
+                  <label className="block text-xs font-bold text-slate-700">
+                    Category Alias / Code <span className="text-slate-400 font-normal">(e.g. CH, PB, NB)</span>
                   </label>
                   <button
                     type="button"
@@ -633,20 +633,20 @@ export default function Categories() {
                   onChange={(e) => setFormAlias(e.target.value.toUpperCase())}
                   placeholder={getCategoryAlias(formName) || "e.g. CH"}
                   maxLength={10}
-                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-600 font-mono font-bold uppercase tracking-wider"
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 font-mono font-bold uppercase tracking-wider"
                 />
-                <span className="text-[10.5px] text-gray-400 mt-1 block">
+                <span className="text-[10.5px] text-slate-400 mt-1 block">
                   Shown in inventory list and compact bill views (e.g. Charger → CH, Neckband → NB, Power Bank → PB).
                 </span>
               </div>
 
               {/* Related Icon */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Category Icon <span className="text-gray-400 font-normal">(Emoji or symbol)</span>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Category Icon <span className="text-slate-400 font-normal">(Emoji or symbol)</span>
                 </label>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-xl shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-xl shrink-0">
                     {formIcon || "📦"}
                   </div>
                   <input
@@ -654,7 +654,7 @@ export default function Categories() {
                     value={formIcon}
                     onChange={(e) => setFormIcon(e.target.value)}
                     placeholder="Enter emoji or icon code"
-                    className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-emerald-600 font-medium"
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-emerald-600 font-medium"
                   />
                 </div>
                 {/* Preset Icon Selector */}
@@ -667,7 +667,7 @@ export default function Categories() {
                       className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition border ${
                         formIcon === p.icon
                           ? "border-emerald-600 bg-emerald-50 scale-110"
-                          : "border-gray-200 bg-gray-50 hover:bg-gray-100"
+                          : "border-slate-200 bg-slate-50 hover:bg-slate-100"
                       }`}
                       title={p.label}
                     >
@@ -679,12 +679,12 @@ export default function Categories() {
 
               {/* Upload Image / PNG Banner */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  Upload Category Image / PNG <span className="text-gray-400 font-normal">(Optional cover or badge)</span>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Upload Category Image / PNG <span className="text-slate-400 font-normal">(Optional cover or badge)</span>
                 </label>
                 <div className="flex items-center gap-3">
                   {formImagePreview ? (
-                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shrink-0">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shrink-0">
                       <img
                         src={formImagePreview}
                         alt="Preview"
@@ -692,15 +692,15 @@ export default function Categories() {
                       />
                     </div>
                   ) : (
-                    <div className="w-16 h-16 rounded-xl border border-dashed border-gray-300 bg-gray-50 flex items-center justify-center text-gray-400 text-xs shrink-0">
+                    <div className="w-16 h-16 rounded-xl border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400 text-xs shrink-0">
                       No Image
                     </div>
                   )}
 
                   <label className="flex-1 cursor-pointer">
-                    <div className="px-3.5 py-2.5 border border-dashed border-gray-300 hover:border-emerald-600 rounded-xl text-center bg-gray-50/50 hover:bg-emerald-50/20 transition">
+                    <div className="px-3.5 py-2.5 border border-dashed border-slate-300 hover:border-emerald-600 rounded-xl text-center bg-slate-50/50 hover:bg-emerald-50/20 transition">
                       <span className="text-xs font-bold text-emerald-800">Choose PNG / JPG Image</span>
-                      <p className="text-[10.5px] text-gray-400 mt-0.5">PNG, JPG, or WebP up to 5MB</p>
+                      <p className="text-[10.5px] text-slate-400 mt-0.5">PNG, JPG, or WebP up to 5MB</p>
                     </div>
                     <input
                       type="file"
@@ -714,7 +714,7 @@ export default function Categories() {
 
               {/* Status */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Status</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Status</label>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer">
                     <input
@@ -740,11 +740,11 @@ export default function Categories() {
               </div>
 
               {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
                 >
                   Cancel
                 </button>
@@ -766,21 +766,21 @@ export default function Categories() {
       {/* Delete Confirmation Modal */}
       {categoryToDelete &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
             <div className="flex items-center gap-3 text-rose-600">
               <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-lg">
                 ⚠️
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 text-sm">Delete Category</h3>
-                <p className="text-xs text-gray-500">Are you sure you want to delete this category?</p>
+                <h3 className="font-bold text-slate-900 text-sm">Delete Category</h3>
+                <p className="text-xs text-slate-500">Are you sure you want to delete this category?</p>
               </div>
             </div>
 
-            <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs">
-              <p className="font-bold text-gray-800">{categoryToDelete.name}</p>
-              <p className="text-gray-500 mt-1">
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+              <p className="font-bold text-slate-800">{categoryToDelete.name}</p>
+              <p className="text-slate-500 mt-1">
                 {categoryToDelete.product_count || 0} products currently linked to this category will be unassigned.
               </p>
             </div>
@@ -789,7 +789,7 @@ export default function Categories() {
               <button
                 type="button"
                 onClick={() => setCategoryToDelete(null)}
-                className="px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition"
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
               >
                 Cancel
               </button>

@@ -126,7 +126,7 @@ const DirectStockInput = memo(function DirectStockInput({
             ? "bg-rose-50/70 border-rose-300 text-rose-800 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-200"
             : isLow
             ? "bg-amber-50/70 border-amber-300 text-amber-800 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
-            : "bg-gray-50/70 border-gray-300 text-gray-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+            : "bg-slate-50/70 border-slate-300 text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
         }`}
         title="Directly edit stock and press Enter or click outside to save"
       />
@@ -1065,7 +1065,7 @@ export default function Inventory({
     <div className={embedded ? "space-y-6" : "space-y-6 pb-12"}>
       {/* Toast Notification */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#064E3B] text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+        <div className="fixed bottom-6 right-6 z-50 bg-navy-900 text-white px-4 py-2.5 rounded-xl shadow-pop ring-1 ring-white/10 text-xs font-bold flex items-center gap-2 animate-fade-in">
           <span>{toastMsg}</span>
         </div>
       )}
@@ -1097,11 +1097,11 @@ export default function Inventory({
                   <path d="M2 12l10 5 10-5" />
                 </svg>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              <h1 className="page-title">
                 Inventory
               </h1>
             </div>
-            <p className="text-xs text-gray-500 mt-1 font-medium">
+            <p className="text-xs text-slate-500 mt-1 font-medium">
               Track stock levels, monitor low stock items, and audit inventory movements.
             </p>
           </div>
@@ -1111,10 +1111,10 @@ export default function Inventory({
             <button
               type="button"
               onClick={() => setShowImportModal(true)}
-              className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-xs flex items-center gap-1.5"
             >
               <svg
-                className="w-4 h-4 text-gray-600"
+                className="w-4 h-4 text-slate-600"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -1130,10 +1130,10 @@ export default function Inventory({
             <button
               type="button"
               onClick={handleExportCSV}
-              className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-xs flex items-center gap-1.5"
             >
               <svg
-                className="w-4 h-4 text-gray-600"
+                className="w-4 h-4 text-slate-600"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -1157,12 +1157,12 @@ export default function Inventory({
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+        <div className="flex items-center justify-between gap-3 flex-wrap bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <div>
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
               Live Product Catalog & Stock List
             </span>
-            <span className="text-[11px] text-gray-500 font-medium">
+            <span className="text-[11px] text-slate-500 font-medium">
               {totalProducts} products listed • Click Eye icon to view details & upload photo
             </span>
           </div>
@@ -1170,10 +1170,10 @@ export default function Inventory({
             <button
               type="button"
               onClick={() => setShowImportModal(true)}
-              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-xs flex items-center gap-1.5"
             >
               <svg
-                className="w-3.5 h-3.5 text-gray-600"
+                className="w-3.5 h-3.5 text-slate-600"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -1189,10 +1189,10 @@ export default function Inventory({
             <button
               type="button"
               onClick={handleExportCSV}
-              className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-xs flex items-center gap-1.5"
             >
               <svg
-                className="w-3.5 h-3.5 text-gray-600"
+                className="w-3.5 h-3.5 text-slate-600"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -1227,7 +1227,7 @@ export default function Inventory({
           className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
             activeFilter === "All"
               ? "border-emerald-500 bg-emerald-50/20 ring-1 ring-emerald-500"
-              : "border-gray-200"
+              : "border-slate-200"
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -1243,15 +1243,15 @@ export default function Inventory({
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">Total Products</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              <div className="text-xs text-slate-500 font-bold">Total Products</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">
                 {totalProducts}
               </div>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
                   {liveCount} Live
                 </span>
-                <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200">
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200">
                   {offlineCount} Offline
                 </span>
               </div>
@@ -1260,7 +1260,7 @@ export default function Inventory({
         </div>
 
         {/* Total Stock */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 flex items-center justify-between shadow-xs">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
               <svg
@@ -1276,10 +1276,10 @@ export default function Inventory({
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">Total Stock</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              <div className="text-xs text-slate-500 font-bold">Total Stock</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">
                 {totalStock.toLocaleString("en-IN")}{" "}
-                <span className="text-xs font-normal text-gray-500">units</span>
+                <span className="text-xs font-normal text-slate-500">units</span>
               </div>
             </div>
           </div>
@@ -1291,7 +1291,7 @@ export default function Inventory({
           className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
             activeFilter === "Low Stock"
               ? "border-amber-500 bg-amber-50/20 ring-1 ring-amber-500"
-              : "border-gray-200"
+              : "border-slate-200"
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -1309,8 +1309,8 @@ export default function Inventory({
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">Low Stock</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              <div className="text-xs text-slate-500 font-bold">Low Stock</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">
                 {lowStockCount}
               </div>
             </div>
@@ -1323,7 +1323,7 @@ export default function Inventory({
           className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition shadow-xs hover:shadow-sm ${
             activeFilter === "Out of Stock"
               ? "border-rose-500 bg-rose-50/20 ring-1 ring-rose-500"
-              : "border-gray-200"
+              : "border-slate-200"
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -1341,8 +1341,8 @@ export default function Inventory({
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">Out of Stock</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
+              <div className="text-xs text-slate-500 font-bold">Out of Stock</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">
                 {outOfStockCount}
               </div>
             </div>
@@ -1361,7 +1361,7 @@ export default function Inventory({
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 ${
               categoryFilter === "All"
                 ? "bg-[#064E3B] text-white shadow-xs"
-                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
             }`}
           >
             <span>All Categories</span>
@@ -1369,7 +1369,7 @@ export default function Inventory({
               className={`text-[10px] px-1.5 py-0.2 rounded-full ${
                 categoryFilter === "All"
                   ? "bg-white/20 text-white"
-                  : "bg-gray-100 text-gray-600"
+                  : "bg-slate-100 text-slate-600"
               }`}
             >
               {totalProducts}
@@ -1386,7 +1386,7 @@ export default function Inventory({
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 ${
                   isSelected
                     ? "bg-[#064E3B] text-white shadow-xs"
-                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                    : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
                 }`}
               >
                 <span
@@ -1403,7 +1403,7 @@ export default function Inventory({
                   className={`text-[10px] px-1.5 py-0.2 rounded-full ${
                     isSelected
                       ? "bg-white/20 text-white"
-                      : "bg-gray-100 text-gray-600"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {count}
@@ -1417,16 +1417,16 @@ export default function Inventory({
       {/* ============================================================== */}
       {/* 3. FILTERS BAR (Category Moved Right-to-Left, before Search)   */}
       {/* ============================================================== */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
         {/* Segmented Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl w-full md:w-auto overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full md:w-auto overflow-x-auto scrollbar-none">
           <button
             type="button"
             onClick={() => setActiveFilter("All")}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
               activeFilter === "All"
                 ? "bg-white text-emerald-900 shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             All Products ({totalProducts})
@@ -1438,7 +1438,7 @@ export default function Inventory({
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
               activeFilter === "Live"
                 ? "bg-white text-emerald-800 shadow-xs ring-1 ring-emerald-500/30"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -1450,11 +1450,11 @@ export default function Inventory({
             onClick={() => setActiveFilter("Offline")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center gap-1.5 ${
               activeFilter === "Offline"
-                ? "bg-white text-gray-800 shadow-xs ring-1 ring-gray-400/30"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-white text-slate-800 shadow-xs ring-1 ring-slate-400/30"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+            <span className="w-2 h-2 rounded-full bg-slate-400"></span>
             <span>Offline ({offlineCount})</span>
           </button>
 
@@ -1464,7 +1464,7 @@ export default function Inventory({
             className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
               activeFilter === "Low Stock"
                 ? "bg-white text-amber-800 shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Low Stock ({lowStockCount})
@@ -1476,7 +1476,7 @@ export default function Inventory({
             className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
               activeFilter === "Out of Stock"
                 ? "bg-white text-rose-700 shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Out of Stock ({outOfStockCount})
@@ -1488,7 +1488,7 @@ export default function Inventory({
             className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
               activeFilter === "Stock Movement"
                 ? "bg-white text-emerald-900 shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             Stock Movement
@@ -1542,10 +1542,10 @@ export default function Inventory({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search product by name, SKU or barcode..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
             />
             <svg
-              className="w-4 h-4 text-gray-400 absolute left-3 top-2"
+              className="w-4 h-4 text-slate-400 absolute left-3 top-2"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -1567,21 +1567,21 @@ export default function Inventory({
       {loading ? (
         <div className="py-20 text-center">
           <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-gray-500 mt-2 font-medium">Loading inventory...</p>
+          <p className="text-xs text-slate-500 mt-2 font-medium">Loading inventory...</p>
         </div>
       ) : activeFilter === "Stock Movement" ? (
         /* Stock Movement Audit Table */
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
-          <div className="p-4 bg-gray-50/70 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
               Inventory Movement History
             </h3>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-slate-500">
               {filteredMovements.length} logged transaction(s)
             </span>
           </div>
           <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 border-b border-gray-200 font-bold text-gray-600 uppercase text-[10px] tracking-wider">
+            <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="p-3">Date & Time</th>
                 <th className="p-3">Product Name & SKU</th>
@@ -1590,10 +1590,10 @@ export default function Inventory({
                 <th className="p-3">Reference / Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {filteredMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
                     No movement records found.
                   </td>
                 </tr>
@@ -1607,20 +1607,20 @@ export default function Inventory({
                     "transfer_in",
                   ].includes((m.type || m.movement_type || "").toLowerCase());
                   return (
-                    <tr key={m.id} className="hover:bg-gray-50/80 transition">
-                      <td className="p-3 text-gray-500 font-mono text-[11px]">
+                    <tr key={m.id} className="hover:bg-slate-50/80 transition">
+                      <td className="p-3 text-slate-500 font-mono text-[11px]">
                         {new Date(m.created_at || m.createdAt).toLocaleString("en-IN")}
                       </td>
                       <td className="p-3 max-w-[220px]">
-                        <div className="font-bold text-gray-900 truncate" title={m.product?.name}>
+                        <div className="font-bold text-slate-900 truncate" title={m.product?.name}>
                           {m.product?.name || `Product #${m.product_id}`}
                         </div>
-                        <div className="text-[10px] text-gray-400 font-mono truncate">
+                        <div className="text-[10px] text-slate-400 font-mono truncate">
                           {m.product?.sku || "—"}
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-700">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700">
                           {m.type || m.movement_type}
                         </span>
                       </td>
@@ -1631,7 +1631,7 @@ export default function Inventory({
                       >
                         {isInc ? `+${qty}` : `-${qty}`}
                       </td>
-                      <td className="p-3 text-gray-600 max-w-xs truncate">
+                      <td className="p-3 text-slate-600 max-w-xs truncate">
                         {m.notes || m.reference_code || "—"}
                       </td>
                     </tr>
@@ -1644,7 +1644,7 @@ export default function Inventory({
       ) : (
         <>
         {/* Main Inventory Table with All 5 Requested Features (Desktop) */}
-        <div className="hidden md:block bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-xs">
+        <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-xs">
           <table className="w-full text-left text-xs min-w-[1000px]">
             <thead className="bg-[#064E3B] text-white font-bold uppercase text-[10px] tracking-wider">
               <tr>
@@ -1693,10 +1693,10 @@ export default function Inventory({
                 <th className="p-3 text-center w-16">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="p-12 text-center text-gray-400">
+                  <td colSpan={12} className="p-12 text-center text-slate-400">
                     No products match the selected inventory filter.
                   </td>
                 </tr>
@@ -1718,7 +1718,7 @@ export default function Inventory({
                       className={`transition ${
                         isEditing
                           ? "bg-emerald-50/40 ring-1 ring-emerald-500/50"
-                          : "hover:bg-gray-50/80"
+                          : "hover:bg-slate-50/80"
                       }`}
                     >
                       {/* Product Image & Name */}
@@ -1729,7 +1729,7 @@ export default function Inventory({
                               setViewProduct(p);
                               setActiveDetailImage(coverImg || null);
                             }}
-                            className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-emerald-500 transition"
+                            className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-emerald-500 transition"
                             title="Click to view full details"
                           >
                             {imgSrc ? (
@@ -1739,7 +1739,7 @@ export default function Inventory({
                                 className="w-full h-full object-contain p-0.5 hover:scale-110 transition-transform duration-200"
                               />
                             ) : (
-                              <span className="text-gray-400 font-bold text-xs">
+                              <span className="text-slate-400 font-bold text-xs">
                                 {p.name.charAt(0)}
                               </span>
                             )}
@@ -1751,13 +1751,13 @@ export default function Inventory({
                                 setViewProduct(p);
                                 setActiveDetailImage(coverImg || null);
                               }}
-                              className="font-bold text-gray-900 truncate block w-full hover:text-emerald-700 transition text-left text-xs leading-snug"
+                              className="font-bold text-slate-900 truncate block w-full hover:text-emerald-700 transition text-left text-xs leading-snug"
                               title={p.name}
                             >
                               {p.name}
                             </button>
                             <div
-                              className="text-[10px] text-gray-400 font-medium truncate block w-full"
+                              className="text-[10px] text-slate-400 font-medium truncate block w-full"
                               title={p.brand || undefined}
                             >
                               {p.brand || "—"}
@@ -1797,7 +1797,7 @@ export default function Inventory({
                       </td>
 
                       {/* SKU */}
-                      <td className="p-2.5 font-mono text-gray-600 font-semibold max-w-[90px] truncate" title={p.sku}>
+                      <td className="p-2.5 font-mono text-slate-600 font-semibold max-w-[90px] truncate" title={p.sku}>
                         {p.sku}
                       </td>
 
@@ -1843,7 +1843,7 @@ export default function Inventory({
                       <td className="p-3 text-right">
                         {isEditing ? (
                           <div className="flex items-center justify-end">
-                            <span className="text-gray-400 text-xs mr-0.5 font-bold">
+                            <span className="text-slate-400 text-xs mr-0.5 font-bold">
                               ₹
                             </span>
                             <input
@@ -1858,7 +1858,7 @@ export default function Inventory({
                             />
                           </div>
                         ) : (
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-slate-700">
                             {formatINR(purchasePrice)}
                           </span>
                         )}
@@ -1868,7 +1868,7 @@ export default function Inventory({
                       <td className="p-3 text-right">
                         {isEditing ? (
                           <div className="flex items-center justify-end">
-                            <span className="text-gray-400 text-xs mr-0.5 font-bold">
+                            <span className="text-slate-400 text-xs mr-0.5 font-bold">
                               ₹
                             </span>
                             <input
@@ -1883,7 +1883,7 @@ export default function Inventory({
                             />
                           </div>
                         ) : (
-                          <span className="font-bold text-gray-900">
+                          <span className="font-bold text-slate-900">
                             {formatINR(sellingPrice)}
                           </span>
                         )}
@@ -1926,7 +1926,7 @@ export default function Inventory({
                       <td className="p-3 text-right">
                         {isEditing ? (
                           <div className="flex items-center justify-end">
-                            <span className="text-gray-400 text-xs mr-0.5 font-bold">
+                            <span className="text-slate-400 text-xs mr-0.5 font-bold">
                               ₹
                             </span>
                             <input
@@ -1945,7 +1945,7 @@ export default function Inventory({
                           <div className="flex flex-col items-end">
                             <span
                               className={`font-bold tabular ${
-                                p.live_price ? "text-emerald-700" : "text-gray-400"
+                                p.live_price ? "text-emerald-700" : "text-slate-400"
                               }`}
                             >
                               {p.live_price ? formatINR(p.live_price) : "—"}
@@ -1978,7 +1978,7 @@ export default function Inventory({
                                 %
                               </span>
                             </div>
-                            <span className="text-[10px] text-gray-400 font-mono">
+                            <span className="text-[10px] text-slate-400 font-mono">
                               ₹
                               {(
                                 Number(inlineDraft.sellingPrice || 0) -
@@ -2009,7 +2009,7 @@ export default function Inventory({
                                 >
                                   {marginPct}%
                                 </span>
-                                <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                                   {formatINR(profit)}
                                 </div>
                               </div>
@@ -2060,7 +2060,7 @@ export default function Inventory({
                               type="button"
                               disabled={inlineSaving}
                               onClick={handleCancelInlineEdit}
-                              className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
+                              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition shadow-xs hover:scale-105 active:scale-95"
                               title="Cancel"
                               aria-label="Cancel"
                             >
@@ -2164,7 +2164,7 @@ export default function Inventory({
         {/* Mobile App-Style Card Feed */}
         <div className="md:hidden space-y-3">
           {filteredProducts.length === 0 ? (
-            <div className="p-8 text-center text-gray-400 bg-white rounded-2xl border border-gray-200">
+            <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
               No products match the selected inventory filter.
             </div>
           ) : (
@@ -2310,13 +2310,13 @@ export default function Inventory({
       {/* ============================================================== */}
       {viewProduct &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 max-h-[92vh] overflow-y-auto">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-pop animate-scale-in border border-border space-y-5 max-h-[92dvh] overflow-y-auto">
               {!isEditingView ? (
                 /* =================== VIEW MODE =================== */
                 <>
                   {/* Modal Header */}
-                  <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+                  <div className="flex items-start justify-between pb-3 border-b border-slate-100">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider">
@@ -2326,16 +2326,16 @@ export default function Inventory({
                           className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
                             viewProduct.status === "active"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : "bg-gray-100 text-gray-500 border border-gray-200"
+                              : "bg-slate-100 text-slate-500 border border-slate-200"
                           }`}
                         >
                           {viewProduct.status === "active" ? "● Live Product" : "○ Offline"}
                         </span>
                       </div>
-                      <h3 className="text-lg font-black text-gray-900 tracking-tight leading-snug">
+                      <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug">
                         {viewProduct.name}
                       </h3>
-                      <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
+                      <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
                         <span>SKU: {viewProduct.sku}</span>
                         {viewProduct.barcode && (
                           <span>• Barcode: {viewProduct.barcode}</span>
@@ -2359,7 +2359,7 @@ export default function Inventory({
                       <button
                         type="button"
                         onClick={() => setViewProduct(null)}
-                        className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm transition cursor-pointer"
+                        className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm transition cursor-pointer"
                       >
                         ✕
                       </button>
@@ -2370,7 +2370,7 @@ export default function Inventory({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Product Image / Icon Frame */}
                     <div className="space-y-2">
-                      <div className="w-full h-60 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-center p-4 relative overflow-hidden group">
+                      <div className="w-full h-60 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-4 relative overflow-hidden group">
                         {activeDetailImage ? (
                           <img
                             src={resolveAssetUrl(activeDetailImage) || undefined}
@@ -2378,18 +2378,18 @@ export default function Inventory({
                             className="max-h-full max-w-full object-contain transition-transform duration-300 group-hover:scale-110"
                           />
                         ) : (
-                          <div className="flex flex-col items-center justify-center text-gray-300 text-center p-4">
-                            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 mb-2">
+                          <div className="flex flex-col items-center justify-center text-slate-300 text-center p-4">
+                            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-2">
                               <svg className="w-8 h-8 stroke-current" viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
                                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                                 <circle cx="8.5" cy="8.5" r="1.5" />
                                 <polyline points="21 15 16 10 5 21" />
                               </svg>
                             </div>
-                            <span className="text-xs font-bold text-gray-500">
+                            <span className="text-xs font-bold text-slate-500">
                               No Photo Uploaded
                             </span>
-                            <span className="text-[11px] text-gray-400 mt-0.5">
+                            <span className="text-[11px] text-slate-400 mt-0.5">
                               Click "Edit Details" to upload a photo / icon
                             </span>
                           </div>
@@ -2407,7 +2407,7 @@ export default function Inventory({
                               className={`w-12 h-12 rounded-xl border p-1 bg-white shrink-0 transition overflow-hidden cursor-pointer ${
                                 activeDetailImage === img.url
                                   ? "border-emerald-600 ring-2 ring-emerald-500/30"
-                                  : "border-gray-200 hover:border-gray-300"
+                                  : "border-slate-200 hover:border-slate-300"
                               }`}
                             >
                               <img
@@ -2426,7 +2426,7 @@ export default function Inventory({
                       {/* Stock on Hand Card */}
                       <div className="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-2xl space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-gray-600">Stock Availability:</span>
+                          <span className="font-bold text-slate-600">Stock Availability:</span>
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-[11px] font-black ${
                               getProductStock(viewProduct) <= 0
@@ -2444,44 +2444,44 @@ export default function Inventory({
                           </span>
                         </div>
                         <div className="flex items-baseline justify-between">
-                          <span className="text-2xl font-black text-gray-900">
+                          <span className="text-2xl font-extrabold tracking-tight text-navy-900 tabular">
                             {getProductStock(viewProduct)}{" "}
-                            <span className="text-xs font-normal text-gray-500">units on hand</span>
+                            <span className="text-xs font-normal text-slate-500">units on hand</span>
                           </span>
-                          <span className="text-[11px] text-gray-500 font-medium">
+                          <span className="text-[11px] text-slate-500 font-medium">
                             Min Alert: {viewProduct.min_stock ?? 5} units
                           </span>
                         </div>
                       </div>
 
                       {/* Pricing & Margin Breakdown */}
-                      <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl space-y-2.5">
+                      <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 font-semibold">Purchase Price (Cost):</span>
-                          <span className="font-bold text-gray-800">
+                          <span className="text-slate-500 font-semibold">Purchase Price (Cost):</span>
+                          <span className="font-bold text-slate-800">
                             {formatINR(viewProduct.purchase_price)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 font-semibold">Selling Price (Retail):</span>
+                          <span className="text-slate-500 font-semibold">Selling Price (Retail):</span>
                           <span className="font-black text-emerald-800 text-sm">
                             {formatINR(viewProduct.selling_price)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-500 font-semibold">Live Price (Online):</span>
+                          <span className="text-slate-500 font-semibold">Live Price (Online):</span>
                           <span className="font-bold text-emerald-700">
                             {viewProduct.live_price ? formatINR(viewProduct.live_price) : "(Same as Selling Price)"}
                           </span>
                         </div>
                         {viewProduct.mrp && viewProduct.mrp > viewProduct.selling_price && (
-                          <div className="flex items-center justify-between text-gray-400">
+                          <div className="flex items-center justify-between text-slate-400">
                             <span>MRP:</span>
                             <span className="line-through">{formatINR(viewProduct.mrp)}</span>
                           </div>
                         )}
-                        <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
-                          <span className="font-bold text-gray-700">Gross Margin:</span>
+                        <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                          <span className="font-bold text-slate-700">Gross Margin:</span>
                           <div className="text-right">
                             {(() => {
                               const pp = Number(viewProduct.purchase_price || 0);
@@ -2491,7 +2491,7 @@ export default function Inventory({
                               return (
                                 <div>
                                   <span className="font-black text-emerald-700 text-sm">{pct}%</span>
-                                  <span className="text-[11px] text-gray-500 ml-1">
+                                  <span className="text-[11px] text-slate-500 ml-1">
                                     ({formatINR(profit)}/unit)
                                   </span>
                                 </div>
@@ -2499,9 +2499,9 @@ export default function Inventory({
                             })()}
                           </div>
                         </div>
-                        <div className="flex items-center justify-between text-gray-600">
+                        <div className="flex items-center justify-between text-slate-600">
                           <span className="font-semibold">Total Stock Value:</span>
-                          <span className="font-black text-gray-900">
+                          <span className="font-black text-slate-900">
                             {formatINR(
                               Math.max(0, getProductStock(viewProduct)) *
                                 Number(viewProduct.purchase_price || 0)
@@ -2511,10 +2511,10 @@ export default function Inventory({
                       </div>
 
                       {/* Catalog Visibility Toggle in Modal */}
-                      <div className="flex items-center justify-between gap-3 p-3 bg-white border border-gray-200 rounded-2xl shadow-xs">
+                      <div className="flex items-center justify-between gap-3 p-3 bg-white border border-slate-200 rounded-2xl shadow-xs">
                         <div className="min-w-0">
-                          <div className="font-bold text-gray-800">Show in</div>
-                          <div className="text-[10px] text-gray-500">
+                          <div className="font-bold text-slate-800">Show in</div>
+                          <div className="text-[10px] text-slate-500">
                             {VISIBILITY_META[effectiveVisibility(viewProduct)].hint}
                           </div>
                         </div>
@@ -2531,15 +2531,15 @@ export default function Inventory({
 
                   {/* Description (if available) */}
                   {viewProduct.description && (
-                    <div className="p-3 bg-gray-50/70 border border-gray-200 rounded-2xl text-xs text-gray-600">
-                      <span className="font-bold text-gray-800 block mb-1">Product Description:</span>
+                    <div className="p-3 bg-slate-50/70 border border-slate-200 rounded-2xl text-xs text-slate-600">
+                      <span className="font-bold text-slate-800 block mb-1">Product Description:</span>
                       <p className="leading-relaxed">{viewProduct.description}</p>
                     </div>
                   )}
 
                   {/* Product Movement Audit History */}
-                  <div className="space-y-2 pt-2 border-t border-gray-100">
-                    <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider">
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
                       Recent Stock Movements for this Product
                     </h4>
                     {(() => {
@@ -2548,15 +2548,15 @@ export default function Inventory({
                       );
                       if (prodMovements.length === 0) {
                         return (
-                          <div className="p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-400">
+                          <div className="p-4 bg-slate-50 rounded-xl text-center text-xs text-slate-400">
                             No recent inventory movements recorded for this item.
                           </div>
                         );
                       }
                       return (
-                        <div className="border border-gray-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
+                        <div className="border border-slate-200 rounded-xl overflow-hidden max-h-44 overflow-y-auto">
                           <table className="w-full text-left text-xs">
-                            <thead className="bg-gray-50 text-[10px] font-bold text-gray-500 uppercase">
+                            <thead className="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase">
                               <tr>
                                 <th className="p-2">Date</th>
                                 <th className="p-2">Type</th>
@@ -2564,7 +2564,7 @@ export default function Inventory({
                                 <th className="p-2">Notes</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 text-[11px]">
+                            <tbody className="divide-y divide-slate-100 text-[11px]">
                               {prodMovements.slice(0, 10).map((m: any) => {
                                 const qty = Number(m.quantity || 0);
                                 const isInc = [
@@ -2574,13 +2574,13 @@ export default function Inventory({
                                   "transfer_in",
                                 ].includes((m.type || m.movement_type || "").toLowerCase());
                                 return (
-                                  <tr key={m.id} className="hover:bg-gray-50/80">
-                                    <td className="p-2 text-gray-500 font-mono">
+                                  <tr key={m.id} className="hover:bg-slate-50/80">
+                                    <td className="p-2 text-slate-500 font-mono">
                                       {new Date(m.created_at || m.createdAt).toLocaleDateString(
                                         "en-IN"
                                       )}
                                     </td>
-                                    <td className="p-2 font-bold capitalize text-gray-700">
+                                    <td className="p-2 font-bold capitalize text-slate-700">
                                       {m.type || m.movement_type}
                                     </td>
                                     <td
@@ -2590,7 +2590,7 @@ export default function Inventory({
                                     >
                                       {isInc ? `+${qty}` : `-${qty}`}
                                     </td>
-                                    <td className="p-2 text-gray-500 truncate max-w-xs">
+                                    <td className="p-2 text-slate-500 truncate max-w-xs">
                                       {m.notes || m.reference_code || "—"}
                                     </td>
                                   </tr>
@@ -2604,7 +2604,7 @@ export default function Inventory({
                   </div>
 
                   {/* Modal Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -2638,7 +2638,7 @@ export default function Inventory({
                     <button
                       type="button"
                       onClick={() => setViewProduct(null)}
-                      className="px-5 py-2 bg-gray-900 hover:bg-black text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                      className="px-5 py-2 bg-slate-900 hover:bg-black text-white font-bold rounded-xl text-xs transition cursor-pointer"
                     >
                       Close
                     </button>
@@ -2648,13 +2648,13 @@ export default function Inventory({
                 /* =================== EDIT MODE =================== */
                 <form onSubmit={handleSaveViewEdit} className="space-y-4">
                   {/* Modal Header for Edit */}
-                  <div className="flex items-start justify-between pb-3 border-b border-gray-100">
+                  <div className="flex items-start justify-between pb-3 border-b border-slate-100">
                     <div>
-                      <h3 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
+                      <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
                         <span>✏️</span>
                         <span>Edit Product Details & Photo</span>
                       </h3>
-                      <p className="text-xs text-gray-500 font-mono mt-0.5">
+                      <p className="text-xs text-slate-500 font-mono mt-0.5">
                         Product: {viewProduct.name} ({viewProduct.sku})
                       </p>
                     </div>
@@ -2666,7 +2666,7 @@ export default function Inventory({
                           setViewPhotoFile(null);
                           setViewPhotoPreview(null);
                         }}
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition cursor-pointer"
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-xs transition cursor-pointer"
                       >
                         Cancel Edit
                       </button>
@@ -2678,7 +2678,7 @@ export default function Inventory({
                           setViewPhotoFile(null);
                           setViewPhotoPreview(null);
                         }}
-                        className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center font-bold text-sm transition cursor-pointer"
+                        className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm transition cursor-pointer"
                       >
                         ✕
                       </button>
@@ -2729,7 +2729,7 @@ export default function Inventory({
                           </button>
                         )}
                       </div>
-                      <p className="text-[11px] text-gray-500">
+                      <p className="text-[11px] text-slate-500">
                         {viewPhotoFile ? (
                           <span className="font-bold text-emerald-800">
                             Ready to upload: {viewPhotoFile.name} ({(viewPhotoFile.size / 1024).toFixed(0)} KB)
@@ -2744,7 +2744,7 @@ export default function Inventory({
                   {/* Basic Details: Name, Category, Brand */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div className="sm:col-span-2">
-                      <label className="font-bold text-gray-700 block mb-1">
+                      <label className="font-bold text-slate-700 block mb-1">
                         Product Name <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -2752,12 +2752,12 @@ export default function Inventory({
                         required
                         value={viewEditForm.name}
                         onChange={(e) => handleViewEditFieldChange("name", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="e.g. Amul Butter 500g"
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-gray-700 block mb-1">Category</label>
+                      <label className="font-bold text-slate-700 block mb-1">Category</label>
                       <select
                         value={viewEditForm.category_id || ""}
                         onChange={(e) =>
@@ -2766,7 +2766,7 @@ export default function Inventory({
                             e.target.value ? Number(e.target.value) : null
                           )
                         }
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-medium text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
                       >
                         <option value="">General / None</option>
                         {categories.map((c) => (
@@ -2781,32 +2781,32 @@ export default function Inventory({
                   {/* SKU, Barcode, Brand */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div>
-                      <label className="font-bold text-gray-700 block mb-1">SKU</label>
+                      <label className="font-bold text-slate-700 block mb-1">SKU</label>
                       <input
                         type="text"
                         value={viewEditForm.sku}
                         onChange={(e) => handleViewEditFieldChange("sku", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-mono text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="SKU-1001"
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-gray-700 block mb-1">Barcode</label>
+                      <label className="font-bold text-slate-700 block mb-1">Barcode</label>
                       <input
                         type="text"
                         value={viewEditForm.barcode}
                         onChange={(e) => handleViewEditFieldChange("barcode", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-mono text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="8901030383741"
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-gray-700 block mb-1">Brand</label>
+                      <label className="font-bold text-slate-700 block mb-1">Brand</label>
                       <input
                         type="text"
                         value={viewEditForm.brand}
                         onChange={(e) => handleViewEditFieldChange("brand", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-medium text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="e.g. Amul"
                       />
                     </div>
@@ -2826,7 +2826,7 @@ export default function Inventory({
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                       <div>
-                        <label className="font-bold text-gray-700 block mb-1">
+                        <label className="font-bold text-slate-700 block mb-1">
                           Purchase Price (Cost ₹)
                         </label>
                         <input
@@ -2835,7 +2835,7 @@ export default function Inventory({
                           min="0"
                           value={viewEditForm.purchase_price}
                           onChange={(e) => handleViewEditFieldChange("purchase_price", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                         />
                       </div>
                       <div>
@@ -2901,7 +2901,7 @@ export default function Inventory({
                     {/* Dynamic Calculation Callout */}
                     <div className="flex items-center justify-between p-2.5 bg-white border border-emerald-200/80 rounded-xl text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="text-gray-500 font-semibold">Profit per unit:</span>
+                        <span className="text-slate-500 font-semibold">Profit per unit:</span>
                         <span className="font-black text-emerald-700 text-sm">
                           ₹
                           {(
@@ -2914,7 +2914,7 @@ export default function Inventory({
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-gray-500 text-[11px]">Margin Health:</span>
+                        <span className="text-slate-500 text-[11px]">Margin Health:</span>
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                             Number(viewEditForm.margin_percent || 0) >= 20
@@ -2937,33 +2937,33 @@ export default function Inventory({
                   {/* MRP, Min Stock Alert & Status */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                     <div>
-                      <label className="font-bold text-gray-700 block mb-1">MRP (Optional ₹)</label>
+                      <label className="font-bold text-slate-700 block mb-1">MRP (Optional ₹)</label>
                       <input
                         type="number"
                         step="0.01"
                         min="0"
                         value={viewEditForm.mrp}
                         onChange={(e) => handleViewEditFieldChange("mrp", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-medium text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-medium text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                         placeholder="e.g. 100"
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-gray-700 block mb-1">Min Stock Alert</label>
+                      <label className="font-bold text-slate-700 block mb-1">Min Stock Alert</label>
                       <input
                         type="number"
                         min="0"
                         value={viewEditForm.min_stock}
                         onChange={(e) => handleViewEditFieldChange("min_stock", e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="font-bold text-gray-700 block mb-1">Catalog Status</label>
+                      <label className="font-bold text-slate-700 block mb-1">Catalog Status</label>
                       <select
                         value={viewEditForm.status}
                         onChange={(e) => handleViewEditFieldChange("status", e.target.value as any)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none cursor-pointer"
                       >
                         <option value="active">Active (Live in Shop)</option>
                         <option value="inactive">Inactive (Offline)</option>
@@ -2973,18 +2973,18 @@ export default function Inventory({
 
                   {/* Description */}
                   <div className="text-xs">
-                    <label className="font-bold text-gray-700 block mb-1">Product Description</label>
+                    <label className="font-bold text-slate-700 block mb-1">Product Description</label>
                     <textarea
                       rows={2}
                       value={viewEditForm.description}
                       onChange={(e) => handleViewEditFieldChange("description", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none"
                       placeholder="Add details, size, weight, packaging notes..."
                     />
                   </div>
 
                   {/* Actions (Footer) */}
-                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                     <button
                       type="button"
                       disabled={savingViewEdit}
@@ -2993,7 +2993,7 @@ export default function Inventory({
                         setViewPhotoFile(null);
                         setViewPhotoPreview(null);
                       }}
-                      className="px-4 py-2 border border-gray-200 hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-xs transition cursor-pointer"
+                      className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -3031,20 +3031,20 @@ export default function Inventory({
       {/* Stock Movement / Adjustment Modal */}
       {showAdjustModal && selectedProduct &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div>
-                <h3 className="font-black text-gray-900 text-sm">
+                <h3 className="font-black text-slate-900 text-sm">
                   Stock Movement & Adjustment
                 </h3>
-                <p className="text-[11px] text-gray-500 font-mono mt-0.5">
+                <p className="text-[11px] text-slate-500 font-mono mt-0.5">
                   {selectedProduct.name} ({selectedProduct.sku})
                 </p>
               </div>
               <button
                 onClick={() => setShowAdjustModal(false)}
-                className="text-gray-400 hover:text-gray-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 font-bold"
               >
                 ✕
               </button>
@@ -3057,23 +3057,23 @@ export default function Inventory({
             )}
 
             <form onSubmit={handleSaveAdjustment} className="space-y-3.5 text-xs">
-              <div className="p-3 bg-gray-50 rounded-xl flex items-center justify-between">
-                <span className="font-semibold text-gray-600">
+              <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
+                <span className="font-semibold text-slate-600">
                   Current Stock on Hand:
                 </span>
-                <span className="font-black text-sm text-gray-900">
+                <span className="font-black text-sm text-slate-900">
                   {getProductStock(selectedProduct)} units
                 </span>
               </div>
 
               <div>
-                <label className="font-bold text-gray-700 block mb-1">
+                <label className="font-bold text-slate-700 block mb-1">
                   Adjustment Reason:
                 </label>
                 <select
                   value={adjustReason}
                   onChange={(e: any) => setAdjustReason(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                 >
                   <option value="count">
                     Count Correction (Physical count differs)
@@ -3089,14 +3089,14 @@ export default function Inventory({
               </div>
 
               {adjustReason === "count" && (
-                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setAdjustMode("change")}
                     className={`flex-1 py-1 rounded-lg font-bold text-xs transition ${
                       adjustMode === "change"
                         ? "bg-white text-emerald-800 shadow-xs"
-                        : "text-gray-500"
+                        : "text-slate-500"
                     }`}
                   >
                     Adjust by Delta (+ / -)
@@ -3107,7 +3107,7 @@ export default function Inventory({
                     className={`flex-1 py-1 rounded-lg font-bold text-xs transition ${
                       adjustMode === "set"
                         ? "bg-white text-emerald-800 shadow-xs"
-                        : "text-gray-500"
+                        : "text-slate-500"
                     }`}
                   >
                     Set Counted Total
@@ -3116,7 +3116,7 @@ export default function Inventory({
               )}
 
               <div>
-                <label className="font-bold text-gray-700 block mb-1">
+                <label className="font-bold text-slate-700 block mb-1">
                   {adjustMode === "set"
                     ? "New Total Counted Quantity:"
                     : "Quantity to Adjust:"}
@@ -3130,12 +3130,12 @@ export default function Inventory({
                   placeholder={
                     adjustMode === "set" ? "e.g. 50" : "e.g. 5 or -2"
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-gray-700 block mb-1">
+                <label className="font-bold text-slate-700 block mb-1">
                   Audit Notes / Explanation:
                 </label>
                 <textarea
@@ -3143,15 +3143,15 @@ export default function Inventory({
                   value={adjustNotes}
                   onChange={(e) => setAdjustNotes(e.target.value)}
                   placeholder="e.g. Annual stock audit verification or damaged box..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAdjustModal(false)}
-                  className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                  className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -3172,22 +3172,22 @@ export default function Inventory({
       {/* Add Product Modal */}
       {showAddModal &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <h3 className="font-black text-gray-900 text-sm">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-pop animate-scale-in border border-border space-y-4 max-h-[92dvh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-black text-slate-900 text-sm">
                 Add New Product to Inventory
               </h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 font-bold"
               >
                 ✕
               </button>
             </div>
             <form onSubmit={handleAddProduct} className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">
+                <label className="font-bold text-slate-700 block mb-1">
                   Product Name *
                 </label>
                 <input
@@ -3196,26 +3196,26 @@ export default function Inventory({
                   value={addName}
                   onChange={(e) => setAddName(e.target.value)}
                   placeholder="e.g. Wireless Mouse X1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">SKU</label>
+                  <label className="font-bold text-slate-700 block mb-1">SKU</label>
                   <input
                     type="text"
                     value={addSku}
                     onChange={(e) => setAddSku(e.target.value)}
                     placeholder="Auto if empty"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">Category</label>
+                  <label className="font-bold text-slate-700 block mb-1">Category</label>
                   <select
                     value={addCategory}
                     onChange={(e) => setAddCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">Select Category</option>
                     {categories.map((c) => (
@@ -3228,7 +3228,7 @@ export default function Inventory({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">
+                  <label className="font-bold text-slate-700 block mb-1">
                     Purchase Price (₹)
                   </label>
                   <input
@@ -3237,11 +3237,11 @@ export default function Inventory({
                     value={addPurchasePrice}
                     onChange={(e) => setAddPurchasePrice(e.target.value)}
                     placeholder="e.g. 400.00"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">
+                  <label className="font-bold text-slate-700 block mb-1">
                     Selling Price (₹) *
                   </label>
                   <input
@@ -3251,12 +3251,12 @@ export default function Inventory({
                     value={addSellingPrice}
                     onChange={(e) => setAddSellingPrice(e.target.value)}
                     placeholder="e.g. 599.00"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                   />
                 </div>
               </div>
               <div>
-                <label className="font-bold text-gray-700 block mb-1 flex items-center justify-between">
+                <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
                   <span>Live Price (Online Rate ₹)</span>
                   {addSellingPrice && (
                     <button
@@ -3277,39 +3277,39 @@ export default function Inventory({
                   value={addLivePrice}
                   onChange={(e) => setAddLivePrice(e.target.value)}
                   placeholder="Leave empty to use Selling Price"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">
+                  <label className="font-bold text-slate-700 block mb-1">
                     Min Stock (Reorder)
                   </label>
                   <input
                     type="number"
                     value={addMinStock}
                     onChange={(e) => setAddMinStock(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">
+                  <label className="font-bold text-slate-700 block mb-1">
                     Opening Stock
                   </label>
                   <input
                     type="number"
                     value={addOpeningStock}
                     onChange={(e) => setAddOpeningStock(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                  className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -3330,22 +3330,22 @@ export default function Inventory({
       {/* Edit Product Modal */}
       {showEditModal && selectedProduct &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <h3 className="font-black text-gray-900 text-sm">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-black text-slate-900 text-sm">
                 Edit Product Information
               </h3>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="text-gray-400 hover:text-gray-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 font-bold"
               >
                 ✕
               </button>
             </div>
             <form onSubmit={handleSaveEdit} className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-gray-700 block mb-1">
+                <label className="font-bold text-slate-700 block mb-1">
                   Product Name
                 </label>
                 <input
@@ -3353,12 +3353,12 @@ export default function Inventory({
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">
+                  <label className="font-bold text-slate-700 block mb-1">
                     Purchase Price (₹)
                   </label>
                   <input
@@ -3366,11 +3366,11 @@ export default function Inventory({
                     step="0.01"
                     value={editPurchasePrice}
                     onChange={(e) => setEditPurchasePrice(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">
+                  <label className="font-bold text-slate-700 block mb-1">
                     Selling Price (₹)
                   </label>
                   <input
@@ -3378,27 +3378,27 @@ export default function Inventory({
                     step="0.01"
                     value={editSellingPrice}
                     onChange={(e) => setEditSellingPrice(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                   />
                 </div>
               </div>
               <div>
-                <label className="font-bold text-gray-700 block mb-1">
+                <label className="font-bold text-slate-700 block mb-1">
                   Reorder Level (Min Stock)
                 </label>
                 <input
                   type="number"
                   value={editMinStock}
                   onChange={(e) => setEditMinStock(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-3.5 py-2 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                  className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -3419,20 +3419,20 @@ export default function Inventory({
       {/* Import CSV Modal */}
       {showImportModal &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <h3 className="font-black text-gray-900 text-sm">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-black text-slate-900 text-sm">
                 Bulk Import Inventory CSV
               </h3>
               <button
                 onClick={() => setShowImportModal(false)}
-                className="text-gray-400 hover:text-gray-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 font-bold"
               >
                 ✕
               </button>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-500">
               Upload your CSV file containing columns: Name, SKU, Category, Selling
               Price, Purchase Price, Stock.
             </p>
@@ -3451,13 +3451,13 @@ export default function Inventory({
                   alert(apiErrorMessage(err, "Import failed"));
                 }
               }}
-              className="w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-800 hover:file:bg-emerald-100"
+              className="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-800 hover:file:bg-emerald-100"
             />
             <div className="flex justify-end pt-2">
               <button
                 type="button"
                 onClick={() => setShowImportModal(false)}
-                className="px-4 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl"
+                className="px-4 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
               >
                 Close
               </button>
@@ -3469,8 +3469,8 @@ export default function Inventory({
       {/* Delete Confirmation Modal */}
       {productToDelete &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-up">
+          <div className="fixed inset-0 z-[9999] bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-pop max-h-[92dvh] overflow-y-auto border border-border space-y-4 animate-scale-up">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -3481,19 +3481,19 @@ export default function Inventory({
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">
+                  <h3 className="text-base font-bold text-slate-900">
                     Delete / Deactivate Product
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Choose how you want to handle <strong className="text-gray-800">{productToDelete.name}</strong> ({productToDelete.sku}).
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Choose how you want to handle <strong className="text-slate-800">{productToDelete.name}</strong> ({productToDelete.sku}).
                   </p>
                 </div>
               </div>
 
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs space-y-1.5 text-gray-600">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs space-y-1.5 text-slate-600">
                 <div className="flex justify-between">
                   <span>Current Stock:</span>
-                  <span className="font-bold text-gray-900">{getProductStock(productToDelete)} units</span>
+                  <span className="font-bold text-slate-900">{getProductStock(productToDelete)} units</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Selling Price:</span>
@@ -3528,7 +3528,7 @@ export default function Inventory({
                   type="button"
                   disabled={deletingProduct}
                   onClick={() => setProductToDelete(null)}
-                  className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs transition"
+                  className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition"
                 >
                   Cancel
                 </button>

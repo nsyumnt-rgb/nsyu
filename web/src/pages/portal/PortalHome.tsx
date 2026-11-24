@@ -103,20 +103,20 @@ export default function PortalHome() {
       {/* Real Database KPI Metrics Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Outstanding Balance */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 col-span-2 md:col-span-1 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-gray-500 mb-2">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 col-span-2 md:col-span-1 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Outstanding Balance</span>
-            <LedgerIcon className="w-5 h-5 text-gray-400" />
+            <LedgerIcon className="w-5 h-5 text-slate-400" />
           </div>
           <div>
             <div
-              className={`text-2xl font-black ${
-                balance > 0 ? "text-rose-600" : balance < 0 ? "text-emerald-600" : "text-gray-800"
+              className={`text-2xl font-extrabold tracking-tight tabular ${
+                balance > 0 ? "text-rose-600" : balance < 0 ? "text-emerald-600" : "text-slate-800"
               }`}
             >
               ₹{Math.abs(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs text-slate-500 mt-1">
               {balance > 0
                 ? "Payment due to the shop"
                 : balance < 0
@@ -124,7 +124,7 @@ export default function PortalHome() {
                 : "No pending balance"}
             </div>
           </div>
-          <div className="mt-3 pt-2 border-t border-gray-100">
+          <div className="mt-3 pt-2 border-t border-slate-100">
             <Link to="/portal/ledger" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
               View Statement &rarr;
             </Link>
@@ -132,18 +132,18 @@ export default function PortalHome() {
         </div>
 
         {/* Total Bills */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-gray-500 mb-2">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Bills</span>
             <span className="text-xs bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded">Bills</span>
           </div>
           <div>
-            <div className="text-2xl font-black text-gray-900">
+            <div className="text-2xl font-extrabold tracking-tight text-slate-900 tabular">
               {dashboardStats?.totalBills ?? recentBills.length}
             </div>
-            <div className="text-xs text-gray-500 mt-1">Tax invoices generated</div>
+            <div className="text-xs text-slate-500 mt-1">Tax invoices generated</div>
           </div>
-          <div className="mt-3 pt-2 border-t border-gray-100">
+          <div className="mt-3 pt-2 border-t border-slate-100">
             <Link to="/portal/bills" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
               View All Bills &rarr;
             </Link>
@@ -151,18 +151,18 @@ export default function PortalHome() {
         </div>
 
         {/* Total Orders */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-gray-500 mb-2">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Total Orders</span>
-            <OrdersIcon className="w-5 h-5 text-gray-400" />
+            <OrdersIcon className="w-5 h-5 text-slate-400" />
           </div>
           <div>
-            <div className="text-2xl font-black text-gray-900">
+            <div className="text-2xl font-extrabold tracking-tight text-slate-900 tabular">
               {dashboardStats?.totalOrders ?? recentOrders.length}
             </div>
-            <div className="text-xs text-gray-500 mt-1">Orders placed with shop</div>
+            <div className="text-xs text-slate-500 mt-1">Orders placed with shop</div>
           </div>
-          <div className="mt-3 pt-2 border-t border-gray-100">
+          <div className="mt-3 pt-2 border-t border-slate-100">
             <Link to="/portal/orders" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
               Track Orders &rarr;
             </Link>
@@ -170,22 +170,22 @@ export default function PortalHome() {
         </div>
 
         {/* Orders Pipeline (Pending & Completed) */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-gray-500 mb-2">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Order Status</span>
             <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded">Status</span>
           </div>
           <div className="space-y-1">
             <div className="flex justify-between items-center text-xs">
               <span className="text-amber-700 font-semibold">Pending / In Progress:</span>
-              <span className="font-bold text-gray-900">{dashboardStats?.pendingOrders ?? 0}</span>
+              <span className="font-bold text-slate-900">{dashboardStats?.pendingOrders ?? 0}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
               <span className="text-emerald-700 font-semibold">Completed / Billed:</span>
-              <span className="font-bold text-gray-900">{dashboardStats?.completedOrders ?? 0}</span>
+              <span className="font-bold text-slate-900">{dashboardStats?.completedOrders ?? 0}</span>
             </div>
           </div>
-          <div className="mt-3 pt-2 border-t border-gray-100">
+          <div className="mt-3 pt-2 border-t border-slate-100">
             <Link to="/portal/orders" className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold">
               View Timeline &rarr;
             </Link>
@@ -197,11 +197,11 @@ export default function PortalHome() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Recent Orders Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <OrdersIcon className="w-5 h-5 text-emerald-700" />
-              <h2 className="text-base font-bold text-gray-900">Recent Orders</h2>
+              <h2 className="text-base font-bold text-slate-900">Recent Orders</h2>
             </div>
             <Link to="/portal/orders" className="text-xs font-bold text-emerald-700 hover:text-emerald-800">
               View All &rarr;
@@ -210,10 +210,10 @@ export default function PortalHome() {
 
           <div className="p-5">
             {loading ? (
-              <div className="py-8 text-center text-xs text-gray-400">Loading orders...</div>
+              <div className="py-8 text-center text-xs text-slate-400">Loading orders...</div>
             ) : recentOrders.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-xs text-gray-400">No orders placed yet.</p>
+                <p className="text-xs text-slate-400">No orders placed yet.</p>
                 <Link
                   to="/portal/catalog"
                   className="mt-3 inline-block px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition"
@@ -227,18 +227,18 @@ export default function PortalHome() {
                   <Link
                     key={ord.id}
                     to={`/portal/orders/${ord.id}`}
-                    className="block p-3.5 rounded-xl border border-gray-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition"
+                    className="block p-3.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition"
                   >
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-gray-900">#{ord.order_number}</span>
+                        <span className="font-bold text-sm text-slate-900">#{ord.order_number}</span>
                         <OrderStatusBadge status={ord.status} />
                       </div>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-bold text-slate-900">
                         ₹{Number(ord.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>{ord.items?.length || 0} item(s)</span>
                       <span>{new Date(ord.createdAt).toLocaleDateString("en-IN")}</span>
                     </div>
@@ -250,11 +250,11 @@ export default function PortalHome() {
         </div>
 
         {/* Recent Bills & Invoices Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BillsIcon className="w-5 h-5 text-emerald-700" />
-              <h2 className="text-base font-bold text-gray-900">Recent Invoices</h2>
+              <h2 className="text-base font-bold text-slate-900">Recent Invoices</h2>
             </div>
             <Link to="/portal/bills" className="text-xs font-bold text-emerald-700 hover:text-emerald-800">
               View All &rarr;
@@ -263,30 +263,30 @@ export default function PortalHome() {
 
           <div className="p-5">
             {loading ? (
-              <div className="py-8 text-center text-xs text-gray-400">Loading bills...</div>
+              <div className="py-8 text-center text-xs text-slate-400">Loading bills...</div>
             ) : recentBills.length === 0 ? (
-              <div className="py-8 text-center text-xs text-gray-400">No invoices issued yet.</div>
+              <div className="py-8 text-center text-xs text-slate-400">No invoices issued yet.</div>
             ) : (
               <div className="space-y-3">
                 {recentBills.map((bill) => (
                   <div
                     key={bill.id}
-                    className="p-3.5 rounded-xl border border-gray-100 flex items-center justify-between hover:border-emerald-200 hover:bg-emerald-50/30 transition"
+                    className="p-3.5 rounded-xl border border-slate-100 flex items-center justify-between hover:border-emerald-200 hover:bg-emerald-50/30 transition"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-gray-900">
+                        <span className="font-bold text-sm text-slate-900">
                           {bill.invoice_number || `Bill #${bill.id}`}
                         </span>
                         <BillStatusBadge status={bill.payment_status} />
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
+                      <div className="text-xs text-slate-500 mt-1">
                         {new Date(bill.createdAt || bill.date).toLocaleDateString("en-IN")}
                       </div>
                     </div>
 
                     <div className="text-right">
-                      <div className="text-sm font-bold text-gray-900">
+                      <div className="text-sm font-bold text-slate-900">
                         ₹{Number(bill.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                       </div>
                       <Link
@@ -312,12 +312,12 @@ export function OrderStatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; text?: string; label: string }> = {
     pending: { bg: "bg-amber-50 border-amber-200 text-amber-700", label: "Pending" },
     confirmed: { bg: "bg-blue-50 border-blue-200 text-blue-700", label: "Confirmed" },
-    processing: { bg: "bg-purple-50 border-purple-200 text-purple-700", label: "Processing" },
-    shipped: { bg: "bg-indigo-50 border-indigo-200 text-indigo-700", label: "Shipped" },
+    processing: { bg: "bg-sky-50 border-sky-200 text-sky-700", label: "Processing" },
+    shipped: { bg: "bg-teal-50 border-teal-200 text-teal-700", label: "Shipped" },
     delivered: { bg: "bg-emerald-50 border-emerald-200 text-emerald-700", label: "Delivered" },
     cancelled: { bg: "bg-rose-50 border-rose-200 text-rose-700", label: "Cancelled" },
   };
-  const c = map[status] || { bg: "bg-gray-100 border-gray-200 text-gray-700", label: status };
+  const c = map[status] || { bg: "bg-slate-100 border-slate-200 text-slate-700", label: status };
   return (
     <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wider ${c.bg}`}>
       {c.label}
@@ -331,7 +331,7 @@ export function BillStatusBadge({ status }: { status: string }) {
     partially_paid: { bg: "bg-amber-50 border-amber-200 text-amber-700", label: "Partially Paid" },
     unpaid: { bg: "bg-rose-50 border-rose-200 text-rose-700", label: "Unpaid" },
   };
-  const c = map[status] || { bg: "bg-gray-100 border-gray-200 text-gray-700", label: status };
+  const c = map[status] || { bg: "bg-slate-100 border-slate-200 text-slate-700", label: status };
   return (
     <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border uppercase tracking-wider ${c.bg}`}>
       {c.label}

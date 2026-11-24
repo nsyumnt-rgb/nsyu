@@ -306,7 +306,7 @@ export default function CustomerDetail() {
                         ₹{Number(ep.down_payment || 0).toLocaleString("en-IN")}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-purple-50 text-purple-700 border border-purple-200">
+                        <span className="px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200">
                           {ep.status}
                         </span>
                       </td>

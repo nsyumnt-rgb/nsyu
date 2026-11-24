@@ -62,10 +62,10 @@ export default function MarketShops() {
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-emerald-100/90 via-emerald-50 to-teal-50 border border-emerald-100 p-6 sm:p-10 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6 min-h-[260px]">
           {/* Left Hero Content */}
           <div className="max-w-md space-y-3 z-10 text-center md:text-left">
-            <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-black text-[#064E3B] leading-tight tracking-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-[34px] font-extrabold text-navy-900 leading-tight tracking-tight">
               Discover Our Premium Shops
             </h1>
-            <p className="text-xs sm:text-sm text-gray-600 font-medium">
+            <p className="text-xs sm:text-sm text-slate-600 font-medium">
               Shop from your favorite stores at the best prices
             </p>
             <div className="pt-2">
@@ -91,13 +91,13 @@ export default function MarketShops() {
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-300 animate-pulse" />
                 </div>
                 {/* Store Body & Window */}
-                <div className="w-56 h-32 bg-white/95 backdrop-blur-xs rounded-b-xl border border-gray-200/80 p-3 shadow-xl flex items-center justify-between gap-3">
+                <div className="w-56 h-32 bg-white/95 backdrop-blur-xs rounded-b-xl border border-slate-200/80 p-3 shadow-xl flex items-center justify-between gap-3">
                   <div className="flex-1 space-y-1.5">
                     <div className="w-full h-12 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center justify-center p-1">
                       <span className="text-xl">🏬</span>
                     </div>
                     <div className="h-2 w-3/4 bg-emerald-200/60 rounded" />
-                    <div className="h-2 w-1/2 bg-gray-200 rounded" />
+                    <div className="h-2 w-1/2 bg-slate-200 rounded" />
                   </div>
                   {/* Shopping Bags Tag */}
                   <div className="w-20 bg-emerald-800 text-white p-2 rounded-xl text-center space-y-0.5 shadow-md">
@@ -112,17 +112,17 @@ export default function MarketShops() {
         </div>
 
         {/* 2. SECTION HEADER & FILTER CONTROLS (Image 2 Mockup) */}
-        <div id="shops-section" className="bg-white rounded-2xl border border-gray-100 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div id="shops-section" className="bg-white rounded-2xl border border-slate-100 p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           
           {/* Title & Count */}
           <div>
             <div className="flex items-center gap-2">
               <span className="text-lg">🏪</span>
-              <h2 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+              <h2 className="text-base sm:text-lg font-extrabold text-navy-900 tracking-tight">
                 Our Shops ({total})
               </h2>
             </div>
-            <p className="text-xs text-gray-500 font-medium mt-0.5">
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
               Explore shops from our trusted partners
             </p>
           </div>
@@ -140,10 +140,10 @@ export default function MarketShops() {
                   setPage(1);
                 }}
                 placeholder="Search shops or area..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none"
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none"
               />
               <svg
-                className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5"
+                className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -159,7 +159,7 @@ export default function MarketShops() {
               <select
                 value={sortBy}
                 onChange={(e: any) => setSortBy(e.target.value)}
-                className="pl-3 pr-8 py-1.5 text-xs font-bold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl outline-none cursor-pointer appearance-none hover:bg-gray-100 transition"
+                className="pl-3 pr-8 py-1.5 text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl outline-none cursor-pointer appearance-none hover:bg-slate-100 transition"
               >
                 <option value="relevance">Sort by: Relevance</option>
                 <option value="stock">Highest Stock</option>
@@ -167,7 +167,7 @@ export default function MarketShops() {
                 <option value="name">Name A-Z</option>
               </select>
               <svg
-                className="w-3 h-3 text-gray-500 absolute right-2.5 top-2.5 pointer-events-none"
+                className="w-3 h-3 text-slate-500 absolute right-2.5 top-2.5 pointer-events-none"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -178,7 +178,7 @@ export default function MarketShops() {
             </div>
 
             {/* Grid / List View Switcher */}
-            <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 shrink-0">
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 shrink-0">
               {/* Grid Button */}
               <button
                 type="button"
@@ -186,7 +186,7 @@ export default function MarketShops() {
                 className={`p-1.5 rounded-lg transition ${
                   !isListView
                     ? "bg-[#047857] text-white shadow-xs"
-                    : "text-gray-500 hover:text-gray-900"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
                 title="Grid View"
                 aria-label="Grid View"
@@ -205,7 +205,7 @@ export default function MarketShops() {
                 className={`p-1.5 rounded-lg transition ${
                   isListView
                     ? "bg-[#047857] text-white shadow-xs"
-                    : "text-gray-500 hover:text-gray-900"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
                 title="List View"
                 aria-label="List View"
@@ -230,12 +230,12 @@ export default function MarketShops() {
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-white rounded-2xl border border-gray-100 p-4 h-64 animate-pulse"
+                className="bg-white rounded-2xl border border-slate-100 p-4 h-64 animate-pulse"
               />
             ))}
           </div>
         ) : sortedShops.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center text-xs text-gray-500">
+          <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center text-xs text-slate-500">
             No shops match “{q}”.
           </div>
         ) : isListView ? (
@@ -259,18 +259,18 @@ export default function MarketShops() {
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition"
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition"
             >
               ‹ Prev
             </button>
-            <span className="text-xs font-bold text-gray-600">
+            <span className="text-xs font-bold text-slate-600">
               Page {page} of {pages}
             </span>
             <button
               type="button"
               disabled={page >= pages}
               onClick={() => setPage((p) => p + 1)}
-              className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-40 transition"
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition"
             >
               Next ›
             </button>

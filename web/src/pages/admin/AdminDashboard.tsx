@@ -55,20 +55,20 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Title & Refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-up">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="eyebrow">
               Platform Governance
             </span>
           </div>
-          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Platform Overview</h1>
-          <p className="text-xs sm:text-sm text-slate-500">Real-time multi-tenant database analytics across all registered shops</p>
+          <h1 className="page-title">Platform Overview</h1>
+          <p className="page-subtitle">Real-time multi-tenant database analytics across all registered shops</p>
         </div>
         <div className="flex items-center space-x-3">
           <button
             onClick={loadData}
-            className="flex items-center space-x-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl border border-[#E5E7EB] shadow-2xs transition"
+            className="flex items-center space-x-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl border border-border shadow-2xs transition"
           >
             <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
       {/* KPI Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Card 1: Total Shops */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="card card-hover p-5">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">TOTAL SHOPS</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
@@ -142,7 +142,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 2: Total Platform Users */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="card card-hover p-5">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">TOTAL USERS</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 flex items-center justify-center">
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 3: Total Platform Sales Amount */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="card card-hover p-5">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">TOTAL SALES (CROSS-SHOP)</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 4: Governance & Audit */}
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-xs hover:shadow-lift transition">
+        <div className="card card-hover p-5">
           <div className="flex items-center justify-between text-slate-500 text-xs font-bold mb-3">
             <span className="tracking-wide">SECURITY AUDIT</span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
@@ -198,7 +198,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <Link
           to="/admin/shops"
-          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+          className="card card-hover p-5 flex items-center space-x-4 group"
         >
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,22 +213,22 @@ export default function AdminDashboard() {
 
         <Link
           to="/admin/categories"
-          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+          className="card card-hover p-5 flex items-center space-x-4 group"
         >
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center group-hover:scale-105 transition">
+          <div className="w-12 h-12 rounded-xl bg-sky-50 text-sky-700 border border-sky-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-navy-900 group-hover:text-purple-700 transition">Master Categories</h3>
+            <h3 className="text-sm font-bold text-navy-900 group-hover:text-sky-700 transition">Master Categories</h3>
             <p className="text-xs text-slate-500 mt-0.5">Manage global categories, aliases & icons</p>
           </div>
         </Link>
 
         <Link
           to="/admin/notifications"
-          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+          className="card card-hover p-5 flex items-center space-x-4 group"
         >
           <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
 
         <Link
           to="/admin/audit-logs"
-          className="p-5 rounded-2xl bg-white border border-[#E5E7EB] hover:border-emerald-300 hover:shadow-lift transition flex items-center space-x-4 group shadow-xs"
+          className="card card-hover p-5 flex items-center space-x-4 group"
         >
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center group-hover:scale-105 transition">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Platform Activity */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+      <div className="card overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-navy-900">Recent Super Admin Activity</h2>
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+            <thead>
               <tr>
                 <th className="py-3 px-4">Action</th>
                 <th className="py-3 px-4">Target Type</th>

@@ -77,15 +77,15 @@ export default function AdminShopView() {
       </div>
 
       {/* Header & Shop Selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-up">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="eyebrow">
               Diagnostic Console
             </span>
           </div>
-          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Shop Support Viewer</h1>
-          <p className="text-xs sm:text-sm text-slate-500">Inspect business records for customer support and system diagnosis</p>
+          <h1 className="page-title">Shop Support Viewer</h1>
+          <p className="page-subtitle">Inspect business records for customer support and system diagnosis</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -130,21 +130,21 @@ export default function AdminShopView() {
         <div className="space-y-6">
           {/* Shop Profile & Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
+            <div className="card p-4">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Total Bills</span>
-              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.billsCount}</span>
+              <span className="text-2xl font-extrabold tracking-tight text-navy-900 tabular">{supportData.stats.billsCount}</span>
             </div>
-            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
+            <div className="card p-4">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Total Orders</span>
-              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.ordersCount}</span>
+              <span className="text-2xl font-extrabold tracking-tight text-navy-900 tabular">{supportData.stats.ordersCount}</span>
             </div>
-            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
+            <div className="card p-4">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Stock Lines</span>
-              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.productsCount}</span>
+              <span className="text-2xl font-extrabold tracking-tight text-navy-900 tabular">{supportData.stats.productsCount}</span>
             </div>
-            <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-xs">
+            <div className="card p-4">
               <span className="text-[11px] text-slate-500 block uppercase font-bold tracking-wider">Customers</span>
-              <span className="text-2xl font-black text-navy-900 font-mono tabular">{supportData.stats.customersCount}</span>
+              <span className="text-2xl font-extrabold tracking-tight text-navy-900 tabular">{supportData.stats.customersCount}</span>
             </div>
           </div>
 
@@ -172,10 +172,10 @@ export default function AdminShopView() {
 
           {/* TAB 1: BILLS */}
           {activeTab === "bills" && (
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+            <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+                  <thead>
                     <tr>
                       <th className="py-3 px-4">Invoice #</th>
                       <th className="py-3 px-4">Date</th>
@@ -228,10 +228,10 @@ export default function AdminShopView() {
 
           {/* TAB 2: ORDERS */}
           {activeTab === "orders" && (
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+            <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+                  <thead>
                     <tr>
                       <th className="py-3 px-4">Order #</th>
                       <th className="py-3 px-4">Order Date</th>
@@ -274,10 +274,10 @@ export default function AdminShopView() {
 
           {/* TAB 3: INVENTORY */}
           {activeTab === "inventory" && (
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+            <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+                  <thead>
                     <tr>
                       <th className="py-3 px-4">Product Name</th>
                       <th className="py-3 px-4">SKU</th>
@@ -322,10 +322,10 @@ export default function AdminShopView() {
 
           {/* TAB 4: CUSTOMERS */}
           {activeTab === "customers" && (
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+            <div className="card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+                  <thead>
                     <tr>
                       <th className="py-3 px-4">Customer Name</th>
                       <th className="py-3 px-4">Phone</th>

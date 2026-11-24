@@ -36,9 +36,9 @@ export default function MarketCategorySidebar({
   }, []);
 
   return (
-    <aside className="w-full bg-white rounded-2xl border border-gray-200/80 p-4 shadow-xs space-y-3">
+    <aside className="w-full bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs space-y-3">
       {/* Sidebar Header with Green Bar */}
-      <div className="flex items-center gap-2 pb-2.5 border-b border-gray-100 font-black text-gray-900 text-[13.5px] tracking-tight">
+      <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100 font-extrabold text-navy-900 text-[13.5px] tracking-tight">
         <span className="w-1.5 h-4 rounded-full bg-[#047857] inline-block" />
         <span>Categories</span>
       </div>
@@ -46,9 +46,9 @@ export default function MarketCategorySidebar({
       {/* Dynamic Category List */}
       <nav className="space-y-1">
         {loading ? (
-          <div className="py-6 text-center text-xs text-gray-400">Loading categories...</div>
+          <div className="py-6 text-center text-xs text-slate-400">Loading categories...</div>
         ) : categories.length === 0 ? (
-          <div className="py-6 text-center text-xs text-gray-400">No categories found</div>
+          <div className="py-6 text-center text-xs text-slate-400">No categories found</div>
         ) : (
           categories.map((cat) => {
             const isActive = currentCategory.toLowerCase() === cat.name.toLowerCase();
@@ -67,7 +67,7 @@ export default function MarketCategorySidebar({
                 className={`group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition ${
                   isActive
                     ? "bg-emerald-50 text-emerald-800 font-bold"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-emerald-700"
+                    : "text-slate-700 hover:bg-slate-50 hover:text-emerald-700"
                 }`}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -75,18 +75,18 @@ export default function MarketCategorySidebar({
                     <img
                       src={resolveAssetUrl(cat.imageUrl) ?? undefined}
                       alt={cat.name}
-                      className="w-5 h-5 object-cover rounded-md shrink-0 bg-gray-50 border border-gray-100"
+                      className="w-5 h-5 object-cover rounded-md shrink-0 bg-slate-50 border border-slate-100"
                     />
                   ) : (
                     <span className="text-sm shrink-0">{cat.icon || "📦"}</span>
                   )}
                   <span className="truncate">{cat.name}</span>
                   {cat.count !== undefined && cat.count > 0 && (
-                    <span className="text-[10px] text-gray-400 font-normal">({cat.count})</span>
+                    <span className="text-[10px] text-slate-400 font-normal">({cat.count})</span>
                   )}
                 </div>
                 <svg
-                  className={`w-3.5 h-3.5 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600 ${
+                  className={`w-3.5 h-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600 ${
                     isActive ? "text-emerald-700" : ""
                   }`}
                   viewBox="0 0 24 24"

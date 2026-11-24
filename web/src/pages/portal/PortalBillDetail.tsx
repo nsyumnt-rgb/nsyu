@@ -92,16 +92,16 @@ export default function PortalBillDetail() {
     return (
       <div className="py-20 text-center">
         <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-gray-500 mt-2 font-medium">Loading invoice...</p>
+        <p className="text-xs text-slate-500 mt-2 font-medium">Loading invoice...</p>
       </div>
     );
   }
 
   if (error || !bill) {
     return (
-      <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 max-w-lg mx-auto">
-        <h2 className="text-lg font-bold text-gray-900">Invoice Not Found</h2>
-        <p className="text-xs text-gray-500 mt-1">{error || "The requested invoice could not be located."}</p>
+      <div className="bg-white rounded-2xl p-12 text-center border border-slate-100 max-w-lg mx-auto">
+        <h2 className="text-lg font-bold text-slate-900">Invoice Not Found</h2>
+        <p className="text-xs text-slate-500 mt-1">{error || "The requested invoice could not be located."}</p>
         <Link
           to="/portal/bills"
           className="mt-4 inline-block px-4 py-2 bg-[#047857] text-white rounded-xl text-xs font-bold"
@@ -120,7 +120,7 @@ export default function PortalBillDetail() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Link
           to="/portal/bills"
-          className="text-xs font-bold text-gray-600 hover:text-gray-900 flex items-center gap-1.5"
+          className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5"
         >
           <span>&larr; Back to Invoices</span>
         </Link>
@@ -146,7 +146,7 @@ export default function PortalBillDetail() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="px-3.5 py-1.5 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-sm"
+            className="px-3.5 py-1.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-sm"
           >
             Print
           </button>
@@ -172,50 +172,50 @@ export default function PortalBillDetail() {
       )}
 
       {/* Printable Invoice Container */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
         
         {/* Header: Shop & Invoice Meta */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-slate-200">
           <div>
             <div className="text-xs font-bold uppercase tracking-wider text-emerald-800">Tax Invoice</div>
-            <h1 className="text-2xl font-black text-gray-900 mt-0.5">{bill.shop?.name || "Shop"}</h1>
-            {bill.shop?.address && <p className="text-xs text-gray-600 max-w-sm mt-1">{bill.shop.address}</p>}
-            {bill.shop?.phone && <p className="text-xs text-gray-600 mt-0.5">Phone: +91 {bill.shop.phone}</p>}
-            {bill.shop?.gstin && <p className="text-xs text-gray-600 font-mono">GSTIN: {bill.shop.gstin}</p>}
+            <h1 className="text-2xl font-extrabold tracking-tight text-navy-900 mt-0.5">{bill.shop?.name || "Shop"}</h1>
+            {bill.shop?.address && <p className="text-xs text-slate-600 max-w-sm mt-1">{bill.shop.address}</p>}
+            {bill.shop?.phone && <p className="text-xs text-slate-600 mt-0.5">Phone: +91 {bill.shop.phone}</p>}
+            {bill.shop?.gstin && <p className="text-xs text-slate-600 font-mono">GSTIN: {bill.shop.gstin}</p>}
           </div>
 
           <div className="sm:text-right space-y-1">
             <div className="flex items-center sm:justify-end gap-2">
-              <span className="text-lg font-black text-gray-900">{bill.invoice_number || `INV${String(bill.id).padStart(6, '0')}`}</span>
+              <span className="text-lg font-extrabold text-navy-900">{bill.invoice_number || `INV${String(bill.id).padStart(6, '0')}`}</span>
               <BillStatusBadge status={bill.payment_status} />
             </div>
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-slate-600">
               Date: <span className="font-semibold">{new Date(bill.createdAt || bill.date).toLocaleDateString("en-IN")}</span>
             </div>
             {bill.due_date && (
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-slate-600">
                 Due Date: <span className="font-semibold">{new Date(bill.due_date).toLocaleDateString("en-IN")}</span>
               </div>
             )}
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-slate-600">
               Payment Method: <span className="font-semibold capitalize">{bill.payment_method || "Credit / Ledger"}</span>
             </div>
           </div>
         </div>
 
         {/* Customer Info Box */}
-        <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col sm:flex-row justify-between gap-4 text-xs">
+        <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col sm:flex-row justify-between gap-4 text-xs">
           <div>
-            <div className="font-bold text-gray-500 uppercase tracking-wider text-[10px] mb-1">Billed To</div>
-            <div className="font-bold text-sm text-gray-900 uppercase">{bill.customer?.name}</div>
-            <div className="text-gray-600 mt-0.5">Mobile: +91 {bill.customer?.phone}</div>
-            {bill.customer?.address && <div className="text-gray-600">{bill.customer.address}</div>}
-            {bill.customer?.gstin && <div className="text-gray-600 font-mono mt-0.5">GSTIN: {bill.customer.gstin}</div>}
+            <div className="font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Billed To</div>
+            <div className="font-bold text-sm text-slate-900 uppercase">{bill.customer?.name}</div>
+            <div className="text-slate-600 mt-0.5">Mobile: +91 {bill.customer?.phone}</div>
+            {bill.customer?.address && <div className="text-slate-600">{bill.customer.address}</div>}
+            {bill.customer?.gstin && <div className="text-slate-600 font-mono mt-0.5">GSTIN: {bill.customer.gstin}</div>}
           </div>
 
           <div className="sm:text-right">
-            <div className="font-bold text-gray-500 uppercase tracking-wider text-[10px] mb-1">Invoice Amount</div>
-            <div className="text-2xl font-black text-gray-900">
+            <div className="font-bold text-slate-500 uppercase tracking-wider text-[10px] mb-1">Invoice Amount</div>
+            <div className="text-2xl font-extrabold tracking-tight text-slate-900 tabular">
               ₹{Number(bill.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </div>
             {balanceDue > 0 ? (
@@ -229,7 +229,7 @@ export default function PortalBillDetail() {
         </div>
 
         {/* Invoice Items Table (Desktop) */}
-        <div className="hidden md:block border border-gray-200 rounded-xl overflow-x-auto">
+        <div className="hidden md:block border border-slate-200 rounded-xl overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#047857] text-white uppercase text-[10px] tracking-wider font-bold">
               <tr>
@@ -243,26 +243,26 @@ export default function PortalBillDetail() {
                 <th className="p-3 text-right">Total</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {bill.items?.map((item: any, idx: number) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="p-3 text-center text-gray-400 font-mono">{idx + 1}</td>
+                <tr key={item.id} className="hover:bg-slate-50">
+                  <td className="p-3 text-center text-slate-400 font-mono">{idx + 1}</td>
                   <td className="p-3">
-                    <div className="font-bold text-gray-900">{item.product_name}</div>
-                    <div className="text-[10px] text-gray-400 font-mono">SKU: {item.sku}</div>
+                    <div className="font-bold text-slate-900">{item.product_name}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">SKU: {item.sku}</div>
                   </td>
-                  <td className="p-3 text-center text-gray-500 font-mono">{item.hsn_code || "—"}</td>
-                  <td className="p-3 text-center font-bold text-gray-800">{item.quantity}</td>
+                  <td className="p-3 text-center text-slate-500 font-mono">{item.hsn_code || "—"}</td>
+                  <td className="p-3 text-center font-bold text-slate-800">{item.quantity}</td>
                   <td className="p-3 text-center font-bold text-amber-700">
-                    {item.returned_quantity > 0 ? item.returned_quantity : <span className="text-gray-300 font-normal">—</span>}
+                    {item.returned_quantity > 0 ? item.returned_quantity : <span className="text-slate-300 font-normal">—</span>}
                   </td>
-                  <td className="p-3 text-right text-gray-700">
+                  <td className="p-3 text-right text-slate-700">
                     ₹{Number(item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="p-3 text-right text-gray-700">
+                  <td className="p-3 text-right text-slate-700">
                     {item.tax_rate ? `${item.tax_rate}%` : "0%"} (₹{Number(item.tax_amount || 0).toFixed(2)})
                   </td>
-                  <td className="p-3 text-right font-black text-gray-900">
+                  <td className="p-3 text-right font-extrabold text-navy-900">
                     ₹{Number(item.line_total || item.total || item.quantity * item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>
                 </tr>
@@ -272,24 +272,24 @@ export default function PortalBillDetail() {
         </div>
 
         {/* Invoice Items (Mobile Cards) */}
-        <div className="md:hidden divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden bg-white">
+        <div className="md:hidden divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
           {bill.items?.map((item: any, idx: number) => (
             <div key={item.id} className="p-3 space-y-1.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <div className="font-bold text-gray-900 text-xs leading-snug">{item.product_name}</div>
-                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">#{idx + 1} · SKU: {item.sku || "—"}</div>
+                  <div className="font-bold text-slate-900 text-xs leading-snug">{item.product_name}</div>
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5">#{idx + 1} · SKU: {item.sku || "—"}</div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-black text-gray-900 text-sm">
+                  <div className="font-extrabold text-navy-900 text-sm">
                     ₹{Number(item.line_total || item.total || item.quantity * item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
-                  <div className="text-[10px] text-gray-500">
+                  <div className="text-[10px] text-slate-500">
                     {item.quantity} × ₹{Number(item.unit_price).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-50">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-50">
                 <span>HSN: {item.hsn_code || "—"}</span>
                 {item.returned_quantity > 0 && (
                   <span className="font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
@@ -316,13 +316,13 @@ export default function PortalBillDetail() {
               {bill.returns.map((ret: any) => (
                 <div key={ret.id} className="pt-2.5 pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <div className="font-bold text-gray-900 flex items-center gap-2">
+                    <div className="font-bold text-slate-900 flex items-center gap-2">
                       <span>{ret.reference_code || `RET${String(ret.id).padStart(6, "0")}`}</span>
-                      <span className="font-normal text-gray-500 text-[11px]">
+                      <span className="font-normal text-slate-500 text-[11px]">
                         ({new Date(ret.return_date || ret.created_at).toLocaleDateString("en-IN")})
                       </span>
                     </div>
-                    {ret.reason && <p className="text-gray-600 text-[11px] mt-0.5">Reason: {ret.reason}</p>}
+                    {ret.reason && <p className="text-slate-600 text-[11px] mt-0.5">Reason: {ret.reason}</p>}
                   </div>
                   <div className="text-sm font-black text-emerald-700">
                     +₹{Number(ret.refund_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })} Credited
@@ -334,24 +334,24 @@ export default function PortalBillDetail() {
         )}
 
         {/* Calculation Summary Footer */}
-        <div className="flex flex-col sm:flex-row justify-between gap-6 pt-4 border-t border-gray-200">
-          <div className="text-xs text-gray-500 space-y-1 sm:max-w-xs">
-            <div className="font-bold text-gray-700 uppercase tracking-wider text-[10px]">Payment Information</div>
+        <div className="flex flex-col sm:flex-row justify-between gap-6 pt-4 border-t border-slate-200">
+          <div className="text-xs text-slate-500 space-y-1 sm:max-w-xs">
+            <div className="font-bold text-slate-700 uppercase tracking-wider text-[10px]">Payment Information</div>
             <p>
               Please verify all item quantities and pricing upon receipt. Direct ledger or bank settlements will be reflected in your statement.
             </p>
           </div>
 
           <div className="w-full sm:w-72 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-gray-600">
+            <div className="flex items-center justify-between text-slate-600">
               <span>Subtotal:</span>
-              <span className="font-semibold text-gray-800">
+              <span className="font-semibold text-slate-800">
                 ₹{Number(bill.subtotal || bill.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </div>
 
             {Number(bill.discount_amount) > 0 && (
-              <div className="flex items-center justify-between text-gray-600">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Discount:</span>
                 <span className="font-semibold text-emerald-600">
                   -₹{Number(bill.discount_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -360,31 +360,31 @@ export default function PortalBillDetail() {
             )}
 
             {Number(bill.tax_amount) > 0 && (
-              <div className="flex items-center justify-between text-gray-600">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Tax (GST):</span>
-                <span className="font-semibold text-gray-800">
+                <span className="font-semibold text-slate-800">
                   +₹{Number(bill.tax_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
               </div>
             )}
 
-            <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-sm font-black text-gray-900">
+            <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-sm font-extrabold text-navy-900">
               <span>Total Amount:</span>
               <span className="text-emerald-800">
                 ₹{Number(bill.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-gray-600 pt-1">
+            <div className="flex items-center justify-between text-slate-600 pt-1">
               <span>Paid Amount:</span>
               <span className="font-bold text-emerald-600">
                 ₹{Number(bill.paid_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </div>
 
-            <div className="flex items-center justify-between font-bold pt-1 border-t border-gray-100">
+            <div className="flex items-center justify-between font-bold pt-1 border-t border-slate-100">
               <span>Balance Due:</span>
-              <span className={balanceDue > 0 ? "text-rose-600 font-black" : "text-gray-700"}>
+              <span className={balanceDue > 0 ? "text-rose-600 font-black" : "text-slate-700"}>
                 ₹{Math.max(0, balanceDue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -395,17 +395,17 @@ export default function PortalBillDetail() {
 
       {/* Return Request Modal */}
       {showReturnModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-navy-950/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-pop border border-border space-y-5 max-h-[92dvh] overflow-y-auto animate-scale-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 className="text-base font-black text-gray-900">Request Item Return</h3>
-                <p className="text-xs text-gray-500">Invoice: #{bill.invoice_number || bill.id}</p>
+                <h3 className="text-base font-extrabold text-navy-900">Request Item Return</h3>
+                <p className="text-xs text-slate-500">Invoice: #{bill.invoice_number || bill.id}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowReturnModal(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition font-bold"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition font-bold"
               >
                 ✕
               </button>
@@ -413,25 +413,25 @@ export default function PortalBillDetail() {
 
             <form onSubmit={handleRequestReturn} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-700 block">Select Items & Quantities to Return:</label>
-                <div className="border border-gray-200 rounded-xl divide-y divide-gray-100 max-h-60 overflow-y-auto">
+                <label className="text-xs font-bold text-slate-700 block">Select Items & Quantities to Return:</label>
+                <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-60 overflow-y-auto">
                   {bill.items?.map((it: any) => {
                     const alreadyReturned = Number(it.returned_quantity || 0);
                     const availableToReturn = Math.max(0, Number(it.quantity) - alreadyReturned);
                     const selectedQty = returnItems[it.id] || 0;
 
                     return (
-                      <div key={it.id} className="p-3 flex items-center justify-between gap-3 text-xs hover:bg-gray-50">
+                      <div key={it.id} className="p-3 flex items-center justify-between gap-3 text-xs hover:bg-slate-50">
                         <div className="flex-1">
-                          <div className="font-bold text-gray-900">{it.product_name}</div>
-                          <div className="text-[11px] text-gray-500">
+                          <div className="font-bold text-slate-900">{it.product_name}</div>
+                          <div className="text-[11px] text-slate-500">
                             Purchased: {it.quantity} {alreadyReturned > 0 && `(Returned: ${alreadyReturned})`} • ₹{Number(it.unit_price).toFixed(2)}/unit
                           </div>
                         </div>
 
                         {availableToReturn > 0 ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-semibold text-gray-500">Max {availableToReturn}:</span>
+                            <span className="text-[10px] font-semibold text-slate-500">Max {availableToReturn}:</span>
                             <input
                               type="number"
                               min="0"
@@ -441,7 +441,7 @@ export default function PortalBillDetail() {
                                 const val = Math.min(availableToReturn, Math.max(0, parseInt(e.target.value) || 0));
                                 setReturnItems((prev) => ({ ...prev, [it.id]: val }));
                               }}
-                              className="w-16 px-2 py-1 border border-gray-300 rounded-lg text-center font-bold text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                              className="w-16 px-2 py-1 border border-slate-300 rounded-lg text-center font-bold text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                             />
                           </div>
                         ) : (
@@ -456,29 +456,29 @@ export default function PortalBillDetail() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">Reason for Return (Optional):</label>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Reason for Return (Optional):</label>
                 <textarea
                   value={returnReason}
                   onChange={(e) => setReturnReason(e.target.value)}
                   placeholder="e.g. Defective item, wrong size, or damaged packaging..."
                   rows={2}
-                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none resize-none"
                 />
               </div>
 
-              <div className="p-3 bg-gray-50 rounded-xl text-xs flex justify-between items-center text-gray-700">
+              <div className="p-3 bg-slate-50 rounded-xl text-xs flex justify-between items-center text-slate-700">
                 <span className="font-medium">Total items selected:</span>
                 <span className="font-black text-emerald-800">
                   {Object.values(returnItems).reduce((sum, q) => sum + (Number(q) || 0), 0)} unit(s)
                 </span>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowReturnModal(false)}
                   disabled={returnSubmitting}
-                  className="px-4 py-2 border border-gray-300 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-100 transition"
+                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
                 >
                   Cancel
                 </button>

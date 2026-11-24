@@ -52,21 +52,21 @@ export default function ProductDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fade-in">
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-gray-100 overflow-hidden flex flex-col my-auto animate-zoomIn"
+        className="bg-white rounded-3xl max-w-3xl w-full shadow-pop border border-border overflow-hidden flex flex-col my-auto animate-scale-in"
       >
         {/* Header Bar */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
-            <h2 className="font-black text-gray-900 text-sm tracking-tight">Product Details</h2>
+            <h2 className="font-extrabold text-navy-900 text-sm tracking-tight">Product Details</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center transition font-bold"
+            className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition font-bold"
           >
             ✕
           </button>
@@ -80,7 +80,7 @@ export default function ProductDetailsModal({
             <div
               onMouseEnter={() => setIsZoomed(true)}
               onMouseLeave={() => setIsZoomed(false)}
-              className="w-full aspect-square rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 border border-gray-200/80 flex items-center justify-center p-6 relative overflow-hidden"
+              className="w-full aspect-square rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 border border-slate-200/80 flex items-center justify-center p-6 relative overflow-hidden"
             >
               {activeSrc ? (
                 <img
@@ -93,7 +93,7 @@ export default function ProductDetailsModal({
                   className="max-h-full max-w-full object-contain pointer-events-none select-none"
                 />
               ) : (
-                <div className="text-gray-400 text-center">
+                <div className="text-slate-400 text-center">
                   <svg className="w-20 h-20 mx-auto stroke-1 text-emerald-800/40" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth="2" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
@@ -105,7 +105,7 @@ export default function ProductDetailsModal({
 
               {/* Zoom hint badge */}
               {activeSrc && (
-                <div className="absolute bottom-2.5 right-2.5 px-2 py-1 rounded-lg bg-white/80 backdrop-blur-xs text-[10px] font-bold text-gray-600 flex items-center gap-1 shadow-xs border border-gray-200">
+                <div className="absolute bottom-2.5 right-2.5 px-2 py-1 rounded-lg bg-white/80 backdrop-blur-xs text-[10px] font-bold text-slate-600 flex items-center gap-1 shadow-xs border border-slate-200">
                   <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="11" cy="11" r="8" />
                     <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -131,7 +131,7 @@ export default function ProductDetailsModal({
                       className={`w-14 h-14 rounded-xl border p-1 bg-white shrink-0 overflow-hidden transition ${
                         isSelected
                           ? "border-emerald-600 ring-2 ring-emerald-500/30"
-                          : "border-gray-200 hover:border-gray-300 opacity-70 hover:opacity-100"
+                          : "border-slate-200 hover:border-slate-300 opacity-70 hover:opacity-100"
                       }`}
                     >
                       <img src={url || ""} alt="" className="w-full h-full object-contain" />
@@ -177,15 +177,15 @@ export default function ProductDetailsModal({
               </div>
 
               {/* Title */}
-              <h1 className="text-xl sm:text-2xl font-black text-gray-900 leading-tight">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-navy-900 leading-tight">
                 {product.name}
               </h1>
 
               {/* Codes */}
-              <div className="flex items-center gap-4 text-xs font-mono text-gray-500">
-                <div>SKU: <b className="text-gray-800">{product.sku}</b></div>
+              <div className="flex items-center gap-4 text-xs font-mono text-slate-500">
+                <div>SKU: <b className="text-slate-800">{product.sku}</b></div>
                 {product.barcode && (
-                  <div>Barcode: <b className="text-gray-800">{product.barcode}</b></div>
+                  <div>Barcode: <b className="text-slate-800">{product.barcode}</b></div>
                 )}
               </div>
 
@@ -194,11 +194,11 @@ export default function ProductDetailsModal({
                 <div>
                   <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider mb-0.5">Selling Price</div>
                   <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
+                    <span className="text-2xl sm:text-3xl font-extrabold text-navy-900 tracking-tight">
                       ₹{sellingPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                     {hasDiscount && (
-                      <span className="text-sm text-gray-400 line-through font-medium">
+                      <span className="text-sm text-slate-400 line-through font-medium">
                         ₹{mrp.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     )}
@@ -215,47 +215,47 @@ export default function ProductDetailsModal({
               {/* Description */}
               {product.description && (
                 <div className="space-y-1">
-                  <div className="text-xs font-bold text-gray-700">Description</div>
-                  <p className="text-xs text-gray-600 leading-relaxed max-h-28 overflow-y-auto pr-1">
+                  <div className="text-xs font-bold text-slate-700">Description</div>
+                  <p className="text-xs text-slate-600 leading-relaxed max-h-28 overflow-y-auto pr-1">
                     {product.description}
                   </p>
                 </div>
               )}
 
               {/* Quick Specs Grid */}
-              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-gray-100">
+              <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <div>
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Tax / GST</span>
-                  <span className="font-semibold text-gray-800">{product.tax_percent ?? 0}%</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Tax / GST</span>
+                  <span className="font-semibold text-slate-800">{product.tax_percent ?? 0}%</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Min Reorder Level</span>
-                  <span className="font-semibold text-gray-800">{product.min_stock ?? 5} units</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Min Reorder Level</span>
+                  <span className="font-semibold text-slate-800">{product.min_stock ?? 5} units</span>
                 </div>
               </div>
             </div>
 
             {/* Quantity Stepper & Add to Cart */}
-            <div className="pt-4 border-t border-gray-100 space-y-3">
+            <div className="pt-4 border-t border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-700">Select Quantity:</span>
-                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl border border-gray-200">
+                <span className="text-xs font-bold text-slate-700">Select Quantity:</span>
+                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
                   <button
                     type="button"
                     disabled={quantity <= 1 || isOutOfStock}
                     onClick={() => handleQtyChange(-1)}
-                    className="w-7 h-7 rounded-lg bg-white text-gray-800 font-bold hover:bg-gray-200 disabled:opacity-40 flex items-center justify-center transition shadow-2xs"
+                    className="w-7 h-7 rounded-lg bg-white text-slate-800 font-bold hover:bg-slate-200 disabled:opacity-40 flex items-center justify-center transition shadow-2xs"
                   >
                     –
                   </button>
-                  <span className="w-8 text-center text-xs font-black text-gray-900 tabular-nums">
+                  <span className="w-8 text-center text-xs font-extrabold text-navy-900 tabular-nums">
                     {quantity}
                   </span>
                   <button
                     type="button"
                     disabled={quantity >= stock || isOutOfStock}
                     onClick={() => handleQtyChange(1)}
-                    className="w-7 h-7 rounded-lg bg-white text-gray-800 font-bold hover:bg-gray-200 disabled:opacity-40 flex items-center justify-center transition shadow-2xs"
+                    className="w-7 h-7 rounded-lg bg-white text-slate-800 font-bold hover:bg-slate-200 disabled:opacity-40 flex items-center justify-center transition shadow-2xs"
                   >
                     +
                   </button>
@@ -268,7 +268,7 @@ export default function ProductDetailsModal({
                 onClick={handleAdd}
                 className={`w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-98 ${
                   isOutOfStock
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+                    ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
                     : isAdded
                     ? "bg-emerald-600 text-white scale-[1.01] shadow-lg ring-2 ring-emerald-400"
                     : "bg-[#047857] hover:bg-emerald-700 text-white"

@@ -437,7 +437,7 @@ export default function Orders() {
                 pending: { label: "Pending", cls: "badge-warn" },
                 confirmed: { label: "Confirmed", cls: "badge-brand" },
                 processing: { label: "Processing", cls: "badge bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/15" },
-                shipped: { label: "Shipped", cls: "badge bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-600/15" },
+                shipped: { label: "Shipped", cls: "badge bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-600/15" },
                 delivered: { label: "Delivered", cls: "badge-active" },
                 completed: { label: "Completed", cls: "badge-active" },
                 cancelled: { label: "Cancelled", cls: "badge-inactive" },

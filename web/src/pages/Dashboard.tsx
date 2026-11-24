@@ -290,8 +290,8 @@ export default function Dashboard() {
 
       {/* Sales trend + Low stock */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <section className="card xl:col-span-8 bg-white p-5 rounded-2xl border border-gray-200">
-          <div className="card-header flex items-center justify-between pb-4 border-b border-gray-100">
+        <section className="card xl:col-span-8 bg-white p-5 rounded-2xl border border-slate-200">
+          <div className="card-header flex items-center justify-between pb-4 border-b border-slate-100">
             <div>
               <h2 className="card-title text-[14.5px] font-bold text-navy-950">Daily Sales Trend</h2>
               <p className="text-[12px] text-slate-500 mt-0.5">{chart.monthly ? "Monthly revenue" : `Daily revenue, last ${series.length} days`}</p>
@@ -305,8 +305,8 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="card xl:col-span-4 flex flex-col bg-white p-5 rounded-2xl border border-gray-200">
-          <div className="card-header flex items-center justify-between pb-3 border-b border-gray-100">
+        <section className="card xl:col-span-4 flex flex-col bg-white p-5 rounded-2xl border border-slate-200">
+          <div className="card-header flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <h2 className="card-title text-[14.5px] font-bold text-navy-950">Low Stock</h2>
               {lowStock.length > 0 && <span className="badge-danger px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700">{lowStock.length}</span>}
@@ -337,7 +337,7 @@ export default function Dashboard() {
             </ul>
           )}
           <div className="pt-3 mt-auto">
-            <Link to="/app/settings/inventory" className="btn-soft w-full text-center block py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-800">
+            <Link to="/app/settings/inventory" className="btn-soft w-full text-center block py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800">
               Manage Stock in Inventory →
             </Link>
           </div>
@@ -345,8 +345,8 @@ export default function Dashboard() {
       </div>
 
       {/* Recent orders */}
-      <section className="card overflow-hidden bg-white p-5 rounded-2xl border border-gray-200">
-        <div className="card-header flex items-center justify-between pb-4 border-b border-gray-100">
+      <section className="card overflow-hidden bg-white p-5 rounded-2xl border border-slate-200">
+        <div className="card-header flex items-center justify-between pb-4 border-b border-slate-100">
           <div>
             <h2 className="card-title text-[14.5px] font-bold text-navy-950">Store Orders</h2>
             <p className="text-[12px] text-slate-500 mt-0.5">Customer orders requiring fulfillment and delivery</p>
@@ -364,7 +364,7 @@ export default function Dashboard() {
             <div className="hidden md:block overflow-x-auto mt-2">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-gray-100 text-gray-400 uppercase text-[10px] tracking-wider">
+                  <tr className="border-b border-slate-100 text-slate-400 uppercase text-[10px] tracking-wider">
                     <th className="py-2.5">Order #</th>
                     <th className="py-2.5">Customer</th>
                     <th className="py-2.5">Amount</th>
@@ -372,13 +372,13 @@ export default function Dashboard() {
                     <th className="py-2.5 text-right">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-slate-100">
                   {orders.slice(0, 5).map((o) => {
                     const st = stageOf(o.status);
                     return (
-                      <tr key={o.id} className="hover:bg-gray-50/60 transition">
+                      <tr key={o.id} className="hover:bg-slate-50/60 transition">
                         <td className="py-3 font-bold text-navy-900">#{o.order_number || o.id}</td>
-                        <td className="py-3 text-gray-700">{o.customer?.name || "Customer"}</td>
+                        <td className="py-3 text-slate-700">{o.customer?.name || "Customer"}</td>
                         <td className="py-3 font-semibold text-emerald-800">{inr(Number(o.total_amount || 0))}</td>
                         <td className="py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.tone}`}>{st.label}</span>
@@ -407,17 +407,17 @@ export default function Dashboard() {
               {orders.slice(0, 5).map((o) => {
                 const st = stageOf(o.status);
                 return (
-                  <div key={o.id} className="p-3 rounded-xl border border-gray-100 bg-gray-50/50 space-y-2 text-xs">
+                  <div key={o.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-navy-900">#{o.order_number || o.id}</span>
                       <span className="font-bold text-emerald-800 tabular">{inr(Number(o.total_amount || 0))}</span>
                     </div>
-                    <div className="flex items-center justify-between text-gray-600">
+                    <div className="flex items-center justify-between text-slate-600">
                       <span className="truncate max-w-[150px]">{o.customer?.name || "Customer"}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.tone}`}>{st.label}</span>
                     </div>
                     {st.next && (
-                      <div className="pt-1.5 border-t border-gray-200/60 flex justify-end">
+                      <div className="pt-1.5 border-t border-slate-200/60 flex justify-end">
                         <button
                           type="button"
                           disabled={busyOrder === o.id}
@@ -438,8 +438,8 @@ export default function Dashboard() {
 
       {/* Top customer dues + Operations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <section className="card bg-white p-5 rounded-2xl border border-gray-200">
-          <div className="card-header flex items-center justify-between pb-3 border-b border-gray-100">
+        <section className="card bg-white p-5 rounded-2xl border border-slate-200">
+          <div className="card-header flex items-center justify-between pb-3 border-b border-slate-100">
             <h2 className="card-title text-[14.5px] font-bold text-navy-950">Customer Khata Dues</h2>
             <Link to="/app/customers?tab=ledger" className="text-[12.5px] font-semibold text-brand-600 hover:text-brand-800">
               Open Ledger →
@@ -466,8 +466,8 @@ export default function Dashboard() {
         </section>
 
         {/* 6 Core Modules Quick Navigation */}
-        <section className="card bg-white p-5 rounded-2xl border border-gray-200">
-          <div className="card-header pb-3 border-b border-gray-100">
+        <section className="card bg-white p-5 rounded-2xl border border-slate-200">
+          <div className="card-header pb-3 border-b border-slate-100">
             <h2 className="card-title text-[14.5px] font-bold text-navy-950">Store Operations</h2>
             <p className="text-[12px] text-slate-500 mt-0.5">Core shop management modules</p>
           </div>
@@ -483,14 +483,14 @@ export default function Dashboard() {
               <Link
                 key={m.to}
                 to={m.to}
-                className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition group"
+                className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition group"
               >
                 <span className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${TONE[m.tone].tile}`}>
                   <Icon name={m.icon} className="w-4 h-4" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-bold text-navy-900 group-hover:text-emerald-800 truncate">{m.label}</div>
-                  <div className="text-[11px] text-gray-500 truncate">{m.desc}</div>
+                  <div className="text-[11px] text-slate-500 truncate">{m.desc}</div>
                 </div>
               </Link>
             ))}
@@ -516,7 +516,7 @@ function Skeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="p-4 space-y-2">
       {Array.from({ length: rows }, (_, i) => (
-        <div key={i} className="h-4 bg-gray-100 rounded animate-pulse" />
+        <div key={i} className="h-4 bg-slate-100 rounded animate-pulse" />
       ))}
     </div>
   );

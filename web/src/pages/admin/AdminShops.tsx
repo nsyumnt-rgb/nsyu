@@ -225,15 +225,15 @@ export default function AdminShops() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-up">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="eyebrow">
               Tenant Architecture
             </span>
           </div>
-          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Shop Management</h1>
-          <p className="text-xs sm:text-sm text-slate-500">Manage tenant shops, operational states, and business parameters</p>
+          <h1 className="page-title">Shop Management</h1>
+          <p className="page-subtitle">Manage tenant shops, operational states, and business parameters</p>
         </div>
         <button
           onClick={openCreateModal}
@@ -305,14 +305,14 @@ export default function AdminShops() {
               else next.set("status", t.key);
               setSearchParams(next);
             }}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${
               currentFilter === t.key
                 ? t.highlight
                   ? "bg-amber-600 text-white shadow-xs"
-                  : "bg-emerald-700 text-white shadow-xs"
+                  : "bg-brand-600 text-white shadow-brand"
                 : t.highlight
                 ? "bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 font-bold"
-                : "bg-white text-slate-700 border border-[#E5E7EB] hover:bg-slate-50 shadow-2xs font-semibold"
+                : "bg-white text-slate-600 border border-border hover:border-brand-300 hover:text-brand-700 font-semibold"
             }`}
           >
             {t.label}
@@ -327,10 +327,10 @@ export default function AdminShops() {
       )}
 
       {/* Shops Table */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+            <thead>
               <tr>
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Shop Details</th>
@@ -358,7 +358,7 @@ export default function AdminShops() {
               ) : (
                 filteredShops.map((shop) => (
                   <tr key={shop.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3.5 px-4 font-mono text-slate-400 font-semibold">{shop.id}</td>
+                    <td className="py-3.5 px-4 tabular text-slate-400 font-semibold">{shop.id}</td>
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-navy-900 text-sm">{shop.name}</div>
                       <div className="text-[11.5px] text-slate-500 truncate max-w-xs">{shop.address || "No address specified"}</div>
@@ -437,14 +437,14 @@ export default function AdminShops() {
                         )}
                         <Link
                           to={`/admin/support?shopId=${shop.id}`}
-                          className="px-2.5 py-1 bg-white hover:bg-slate-50 text-emerald-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition"
+                          className="px-2.5 py-1 bg-white hover:bg-slate-50 hover:border-slate-300 text-emerald-700 font-semibold text-xs rounded-lg border border-border shadow-2xs transition"
                           title="Read-only Support Viewer"
                         >
                           Support View
                         </Link>
                         <button
                           onClick={() => openEditModal(shop)}
-                          className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-[#E5E7EB] shadow-2xs transition"
+                          className="px-2.5 py-1 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-semibold text-xs rounded-lg border border-border shadow-2xs transition"
                         >
                           Edit
                         </button>
@@ -460,8 +460,8 @@ export default function AdminShops() {
 
       {/* CREATE SHOP MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white border border-border rounded-3xl max-w-lg w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-navy-900">Create New Shop</h3>
               <button
@@ -578,8 +578,8 @@ export default function AdminShops() {
 
       {/* EDIT SHOP MODAL */}
       {showEditModal && selectedShop && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white border border-border rounded-3xl max-w-lg w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-navy-900">Edit Shop: {selectedShop.name}</h3>
               <button
@@ -662,8 +662,8 @@ export default function AdminShops() {
 
       {/* APPROVE SHOP MODAL */}
       {showApproveModal && selectedShop && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white border border-border rounded-3xl max-w-md w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center space-x-3 text-emerald-700">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold">
                 ✓
@@ -741,8 +741,8 @@ export default function AdminShops() {
 
       {/* REJECT SHOP MODAL */}
       {showRejectModal && selectedShop && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white border border-border rounded-3xl max-w-md w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center space-x-3 text-rose-600">
               <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 flex items-center justify-center font-bold">
                 ✕
@@ -800,8 +800,8 @@ export default function AdminShops() {
         </div>
       )}
       {showStatusModal && selectedShop && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white border border-border rounded-3xl max-w-md w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center space-x-3 text-amber-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

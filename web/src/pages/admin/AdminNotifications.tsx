@@ -104,15 +104,15 @@ export default function AdminNotifications() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-up">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="eyebrow">
               Platform Communications
             </span>
           </div>
-          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Platform Notifications</h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <h1 className="page-title">Platform Notifications</h1>
+          <p className="page-subtitle">
             Broadcast platform-wide alerts, system maintenance notes, and targeted notices to tenant owners and users
           </p>
         </div>
@@ -147,7 +147,7 @@ export default function AdminNotifications() {
       )}
 
       {/* Broadcast Composer Card */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-xs">
+      <div className="card p-5 sm:p-6">
         <div className="flex items-center gap-3 pb-4 mb-4 border-b border-slate-100">
           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -259,7 +259,7 @@ export default function AdminNotifications() {
       </div>
 
       {/* Notifications History */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+      <div className="card overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-navy-900">Broadcast & Notification History</h2>
@@ -301,7 +301,7 @@ export default function AdminNotifications() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+            <thead>
               <tr>
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Title & Message</th>
@@ -328,7 +328,7 @@ export default function AdminNotifications() {
               ) : (
                 filteredNotifications.map((notif) => (
                   <tr key={notif.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3.5 px-4 font-mono text-slate-400 font-semibold">{notif.id}</td>
+                    <td className="py-3.5 px-4 tabular text-slate-400 font-semibold">{notif.id}</td>
                     <td className="py-3.5 px-4 max-w-md">
                       <div className="font-bold text-navy-900 text-xs">{notif.title}</div>
                       <div className="text-[11.5px] text-slate-600 line-clamp-2 mt-0.5 leading-relaxed">

@@ -81,7 +81,7 @@ export default function MarketLayout() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full h-11 pl-11 pr-24 rounded-full border border-border hover:border-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-xs sm:text-sm bg-slate-50/80 focus:bg-white shadow-xs transition-all duration-200 outline-none placeholder:text-slate-400"
               />
-              <span className="absolute left-4 text-gray-400">
+              <span className="absolute left-4 text-slate-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -124,7 +124,7 @@ export default function MarketLayout() {
               className="relative shrink-0 w-10 h-10 sm:w-11 sm:h-11 rounded-xl border border-border bg-white hover:border-brand-400 hover:bg-brand-50/60 hover:shadow-soft text-navy-950 transition-all duration-200 flex items-center justify-center group"
               title="View Cart"
             >
-              <svg className="w-5 h-5 group-hover:scale-110 transition-transform text-[#064E3B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 group-hover:scale-110 transition-transform text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               {cartCount > 0 && (
@@ -193,7 +193,7 @@ export default function MarketLayout() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-11 pl-10 pr-16 rounded-full border border-border text-[16px] sm:text-xs bg-slate-50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition outline-none placeholder:text-slate-400"
             />
-            <span className="absolute left-3.5 text-gray-400">
+            <span className="absolute left-3.5 text-slate-400">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>

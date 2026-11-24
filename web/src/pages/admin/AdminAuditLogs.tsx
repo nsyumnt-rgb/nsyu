@@ -58,7 +58,7 @@ export default function AdminAuditLogs() {
       return "bg-rose-50 text-rose-800 border-rose-200";
     }
     if (action.includes("broadcast") || action.includes("notification")) {
-      return "bg-purple-50 text-purple-800 border-purple-200";
+      return "bg-sky-50 text-sky-800 border-sky-200";
     }
     if (action.includes("category")) {
       return "bg-amber-50 text-amber-800 border-amber-200";
@@ -69,15 +69,15 @@ export default function AdminAuditLogs() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-up">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <span className="eyebrow">
               Platform Compliance
             </span>
           </div>
-          <h1 className="text-2xl font-black text-navy-900 tracking-tight">Platform Audit Log</h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <h1 className="page-title">Platform Audit Log</h1>
+          <p className="page-subtitle">
             Immutable system audit trail recording every administrative governance operation
           </p>
         </div>
@@ -132,10 +132,10 @@ export default function AdminAuditLogs() {
               setActionCategory(tab.key);
               setPage(1);
             }}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition ${
               actionCategory === tab.key
-                ? "bg-emerald-700 text-white shadow-xs"
-                : "bg-white text-slate-700 border border-[#E5E7EB] hover:bg-slate-50 shadow-2xs"
+                ? "bg-brand-600 text-white shadow-brand"
+                : "bg-white text-slate-600 border border-border hover:border-brand-300 hover:text-brand-700"
             }`}
           >
             {tab.label}
@@ -150,10 +150,10 @@ export default function AdminAuditLogs() {
       )}
 
       {/* Logs Table */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden shadow-xs">
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+            <thead>
               <tr>
                 <th className="py-3 px-4">ID</th>
                 <th className="py-3 px-4">Action</th>
@@ -182,7 +182,7 @@ export default function AdminAuditLogs() {
               ) : (
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3.5 px-4 font-mono text-slate-400 font-semibold">{log.id}</td>
+                    <td className="py-3.5 px-4 tabular text-slate-400 font-semibold">{log.id}</td>
                     <td className="py-3.5 px-4">
                       <span className={`font-mono font-bold px-2.5 py-0.5 rounded text-[11px] border ${getActionBadgeColor(log.action)}`}>
                         {log.action}
@@ -206,7 +206,7 @@ export default function AdminAuditLogs() {
                     <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => setSelectedLog(log)}
-                        className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-[#E5E7EB] shadow-2xs transition"
+                        className="px-2.5 py-1 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-semibold text-xs rounded-lg border border-border shadow-2xs transition"
                       >
                         Inspect
                       </button>
@@ -248,8 +248,8 @@ export default function AdminAuditLogs() {
 
       {/* INSPECT LOG DETAILS MODAL */}
       {selectedLog && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white border border-[#E5E7EB] rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white border border-border rounded-3xl max-w-xl w-full max-h-[92dvh] overflow-y-auto p-5 sm:p-6 shadow-pop space-y-4 animate-scale-in">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
                 <span className={`font-mono font-bold px-2.5 py-0.5 rounded text-xs border ${getActionBadgeColor(selectedLog.action)}`}>

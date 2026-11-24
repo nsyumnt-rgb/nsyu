@@ -63,10 +63,10 @@ export default function PortalBills() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="page-title">Bills & Invoices</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Download official tax invoices and track payment balances.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Download official tax invoices and track payment balances.</p>
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export default function PortalBills() {
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${
               statusFilter === tab.id
                 ? "bg-emerald-700 text-white shadow-sm"
-                : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
             }`}
           >
             {tab.label}
@@ -95,15 +95,15 @@ export default function PortalBills() {
       {loading ? (
         <div className="py-20 text-center">
           <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-gray-500 mt-2 font-medium">Loading invoices...</p>
+          <p className="text-xs text-slate-500 mt-2 font-medium">Loading invoices...</p>
         </div>
       ) : bills.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
-          <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+        <div className="bg-white rounded-2xl p-12 text-center border border-slate-100">
+          <div className="w-16 h-16 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
             <BillsIcon className="w-8 h-8" />
           </div>
-          <h3 className="text-base font-bold text-gray-800">No invoices found</h3>
-          <p className="text-xs text-gray-500 mt-1">There are no invoices matching the selected filter.</p>
+          <h3 className="text-base font-bold text-slate-800">No invoices found</h3>
+          <p className="text-xs text-slate-500 mt-1">There are no invoices matching the selected filter.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -113,17 +113,17 @@ export default function PortalBills() {
             return (
               <div
                 key={bill.id}
-                className="bg-white rounded-2xl p-5 border border-gray-200/80 shadow-sm hover:border-emerald-200 transition"
+                className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:border-emerald-200 transition"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-3">
-                    <span className="font-extrabold text-base text-gray-900">
+                    <span className="font-extrabold text-base text-slate-900">
                       {bill.invoice_number || `Invoice #${bill.id}`}
                     </span>
                     <BillStatusBadge status={bill.payment_status} />
                   </div>
 
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-slate-500">
                     Dated {new Date(bill.createdAt || bill.date).toLocaleDateString("en-IN", {
                       day: "numeric",
                       month: "short",
@@ -135,37 +135,37 @@ export default function PortalBills() {
                 {/* Amounts Breakdown */}
                 <div className="py-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>
-                    <span className="text-gray-400 block">Total Amount</span>
-                    <span className="font-bold text-sm text-gray-900">
+                    <span className="text-slate-400 block">Total Amount</span>
+                    <span className="font-bold text-sm text-slate-900">
                       ₹{Number(bill.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block">Paid Amount</span>
+                    <span className="text-slate-400 block">Paid Amount</span>
                     <span className="font-bold text-sm text-emerald-600">
                       ₹{Number(bill.paid_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block">Balance Due</span>
-                    <span className={`font-bold text-sm ${balanceDue > 0 ? "text-rose-600" : "text-gray-900"}`}>
+                    <span className="text-slate-400 block">Balance Due</span>
+                    <span className={`font-bold text-sm ${balanceDue > 0 ? "text-rose-600" : "text-slate-900"}`}>
                       ₹{Math.max(0, balanceDue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block">Payment Mode</span>
-                    <span className="font-semibold text-gray-700 capitalize">
+                    <span className="text-slate-400 block">Payment Mode</span>
+                    <span className="font-semibold text-slate-700 capitalize">
                       {bill.payment_method || "Credit / Ledger"}
                     </span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-3">
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => handleDownloadPdf(bill.id, bill.invoice_number)}
-                    className="px-3.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg text-xs transition flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition flex items-center gap-1.5"
                   >
                     <DownloadIcon className="w-3.5 h-3.5" />
                     <span>Download PDF</span>
@@ -191,18 +191,18 @@ export default function PortalBills() {
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
           >
             &larr; Prev
           </button>
-          <span className="text-xs font-semibold text-gray-600">
+          <span className="text-xs font-semibold text-slate-600">
             Page {page} of {totalPages}
           </span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
           >
             Next &rarr;
           </button>

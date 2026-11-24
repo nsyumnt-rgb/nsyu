@@ -40,7 +40,7 @@ function ProductThumbnail({ name, category, imageUrl }: { name: string; category
 
   if (lower.includes("iphone") || lower.includes("samsung") || lower.includes("phone")) {
     return (
-      <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-slate-800 to-indigo-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-navy-800 to-navy-950 text-white flex items-center justify-center shrink-0 shadow-xs">
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
           <line x1="12" y1="18" x2="12.01" y2="18" />
@@ -116,7 +116,7 @@ function ProductThumbnail({ name, category, imageUrl }: { name: string; category
   }
   if (lower.includes("monitor")) {
     return (
-      <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-700 to-indigo-800 text-white flex items-center justify-center shrink-0 shadow-xs">
+      <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-brand-800 text-white flex items-center justify-center shrink-0 shadow-xs">
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <rect x="2" y="3" width="20" height="14" rx="2" />
           <line x1="8" y1="21" x2="16" y2="21" />
@@ -607,7 +607,7 @@ function ProductsInner() {
     <div className="space-y-6 pb-12">
       {/* Toast Alert */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#064E3B] text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+        <div className="fixed bottom-6 right-6 z-50 bg-navy-900 text-white px-4 py-2.5 rounded-xl shadow-pop ring-1 ring-white/10 text-xs font-bold flex items-center gap-2 animate-fade-in">
           <span>{toastMsg}</span>
         </div>
       )}
@@ -625,9 +625,9 @@ function ProductsInner() {
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Products</h1>
+            <h1 className="page-title">Products</h1>
           </div>
-          <p className="text-xs text-gray-500 mt-1 font-medium">
+          <p className="text-xs text-slate-500 mt-1 font-medium">
             Manage your products, update prices and stock, and keep your catalog up to date.
           </p>
         </div>
@@ -636,9 +636,9 @@ function ProductsInner() {
           <button
             type="button"
             onClick={() => setShowImportModal(true)}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-xs flex items-center gap-1.5"
           >
-            <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
@@ -649,9 +649,9 @@ function ProductsInner() {
           <button
             type="button"
             onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-xs flex items-center gap-1.5"
           >
-            <svg className="w-4 h-4 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
@@ -678,7 +678,7 @@ function ProductsInner() {
         <div
           onClick={() => { setStockStatusFilter("All"); setCurrentPage(1); }}
           className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
-            stockStatusFilter === "All" ? "border-emerald-500 bg-emerald-50/20 ring-1 ring-emerald-500" : "border-gray-200"
+            stockStatusFilter === "All" ? "border-emerald-500 bg-emerald-50/20 ring-1 ring-emerald-500" : "border-slate-200"
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -688,13 +688,13 @@ function ProductsInner() {
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">Total Products</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{totalCount}</div>
+              <div className="text-xs text-slate-500 font-bold">Total Products</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">{totalCount}</div>
               <div className="flex flex-wrap items-center gap-1.5 mt-1">
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
                   {liveCount} Live
                 </span>
-                <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200">
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200">
                   {offlineCount} Offline
                 </span>
               </div>
@@ -706,7 +706,7 @@ function ProductsInner() {
         <div
           onClick={() => { setStockStatusFilter("In Stock"); setCurrentPage(1); }}
           className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
-            stockStatusFilter === "In Stock" ? "border-blue-500 bg-blue-50/20 ring-1 ring-blue-500" : "border-gray-200"
+            stockStatusFilter === "In Stock" ? "border-blue-500 bg-blue-50/20 ring-1 ring-blue-500" : "border-slate-200"
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -718,8 +718,8 @@ function ProductsInner() {
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">In Stock</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{totalCount - outOfStockCount}</div>
+              <div className="text-xs text-slate-500 font-bold">In Stock</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">{totalCount - outOfStockCount}</div>
             </div>
           </div>
         </div>
@@ -728,7 +728,7 @@ function ProductsInner() {
         <div
           onClick={() => { setStockStatusFilter("Low Stock"); setCurrentPage(1); }}
           className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
-            stockStatusFilter === "Low Stock" ? "border-amber-500 bg-amber-50/20 ring-1 ring-amber-500" : "border-gray-200"
+            stockStatusFilter === "Low Stock" ? "border-amber-500 bg-amber-50/20 ring-1 ring-amber-500" : "border-slate-200"
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -740,8 +740,8 @@ function ProductsInner() {
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">Low Stock</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{lowStockCount}</div>
+              <div className="text-xs text-slate-500 font-bold">Low Stock</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">{lowStockCount}</div>
             </div>
           </div>
         </div>
@@ -750,7 +750,7 @@ function ProductsInner() {
         <div
           onClick={() => { setStockStatusFilter("Out of Stock"); setCurrentPage(1); }}
           className={`bg-white rounded-2xl border p-4 sm:p-5 flex items-center justify-between cursor-pointer transition-all duration-300 shadow-card hover:shadow-lift hover:-translate-y-0.5 min-w-0 ${
-            stockStatusFilter === "Out of Stock" ? "border-rose-500 bg-rose-50/20 ring-1 ring-rose-500" : "border-gray-200"
+            stockStatusFilter === "Out of Stock" ? "border-rose-500 bg-rose-50/20 ring-1 ring-rose-500" : "border-slate-200"
           }`}
         >
           <div className="flex items-center gap-3.5">
@@ -762,8 +762,8 @@ function ProductsInner() {
               </svg>
             </div>
             <div>
-              <div className="text-xs text-gray-500 font-bold">Out of Stock</div>
-              <div className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">{outOfStockCount}</div>
+              <div className="text-xs text-slate-500 font-bold">Out of Stock</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-navy-900 tracking-tight tabular">{outOfStockCount}</div>
             </div>
           </div>
         </div>
@@ -772,7 +772,7 @@ function ProductsInner() {
       {/* ============================================================== */}
       {/* 3. SEARCH & FILTERS BAR (Matching Image 2)                     */}
       {/* ============================================================== */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
         {/* Search input */}
         <div className="relative flex-1 w-full">
           <input
@@ -780,9 +780,9 @@ function ProductsInner() {
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             placeholder="Search product by name, SKU or barcode..."
-            className="w-full pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
           />
-          <svg className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -794,7 +794,7 @@ function ProductsInner() {
             <select
               value={categoryFilter}
               onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-              className="min-w-0 max-w-[60vw] sm:max-w-none px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none"
+              className="min-w-0 max-w-[60vw] sm:max-w-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none"
             >
               <option value="All">All Categories</option>
               {categories.map((c) => (
@@ -815,7 +815,7 @@ function ProductsInner() {
           <select
             value={stockStatusFilter}
             onChange={(e) => { setStockStatusFilter(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-700 outline-none cursor-pointer"
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-none cursor-pointer"
           >
             <option value="All">All Status</option>
             <option value="Live">Live (Active)</option>
@@ -825,11 +825,11 @@ function ProductsInner() {
             <option value="Out of Stock">Out of Stock</option>
           </select>
 
-          <div className="flex items-center p-0.5 bg-gray-100 rounded-xl border border-gray-200">
+          <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200">
             <button
               type="button"
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-lg transition ${viewMode === "grid" ? "bg-white text-emerald-800 shadow-xs" : "text-gray-400 hover:text-gray-600"}`}
+              className={`p-1.5 rounded-lg transition ${viewMode === "grid" ? "bg-white text-emerald-800 shadow-xs" : "text-slate-400 hover:text-slate-600"}`}
               title="Grid View"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -842,7 +842,7 @@ function ProductsInner() {
             <button
               type="button"
               onClick={() => setViewMode("list")}
-              className={`p-1.5 rounded-lg transition ${viewMode === "list" ? "bg-white text-emerald-800 shadow-xs" : "text-gray-400 hover:text-gray-600"}`}
+              className={`p-1.5 rounded-lg transition ${viewMode === "list" ? "bg-white text-emerald-800 shadow-xs" : "text-slate-400 hover:text-slate-600"}`}
               title="List View"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -902,15 +902,15 @@ function ProductsInner() {
       {loading && products.length === 0 ? (
         <div className="py-20 text-center">
           <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs text-gray-500 mt-2 font-medium">Loading products...</p>
+          <p className="text-xs text-slate-500 mt-2 font-medium">Loading products...</p>
         </div>
       ) : sortedProducts.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center space-y-3">
+        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
           <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto text-xl font-bold">
             🛍️
           </div>
-          <h3 className="text-sm font-bold text-gray-900">No products match your filter</h3>
-          <p className="text-xs text-gray-500 max-w-sm mx-auto">
+          <h3 className="text-sm font-bold text-slate-900">No products match your filter</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
             Try resetting filters or adding new products to your catalog.
           </p>
         </div>
@@ -926,11 +926,11 @@ function ProductsInner() {
             return (
               <div
                 key={p.id}
-                className="bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 shadow-xs hover:shadow-md transition p-2.5 sm:p-3 flex flex-col justify-between group relative"
+                className="bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 shadow-xs hover:shadow-md transition p-2.5 sm:p-3 flex flex-col justify-between group relative"
               >
                 <div className="cursor-pointer" onClick={() => setQuickViewProduct(p)}>
                   {/* Image Container with Top-Right Status Badge */}
-                  <div className="w-full aspect-square max-h-36 sm:h-32 bg-gray-50/70 rounded-xl mb-2 flex items-center justify-center overflow-hidden relative">
+                  <div className="w-full aspect-square max-h-36 sm:h-32 bg-slate-50/70 rounded-xl mb-2 flex items-center justify-center overflow-hidden relative">
                     {/* Status Badge in top right */}
                     <div className="absolute top-1.5 right-1.5 z-10">
                       <span
@@ -954,19 +954,19 @@ function ProductsInner() {
                   </div>
 
                   {/* Title & SKU */}
-                  <h3 className="font-bold text-[12px] sm:text-xs text-gray-900 line-clamp-2 min-h-[30px] sm:min-h-[32px] group-hover:text-emerald-800 transition">
+                  <h3 className="font-bold text-[12px] sm:text-xs text-slate-900 line-clamp-2 min-h-[30px] sm:min-h-[32px] group-hover:text-emerald-800 transition">
                     {p.name}
                   </h3>
-                  <div className="text-[10px] text-gray-400 font-mono mt-0.5 truncate">
+                  <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
                     SKU: {p.sku}
                   </div>
 
                   {/* Price & Stock */}
                   <div className="mt-1.5 flex items-baseline justify-between flex-wrap gap-1">
-                    <div className="text-xs sm:text-sm font-black text-gray-900 tabular">
+                    <div className="text-xs sm:text-sm font-black text-slate-900 tabular">
                       ₹{Number(p.selling_price).toFixed(2)}
                     </div>
-                    <div className="text-[10px] sm:text-[11px] font-bold text-gray-600 flex items-center gap-1">
+                    <div className="text-[10px] sm:text-[11px] font-bold text-slate-600 flex items-center gap-1">
                       <span>Stock: {stock}</span>
                     </div>
                   </div>
@@ -994,9 +994,9 @@ function ProductsInner() {
       ) : (
         <>
           {/* List View (Desktop Table) */}
-          <div className="hidden md:block bg-white rounded-2xl border border-gray-200 overflow-x-auto shadow-xs">
+          <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-xs">
           <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 border-b border-gray-200 font-bold text-gray-600 uppercase text-[10px] tracking-wider select-none">
+            <thead className="bg-slate-50 border-b border-slate-200 font-bold text-slate-600 uppercase text-[10px] tracking-wider select-none">
               <tr>
                 <th className="p-3 cursor-pointer hover:text-emerald-800" onClick={() => handleSort("name")}>Product</th>
                 <th className="p-3 cursor-pointer hover:text-emerald-800" onClick={() => handleSort("sku")}>SKU</th>
@@ -1008,21 +1008,21 @@ function ProductsInner() {
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-100">
               {paginatedProducts.map((p) => {
                 const stock = Number(p.stocks?.[0]?.current_stock ?? 0);
                 const isOutOfStock = stock <= 0;
                 const isLowStock = stock > 0 && stock <= (Number(p.min_stock ?? 5) || 5);
                 return (
-                  <tr key={p.id} className="hover:bg-gray-50 transition">
+                  <tr key={p.id} className="hover:bg-slate-50 transition">
                     <td className="p-3">
-                      <div className="font-bold text-gray-900">{p.name}</div>
-                      <div className="text-[10px] text-gray-400 font-mono">{p.brand || "—"}</div>
+                      <div className="font-bold text-slate-900">{p.name}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{p.brand || "—"}</div>
                     </td>
-                    <td className="p-3 font-mono text-gray-500">{p.sku}</td>
-                    <td className="p-3 text-gray-600">{p.category?.name || "—"}</td>
-                    <td className="p-3 text-right font-medium text-gray-600">₹{Number(p.purchase_price || 0).toFixed(2)}</td>
-                    <td className="p-3 text-right font-black text-gray-900">₹{Number(p.selling_price).toFixed(2)}</td>
+                    <td className="p-3 font-mono text-slate-500">{p.sku}</td>
+                    <td className="p-3 text-slate-600">{p.category?.name || "—"}</td>
+                    <td className="p-3 text-right font-medium text-slate-600">₹{Number(p.purchase_price || 0).toFixed(2)}</td>
+                    <td className="p-3 text-right font-black text-slate-900">₹{Number(p.selling_price).toFixed(2)}</td>
                     <td className="p-3 text-center">
                       <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
                         isOutOfStock ? "bg-rose-50 text-rose-700" : isLowStock ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
@@ -1032,7 +1032,7 @@ function ProductsInner() {
                     </td>
                     <td className="p-3 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        p.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"
+                        p.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
                       }`}>
                         {p.status}
                       </span>
@@ -1048,7 +1048,7 @@ function ProductsInner() {
                       <button
                         type="button"
                         onClick={() => openEdit(p)}
-                        className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-semibold"
+                        className="px-2 py-1 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold"
                       >
                         Edit
                       </button>
@@ -1138,22 +1138,22 @@ function ProductsInner() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-slate-500">
             Showing {startIndex + 1} to {Math.min(startIndex + pageSize, totalItems)} of {totalItems} products
           </div>
           <div className="flex items-center gap-1">
             <button
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 disabled:opacity-40"
+              className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 disabled:opacity-40"
             >
               Previous
             </button>
-            <span className="px-2 text-xs font-bold text-gray-700">{currentPage} / {totalPages}</span>
+            <span className="px-2 text-xs font-bold text-slate-700">{currentPage} / {totalPages}</span>
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 disabled:opacity-40"
+              className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 disabled:opacity-40"
             >
               Next
             </button>
@@ -1163,39 +1163,39 @@ function ProductsInner() {
 
       {/* Quick View Product Modal */}
       {quickViewProduct && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-              <h3 className="font-black text-gray-900 text-sm">Product Overview</h3>
-              <button onClick={() => setQuickViewProduct(null)} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+        <div className="fixed inset-0 z-50 bg-navy-950/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-pop animate-scale-in max-h-[92dvh] overflow-y-auto border border-border space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <h3 className="font-black text-slate-900 text-sm">Product Overview</h3>
+              <button onClick={() => setQuickViewProduct(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
             </div>
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-gray-400 block text-[10px] uppercase font-bold">Name</span>
-                <span className="font-bold text-gray-900 text-sm">{quickViewProduct.name}</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Name</span>
+                <span className="font-bold text-slate-900 text-sm">{quickViewProduct.name}</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">SKU</span>
-                  <span className="font-mono font-bold text-gray-800">{quickViewProduct.sku}</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">SKU</span>
+                  <span className="font-mono font-bold text-slate-800">{quickViewProduct.sku}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Barcode</span>
-                  <span className="font-mono font-bold text-gray-800">{quickViewProduct.barcode || "—"}</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Barcode</span>
+                  <span className="font-mono font-bold text-slate-800">{quickViewProduct.barcode || "—"}</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Selling Price</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Selling Price</span>
                   <span className="font-black text-emerald-800 text-base">₹{Number(quickViewProduct.selling_price).toFixed(2)}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400 block text-[10px] uppercase font-bold">Current Stock</span>
-                  <span className="font-black text-gray-900 text-base">{Number(quickViewProduct.stocks?.[0]?.current_stock ?? 0)} units</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Stock</span>
+                  <span className="font-black text-slate-900 text-base">{Number(quickViewProduct.stocks?.[0]?.current_stock ?? 0)} units</span>
                 </div>
               </div>
             </div>
-            <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => {
@@ -1203,7 +1203,7 @@ function ProductsInner() {
                   setQuickViewProduct(null);
                   openEdit(p);
                 }}
-                className="px-3 py-1.5 border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50"
+                className="px-3 py-1.5 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50"
               >
                 Edit Details
               </button>
@@ -1229,7 +1229,7 @@ function ProductsInner() {
 
       {/* ADD PRODUCT MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-xs">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -1422,7 +1422,7 @@ function ProductsInner() {
 
       {/* EDIT PRODUCT MODAL */}
       {showEditModal && activeProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-xs">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -1582,7 +1582,7 @@ function ProductsInner() {
 
       {/* VIEW PRODUCT MODAL */}
       {showViewModal && activeProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-xs">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
@@ -1647,7 +1647,7 @@ function ProductsInner() {
 
       {/* DELETE CONFIRMATION MODAL */}
       {showDeleteModal && activeProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-xs">
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/90 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-6 space-y-4">
             <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-lg">
               ⚠️
@@ -1680,8 +1680,8 @@ function ProductsInner() {
 
       {/* IMPORT MODAL */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 p-6 space-y-4 my-8">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-navy-950/50 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-pop border border-border w-full max-w-4xl overflow-hidden animate-scale-in p-5 sm:p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
@@ -1873,11 +1873,11 @@ function ProductsInner() {
                   <div
                     onClick={() => setPreviewFilter("duplicate")}
                     className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
-                      previewFilter === "duplicate" ? "bg-purple-100/60 border-purple-500 shadow-xs" : "bg-purple-50/50 border-purple-200 hover:bg-purple-100/40"
+                      previewFilter === "duplicate" ? "bg-sky-100/60 border-sky-500 shadow-xs" : "bg-sky-50/50 border-sky-200 hover:bg-sky-100/40"
                     }`}
                   >
-                    <div className="text-[10px] font-semibold text-purple-700 uppercase">Duplicates</div>
-                    <div className="text-lg font-bold text-purple-700">{previewResult.summary.duplicateCount}</div>
+                    <div className="text-[10px] font-semibold text-sky-700 uppercase">Duplicates</div>
+                    <div className="text-lg font-bold text-sky-700">{previewResult.summary.duplicateCount}</div>
                   </div>
 
                   <div
@@ -1934,7 +1934,7 @@ function ProductsInner() {
                       type="button"
                       onClick={() => setPreviewFilter("duplicate")}
                       className={`px-3 py-1 font-semibold rounded-lg ${
-                        previewFilter === "duplicate" ? "bg-purple-600 text-white" : "text-slate-600 hover:bg-slate-100"
+                        previewFilter === "duplicate" ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-slate-100"
                       }`}
                     >
                       Duplicates ({previewResult.summary.duplicateCount})
@@ -1984,7 +1984,7 @@ function ProductsInner() {
                                 item.status === "invalid"
                                   ? "bg-rose-50/40"
                                   : item.status === "duplicate"
-                                  ? "bg-purple-50/30"
+                                  ? "bg-sky-50/30"
                                   : item.status === "price_change"
                                   ? "bg-amber-50/30"
                                   : ""
@@ -2008,7 +2008,7 @@ function ProductsInner() {
                                   </span>
                                 )}
                                 {item.status === "duplicate" && (
-                                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded font-semibold text-[10px]">
+                                  <span className="px-1.5 py-0.5 bg-sky-100 text-sky-800 rounded font-semibold text-[10px]">
                                     🔁 Duplicate
                                   </span>
                                 )}
@@ -2200,22 +2200,22 @@ function ProductsInner() {
       {/* LIVE ADD CATEGORY MODAL                                        */}
       {/* ============================================================== */}
       {showAddCategoryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-950/50 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full max-h-[92dvh] overflow-y-auto shadow-pop border border-border space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-sm">
                   +
                 </div>
                 <div>
-                  <h3 className="font-black text-sm text-gray-900">Add Product Category</h3>
-                  <p className="text-[11px] text-gray-500 font-medium">Create a category live and manage catalog visibility.</p>
+                  <h3 className="font-black text-sm text-slate-900">Add Product Category</h3>
+                  <p className="text-[11px] text-slate-500 font-medium">Create a category live and manage catalog visibility.</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddCategoryModal(false)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
               >
                 ✕
               </button>
@@ -2229,7 +2229,7 @@ function ProductsInner() {
 
             <form onSubmit={handleCreateCategory} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Category Name *
                 </label>
                 <input
@@ -2239,15 +2239,15 @@ function ProductsInner() {
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="e.g. Wireless Audio, Smart Watches..."
-                  className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-gray-900"
+                  className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-semibold text-slate-900"
                 />
               </div>
 
               {/* Live Status ON / OFF Option */}
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-200">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200">
                 <div>
-                  <div className="text-xs font-bold text-gray-800">Live Status (Visible on Storefront)</div>
-                  <div className="text-[11px] text-gray-500">
+                  <div className="text-xs font-bold text-slate-800">Live Status (Visible on Storefront)</div>
+                  <div className="text-[11px] text-slate-500">
                     {newCategoryStatus === "active" ? "Category is Live & visible immediately" : "Hidden in catalog until turned Live"}
                   </div>
                 </div>
@@ -2257,7 +2257,7 @@ function ProductsInner() {
                   aria-checked={newCategoryStatus === "active"}
                   onClick={() => setNewCategoryStatus(newCategoryStatus === "active" ? "inactive" : "active")}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    newCategoryStatus === "active" ? "bg-emerald-600" : "bg-gray-300"
+                    newCategoryStatus === "active" ? "bg-emerald-600" : "bg-slate-300"
                   }`}
                 >
                   <span
@@ -2268,11 +2268,11 @@ function ProductsInner() {
                 </button>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddCategoryModal(false)}
-                  className="px-4 py-2 font-bold text-gray-600 hover:bg-gray-100 rounded-xl text-xs transition"
+                  className="px-4 py-2 font-bold text-slate-600 hover:bg-slate-100 rounded-xl text-xs transition"
                 >
                   Cancel
                 </button>

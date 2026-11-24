@@ -231,18 +231,18 @@ export default function LoginModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 sm:p-6 overflow-y-auto animate-fade-in">
       {/* Dark Blurred Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-navy-950/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Centered Modal Popup Card */}
-      <div className="relative w-full max-w-[440px] bg-white rounded-3xl border border-gray-100 shadow-2xl p-6 sm:p-8 z-10 space-y-5 animate-scaleUp">
+      <div className="relative w-full max-w-[440px] bg-white rounded-3xl border border-border shadow-pop p-6 sm:p-8 z-10 space-y-5 animate-scale-in">
         
         {/* Modal Top Header with Close Button */}
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-800 flex items-center justify-center font-bold shadow-xs">
               <svg className="w-5 h-5 text-[#047857]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -252,7 +252,7 @@ export default function LoginModal({
               </svg>
             </div>
             <div>
-              <h2 className="text-base font-black text-gray-900 tracking-tight leading-none">
+              <h2 className="text-base font-extrabold text-navy-900 tracking-tight leading-none">
                 NSYU Sign In
               </h2>
               <span className="text-[10.5px] font-semibold text-emerald-700">
@@ -264,7 +264,7 @@ export default function LoginModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition"
             aria-label="Close modal"
           >
             ✕
@@ -272,7 +272,7 @@ export default function LoginModal({
         </div>
 
         {/* Tab Switcher: Customer vs Shop Owner/Staff */}
-        <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-2xl">
+        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl">
           <button
             type="button"
             onClick={() => {
@@ -282,7 +282,7 @@ export default function LoginModal({
             className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               activeTab === "customer"
                 ? "bg-[#047857] text-white shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <span>👤</span>
@@ -298,7 +298,7 @@ export default function LoginModal({
             className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
               activeTab === "staff"
                 ? "bg-[#047857] text-white shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                : "text-slate-600 hover:text-slate-900"
             }`}
           >
             <span>🏪</span>
@@ -325,7 +325,7 @@ export default function LoginModal({
         {activeTab === "staff" && (
           <form onSubmit={handleStaffSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Shop Owner / Staff Email
               </label>
               <input
@@ -336,13 +336,13 @@ export default function LoginModal({
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="owner@business.com or staff@shop.com"
-                className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
+                className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-bold text-gray-700">Password</label>
+                <label className="text-xs font-bold text-slate-700">Password</label>
                 <a
                   href="#/login"
                   onClick={onClose}
@@ -359,12 +359,12 @@ export default function LoginModal({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your login password"
-                  className="w-full pl-3.5 pr-10 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
+                  className="w-full pl-3.5 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs"
                 >
                   {showPassword ? "Hide" : "Show"}
                 </button>
@@ -386,7 +386,7 @@ export default function LoginModal({
               )}
             </button>
 
-            <div className="pt-2 text-center text-xs text-gray-500 font-medium">
+            <div className="pt-2 text-center text-xs text-slate-500 font-medium">
               Want to register a new store?{" "}
               <a
                 href="#/register"
@@ -407,7 +407,7 @@ export default function LoginModal({
             
             {/* Mode Toggle: Password vs OTP vs Register */}
             {customerMode !== "register" && (
-              <div className="flex items-center justify-between text-xs font-bold border-b border-gray-100 pb-2">
+              <div className="flex items-center justify-between text-xs font-bold border-b border-slate-100 pb-2">
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -418,7 +418,7 @@ export default function LoginModal({
                     className={`transition pb-1 ${
                       customerMode === "password"
                         ? "text-emerald-700 border-b-2 border-emerald-600"
-                        : "text-gray-500 hover:text-gray-800"
+                        : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
                     Password Sign In
@@ -432,7 +432,7 @@ export default function LoginModal({
                     className={`transition pb-1 ${
                       customerMode === "otp"
                         ? "text-emerald-700 border-b-2 border-emerald-600"
-                        : "text-gray-500 hover:text-gray-800"
+                        : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
                     Email OTP Sign In
@@ -456,7 +456,7 @@ export default function LoginModal({
             {customerMode === "password" && (
               <form onSubmit={handleCustomerPasswordSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Mobile Number or Email
                   </label>
                   <input
@@ -466,12 +466,12 @@ export default function LoginModal({
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="98765 43210 or customer@example.com"
-                    className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
+                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Password
                   </label>
                   <div className="relative">
@@ -481,12 +481,12 @@ export default function LoginModal({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your customer password"
-                      className="w-full pl-3.5 pr-10 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
+                      className="w-full pl-3.5 pr-10 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 text-xs"
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs"
                     >
                       {showPassword ? "Hide" : "Show"}
                     </button>
@@ -514,7 +514,7 @@ export default function LoginModal({
             {customerMode === "otp" && (
               <form onSubmit={otpStep === "request" ? handleRequestOtp : handleVerifyOtp} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
                     Registered Email Address
                   </label>
                   <input
@@ -524,13 +524,13 @@ export default function LoginModal({
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="customer@example.com"
-                    className="w-full px-3.5 py-2.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium disabled:opacity-60"
+                    className="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-medium disabled:opacity-60"
                   />
                 </div>
 
                 {otpStep === "verify" && (
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
                       6-Digit OTP Code sent to {maskedEmail || "email"}
                     </label>
                     <input
@@ -541,7 +541,7 @@ export default function LoginModal({
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                       placeholder="••••••"
-                      className="w-full py-2.5 text-center text-lg font-mono tracking-widest bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-bold"
+                      className="w-full py-2.5 text-center text-lg font-mono tracking-widest bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition font-bold"
                     />
                   </div>
                 )}
@@ -564,11 +564,11 @@ export default function LoginModal({
                 </button>
 
                 {otpStep === "verify" && (
-                  <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
                     <button
                       type="button"
                       onClick={() => setOtpStep("request")}
-                      className="hover:underline text-gray-600 font-medium"
+                      className="hover:underline text-slate-600 font-medium"
                     >
                       ← Change Email
                     </button>
@@ -576,7 +576,7 @@ export default function LoginModal({
                       type="button"
                       disabled={otpCooldown > 0}
                       onClick={handleRequestOtp}
-                      className="font-bold text-emerald-700 hover:underline disabled:text-gray-400"
+                      className="font-bold text-emerald-700 hover:underline disabled:text-slate-400"
                     >
                       {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : "Resend code"}
                     </button>
@@ -589,7 +589,7 @@ export default function LoginModal({
             {customerMode === "register" && (
               <form onSubmit={handleRegister} className="space-y-3">
                 <div className="flex items-center justify-between pb-1">
-                  <span className="text-xs font-black text-gray-800">Create Customer Account</span>
+                  <span className="text-xs font-extrabold text-navy-900">Create Customer Account</span>
                   <button
                     type="button"
                     onClick={() => setCustomerMode("password")}
@@ -600,49 +600,49 @@ export default function LoginModal({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-0.5">Full Name *</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Full Name *</label>
                   <input
                     type="text"
                     required
                     value={regName}
                     onChange={(e) => setRegName(e.target.value)}
                     placeholder="e.g. Rahul Sharma"
-                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-0.5">Mobile Number *</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Mobile Number *</label>
                   <input
                     type="tel"
                     required
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
                     placeholder="9876543210"
-                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-0.5">Email (for OTP verification) *</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Email (for OTP verification) *</label>
                   <input
                     type="email"
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     placeholder="you@example.com"
-                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-700 mb-0.5">Delivery Address (optional)</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Delivery Address (optional)</label>
                   <input
                     type="text"
                     value={regAddress}
                     onChange={(e) => setRegAddress(e.target.value)}
                     placeholder="House / Flat, Landmark, City"
-                    className="w-full px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
 

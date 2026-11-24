@@ -67,10 +67,10 @@ export default function PortalLedger() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="page-title">Account Statement & Ledger</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             Real-time chronological financial transaction history and running balance.
           </p>
         </div>
@@ -78,7 +78,7 @@ export default function PortalLedger() {
         <button
           type="button"
           onClick={() => window.print()}
-          className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-50 transition shadow-sm flex items-center gap-1.5 self-start md:self-auto"
+          className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl text-xs hover:bg-slate-50 transition shadow-sm flex items-center gap-1.5 self-start md:self-auto"
         >
           <PrintIcon className="w-4 h-4" />
           <span>Print Statement</span>
@@ -87,45 +87,45 @@ export default function PortalLedger() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
             Total Invoiced (Debit)
           </span>
-          <div className="text-2xl font-black text-gray-900">
+          <div className="text-2xl font-extrabold tracking-tight text-slate-900 tabular">
             ₹{Number(summary?.totalDebits ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
-          <span className="text-[11px] text-gray-400 mt-1 block">All purchases and invoices billed</span>
+          <span className="text-[11px] text-slate-400 mt-1 block">All purchases and invoices billed</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
             Total Settled (Credit)
           </span>
-          <div className="text-2xl font-black text-emerald-600">
+          <div className="text-2xl font-extrabold tracking-tight text-emerald-600 tabular">
             ₹{Number(summary?.totalCredits ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
-          <span className="text-[11px] text-gray-400 mt-1 block">Total payments received by shop</span>
+          <span className="text-[11px] text-slate-400 mt-1 block">Total payments received by shop</span>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">
+        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">
             Current Outstanding Balance
           </span>
           <div
-            className={`text-2xl font-black ${
-              currentBal > 0 ? "text-rose-600" : currentBal < 0 ? "text-emerald-600" : "text-gray-900"
+            className={`text-2xl font-extrabold tracking-tight tabular ${
+              currentBal > 0 ? "text-rose-600" : currentBal < 0 ? "text-emerald-600" : "text-slate-900"
             }`}
           >
             ₹{Math.abs(currentBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </div>
-          <span className="text-[11px] text-gray-500 mt-1 block font-medium">
+          <span className="text-[11px] text-slate-500 mt-1 block font-medium">
             {currentBal > 0 ? "Amount payable to the shop" : currentBal < 0 ? "Advance balance" : "All cleared"}
           </span>
         </div>
       </div>
 
       {/* Tab Switcher & Filters */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm space-y-4">
+      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <button
@@ -134,7 +134,7 @@ export default function PortalLedger() {
               className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
                 activeTab === "statement"
                   ? "bg-[#047857] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               Chronological Statement
@@ -145,7 +145,7 @@ export default function PortalLedger() {
               className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
                 activeTab === "payments"
                   ? "bg-[#047857] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               Payment Receipts ({payments.length})
@@ -158,15 +158,15 @@ export default function PortalLedger() {
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
-                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-gray-700 bg-gray-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 title="From date"
               />
-              <span className="text-gray-400">to</span>
+              <span className="text-slate-400">to</span>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-gray-700 bg-gray-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="px-2.5 py-1.5 border border-slate-200 rounded-lg text-slate-700 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 title="To date"
               />
               <button
@@ -179,7 +179,7 @@ export default function PortalLedger() {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="px-2 py-1.5 text-gray-500 hover:text-gray-700 font-semibold"
+                  className="px-2 py-1.5 text-slate-500 hover:text-slate-700 font-semibold"
                 >
                   Reset
                 </button>
@@ -190,15 +190,15 @@ export default function PortalLedger() {
       </div>
 
       {/* Main Table Content */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="py-20 text-center">
             <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs text-gray-500 mt-2 font-medium">Loading statement...</p>
+            <p className="text-xs text-slate-500 mt-2 font-medium">Loading statement...</p>
           </div>
         ) : activeTab === "statement" ? (
           ledgerEntries.length === 0 ? (
-            <div className="p-12 text-center text-xs text-gray-400">No ledger transactions in this period.</div>
+            <div className="p-12 text-center text-xs text-slate-400">No ledger transactions in this period.</div>
           ) : (
             <>
               {/* Desktop statement table */}
@@ -214,14 +214,14 @@ export default function PortalLedger() {
                       <th className="p-3.5 text-right pr-4">Running Balance</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {ledgerEntries.map((row) => {
                       const isDebit = Number(row.debit_amount) > 0;
                       const runningBal = Number(row.running_balance ?? 0);
 
                       return (
-                        <tr key={row.id} className="hover:bg-gray-50 transition">
-                          <td className="p-3.5 text-gray-500 whitespace-nowrap">
+                        <tr key={row.id} className="hover:bg-slate-50 transition">
+                          <td className="p-3.5 text-slate-500 whitespace-nowrap">
                             {new Date(row.entry_date || row.createdAt).toLocaleDateString("en-IN", {
                               day: "numeric",
                               month: "short",
@@ -236,10 +236,10 @@ export default function PortalLedger() {
                             >
                               {row.entry_type || (isDebit ? "Debit" : "Credit")}
                             </span>
-                            <span className="font-medium text-gray-800">{row.description || "—"}</span>
+                            <span className="font-medium text-slate-800">{row.description || "—"}</span>
                           </td>
-                          <td className="p-3.5 font-mono text-gray-500">{row.reference_number || "—"}</td>
-                          <td className="p-3.5 text-right font-bold text-gray-900">
+                          <td className="p-3.5 font-mono text-slate-500">{row.reference_number || "—"}</td>
+                          <td className="p-3.5 text-right font-bold text-slate-900">
                             {isDebit
                               ? `₹${Number(row.debit_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
                               : "—"}
@@ -251,11 +251,11 @@ export default function PortalLedger() {
                           </td>
                           <td
                             className={`p-3.5 text-right font-black pr-4 ${
-                              runningBal > 0 ? "text-rose-600" : runningBal < 0 ? "text-emerald-600" : "text-gray-700"
+                              runningBal > 0 ? "text-rose-600" : runningBal < 0 ? "text-emerald-600" : "text-slate-700"
                             }`}
                           >
                             ₹{Math.abs(runningBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                            <span className="text-[10px] font-medium ml-1 text-gray-400">
+                            <span className="text-[10px] font-medium ml-1 text-slate-400">
                               {runningBal > 0 ? "Dr" : runningBal < 0 ? "Cr" : ""}
                             </span>
                           </td>
@@ -267,7 +267,7 @@ export default function PortalLedger() {
               </div>
 
               {/* Mobile statement cards */}
-              <div className="md:hidden divide-y divide-gray-100">
+              <div className="md:hidden divide-y divide-slate-100">
                 {ledgerEntries.map((row) => {
                   const isDebit = Number(row.debit_amount) > 0;
                   const runningBal = Number(row.running_balance ?? 0);
@@ -284,7 +284,7 @@ export default function PortalLedger() {
                             >
                               {row.entry_type || (isDebit ? "Debit" : "Credit")}
                             </span>
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-slate-400">
                               {new Date(row.entry_date || row.createdAt).toLocaleDateString("en-IN", {
                                 day: "numeric",
                                 month: "short",
@@ -292,9 +292,9 @@ export default function PortalLedger() {
                               })}
                             </span>
                           </div>
-                          <div className="font-semibold text-gray-900 text-xs mt-1">{row.description || "—"}</div>
+                          <div className="font-semibold text-slate-900 text-xs mt-1">{row.description || "—"}</div>
                           {row.reference_number && (
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">Ref: {row.reference_number}</div>
+                            <div className="text-[10px] text-slate-400 font-mono mt-0.5">Ref: {row.reference_number}</div>
                           )}
                         </div>
 
@@ -302,9 +302,9 @@ export default function PortalLedger() {
                           <div className={`font-black text-sm ${isDebit ? "text-rose-600" : "text-emerald-600"}`}>
                             {isDebit ? "+" : "-"}₹{Number(isDebit ? row.debit_amount : row.credit_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                           </div>
-                          <div className="text-[10px] text-gray-500 mt-0.5 font-medium">
+                          <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
                             Bal: ₹{Math.abs(runningBal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}{" "}
-                            <span className="text-[9px] text-gray-400">{runningBal > 0 ? "Dr" : runningBal < 0 ? "Cr" : ""}</span>
+                            <span className="text-[9px] text-slate-400">{runningBal > 0 ? "Dr" : runningBal < 0 ? "Cr" : ""}</span>
                           </div>
                         </div>
                       </div>
@@ -317,7 +317,7 @@ export default function PortalLedger() {
         ) : (
           /* Payments Table */
           payments.length === 0 ? (
-            <div className="p-12 text-center text-xs text-gray-400">No payment records found.</div>
+            <div className="p-12 text-center text-xs text-slate-400">No payment records found.</div>
           ) : (
             <>
               {/* Desktop payments table */}
@@ -332,19 +332,19 @@ export default function PortalLedger() {
                       <th className="p-3.5 text-right pr-4">Amount Paid</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-slate-100">
                     {payments.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50 transition">
-                        <td className="p-3.5 text-gray-500 whitespace-nowrap">
+                      <tr key={p.id} className="hover:bg-slate-50 transition">
+                        <td className="p-3.5 text-slate-500 whitespace-nowrap">
                           {new Date(p.payment_date || p.createdAt).toLocaleDateString("en-IN", {
                             day: "numeric",
                             month: "short",
                             year: "numeric",
                           })}
                         </td>
-                        <td className="p-3.5 font-bold text-gray-800 uppercase tracking-wide">{p.payment_method}</td>
-                        <td className="p-3.5 font-mono text-gray-500">{p.reference_number || "—"}</td>
-                        <td className="p-3.5 text-gray-600">{p.notes || "—"}</td>
+                        <td className="p-3.5 font-bold text-slate-800 uppercase tracking-wide">{p.payment_method}</td>
+                        <td className="p-3.5 font-mono text-slate-500">{p.reference_number || "—"}</td>
+                        <td className="p-3.5 text-slate-600">{p.notes || "—"}</td>
                         <td className="p-3.5 text-right font-black text-emerald-600 text-sm pr-4">
                           ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
@@ -355,13 +355,13 @@ export default function PortalLedger() {
               </div>
 
               {/* Mobile payments cards */}
-              <div className="md:hidden divide-y divide-gray-100">
+              <div className="md:hidden divide-y divide-slate-100">
                 {payments.map((p) => (
                   <div key={p.id} className="p-3.5 space-y-1.5 bg-white">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="font-bold text-gray-800 uppercase text-xs tracking-wide">{p.payment_method}</div>
-                        <div className="text-[11px] text-gray-400 mt-0.5">
+                        <div className="font-bold text-slate-800 uppercase text-xs tracking-wide">{p.payment_method}</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
                           {new Date(p.payment_date || p.createdAt).toLocaleDateString("en-IN", {
                             day: "numeric",
                             month: "short",
@@ -376,7 +376,7 @@ export default function PortalLedger() {
                       </div>
                     </div>
                     {(p.reference_number || p.notes) && (
-                      <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-50">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-50">
                         {p.reference_number && <span className="font-mono text-[10px]">Ref: {p.reference_number}</span>}
                         {p.notes && <span className="truncate">{p.notes}</span>}
                       </div>
@@ -396,18 +396,18 @@ export default function PortalLedger() {
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
           >
             &larr; Prev
           </button>
-          <span className="text-xs font-semibold text-gray-600">
+          <span className="text-xs font-semibold text-slate-600">
             Page {page} of {totalPages}
           </span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
           >
             Next &rarr;
           </button>

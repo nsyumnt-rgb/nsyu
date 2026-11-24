@@ -178,7 +178,7 @@ export default function PosCartDrawer() {
                         }}
                       />
                     ) : (
-                      <span className="text-gray-400 font-bold text-xs">
+                      <span className="text-slate-400 font-bold text-xs">
                         {p.name ? p.name.charAt(0) : "📦"}
                       </span>
                     )}
@@ -281,7 +281,7 @@ export default function PosCartDrawer() {
                   setOpen(false);
                   navigate("/app/products");
                 }}
-                className="py-2.5 px-3 rounded-xl border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold text-xs transition cursor-pointer shrink-0"
+                className="py-2.5 px-3 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold text-xs transition cursor-pointer shrink-0"
               >
                 + Add More
               </button>

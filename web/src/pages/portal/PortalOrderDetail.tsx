@@ -47,16 +47,16 @@ export default function PortalOrderDetail() {
     return (
       <div className="py-20 text-center">
         <div className="inline-block w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs text-gray-500 mt-2 font-medium">Loading order #{id}...</p>
+        <p className="text-xs text-slate-500 mt-2 font-medium">Loading order #{id}...</p>
       </div>
     );
   }
 
   if (error || !order) {
     return (
-      <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 max-w-lg mx-auto">
-        <h2 className="text-lg font-bold text-gray-900">Order Not Found</h2>
-        <p className="text-xs text-gray-500 mt-1">{error || "The requested order could not be located."}</p>
+      <div className="bg-white rounded-2xl p-12 text-center border border-slate-100 max-w-lg mx-auto">
+        <h2 className="text-lg font-bold text-slate-900">Order Not Found</h2>
+        <p className="text-xs text-slate-500 mt-1">{error || "The requested order could not be located."}</p>
         <button
           type="button"
           onClick={() => navigate("/portal/orders")}
@@ -81,15 +81,15 @@ export default function PortalOrderDetail() {
       <div className="flex items-center justify-between">
         <Link
           to="/portal/orders"
-          className="text-xs font-bold text-gray-600 hover:text-gray-900 flex items-center gap-1.5"
+          className="text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1.5"
         >
           <span>&larr; Back to All Orders</span>
         </Link>
       </div>
 
       {/* Main Order Card Header */}
-      <div className="bg-white rounded-2xl p-5 md:p-6 border border-gray-200 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+      <div className="bg-white rounded-2xl p-5 md:p-6 border border-slate-200 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="page-title">
@@ -97,8 +97,8 @@ export default function PortalOrderDetail() {
               </h1>
               <OrderStatusBadge status={order.status} />
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {order.shop?.name && <span className="font-semibold text-gray-700">{order.shop.name} · </span>}
+            <div className="text-xs text-slate-500 mt-1">
+              {order.shop?.name && <span className="font-semibold text-slate-700">{order.shop.name} · </span>}
               Placed on {new Date(order.createdAt || order.order_date).toLocaleDateString("en-IN", {
                 weekday: "short",
                 day: "numeric",
@@ -142,7 +142,7 @@ export default function PortalOrderDetail() {
         {/* Status Tracker / Timeline */}
         {!isCancelled ? (
           <div>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
               Fulfillment Status
             </h3>
             <div className="grid grid-cols-5 gap-2 text-center">
@@ -157,7 +157,7 @@ export default function PortalOrderDetail() {
                           ? "bg-emerald-600 text-white ring-4 ring-emerald-100"
                           : isPassed
                           ? "bg-emerald-600 text-white"
-                          : "bg-gray-100 text-gray-400"
+                          : "bg-slate-100 text-slate-400"
                       }`}
                     >
                       {isPassed ? "✓" : idx + 1}
@@ -167,8 +167,8 @@ export default function PortalOrderDetail() {
                         isCurrent
                           ? "text-emerald-700 font-bold"
                           : isPassed
-                          ? "text-gray-700"
-                          : "text-gray-400"
+                          ? "text-slate-700"
+                          : "text-slate-400"
                       }`}
                     >
                       {st}
@@ -186,20 +186,20 @@ export default function PortalOrderDetail() {
 
         {/* Order Status History Log */}
         {history.length > 0 && (
-          <div className="pt-3 border-t border-gray-100">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+          <div className="pt-3 border-t border-slate-100">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
               Status Activity Log
             </h3>
             <div className="space-y-1.5">
               {history.map((h: any) => (
-                <div key={h.id} className="text-xs text-gray-600 flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+                <div key={h.id} className="text-xs text-slate-600 flex items-center justify-between bg-slate-50 p-2 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold uppercase text-[10px] bg-white px-2 py-0.5 rounded border border-gray-200">
+                    <span className="font-bold uppercase text-[10px] bg-white px-2 py-0.5 rounded border border-slate-200">
                       {String(h.to_status ?? h.status ?? "").replace(/_/g, " ")}
                     </span>
-                    {(h.note ?? h.comment) && <span className="text-gray-500">({h.note ?? h.comment})</span>}
+                    {(h.note ?? h.comment) && <span className="text-slate-500">({h.note ?? h.comment})</span>}
                   </div>
-                  <span className="text-gray-400 text-[11px]">
+                  <span className="text-slate-400 text-[11px]">
                     {new Date(h.createdAt ?? h.created_at).toLocaleTimeString("en-IN", {
                       hour: "2-digit",
                       minute: "2-digit",
@@ -215,27 +215,27 @@ export default function PortalOrderDetail() {
       </div>
 
       {/* Items Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 font-bold text-sm text-gray-900">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 font-bold text-sm text-slate-900">
           Ordered Items ({order.items?.length || 0})
         </div>
 
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-slate-100">
           {order.items?.map((item: any, idx: number) => (
             <div key={item.id} className="p-4 sm:px-5 flex items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="text-gray-400 font-mono w-5 shrink-0">{idx + 1}.</span>
+                <span className="text-slate-400 font-mono w-5 shrink-0">{idx + 1}.</span>
                 <div className="min-w-0">
-                  <h4 className="font-bold text-gray-900 text-sm [overflow-wrap:anywhere]">{item.product_name}</h4>
-                  <div className="text-gray-400 font-mono text-[11px] mt-0.5">
+                  <h4 className="font-bold text-slate-900 text-sm [overflow-wrap:anywhere]">{item.product_name}</h4>
+                  <div className="text-slate-400 font-mono text-[11px] mt-0.5">
                     Unit Price: ₹{Number(item.rate ?? item.unit_price ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </div>
                 </div>
               </div>
 
               <div className="text-right shrink-0">
-                <div className="font-bold text-gray-700 whitespace-nowrap">Qty: {item.quantity}</div>
-                <div className="text-sm font-black text-gray-900 mt-0.5">
+                <div className="font-bold text-slate-700 whitespace-nowrap">Qty: {item.quantity}</div>
+                <div className="text-sm font-extrabold text-navy-900 mt-0.5">
                   ₹{Number(item.amount ?? item.line_total ?? item.quantity * Number(item.rate ?? item.unit_price ?? 0)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
               </div>
@@ -244,15 +244,15 @@ export default function PortalOrderDetail() {
         </div>
 
         {/* Calculation Summary Footer */}
-        <div className="bg-gray-50 p-5 border-t border-gray-200 space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-600">
+        <div className="bg-slate-50 p-5 border-t border-slate-200 space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-600">
             <span>Subtotal</span>
             <span className="font-bold">
               ₹{Number(order.subtotal || order.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </span>
           </div>
           {Number(order.discount_amount) > 0 && (
-            <div className="flex items-center justify-between text-xs text-gray-600">
+            <div className="flex items-center justify-between text-xs text-slate-600">
               <span>Discount</span>
               <span className="font-bold text-emerald-600">
                 -₹{Number(order.discount_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -260,14 +260,14 @@ export default function PortalOrderDetail() {
             </div>
           )}
           {Number(order.tax_amount) > 0 && (
-            <div className="flex items-center justify-between text-xs text-gray-600">
+            <div className="flex items-center justify-between text-xs text-slate-600">
               <span>Tax (GST)</span>
               <span className="font-bold">
                 +₹{Number(order.tax_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </div>
           )}
-          <div className="pt-2 border-t border-gray-200 flex items-center justify-between text-sm font-black text-gray-900">
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-sm font-extrabold text-navy-900">
             <span>Grand Total</span>
             <span className="text-base text-emerald-800">
               ₹{Number(order.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
@@ -277,21 +277,21 @@ export default function PortalOrderDetail() {
       </div>
 
       {/* Delivery & Notes Details */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm space-y-2 text-xs">
-        <h3 className="font-bold text-gray-800 uppercase tracking-wider">Fulfillment & Notes</h3>
-        <div className="text-gray-600">
-          <span className="font-semibold text-gray-800">Type: </span>
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-2 text-xs">
+        <h3 className="font-bold text-slate-800 uppercase tracking-wider">Fulfillment & Notes</h3>
+        <div className="text-slate-600">
+          <span className="font-semibold text-slate-800">Type: </span>
           {order.delivery_type === "delivery" ? "Doorstep Delivery" : "Store Pickup"}
         </div>
         {order.shipping_address && (
-          <div className="text-gray-600">
-            <span className="font-semibold text-gray-800">Shipping Address: </span>
+          <div className="text-slate-600">
+            <span className="font-semibold text-slate-800">Shipping Address: </span>
             {order.shipping_address}
           </div>
         )}
         {order.notes && (
-          <div className="text-gray-600">
-            <span className="font-semibold text-gray-800">Customer Note: </span>
+          <div className="text-slate-600">
+            <span className="font-semibold text-slate-800">Customer Note: </span>
             {order.notes}
           </div>
         )}

@@ -62,9 +62,9 @@ export default function ShopCard({
 
   if (isListView) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-xs hover:shadow-md transition flex flex-col sm:flex-row items-center gap-4">
+      <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-xs hover:shadow-md transition flex flex-col sm:flex-row items-center gap-4">
         {/* Cover Thumbnail */}
-        <div className="w-full sm:w-44 h-28 rounded-xl overflow-hidden bg-gray-100 relative shrink-0">
+        <div className="w-full sm:w-44 h-28 rounded-xl overflow-hidden bg-slate-100 relative shrink-0">
           <img
             src={coverUrl}
             alt={shop.name}
@@ -80,7 +80,7 @@ export default function ShopCard({
             className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-xs transition ${
               isFavorite
                 ? "bg-rose-50 text-rose-600"
-                : "bg-white/90 text-gray-400 hover:text-rose-600"
+                : "bg-white/90 text-slate-400 hover:text-rose-600"
             }`}
           >
             <svg
@@ -105,20 +105,20 @@ export default function ShopCard({
             </span>
             <Link
               to={shopHref}
-              className="text-sm font-black text-gray-900 truncate hover:text-[#047857] transition"
+              className="text-sm font-extrabold text-navy-900 truncate hover:text-brand-700 transition"
             >
               {shop.name}
             </Link>
           </div>
-          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1 truncate">
+          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1 truncate">
             <span>📍</span>
             <span>{shop.address || "Local Partner Store"}</span>
           </p>
-          <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-gray-600">
+          <div className="mt-2 flex items-center gap-2 text-xs font-semibold text-slate-600">
             <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/60">
               🛒 {shop.inStockCount} in stock
             </span>
-            <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
+            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
               📦 {shop.productCount} products
             </span>
           </div>
@@ -137,9 +137,9 @@ export default function ShopCard({
   }
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-1 transition duration-200 flex flex-col">
+    <div className="group bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-1 transition duration-200 flex flex-col">
       {/* Top Banner / Cover */}
-      <div className="h-32 w-full bg-gray-100 relative overflow-hidden">
+      <div className="h-32 w-full bg-slate-100 relative overflow-hidden">
         <img
           src={coverUrl}
           alt={shop.name}
@@ -156,7 +156,7 @@ export default function ShopCard({
           className={`absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full flex items-center justify-center shadow-xs transition ${
             isFavorite
               ? "bg-rose-50 text-rose-600"
-              : "bg-white/90 text-gray-400 hover:text-rose-600 hover:bg-white"
+              : "bg-white/90 text-slate-400 hover:text-rose-600 hover:bg-white"
           }`}
         >
           <svg
@@ -183,7 +183,7 @@ export default function ShopCard({
             </span>
             <Link
               to={shopHref}
-              className="font-black text-gray-900 text-xs sm:text-[13px] truncate hover:text-[#047857] transition block"
+              className="font-extrabold text-navy-900 text-xs sm:text-[13px] truncate hover:text-brand-700 transition block"
               title={shop.name}
             >
               {shop.name}
@@ -191,13 +191,13 @@ export default function ShopCard({
           </div>
 
           {/* Location / Address */}
-          <div className="text-[11px] text-gray-500 flex items-center gap-1 truncate font-medium">
-            <span className="text-gray-400">📍</span>
+          <div className="text-[11px] text-slate-500 flex items-center gap-1 truncate font-medium">
+            <span className="text-slate-400">📍</span>
             <span className="truncate">{shop.address || "Local Partner Store"}</span>
           </div>
 
           {/* Stock Metrics */}
-          <div className="pt-1 flex items-center gap-2 text-[10.5px] font-semibold text-gray-500">
+          <div className="pt-1 flex items-center gap-2 text-[10.5px] font-semibold text-slate-500">
             <span>🛒 {shop.inStockCount} in stock</span>
             <span>|</span>
             <span>📦 {shop.productCount} products</span>

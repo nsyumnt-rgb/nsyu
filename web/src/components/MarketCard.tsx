@@ -85,7 +85,7 @@ export default function MarketCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100/90 shadow-2xs hover:shadow-md transition-all duration-200 p-3 flex flex-col relative group">
+    <div className="bg-white rounded-2xl border border-slate-100/90 shadow-2xs hover:shadow-md transition-all duration-200 p-3 flex flex-col relative group">
       
       {/* Top Media Container - Clean white background matching Image 1 */}
       <div className="relative w-full aspect-square bg-white rounded-xl overflow-hidden flex items-center justify-center p-2 mb-2.5">
@@ -105,7 +105,7 @@ export default function MarketCard({
           className={`absolute right-1.5 top-1.5 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-150 active:scale-90 ${
             isWishlisted
               ? "bg-rose-50 text-rose-600 ring-1 ring-rose-200"
-              : "text-gray-400 hover:text-rose-600 bg-white/80"
+              : "text-slate-400 hover:text-rose-600 bg-white/80"
           }`}
         >
           <svg
@@ -152,7 +152,7 @@ export default function MarketCard({
           {/* Product Title (Clean, 1-2 lines, bold black) */}
           <Link
             to={href}
-            className="block text-xs sm:text-[13px] font-bold text-gray-900 leading-snug line-clamp-1 hover:text-[#047857] transition"
+            className="block text-xs sm:text-[13px] font-bold text-slate-900 leading-snug line-clamp-1 hover:text-brand-700 transition"
             title={listing.name}
           >
             {listing.name}
@@ -160,10 +160,10 @@ export default function MarketCard({
 
           {/* Pricing Row: Price + MRP Strikethrough */}
           <div className="mt-1 flex items-baseline gap-1.5">
-            <span className="text-xs sm:text-sm font-black text-gray-900 tracking-tight tabular">
+            <span className="text-xs sm:text-sm font-extrabold text-navy-900 tracking-tight tabular">
               {rupees(listing.price)}
             </span>
-            <span className="text-[11px] text-gray-400 line-through font-medium tabular">
+            <span className="text-[11px] text-slate-400 line-through font-medium tabular">
               {rupees(displayMrp)}
             </span>
           </div>
@@ -179,7 +179,7 @@ export default function MarketCard({
               ? "bg-[#064E3B] text-white"
               : listing.inStock
               ? "bg-[#047857] hover:bg-[#064E3B] text-white active:scale-[0.98]"
-              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              : "bg-slate-100 text-slate-400 cursor-not-allowed"
           }`}
         >
           {adding ? (
