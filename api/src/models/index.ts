@@ -12,6 +12,7 @@ import { Subcategory } from "./Subcategory";
 import { ProductImage } from "./ProductImage";
 import { ProductStock } from "./ProductStock";
 import { InventoryTransaction } from "./InventoryTransaction";
+import { StockTransfer } from "./StockTransfer";
 import { Customer } from "./Customer";
 import { Sale } from "./Sale";
 import { SaleItem } from "./SaleItem";
@@ -40,6 +41,7 @@ import { EmailNotification } from "./EmailNotification";
 import { Supplier } from "./Supplier";
 import { Purchase, PurchaseItem } from "./Purchase";
 import { SupplierLedger } from "./SupplierLedger";
+import { MessagingSettings, MessageTemplate, MessageCampaign, MessageDelivery, CustomerMessagePreference } from "./Messaging";
 
 /* ---------------- Owner ---------------- */
 Owner.hasMany(Shop, { foreignKey: "owner_id", as: "shops" });
@@ -109,6 +111,12 @@ Product.hasMany(InventoryTransaction, { foreignKey: "product_id", as: "inventory
 InventoryTransaction.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 Shop.hasMany(InventoryTransaction, { foreignKey: "shop_id", as: "inventoryTransactions" });
 InventoryTransaction.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
+
+/* ---------------- Stock transfers ---------------- */
+Product.hasMany(StockTransfer, { foreignKey: "product_id", as: "transfers" });
+StockTransfer.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+StockTransfer.belongsTo(Shop, { foreignKey: "from_shop_id", as: "fromShop" });
+StockTransfer.belongsTo(Shop, { foreignKey: "to_shop_id", as: "toShop" });
 
 /* ---------------- Customers ---------------- */
 Owner.hasMany(Customer, { foreignKey: "owner_id", as: "customers" });
@@ -206,7 +214,21 @@ SupplierLedger.belongsTo(Supplier, { foreignKey: "supplier_id", as: "supplier" }
 SupplierLedger.belongsTo(Purchase, { foreignKey: "purchase_id", as: "purchase" });
 SupplierLedger.belongsTo(Shop, { foreignKey: "shop_id", as: "shop" });
 
+/* ---------------- Messaging (WhatsApp + Email) ---------------- */
+MessageCampaign.hasMany(MessageDelivery, { foreignKey: "campaign_id", as: "deliveries" });
+MessageDelivery.belongsTo(MessageCampaign, { foreignKey: "campaign_id", as: "campaign" });
+MessageDelivery.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
+MessageDelivery.belongsTo(MessageTemplate, { foreignKey: "template_id", as: "template" });
+MessageCampaign.belongsTo(MessageTemplate, { foreignKey: "template_id", as: "template" });
+Customer.hasOne(CustomerMessagePreference, { foreignKey: "customer_id", as: "messagePreference" });
+CustomerMessagePreference.belongsTo(Customer, { foreignKey: "customer_id", as: "customer" });
+
 export {
+  MessagingSettings,
+  MessageTemplate,
+  MessageCampaign,
+  MessageDelivery,
+  CustomerMessagePreference,
   sequelize,
   Owner,
   Shop,
@@ -221,6 +243,7 @@ export {
   ProductImage,
   ProductStock,
   InventoryTransaction,
+  StockTransfer,
   Customer,
   Sale,
   SaleItem,

@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/customer_portal_provider.dart';
 import '../../services/customer_portal_service.dart';
 import '../../theme/app_theme.dart';
+import 'portal_message_preferences_screen.dart';
 
 class PortalMoreScreen extends StatefulWidget {
   const PortalMoreScreen({super.key});
@@ -599,6 +600,30 @@ class _PortalMoreScreenState extends State<PortalMoreScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.blue50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.forum_rounded, color: AppColors.navy900, size: 20),
+                    ),
+                    title: const Text(
+                      'Message Preferences',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.navy900),
+                    ),
+                    subtitle: const Text(
+                      'Choose WhatsApp, email, both or neither',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PortalMessagePreferencesScreen()),
+                    ),
+                  ),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Container(

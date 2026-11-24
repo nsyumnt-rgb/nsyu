@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { onInvoiceCreated, onPaymentReceived, onOrderStatusChanged } from "../utils/messaging/hooks";
 import { withBillPayment, CONVERTED_SALE_ATTRS } from "../utils/orderPayment";
 import { Op } from "sequelize";
 import {
@@ -607,6 +608,8 @@ export async function updateOrderStatus(req: Request, res: Response) {
       ],
     });
 
+    if (statusChanged) onOrderStatusChanged(updated || order, targetStatus);
+
     return res.json({
       success: true,
       message: `Order status updated to ${order.status}`,
@@ -998,6 +1001,20 @@ export async function convertOrderToBill(req: Request, res: Response) {
 
     // Asynchronously dispatch bill email & receipt confirmation after DB commit
     const targetBill = refreshedBill || conversionResult.sale;
+    if (targetBill && targetBill.customer_id) {
+      onInvoiceCreated(targetBill);
+      if (Number(targetBill.paid_amount) > 0) {
+        onPaymentReceived({
+          ownerId,
+          shopId: targetBill.shop_id,
+          customerId: targetBill.customer_id,
+          amount: Number(targetBill.paid_amount),
+          saleId: targetBill.id,
+          invoiceNumber: targetBill.invoice_number,
+          balance: Number((targetBill as any).customer?.current_balance ?? targetBill.due_amount),
+        });
+      }
+    }
     if (targetBill && targetBill.customer_id) {
       setImmediate(async () => {
         try {

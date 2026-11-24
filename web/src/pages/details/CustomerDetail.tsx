@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCustomer } from "../../api/customers";
 import ReferenceLink from "../../components/ReferenceLink";
+import CustomerMessagingCard from "../messaging/CustomerMessagingCard";
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -137,6 +138,8 @@ export default function CustomerDetail() {
           <p className="text-xs font-mono text-slate-500 mt-1">GSTIN: {customer.gstin || "—"}</p>
         </div>
       </div>
+
+      <CustomerMessagingCard customerId={Number(customer.id)} />
 
       {/* Tabs Section: Sales, Ledger, EMI */}
       <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">

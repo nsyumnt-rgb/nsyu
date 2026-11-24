@@ -15,10 +15,33 @@ export function recordMovement(payload: {
   return api.post<ApiEnvelope<{ currentStock?: number; stock?: { current_stock: number }; transaction: InventoryTransaction }>>("/inventory/movement", payload);
 }
 
-export function transferStock(payload: { productId: number; fromShopId: number; toShopId: number; quantity: number; notes?: string }) {
-  return api.post<
-    ApiEnvelope<{ transfer: StockTransfer; fromShopStock: number; toShopStock: number }>
-  >("/inventory/transfer", payload);
+export type TransferStatus = "pending" | "in_transit" | "completed" | "cancelled";
+
+/**
+ * Move stock between two of the owner's shops.
+ * status "completed" moves it at once; "in_transit" takes it out of the source now;
+ * "pending" moves nothing until it is dispatched.
+ */
+export function transferStock(payload: {
+  fromShopId: number;
+  toShopId: number;
+  items: { productId: number; quantity: number }[];
+  status?: Exclude<TransferStatus, "cancelled">;
+  notes?: string;
+}) {
+  return api.post<ApiEnvelope<StockTransfer>>("/inventory/transfers", payload);
+}
+
+export function dispatchTransfer(id: number) {
+  return api.put<ApiEnvelope<StockTransfer>>(`/inventory/transfers/${id}/dispatch`, {});
+}
+
+export function receiveTransfer(id: number) {
+  return api.put<ApiEnvelope<StockTransfer>>(`/inventory/transfers/${id}/receive`, {});
+}
+
+export function cancelTransfer(id: number, reason?: string) {
+  return api.put<ApiEnvelope<StockTransfer>>(`/inventory/transfers/${id}/cancel`, { reason });
 }
 
 export function getInventoryHistory(params?: { productId?: number; shopId?: number; type?: MovementType; limit?: number }) {
@@ -43,7 +66,7 @@ export function listTransfers(params?: {
   limit?: number;
 }) {
   return api.get<ApiEnvelope<{
-    transfers: any[];
+    transfers: StockTransfer[];
     total: number;
     page: number;
     pageSize: number;
@@ -55,7 +78,7 @@ export function listTransfers(params?: {
       completedTransfers: number;
     };
     monthlyTrends: { month: string; transfers: number; items: number }[];
-    recentTransfers: any[];
+    recentTransfers: StockTransfer[];
   }>>("/inventory/transfers", { params });
 }
 

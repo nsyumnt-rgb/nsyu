@@ -4,6 +4,7 @@ import { Notification } from "../models/Notification";
 import { Customer } from "../models/Customer";
 import { CustomerAccount } from "../models/CustomerAccount";
 import { Shop } from "../models/Shop";
+import { legacyEmailAllowed } from "./messaging/settings";
 
 export function maskEmail(email: string): string {
   if (!email || !email.includes("@")) return email || "";
@@ -379,6 +380,11 @@ export async function sendBillEmail(params: SendBillEmailParams): Promise<{ succ
     items = [],
   } = params;
 
+  // Shop owner can switch this email off (or replace it with a template) in Messaging → Automations
+  if (!(await legacyEmailAllowed(shopId, "invoice_generated"))) {
+    return { success: false, skipped: true, error: "Invoice email is turned off in Messaging automations" };
+  }
+
   let activeShopName = "NSYU Business";
   try {
     const shop = await Shop.findByPk(shopId);
@@ -584,6 +590,10 @@ export async function sendPaymentReceiptEmail(params: SendPaymentReceiptEmailPar
     currentBalance,
     notes,
   } = params;
+
+  if (!(await legacyEmailAllowed(shopId, "payment_received"))) {
+    return { success: false, skipped: true, error: "Payment receipt email is turned off in Messaging automations" };
+  }
 
   let activeShopName = "NSYU Business";
   try {

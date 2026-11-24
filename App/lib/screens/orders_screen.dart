@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/saved_order.dart';
 import '../navigation/app_navigation.dart';
@@ -167,7 +168,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   // Share, Notifications, Search
                   IconButton(
                     icon: const Icon(Icons.share_outlined, color: Color(0xFF475569), size: 21),
-                    onPressed: () {},
+                    tooltip: 'Share summary',
+                    onPressed: () {
+                      final list = allOrdersList;
+                      final fmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+                      final total = list.fold<double>(0, (a, x) => a + x.total);
+                      final b = StringBuffer()
+                        ..writeln('Orders (${list.length})')
+                        ..writeln('Total: ${fmt.format(total)}')
+                        ..writeln();
+                      for (final x in list.take(20)) {
+                        b.writeln('• ${x.orderNumber} — ${x.customerName} — ${fmt.format(x.total)}');
+                      }
+                      if (list.length > 20) b.writeln('…and ${list.length - 20} more');
+                      Share.share(b.toString(), subject: 'Orders');
+                    },
                   ),
                   Builder(builder: (ctx) {
                     final unread = ctx.watch<NotificationsProvider>().unreadCount;

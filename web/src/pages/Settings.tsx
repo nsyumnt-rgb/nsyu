@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import ShopBannerCard from "../components/ShopBannerCard";
 import ShopPortalSettingsCard from "../components/ShopPortalSettingsCard";
 import Inventory from "./Inventory";
+import StockTransfers from "./StockTransfers";
 import Shops from "./Shops";
 
 interface FullSettingsState {
@@ -183,7 +184,7 @@ function SettingsInner() {
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [inventorySubTab, setInventorySubTab] = useState<"list" | "rules">("list");
+  const [inventorySubTab, setInventorySubTab] = useState<"list" | "transfers" | "rules">(() => (searchParams.get("tab") === "transfers" ? "transfers" : "list"));
 
   // Change Password Modal State
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -1650,6 +1651,18 @@ function SettingsInner() {
               </button>
               <button
                 type="button"
+                onClick={() => setInventorySubTab("transfers")}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                  inventorySubTab === "transfers"
+                    ? "bg-white text-emerald-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>🔁</span>
+                <span>Stock Transfers</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setInventorySubTab("rules")}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                   inventorySubTab === "rules"
@@ -1668,6 +1681,8 @@ function SettingsInner() {
             <div className="space-y-4">
               <Inventory showViewOption={true} embedded={true} />
             </div>
+          ) : inventorySubTab === "transfers" ? (
+            <StockTransfers />
           ) : (
             /* Sub-tab 2: Stock & Warehouse Rules (Existing Settings) */
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">

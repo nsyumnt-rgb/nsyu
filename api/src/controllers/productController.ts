@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { onProductPriceDropped } from "../utils/messaging/hooks";
 import { PRODUCT_VISIBILITIES, isProductVisibility, visibilityColumnReady } from "../utils/productVisibility";
 import fs from "fs";
 import path from "path";
@@ -142,6 +143,7 @@ export async function updateProduct(req: Request, res: Response) {
   }
 
   const priceFields = ["purchase_price", "selling_price", "live_price", "mrp"] as const;
+  const previousSellingPrice = Number(product.selling_price);
   const oldPrices: Record<string, number> = {};
   const newPrices: Record<string, number> = {};
 
@@ -183,6 +185,7 @@ export async function updateProduct(req: Request, res: Response) {
       oldValue: oldPrices,
       newValue: newPrices,
     });
+    if (newPrices.selling_price !== undefined) onProductPriceDropped(product, previousSellingPrice, req.auth!.shopId);
   }
 
   return res.json({ success: true, data: product });

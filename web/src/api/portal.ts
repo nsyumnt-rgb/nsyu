@@ -268,3 +268,20 @@ export async function changePortalPasswordApi(data: { currentPassword: string; n
   const res = await portalApi.post("/customer-portal/auth/change-password", data);
   return res.data as { success: boolean; message: string };
 }
+
+/* ── Message preferences (WhatsApp / email consent) ── */
+export interface PortalMessagePrefs {
+  allowWhatsapp: boolean;
+  allowEmail: boolean;
+  promoWhatsapp: boolean;
+  promoEmail: boolean;
+  dateOfBirth: string;
+}
+export async function getPortalMessagePrefsApi(): Promise<PortalMessagePrefs> {
+  const res = await portalApi.get("/customer-portal/me/message-preferences");
+  return res.data.data;
+}
+export async function updatePortalMessagePrefsApi(data: Partial<PortalMessagePrefs>): Promise<PortalMessagePrefs> {
+  const res = await portalApi.put("/customer-portal/me/message-preferences", data);
+  return res.data.data;
+}

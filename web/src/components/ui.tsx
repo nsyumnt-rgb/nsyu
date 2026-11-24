@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 
 /* ─────────────────────────────────────────────────────────────
@@ -50,6 +51,12 @@ const PATHS: Record<string, ReactNode> = {
   mapPin: (<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>),
   calendar: (<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>),
   book: (<><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /><path d="M8 7h8M8 11h6" /></>),
+  message: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />,
+  send: (<><path d="M22 2 11 13" /><path d="M22 2 15 22l-4-9-9-4z" /></>),
+  repeat: (<><path d="m17 1 4 4-4 4" /><path d="M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4" /><path d="M21 13v2a4 4 0 0 1-4 4H3" /></>),
+  zap: <path d="M13 2 3 14h9l-1 8 10-12h-9z" />,
+  link: (<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>),
+  paperclip: <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
 };
 
 export type IconName = keyof typeof PATHS;
@@ -298,7 +305,8 @@ export function Modal({ title, subtitle, icon, onClose, children, footer, size =
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   const w = size === "sm" ? "max-w-md" : size === "lg" ? "max-w-3xl" : "max-w-2xl";
-  return (
+  // Portal to <body>: an animated page wrapper (transform) would otherwise trap the overlay under the mobile nav
+  return createPortal(
     <div className="fixed inset-0 z-50 bg-navy-950/45 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 animate-fade-in" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" className={`bg-white w-full ${w} rounded-t-4xl sm:rounded-2xl shadow-pop ring-1 ring-black/5 max-h-[92dvh] flex flex-col animate-slide-up sm:animate-scale-in`}>
         {/* Mobile Drag Handle */}
@@ -320,7 +328,8 @@ export function Modal({ title, subtitle, icon, onClose, children, footer, size =
         <div className="px-5 sm:px-6 py-5 overflow-y-auto overscroll-contain min-h-0">{children}</div>
         {footer && <div className="px-5 sm:px-6 py-3.5 pb-safe sm:pb-3.5 border-t border-slate-100 bg-slate-50/60 rounded-b-2xl flex flex-wrap justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

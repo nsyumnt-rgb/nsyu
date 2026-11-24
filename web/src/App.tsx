@@ -37,6 +37,8 @@ const CustomersHub = lazy(() => import("./pages/CustomersHub"));
 const CustomerDetail = lazy(() => import("./pages/details/CustomerDetail"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Messaging = lazy(() => import("./pages/messaging/Messaging"));
+const MessagePreferences = lazy(() => import("./pages/MessagePreferences"));
 
 // Customer Portal Pages
 const PortalHome = lazy(() => import("./pages/portal/PortalHome"));
@@ -95,6 +97,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/portal/login" element={<Navigate to="/login?tab=customer" replace />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/preferences/:token" element={<MessagePreferences />} />
 
           {/* Customer Authenticated Portal */}
           <Route element={<RequireCustomerAuth />}>
@@ -148,6 +151,8 @@ export default function App() {
               {/* Customers page: Details | Ledger tabs */}
               <Route path="customers" element={<CustomersHub />} />
               <Route path="customers/:id" element={<CustomerDetail />} />
+              <Route path="messaging" element={<Messaging />} />
+              <Route path="messaging/:tab" element={<Messaging />} />
               {/* Settings: shop profile, inventory, preferences, … */}
               <Route path="settings" element={<Settings />} />
               <Route path="settings/:section" element={<Settings />} />

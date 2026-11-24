@@ -298,6 +298,23 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
                 </div>
               </button>
 
+              {/* Messages (WhatsApp + Email) */}
+              <button
+                type="button"
+                onClick={() => { navigate("/app/messaging"); setMoreOpen(false); }}
+                className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-border shadow-xs active:scale-[0.98] active:bg-brand-50 hover:border-brand-200 text-left transition-all duration-200"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-100/80 text-emerald-800 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[13.5px] font-bold text-navy-900 leading-snug">Messages</div>
+                  <div className="text-[11px] text-slate-500 truncate">WhatsApp & email</div>
+                </div>
+              </button>
+
               {/* Settings › Inventory */}
               <button
                 type="button"

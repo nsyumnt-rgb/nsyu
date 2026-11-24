@@ -281,14 +281,30 @@ export interface InventoryTransaction {
   created_at: string;
 }
 
+export interface StockTransferItem {
+  productId: number;
+  productName: string;
+  sku?: string;
+  quantity: number;
+}
+
 export interface StockTransfer {
   id: number;
   owner_id: number;
-  product_id: number;
+  product_id?: number | null;
   from_shop_id: number;
   to_shop_id: number;
-  quantity: number;
+  quantity?: number | null;
   notes?: string | null;
+  transfer_no?: string | null;
+  status: "pending" | "in_transit" | "completed" | "cancelled";
+  items?: StockTransferItem[] | null;
+  received_at?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  fromShop?: Pick<Shop, "id" | "name" | "code">;
+  toShop?: Pick<Shop, "id" | "name" | "code">;
+  product?: { id: number; name: string; sku?: string };
   created_at: string;
 }
 

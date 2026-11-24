@@ -30,6 +30,7 @@ import supplierLedgerRoutes from "./routes/supplierLedgerRoutes";
 import marketplaceRoutes from "./routes/marketplaceRoutes";
 import marketCartRoutes from "./routes/marketCartRoutes";
 import supplierPortalRoutes from "./routes/supplierPortalRoutes";
+import messagingRoutes from "./routes/messagingRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import { sequelize } from "./models";
 
@@ -65,7 +66,14 @@ app.use(cors({
   // can't create a duplicate. Without it here, browsers block those requests (CORS preflight).
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "X-Idempotency-Key"]
 }));
-app.use(express.json());
+app.use(
+  express.json({
+    // The WhatsApp webhook signature (X-Hub-Signature-256) is computed over the raw body
+    verify: (req: any, _res, buf) => {
+      if (req.originalUrl?.startsWith("/api/messaging/webhooks")) req.rawBody = buf;
+    },
+  })
+);
 if (process.env.NODE_ENV !== "test") {
   app.use(morgan("dev")); // quiet during automated tests (see tests/env.ts) — keeps CI output readable
 }
@@ -117,6 +125,7 @@ app.use("/api/supplier-ledger", supplierLedgerRoutes);
 app.use("/api/marketplace", marketplaceRoutes);
 app.use("/api/customer-portal/market", marketCartRoutes);
 app.use("/api/supplier-portal", supplierPortalRoutes);
+app.use("/api/messaging", messagingRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: "Route not found" }));
 app.use(errorHandler);

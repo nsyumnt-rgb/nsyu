@@ -1,3 +1,4 @@
+import { getMyPreferences, updateMyPreferences } from "../controllers/messagingController";
 import { Router } from "express";
 import { requireCustomer } from "../middleware/auth";
 import {
@@ -105,6 +106,8 @@ router.post("/notifications/read-all", markAllPortalNotificationsRead);
 // Profile
 router.get("/me", getPortalProfile);
 router.patch("/me", updatePortalProfile);
+router.get("/me/message-preferences", getMyPreferences);
+router.put("/me/message-preferences", updateMyPreferences);
 
 export default router;
 

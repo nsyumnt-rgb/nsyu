@@ -7,6 +7,7 @@ import app from "./app";
 import { DataTypes } from "sequelize";
 import { sequelize, Product } from "./models";
 import { setVisibilityColumnReady } from "./utils/productVisibility";
+import { startMessagingWorker } from "./utils/messaging/engine";
 
 const PORT = process.env.PORT || 5000;
 
@@ -134,6 +135,36 @@ async function ensureReturnsSchema() {
   await runSqlMigration("10_returns_workflow.sql", "Returns workflow schema verified");
 }
 
+/** Stock transfers between an owner's shops (adopts the legacy table; additive, idempotent). */
+async function ensureStockTransferSchema() {
+  if (sequelize.getDialect() === "postgres") {
+    await runSqlMigration("13_stock_transfers.sql", "Stock transfer schema verified");
+    return;
+  }
+  try {
+    const { StockTransfer } = await import("./models/StockTransfer");
+    await StockTransfer.sync();
+    console.log("✅ Stock transfer schema verified");
+  } catch (err) {
+    console.warn("⚠️ Stock transfer schema — check warning:", err);
+  }
+}
+
+/** WhatsApp + Email messaging tables (additive, idempotent). */
+async function ensureMessagingSchema() {
+  if (sequelize.getDialect() === "postgres") {
+    await runSqlMigration("12_messaging.sql", "Messaging schema verified");
+    return;
+  }
+  try {
+    const { MessagingSettings, MessageTemplate, MessageCampaign, MessageDelivery, CustomerMessagePreference } = await import("./models/Messaging");
+    for (const m of [MessagingSettings, MessageTemplate, MessageCampaign, MessageDelivery, CustomerMessagePreference]) await m.sync();
+    console.log("✅ Messaging schema verified");
+  } catch (err) {
+    console.warn("⚠️ Messaging schema — check warning:", err);
+  }
+}
+
 /**
  * products.visibility (both | marketplace | pos | hidden). Works on MySQL,
  * Postgres and SQLite. If the column can't be added, the attribute is dropped
@@ -172,9 +203,12 @@ async function start() {
     await ensurePromotionsAndSuppliersSchema();
     await ensureReturnsSchema();
     await ensureProductVisibilitySchema();
+    await ensureMessagingSchema();
+    await ensureStockTransferSchema();
 
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`🚀 NSYU Business API running on port ${PORT} (0.0.0.0)`);
+      startMessagingWorker();
     });
   } catch (err) {
     console.error("❌ Unable to start server:", err);

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { onCustomerRegistered } from "../utils/messaging/hooks";
 import { Op } from "sequelize";
 import bcrypt from "bcryptjs";
 import { Customer, Sale, CustomerLedger, CustomerAccount, CustomerRefreshToken, Shop, Notification } from "../models";
@@ -147,6 +148,7 @@ export async function createCustomer(req: Request, res: Response) {
   }
 
   await logAudit({ req, module: "customers", action: "create", entityType: "Customer", entityId: customer.id });
+  onCustomerRegistered(ownerId, shopId, customer.id);
   return res.status(201).json({ success: true, data: customer });
 }
 

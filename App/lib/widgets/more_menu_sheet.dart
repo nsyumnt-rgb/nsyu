@@ -5,9 +5,16 @@ import '../features/dashboard/screens/home_screen.dart';
 import '../providers/auth_provider.dart';
 import '../screens/about_app_screen.dart';
 import '../screens/business_info_screen.dart';
-import '../screens/customer_picker_screen.dart';
 import '../screens/help_support_screen.dart';
 import '../screens/inventory_screen.dart';
+import '../screens/messaging/messaging_screen.dart';
+import '../screens/business/categories_screen.dart';
+import '../screens/business/purchases_screen.dart';
+import '../screens/business/roles_screen.dart';
+import '../screens/business/shop_settings_screen.dart';
+import '../screens/business/stock_screen.dart';
+import '../screens/business/suppliers_screen.dart';
+import '../screens/business/transfers_screen.dart';
 import '../screens/portal/customer_portal_shell.dart';
 import '../screens/profile_screen.dart';
 import '../screens/shop_management_screen.dart';
@@ -17,7 +24,7 @@ import 'app_bottom_nav.dart';
 
 /// Modal bottom sheet for "More Options"
 /// Grouped into clean, balanced sections:
-/// - Business Operations (Dashboard, Inventory, Suppliers, Customer View, Kaccha Khaata, Auto Reminder)
+/// - Business Operations (Dashboard, Inventory, Suppliers, Customer View, Messages, Auto Reminder)
 /// - Account & Shop (Business Info, User Profile, Settings)
 /// - Support & System (Subscription Plan, Help, About, Sign Out)
 class MoreMenuSheet extends StatelessWidget {
@@ -231,7 +238,7 @@ class MoreMenuSheet extends StatelessWidget {
                           Navigator.pop(context);
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const CustomerPickerScreen(showSuppliersOnly: true)),
+                            MaterialPageRoute(builder: (_) => const SuppliersScreen()),
                           );
                         },
                       ),
@@ -258,13 +265,13 @@ class MoreMenuSheet extends StatelessWidget {
                       const SizedBox(width: 10),
                       _buildGridCard(
                         context,
-                        icon: Icons.edit_note_rounded,
-                        label: 'Kaccha Khaata',
+                        icon: Icons.forum_rounded,
+                        label: 'Messages',
                         iconColor: const Color(0xFFD97706),
                         bgColor: const Color(0xFFFFFBEB),
                         onTap: () {
                           Navigator.pop(context);
-                          _showKacchaKhaataSheet(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MessagingScreen()));
                         },
                       ),
                       const SizedBox(width: 10),
@@ -276,10 +283,69 @@ class MoreMenuSheet extends StatelessWidget {
                         bgColor: const Color(0xFFFFF1F2),
                         onTap: () {
                           Navigator.pop(context);
-                          _showAutoReminderSheet(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const MessagingScreen(initialTab: 2)));
                         },
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // ── Stock & purchasing ──
+                  _buildSectionHeader('STOCK & PURCHASING'),
+                  const SizedBox(height: 8),
+                  AppCard(
+                    padding: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        _buildListTile(
+                          icon: Icons.receipt_long_rounded,
+                          title: 'Purchases',
+                          subtitle: 'Buy stock from suppliers, pay dues',
+                          iconColor: const Color(0xFF7C3AED),
+                          bgColor: const Color(0xFFF5F3FF),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PurchasesScreen()));
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
+                        _buildListTile(
+                          icon: Icons.swap_vert_rounded,
+                          title: 'Stock in / out',
+                          subtitle: 'Record movements, see stock history',
+                          iconColor: const Color(0xFF4F46E5),
+                          bgColor: const Color(0xFFEEF2FF),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const StockScreen()));
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
+                        _buildListTile(
+                          icon: Icons.swap_horiz_rounded,
+                          title: 'Stock transfers',
+                          subtitle: 'Move stock between your shops',
+                          iconColor: const Color(0xFF0284C7),
+                          bgColor: const Color(0xFFF0F9FF),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const TransfersScreen()));
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
+                        _buildListTile(
+                          icon: Icons.category_rounded,
+                          title: 'Categories',
+                          subtitle: 'Add, rename and switch off categories',
+                          iconColor: const Color(0xFFD97706),
+                          bgColor: const Color(0xFFFFFBEB),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesScreen()));
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 18),
 
@@ -291,6 +357,45 @@ class MoreMenuSheet extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
+                        _buildListTile(
+                          icon: Icons.forum_rounded,
+                          title: 'Messages',
+                          subtitle: 'WhatsApp & email to customers, automations',
+                          iconColor: const Color(0xFF15803D),
+                          bgColor: const Color(0xFFDCFCE7),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const MessagingScreen()),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
+                        _buildListTile(
+                          icon: Icons.admin_panel_settings_rounded,
+                          title: 'Staff roles',
+                          subtitle: 'What each role can view and change',
+                          iconColor: const Color(0xFF0F766E),
+                          bgColor: const Color(0xFFF0FDFA),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const RolesScreen()));
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
+                        _buildListTile(
+                          icon: Icons.receipt_long_rounded,
+                          title: 'Billing & tax settings',
+                          subtitle: 'Invoice prefix, GST, payment methods',
+                          iconColor: const Color(0xFF2563EB),
+                          bgColor: const Color(0xFFEFF6FF),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const ShopSettingsScreen()));
+                          },
+                        ),
+                        const Divider(height: 1, indent: 56, color: AppColors.border),
                         _buildListTile(
                           icon: Icons.store_mall_directory_rounded,
                           title: 'Shops & Branches',
@@ -615,136 +720,6 @@ class MoreMenuSheet extends StatelessWidget {
       ),
     );
   }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // AUTO REMINDER SHEET
-  // ──────────────────────────────────────────────────────────────────────────
-  void _showAutoReminderSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          return Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.notifications_active_rounded, color: Color(0xFFE11D48)),
-                        SizedBox(width: 8),
-                        Text('Auto Reminder Settings', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.bold, color: AppColors.navy900)),
-                      ],
-                    ),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-                  ],
-                ),
-                const Divider(),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Daily Due Date Reminders', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
-                  subtitle: const Text('Notify defaulters automatically 2 days before & on due date', style: TextStyle(fontSize: 11.5)),
-                  value: true,
-                  onChanged: (v) {},
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('WhatsApp Auto Reminders', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
-                  subtitle: const Text('Send reminder link directly with bill summary', style: TextStyle(fontSize: 11.5)),
-                  value: true,
-                  onChanged: (v) {},
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: PrimaryButton(
-                    label: 'Save Reminder Schedule',
-                    icon: Icons.check_circle_outline,
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      showAppSnackBar(context, 'Auto reminders updated & scheduled');
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // KACCHA KHAATA (ROUGH ESTIMATES / DRAFTS LEDGER) SHEET
-  // ──────────────────────────────────────────────────────────────────────────
-  void _showKacchaKhaataSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.edit_note_rounded, color: Color(0xFFD97706)),
-                    SizedBox(width: 8),
-                    Text('Kaccha Khaata (Estimates)', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.navy900)),
-                  ],
-                ),
-                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
-              ],
-            ),
-            const Divider(),
-            const Text(
-              'Rough/Estimate entries without formal GST invoicing. Tap entry to convert to pukka bill.',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            const Expanded(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.edit_note_rounded, size: 48, color: Color(0xFFCBD5E1)),
-                      SizedBox(height: 12),
-                      Text('No estimate entries yet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),
-                      SizedBox(height: 4),
-                      Text('Tap the button below to record your first rough estimate draft.', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: double.infinity,
-              child: PrimaryButton(
-                label: 'Add Kaccha / Estimate Entry',
-                icon: Icons.add,
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  showAppSnackBar(context, 'New Kaccha Khaata estimate draft opened');
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// Plan & Subscription modal sheet
@@ -859,7 +834,7 @@ void showMyPlanSheet(BuildContext context) {
           ),
           const SizedBox(height: 10),
           _planFeature(Icons.check_circle_rounded, 'Realtime Supabase Cloud Sync across Mobile & Web'),
-          _planFeature(Icons.check_circle_rounded, 'Full GST / Non-GST Invoicing & Kaccha Khaata Drafts'),
+          _planFeature(Icons.check_circle_rounded, 'Full GST / Non-GST Invoicing'),
           _planFeature(Icons.check_circle_rounded, 'Automated WhatsApp Payment Reminders'),
           _planFeature(Icons.check_circle_rounded, 'Product Catalog with Barcode Scanning & Stock Control'),
           _planFeature(Icons.check_circle_rounded, 'Multi-Shop Management with Employee Permissions'),

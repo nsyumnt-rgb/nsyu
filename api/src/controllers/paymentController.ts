@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { onPaymentReceived } from "../utils/messaging/hooks";
 import { CustomerLedger, Sale, Customer, Shop, Notification, sequelize } from "../models";
 import { computeBillPaymentStatus } from "../models/Sale";
 import { streamReceiptPdf } from "../utils/pdf";
@@ -183,6 +184,19 @@ export async function createPayment(req: Request, res: Response) {
         { model: Shop, as: "shop" },
       ],
     });
+
+    if (fullPayment && fullPayment.customer_id && !result.idempotent) {
+      onPaymentReceived({
+        ownerId,
+        shopId,
+        customerId: fullPayment.customer_id,
+        amount: Number(fullPayment.amount),
+        entryId: fullPayment.id,
+        saleId: result.sale?.id,
+        invoiceNumber: result.sale?.invoice_number || req.body.invoiceNumber,
+        balance: Number((fullPayment as any).customer?.current_balance ?? 0),
+      });
+    }
 
     // Asynchronously dispatch payment receipt email confirmation
     if (fullPayment && fullPayment.customer_id) {

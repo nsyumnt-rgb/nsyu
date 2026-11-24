@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/saved_bill.dart';
 import '../navigation/app_navigation.dart';
@@ -170,7 +171,23 @@ class _BillsListScreenState extends State<BillsListScreen> {
                   // Share, Notifications, Search
                   IconButton(
                     icon: const Icon(Icons.share_outlined, color: Color(0xFF475569), size: 21),
-                    onPressed: () {},
+                    tooltip: 'Share summary',
+                    onPressed: () {
+                      final list = allBillsList;
+                      final fmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+                      final total = list.fold<double>(0, (a, x) => a + x.total);
+                      final due = list.fold<double>(0, (a, x) => a + x.dueAmount);
+                      final b = StringBuffer()
+                        ..writeln('Bills (${list.length})')
+                        ..writeln('Total: ${fmt.format(total)}')
+                        ..writeln('Due: ${fmt.format(due)}')
+                        ..writeln();
+                      for (final x in list.take(20)) {
+                        b.writeln('• ${x.billNumber} — ${x.customerName} — ${fmt.format(x.total)}');
+                      }
+                      if (list.length > 20) b.writeln('…and ${list.length - 20} more');
+                      Share.share(b.toString(), subject: 'Bills');
+                    },
                   ),
                   Builder(builder: (ctx) {
                     final unread = ctx.watch<NotificationsProvider>().unreadCount;

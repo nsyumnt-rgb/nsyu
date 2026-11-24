@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePortalStore } from "../../store/portalStore";
 import { updatePortalProfileApi, logoutCustomerApi, changePortalPasswordApi } from "../../api/portal";
 import { apiErrorMessage } from "../../api/client";
+import { getPortalMessagePrefsApi, updatePortalMessagePrefsApi, type PortalMessagePrefs } from "../../api/portal";
+import { Switch } from "../../components/ui";
 
 export default function PortalProfile() {
   const navigate = useNavigate();
@@ -174,6 +176,7 @@ export default function PortalProfile() {
         </div>
       </form>
 
+      <MessagePrefsCard />
       <ChangePasswordCard />
 
       {/* Linked Shop Card */}
@@ -270,5 +273,63 @@ function ChangePasswordCard() {
         <button type="submit" disabled={busy} className="btn-primary">{busy ? "Saving…" : "Change password"}</button>
       </div>
     </form>
+  );
+}
+
+function MessagePrefsCard() {
+  const [p, setP] = useState<PortalMessagePrefs | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    getPortalMessagePrefsApi().then(setP).catch(() => setP(null));
+  }, []);
+  if (!p) return null;
+
+  async function save() {
+    if (!p) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      setP(await updatePortalMessagePrefsApi(p));
+      setMsg({ ok: true, text: "Preferences saved" });
+    } catch (err) {
+      setMsg({ ok: false, text: apiErrorMessage(err) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">
+      <div className="pb-2 border-b border-slate-100">
+        <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Messages from the shop</h2>
+        <p className="text-[12.5px] text-slate-500 mt-1">Choose how you get updates. You can use WhatsApp, email, both, or neither.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Order, bill & payment updates</div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Switch checked={p.allowWhatsapp} onChange={(v) => setP({ ...p, allowWhatsapp: v })} label="WhatsApp" />
+            <Switch checked={p.allowEmail} onChange={(v) => setP({ ...p, allowEmail: v })} label="Email" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Offers & greetings</div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Switch checked={p.promoWhatsapp} onChange={(v) => setP({ ...p, promoWhatsapp: v })} label="WhatsApp" />
+            <Switch checked={p.promoEmail} onChange={(v) => setP({ ...p, promoEmail: v })} label="Email" />
+          </div>
+        </div>
+        <label className="block">
+          <span className="label">Date of birth (optional)</span>
+          <input type="date" className="input" value={p.dateOfBirth || ""} onChange={(e) => setP({ ...p, dateOfBirth: e.target.value })} />
+        </label>
+      </div>
+      {msg && <p className={`text-[13px] rounded-lg px-3 py-2 ${msg.ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>{msg.text}</p>}
+      <div className="flex justify-end">
+        <button type="button" disabled={busy} onClick={save} className="btn-primary">{busy ? "Saving…" : "Save preferences"}</button>
+      </div>
+    </div>
   );
 }

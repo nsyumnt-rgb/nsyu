@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { onInvoiceCreated, onPaymentReceived } from "../utils/messaging/hooks";
 import { isPosVisible, visibilityColumnReady } from "../utils/productVisibility";
 import { Op } from "sequelize";
 import {
@@ -494,6 +495,22 @@ export async function createSale(req: Request, res: Response) {
 
     const sale = await Sale.findByPk(result, { include: saleIncludes });
 
+    // WhatsApp / Email automations (invoice generated, payment received)
+    if (sale && sale.customer_id) {
+      onInvoiceCreated(sale);
+      if (Number(sale.paid_amount) > 0) {
+        onPaymentReceived({
+          ownerId,
+          shopId: sale.shop_id,
+          customerId: sale.customer_id,
+          amount: Number(sale.paid_amount),
+          saleId: sale.id,
+          invoiceNumber: sale.invoice_number,
+          balance: Number((sale as any).customer?.current_balance ?? sale.due_amount),
+        });
+      }
+    }
+
     // Asynchronously dispatch bill email & payment receipt confirmation after DB commit
     if (sale && sale.customer_id) {
       setImmediate(async () => {
@@ -696,6 +713,19 @@ export async function recordSalePayment(req: Request, res: Response) {
     const reloadedSale = result.sale
       ? await Sale.findByPk(result.sale.id, { include: saleIncludes })
       : null;
+
+    if (!result.idempotent) {
+      onPaymentReceived({
+        ownerId,
+        shopId,
+        customerId: Number((reloadedSale || result.sale)?.customer_id || (result.entry as any).customer_id),
+        amount: Number(result.entry.amount),
+        entryId: result.entry.id,
+        saleId: (reloadedSale || result.sale)?.id,
+        invoiceNumber: (reloadedSale || result.sale)?.invoice_number,
+        balance: Number(result.entry.running_balance),
+      });
+    }
 
     return res.status(result.idempotent ? 200 : 201).json({
       success: true,

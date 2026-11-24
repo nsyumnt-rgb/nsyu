@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { onCustomerRegistered } from "../utils/messaging/hooks";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { Op } from "sequelize";
@@ -679,6 +680,7 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
         reference_id: newAccount.id,
       });
     } catch {}
+    onCustomerRegistered(shop.owner_id, shop.id, customer.id);
 
     return res.status(201).json({
       success: true,

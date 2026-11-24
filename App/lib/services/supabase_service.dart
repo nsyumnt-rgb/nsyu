@@ -166,6 +166,13 @@ class SupabaseService {
     throw Exception(data['message'] ?? 'Business registration failed (HTTP ${res.statusCode})');
   }
 
+  /// Signed-in API calls (refresh the session once on 401) for feature services.
+  Future<http.Response> authedGet(Uri url) => _getWithRetry(url);
+  Future<http.Response> authedPost(Uri url, Map<String, dynamic> body) => _postWithRetry(url, body);
+  Future<http.Response> authedPut(Uri url, Map<String, dynamic> body) => _putWithRetry(url, body);
+  Future<http.Response> authedPatch(Uri url, Map<String, dynamic> body) => _patchWithRetry(url, body);
+  Future<http.Response> authedDelete(Uri url) => _deleteWithRetry(url);
+
   Future<http.Response> _getWithRetry(Uri url) async {
     await ensureAuth();
     var res = await http.get(url, headers: _headers);
