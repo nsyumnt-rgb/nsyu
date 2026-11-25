@@ -33,7 +33,7 @@ import {
   campaignContent,
   type Audience,
 } from "../utils/messaging/engine";
-import { getTransporterForShop, relayEnabled } from "../utils/mailer";
+import { getTransporterForShop, relayEnabled, retryEmailNotification } from "../utils/mailer";
 import { decryptSecret } from "../utils/messaging/secrets";
 
 const ctx = (req: Request) => ({ ownerId: req.auth!.ownerId, shopId: Number(req.auth!.shopId) });
@@ -809,7 +809,17 @@ export async function getHistory(req: Request, res: Response) {
 
 export async function retryDelivery(req: Request, res: Response) {
   const { ownerId, shopId } = ctx(req);
-  const d = await MessageDelivery.findOne({ where: { id: Number(req.params.id), owner_id: ownerId, shop_id: shopId } });
+  const rawId = String(req.params.id || "").trim();
+
+  // If this is a system email (e.g. "e20"), retry via EmailNotification service
+  if (rawId.startsWith("e")) {
+    const legacyId = Number(rawId.slice(1));
+    const result = await retryEmailNotification(legacyId, ownerId);
+    if (!result.success) return fail(res, 400, result.message);
+    return res.json({ success: true, message: result.message || "Email resent successfully" });
+  }
+
+  const d = await MessageDelivery.findOne({ where: { id: Number(rawId), owner_id: ownerId, shop_id: shopId } });
   if (!d) return fail(res, 404, "Message not found");
   if (d.status !== "failed") return fail(res, 400, "Only failed messages can be retried");
   const log = [...((d.log as any[]) || []), { at: new Date().toISOString(), event: "manual_retry" }];
