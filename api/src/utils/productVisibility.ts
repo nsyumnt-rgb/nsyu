@@ -43,7 +43,8 @@ export function marketplaceVisibleSql(alias = "p"): string {
 
 /** True when a product may be sold at the POS counter. */
 export function isPosVisible(p: { status?: string | null; visibility?: string | null }): boolean {
-  if (p.status === "inactive") return false;
   const v = p.visibility || "both";
-  return (POS_VISIBLE as string[]).includes(v);
+  // Products explicitly set to marketplace-only or hidden cannot be sold at the POS counter
+  if (v === "marketplace" || v === "hidden") return false;
+  return true;
 }

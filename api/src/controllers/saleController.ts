@@ -205,6 +205,10 @@ export async function createSale(req: Request, res: Response) {
         if (!req.body.orderId && visibilityColumnReady() && !isPosVisible(product)) {
           throw Object.assign(new Error(`"${product.name}" is not available in POS billing`), { status: 400 });
         }
+        if (product.status === "inactive") {
+          product.status = "active";
+          await product.save({ transaction: t });
+        }
 
         const qty = Math.max(1, Math.floor(Number(rawQuantity)));
         const rate = raw.rate !== undefined ? Number(raw.rate) : (raw.unitPrice !== undefined ? Number(raw.unitPrice) : Number(product.selling_price));
