@@ -177,6 +177,43 @@ export default function Inventory({
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
 
+  // Specific Column Filters (Category, SKU, Show, Stock, Purchase Price, Selling Price, Live Price, Margin %, Stock Value)
+  const [skuFilter, setSkuFilter] = useState("");
+  const [showFilter, setShowFilter] = useState<"all" | "both" | "marketplace" | "pos" | "hidden">("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState<"all" | "in_stock" | "low_stock" | "out_of_stock">("all");
+  const [minStockFilter, setMinStockFilter] = useState("");
+  const [maxStockFilter, setMaxStockFilter] = useState("");
+  const [minPurchasePrice, setMinPurchasePrice] = useState("");
+  const [maxPurchasePrice, setMaxPurchasePrice] = useState("");
+  const [minSellingPrice, setMinSellingPrice] = useState("");
+  const [maxSellingPrice, setMaxSellingPrice] = useState("");
+  const [minLivePrice, setMinLivePrice] = useState("");
+  const [maxLivePrice, setMaxLivePrice] = useState("");
+  const [marginRangeFilter, setMarginRangeFilter] = useState<"all" | "high" | "medium" | "low" | "negative">("all");
+  const [minMarginFilter, setMinMarginFilter] = useState("");
+  const [maxMarginFilter, setMaxMarginFilter] = useState("");
+  const [minStockValue, setMinStockValue] = useState("");
+  const [maxStockValue, setMaxStockValue] = useState("");
+
+  // Column Sorting State
+  const [sortField, setSortField] = useState<
+    | "recency"
+    | "name"
+    | "category"
+    | "sku"
+    | "show"
+    | "stock"
+    | "purchasePrice"
+    | "sellingPrice"
+    | "livePrice"
+    | "margin"
+    | "stockValue"
+  >("recency");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Toggle for Advanced Filters bar
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   // Modals
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -347,30 +384,244 @@ export default function Inventory({
     return map;
   }, [products]);
 
-  // Filtered Products for Table
-  // Most recently added / edited / restocked products first.
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const stock = getProductStock(p);
-      const min = Number(p.min_stock ?? 5) || 5;
+  // Active Filter Helpers
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (categoryFilter !== "All") count++;
+    if (skuFilter.trim()) count++;
+    if (showFilter !== "all") count++;
+    if (stockStatusFilter !== "all") count++;
+    if (minStockFilter !== "" || maxStockFilter !== "") count++;
+    if (minPurchasePrice !== "" || maxPurchasePrice !== "") count++;
+    if (minSellingPrice !== "" || maxSellingPrice !== "") count++;
+    if (minLivePrice !== "" || maxLivePrice !== "") count++;
+    if (marginRangeFilter !== "all" || minMarginFilter !== "" || maxMarginFilter !== "") count++;
+    if (minStockValue !== "" || maxStockValue !== "") count++;
+    return count;
+  }, [
+    categoryFilter,
+    skuFilter,
+    showFilter,
+    stockStatusFilter,
+    minStockFilter,
+    maxStockFilter,
+    minPurchasePrice,
+    maxPurchasePrice,
+    minSellingPrice,
+    maxSellingPrice,
+    minLivePrice,
+    maxLivePrice,
+    marginRangeFilter,
+    minMarginFilter,
+    maxMarginFilter,
+    minStockValue,
+    maxStockValue,
+  ]);
 
-      if (activeFilter === "Live" && p.status !== "active") return false;
-      if (activeFilter === "Offline" && p.status === "active") return false;
-      if (activeFilter === "Low Stock" && (stock <= 0 || stock > min)) return false;
-      if (activeFilter === "Out of Stock" && stock > 0) return false;
+  const hasActiveColumnFilters = activeFilterCount > 0;
 
-      if (categoryFilter !== "All" && p.category?.name !== categoryFilter) return false;
+  function handleClearAllFilters() {
+    setCategoryFilter("All");
+    setSkuFilter("");
+    setShowFilter("all");
+    setStockStatusFilter("all");
+    setMinStockFilter("");
+    setMaxStockFilter("");
+    setMinPurchasePrice("");
+    setMaxPurchasePrice("");
+    setMinSellingPrice("");
+    setMaxSellingPrice("");
+    setMinLivePrice("");
+    setMaxLivePrice("");
+    setMarginRangeFilter("all");
+    setMinMarginFilter("");
+    setMaxMarginFilter("");
+    setMinStockValue("");
+    setMaxStockValue("");
+    setSearchQuery("");
+    setActiveFilter("All");
+    setSortField("recency");
+    setSortDirection("asc");
+  }
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const mName = p.name.toLowerCase().includes(q);
-        const mSku = p.sku.toLowerCase().includes(q);
-        const mBarcode = p.barcode?.toLowerCase().includes(q);
-        if (!mName && !mSku && !mBarcode) return false;
+  function handleSort(field: typeof sortField) {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        setSortField("recency");
+        setSortDirection("asc");
       }
-      return true;
-    }).sort(byRecentChange);
-  }, [products, activeFilter, categoryFilter, searchQuery, getProductStock]);
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  }
+
+  function renderSortIndicator(field: typeof sortField) {
+    if (sortField !== field) {
+      return (
+        <span className="ml-1 text-emerald-300/40 opacity-40 group-hover:opacity-100 transition-opacity">
+          ↕
+        </span>
+      );
+    }
+    return (
+      <span className="ml-1 text-amber-300 font-black">
+        {sortDirection === "asc" ? "▲" : "▼"}
+      </span>
+    );
+  }
+
+  // Filtered Products for Table
+  // Applies column filters for Category, SKU, Show, Stock, Purchase Price, Selling Price, Live Price, Margin %, Stock Value
+  // and sorts according to the user-selected column header.
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter((p) => {
+        const stock = getProductStock(p);
+        const min = Number(p.min_stock ?? 5) || 5;
+        const pp = Number(p.purchase_price || 0);
+        const sp = Number(p.selling_price || 0);
+        const lp = Number(p.live_price ?? sp);
+        const margin = sp > 0 ? ((sp - pp) / sp) * 100 : 0;
+        const stockVal = Math.max(0, stock) * pp;
+        const vis = effectiveVisibility(p);
+
+        // Status Segment Filters
+        if (activeFilter === "Live" && p.status !== "active") return false;
+        if (activeFilter === "Offline" && p.status === "active") return false;
+        if (activeFilter === "Low Stock" && (stock <= 0 || stock > min)) return false;
+        if (activeFilter === "Out of Stock" && stock > 0) return false;
+
+        // 1. Category Filter
+        const catName = p.category?.name || "Uncategorized";
+        if (categoryFilter !== "All" && catName !== categoryFilter) return false;
+
+        // 2. SKU Filter
+        if (skuFilter.trim()) {
+          const q = skuFilter.toLowerCase().trim();
+          if (!p.sku.toLowerCase().includes(q)) return false;
+        }
+
+        // 3. Show Filter (both, marketplace, pos, hidden)
+        if (showFilter !== "all") {
+          if (vis !== showFilter) return false;
+        }
+
+        // 4. Stock Filter
+        if (stockStatusFilter === "in_stock" && stock <= 0) return false;
+        if (stockStatusFilter === "low_stock" && (stock <= 0 || stock > min)) return false;
+        if (stockStatusFilter === "out_of_stock" && stock > 0) return false;
+        if (minStockFilter !== "" && stock < Number(minStockFilter)) return false;
+        if (maxStockFilter !== "" && stock > Number(maxStockFilter)) return false;
+
+        // 5. Purchase Price Filter
+        if (minPurchasePrice !== "" && pp < Number(minPurchasePrice)) return false;
+        if (maxPurchasePrice !== "" && pp > Number(maxPurchasePrice)) return false;
+
+        // 6. Selling Price Filter
+        if (minSellingPrice !== "" && sp < Number(minSellingPrice)) return false;
+        if (maxSellingPrice !== "" && sp > Number(maxSellingPrice)) return false;
+
+        // 7. Live Price Filter
+        if (minLivePrice !== "" && lp < Number(minLivePrice)) return false;
+        if (maxLivePrice !== "" && lp > Number(maxLivePrice)) return false;
+
+        // 8. Margin (%) Filter
+        if (marginRangeFilter === "negative" && margin >= 0) return false;
+        if (marginRangeFilter === "low" && (margin < 0 || margin >= 10)) return false;
+        if (marginRangeFilter === "medium" && (margin < 10 || margin >= 25)) return false;
+        if (marginRangeFilter === "high" && margin < 25) return false;
+        if (minMarginFilter !== "" && margin < Number(minMarginFilter)) return false;
+        if (maxMarginFilter !== "" && margin > Number(maxMarginFilter)) return false;
+
+        // 9. Stock Value Filter
+        if (minStockValue !== "" && stockVal < Number(minStockValue)) return false;
+        if (maxStockValue !== "" && stockVal > Number(maxStockValue)) return false;
+
+        // General search box (name, SKU, barcode)
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const mName = p.name.toLowerCase().includes(q);
+          const mSku = p.sku.toLowerCase().includes(q);
+          const mBarcode = p.barcode?.toLowerCase().includes(q);
+          if (!mName && !mSku && !mBarcode) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortField === "recency") {
+          return byRecentChange(a, b);
+        }
+        let cmp = 0;
+        if (sortField === "name") {
+          cmp = a.name.localeCompare(b.name);
+        } else if (sortField === "category") {
+          const catA = a.category?.name || "Uncategorized";
+          const catB = b.category?.name || "Uncategorized";
+          cmp = catA.localeCompare(catB);
+        } else if (sortField === "sku") {
+          cmp = (a.sku || "").localeCompare(b.sku || "");
+        } else if (sortField === "show") {
+          const visA = effectiveVisibility(a);
+          const visB = effectiveVisibility(b);
+          cmp = visA.localeCompare(visB);
+        } else if (sortField === "stock") {
+          const sA = getProductStock(a);
+          const sB = getProductStock(b);
+          cmp = sA - sB;
+        } else if (sortField === "purchasePrice") {
+          cmp = Number(a.purchase_price || 0) - Number(b.purchase_price || 0);
+        } else if (sortField === "sellingPrice") {
+          cmp = Number(a.selling_price || 0) - Number(b.selling_price || 0);
+        } else if (sortField === "livePrice") {
+          const lpA = Number(a.live_price ?? a.selling_price ?? 0);
+          const lpB = Number(b.live_price ?? b.selling_price ?? 0);
+          cmp = lpA - lpB;
+        } else if (sortField === "margin") {
+          const ppA = Number(a.purchase_price || 0);
+          const spA = Number(a.selling_price || 0);
+          const mA = spA > 0 ? ((spA - ppA) / spA) * 100 : 0;
+
+          const ppB = Number(b.purchase_price || 0);
+          const spB = Number(b.selling_price || 0);
+          const mB = spB > 0 ? ((spB - ppB) / spB) * 100 : 0;
+
+          cmp = mA - mB;
+        } else if (sortField === "stockValue") {
+          const svA = Math.max(0, getProductStock(a)) * Number(a.purchase_price || 0);
+          const svB = Math.max(0, getProductStock(b)) * Number(b.purchase_price || 0);
+          cmp = svA - svB;
+        }
+
+        return sortDirection === "asc" ? cmp : -cmp;
+      });
+  }, [
+    products,
+    activeFilter,
+    categoryFilter,
+    skuFilter,
+    showFilter,
+    stockStatusFilter,
+    minStockFilter,
+    maxStockFilter,
+    minPurchasePrice,
+    maxPurchasePrice,
+    minSellingPrice,
+    maxSellingPrice,
+    minLivePrice,
+    maxLivePrice,
+    marginRangeFilter,
+    minMarginFilter,
+    maxMarginFilter,
+    minStockValue,
+    maxStockValue,
+    searchQuery,
+    sortField,
+    sortDirection,
+    getProductStock,
+  ]);
 
   // Filtered Movement History
   const filteredMovements = useMemo(() => {
@@ -1555,8 +1806,440 @@ export default function Inventory({
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </div>
+
+          {/* Advanced / Column Filters Toggle Button */}
+          {activeFilter !== "Stock Movement" && (
+            <button
+              type="button"
+              onClick={() => setShowAdvancedFilters((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                showAdvancedFilters || hasActiveColumnFilters
+                  ? "bg-[#064E3B] text-white border-emerald-700 shadow-xs"
+                  : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+              }`}
+              title="Filter by Category, SKU, Show, Stock, Purchase Price, Selling Price, Live Price, Margin %, Stock Value"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              </svg>
+              <span>Filters</span>
+              {hasActiveColumnFilters && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-emerald-950 text-[10px] font-black">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Active Filter Chips & Clear All */}
+      {hasActiveColumnFilters && activeFilter !== "Stock Movement" && (
+        <div className="flex flex-wrap items-center gap-1.5 bg-emerald-50/70 border border-emerald-200/90 p-2.5 rounded-2xl shadow-2xs">
+          <span className="text-xs font-bold text-emerald-900 flex items-center gap-1 mr-1">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+            </svg>
+            Active Filters ({activeFilterCount}):
+          </span>
+
+          {categoryFilter !== "All" && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Category: {categoryFilter}
+              <button
+                type="button"
+                onClick={() => setCategoryFilter("All")}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove category filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {skuFilter.trim() && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs font-mono">
+              SKU: "{skuFilter}"
+              <button
+                type="button"
+                onClick={() => setSkuFilter("")}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove SKU filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {showFilter !== "all" && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs uppercase">
+              Show: {showFilter}
+              <button
+                type="button"
+                onClick={() => setShowFilter("all")}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove show filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {stockStatusFilter !== "all" && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Stock: {stockStatusFilter === "in_stock" ? "In Stock (>0)" : stockStatusFilter === "low_stock" ? "Low Stock (≤min)" : "Out of Stock (0)"}
+              <button
+                type="button"
+                onClick={() => setStockStatusFilter("all")}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove stock status filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {(minStockFilter !== "" || maxStockFilter !== "") && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Stock Qty: {minStockFilter || "0"} - {maxStockFilter || "∞"}
+              <button
+                type="button"
+                onClick={() => {
+                  setMinStockFilter("");
+                  setMaxStockFilter("");
+                }}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove stock quantity filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {(minPurchasePrice !== "" || maxPurchasePrice !== "") && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Purchase: ₹{minPurchasePrice || "0"} - ₹{maxPurchasePrice || "∞"}
+              <button
+                type="button"
+                onClick={() => {
+                  setMinPurchasePrice("");
+                  setMaxPurchasePrice("");
+                }}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove purchase price filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {(minSellingPrice !== "" || maxSellingPrice !== "") && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Selling: ₹{minSellingPrice || "0"} - ₹{maxSellingPrice || "∞"}
+              <button
+                type="button"
+                onClick={() => {
+                  setMinSellingPrice("");
+                  setMaxSellingPrice("");
+                }}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove selling price filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {(minLivePrice !== "" || maxLivePrice !== "") && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Live: ₹{minLivePrice || "0"} - ₹{maxLivePrice || "∞"}
+              <button
+                type="button"
+                onClick={() => {
+                  setMinLivePrice("");
+                  setMaxLivePrice("");
+                }}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove live price filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {(marginRangeFilter !== "all" || minMarginFilter !== "" || maxMarginFilter !== "") && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Margin: {marginRangeFilter === "high" ? ">25%" : marginRangeFilter === "medium" ? "10-25%" : marginRangeFilter === "low" ? "0-10%" : marginRangeFilter === "negative" ? "<0% (Loss)" : `${minMarginFilter || "0"}% - ${maxMarginFilter || "100"}%`}
+              <button
+                type="button"
+                onClick={() => {
+                  setMarginRangeFilter("all");
+                  setMinMarginFilter("");
+                  setMaxMarginFilter("");
+                }}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove margin filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {(minStockValue !== "" || maxStockValue !== "") && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 text-emerald-900 text-xs font-bold shadow-2xs">
+              Stock Value: ₹{minStockValue || "0"} - ₹{maxStockValue || "∞"}
+              <button
+                type="button"
+                onClick={() => {
+                  setMinStockValue("");
+                  setMaxStockValue("");
+                }}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Remove stock value filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {sortField !== "recency" && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-sky-50 border border-sky-300 text-sky-950 text-xs font-bold shadow-2xs">
+              Sorted: {sortField} ({sortDirection === "asc" ? "Asc" : "Desc"})
+              <button
+                type="button"
+                onClick={() => {
+                  setSortField("recency");
+                  setSortDirection("asc");
+                }}
+                className="text-slate-400 hover:text-rose-600 font-bold ml-1 cursor-pointer"
+                title="Reset sort"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={handleClearAllFilters}
+            className="text-xs text-rose-600 hover:text-rose-800 font-black underline ml-auto px-2 py-0.5 cursor-pointer"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/* Expandable Advanced Filter Panel (Category, SKU, Show, Stock, Purchase, Selling, Live, Margin, Stock Value) */}
+      {showAdvancedFilters && activeFilter !== "Stock Movement" && (
+        <div className="bg-white p-4 rounded-2xl border border-emerald-200/90 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-600" />
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Filter by All 9 Inventory Dimensions
+              </h4>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="text-xs text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+              >
+                Reset All
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters(false)}
+                className="text-xs text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {/* 1. Category */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">1. Category</label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="All">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2. SKU */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">2. SKU Code</label>
+              <input
+                type="text"
+                placeholder="Search SKU..."
+                value={skuFilter}
+                onChange={(e) => setSkuFilter(e.target.value)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* 3. Show (Visibility) */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">3. Show (Visibility)</label>
+              <select
+                value={showFilter}
+                onChange={(e) => setShowFilter(e.target.value as any)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="all">All Channels</option>
+                <option value="both">BOTH (Marketplace + POS)</option>
+                <option value="marketplace">MKT (Marketplace Only)</option>
+                <option value="pos">POS (POS Billing Only)</option>
+                <option value="hidden">HIDE (Hidden)</option>
+              </select>
+            </div>
+
+            {/* 4. Stock Level */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">4. Stock</label>
+              <select
+                value={stockStatusFilter}
+                onChange={(e) => setStockStatusFilter(e.target.value as any)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="all">All Levels</option>
+                <option value="in_stock">In Stock (&gt; 0)</option>
+                <option value="low_stock">Low Stock (≤ Min Stock)</option>
+                <option value="out_of_stock">Out of Stock (0)</option>
+              </select>
+            </div>
+
+            {/* 5. Purchase Price Range */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">5. Purchase Price (₹)</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min ₹"
+                  value={minPurchasePrice}
+                  onChange={(e) => setMinPurchasePrice(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-slate-400 text-xs">-</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max ₹"
+                  value={maxPurchasePrice}
+                  onChange={(e) => setMaxPurchasePrice(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* 6. Selling Price Range */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">6. Selling Price (₹)</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min ₹"
+                  value={minSellingPrice}
+                  onChange={(e) => setMinSellingPrice(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-slate-400 text-xs">-</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max ₹"
+                  value={maxSellingPrice}
+                  onChange={(e) => setMaxSellingPrice(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* 7. Live Price Range */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">7. Live Price (₹)</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min ₹"
+                  value={minLivePrice}
+                  onChange={(e) => setMinLivePrice(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-slate-400 text-xs">-</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max ₹"
+                  value={maxLivePrice}
+                  onChange={(e) => setMaxLivePrice(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* 8. Margin (%) */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">8. Margin (%)</label>
+              <select
+                value={marginRangeFilter}
+                onChange={(e) => setMarginRangeFilter(e.target.value as any)}
+                className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="all">All Margins</option>
+                <option value="high">&gt; 25% (High Margin)</option>
+                <option value="medium">10% - 25% (Medium Margin)</option>
+                <option value="low">0% - 10% (Low Margin)</option>
+                <option value="negative">&lt; 0% (Loss Making)</option>
+              </select>
+            </div>
+
+            {/* 9. Stock Value Range */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-700">9. Stock Value (₹)</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Min ₹"
+                  value={minStockValue}
+                  onChange={(e) => setMinStockValue(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <span className="text-slate-400 text-xs">-</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Max ₹"
+                  value={maxStockValue}
+                  onChange={(e) => setMaxStockValue(e.target.value)}
+                  className="w-1/2 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-right outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ============================================================== */}
       {/* 4. INVENTORY TABLE                                              */}
@@ -1646,18 +2329,86 @@ export default function Inventory({
         {/* Main Inventory Table with All 5 Requested Features (Desktop) */}
         <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-xs">
           <table className="w-full text-left text-xs min-w-[1000px]">
-            <thead className="bg-[#064E3B] text-white font-bold uppercase text-[10px] tracking-wider">
+            <thead className="bg-[#064E3B] text-white font-bold uppercase text-[10px] tracking-wider select-none">
+              {/* Row 1: Sortable Column Headers */}
               <tr>
-                <th className="p-3 w-52 max-w-[210px]">Product</th>
-                {/* Requirement 4: Category column moved left immediately next to product */}
-                <th className="p-3 text-center w-16">Category</th>
-                <th className="p-3 w-20">SKU</th>
-                {/* SHOW: Marketplace / POS visibility badge (click to change) */}
-                <th className="p-3 text-center w-16" title="BOTH = Marketplace + POS · MKT = Marketplace only · POS = POS billing only · HIDE = hidden">Show</th>
-                {/* Requirement 3: Editable fields: Quantity, Purchase, Selling, Margin */}
-                <th className="p-3 text-center w-20">Stock</th>
-                <th className="p-3 text-right w-24">Purchase Price</th>
-                <th className="p-3 text-right w-24">Selling Price</th>
+                <th className="p-3 w-52 max-w-[210px]">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("name")}
+                    className="group inline-flex items-center gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer"
+                    title="Click to sort by Product Name"
+                  >
+                    <span>Product</span>
+                    {renderSortIndicator("name")}
+                  </button>
+                </th>
+                <th className="p-2 text-center w-28">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("category")}
+                    className="group inline-flex items-center justify-center gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer"
+                    title="Click to sort by Category"
+                  >
+                    <span>Category</span>
+                    {renderSortIndicator("category")}
+                  </button>
+                </th>
+                <th className="p-2 w-24">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("sku")}
+                    className="group inline-flex items-center gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer"
+                    title="Click to sort by SKU"
+                  >
+                    <span>SKU</span>
+                    {renderSortIndicator("sku")}
+                  </button>
+                </th>
+                <th className="p-2 text-center w-20" title="BOTH = Marketplace + POS · MKT = Marketplace only · POS = POS billing only · HIDE = hidden">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("show")}
+                    className="group inline-flex items-center justify-center gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer"
+                    title="Click to sort by Channel Visibility"
+                  >
+                    <span>Show</span>
+                    {renderSortIndicator("show")}
+                  </button>
+                </th>
+                <th className="p-2 text-center w-24">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("stock")}
+                    className="group inline-flex items-center justify-center gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer"
+                    title="Click to sort by Stock quantity"
+                  >
+                    <span>Stock</span>
+                    {renderSortIndicator("stock")}
+                  </button>
+                </th>
+                <th className="p-2 text-right w-28">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("purchasePrice")}
+                    className="group inline-flex items-center justify-end gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer w-full"
+                    title="Click to sort by Purchase Price"
+                  >
+                    <span>Purchase Price</span>
+                    {renderSortIndicator("purchasePrice")}
+                  </button>
+                </th>
+                <th className="p-2 text-right w-28">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("sellingPrice")}
+                    className="group inline-flex items-center justify-end gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer w-full"
+                    title="Click to sort by Selling Price"
+                  >
+                    <span>Selling Price</span>
+                    {renderSortIndicator("sellingPrice")}
+                  </button>
+                </th>
                 {/* Arrow Header: Copy Selling Price to Live Price */}
                 <th className="p-2 text-center w-9">
                   <button
@@ -1686,18 +2437,279 @@ export default function Inventory({
                     )}
                   </button>
                 </th>
-                <th className="p-3 text-right w-24">Live Price</th>
-                <th className="p-3 text-right w-20">Margin (%)</th>
-                <th className="p-3 text-right w-24">Stock Value</th>
-                {/* Requirement 1 & 5: Action Icons with View Details (Eye) */}
-                <th className="p-3 text-center w-16">Actions</th>
+                <th className="p-2 text-right w-28">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("livePrice")}
+                    className="group inline-flex items-center justify-end gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer w-full"
+                    title="Click to sort by Live Price"
+                  >
+                    <span>Live Price</span>
+                    {renderSortIndicator("livePrice")}
+                  </button>
+                </th>
+                <th className="p-2 text-right w-24">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("margin")}
+                    className="group inline-flex items-center justify-end gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer w-full"
+                    title="Click to sort by Margin %"
+                  >
+                    <span>Margin (%)</span>
+                    {renderSortIndicator("margin")}
+                  </button>
+                </th>
+                <th className="p-2 text-right w-28">
+                  <button
+                    type="button"
+                    onClick={() => handleSort("stockValue")}
+                    className="group inline-flex items-center justify-end gap-1 font-bold text-white hover:text-emerald-200 transition cursor-pointer w-full"
+                    title="Click to sort by Stock Value"
+                  >
+                    <span>Stock Value</span>
+                    {renderSortIndicator("stockValue")}
+                  </button>
+                </th>
+                <th className="p-2 text-center w-20">Actions</th>
+              </tr>
+
+              {/* Row 2: In-Table Column Filters for All 9 Requested Columns */}
+              <tr className="bg-[#033b2c] border-t border-emerald-700/60 font-normal lowercase tracking-normal">
+                {/* Product Column Info */}
+                <th className="p-2 w-52 max-w-[210px]">
+                  <div className="flex items-center justify-between text-[10px] text-emerald-200/90 font-bold uppercase tracking-wider">
+                    <span className="flex items-center gap-1">
+                      <svg className="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                      </svg>
+                      Filters:
+                    </span>
+                    {hasActiveColumnFilters && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllFilters}
+                        className="text-amber-300 hover:text-white underline lowercase font-bold text-[10px] cursor-pointer"
+                      >
+                        clear
+                      </button>
+                    )}
+                  </div>
+                </th>
+
+                {/* 1. Category Filter */}
+                <th className="p-1.5 w-28 text-center">
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-full px-1.5 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
+                    title="Filter by Category"
+                  >
+                    <option value="All">All Categories</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+
+                {/* 2. SKU Filter */}
+                <th className="p-1.5 w-24">
+                  <input
+                    type="text"
+                    value={skuFilter}
+                    onChange={(e) => setSkuFilter(e.target.value)}
+                    placeholder="SKU..."
+                    className="w-full px-1.5 py-1 text-[10px] bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 font-mono"
+                    title="Filter by SKU"
+                  />
+                </th>
+
+                {/* 3. Show Filter */}
+                <th className="p-1.5 w-20 text-center">
+                  <select
+                    value={showFilter}
+                    onChange={(e) => setShowFilter(e.target.value as any)}
+                    className="w-full px-1 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer uppercase"
+                    title="Filter by Show (Visibility)"
+                  >
+                    <option value="all">All</option>
+                    <option value="both">BOTH</option>
+                    <option value="marketplace">MKT</option>
+                    <option value="pos">POS</option>
+                    <option value="hidden">HIDE</option>
+                  </select>
+                </th>
+
+                {/* 4. Stock Filter */}
+                <th className="p-1.5 w-24 text-center">
+                  <select
+                    value={stockStatusFilter}
+                    onChange={(e) => setStockStatusFilter(e.target.value as any)}
+                    className="w-full px-1.5 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
+                    title="Filter by Stock level"
+                  >
+                    <option value="all">All Stock</option>
+                    <option value="in_stock">In Stock (&gt;0)</option>
+                    <option value="low_stock">Low (≤min)</option>
+                    <option value="out_of_stock">Out (0)</option>
+                  </select>
+                </th>
+
+                {/* 5. Purchase Price Filter */}
+                <th className="p-1.5 w-28 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Min"
+                      value={minPurchasePrice}
+                      onChange={(e) => setMinPurchasePrice(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Min Purchase Price"
+                    />
+                    <span className="text-emerald-400/60">-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Max"
+                      value={maxPurchasePrice}
+                      onChange={(e) => setMaxPurchasePrice(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Max Purchase Price"
+                    />
+                  </div>
+                </th>
+
+                {/* 6. Selling Price Filter */}
+                <th className="p-1.5 w-28 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Min"
+                      value={minSellingPrice}
+                      onChange={(e) => setMinSellingPrice(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Min Selling Price"
+                    />
+                    <span className="text-emerald-400/60">-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Max"
+                      value={maxSellingPrice}
+                      onChange={(e) => setMaxSellingPrice(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Max Selling Price"
+                    />
+                  </div>
+                </th>
+
+                {/* Bulk Sync Column Spacer */}
+                <th className="p-1 w-9 text-center">
+                  <span className="text-emerald-400/30 text-[10px]">—</span>
+                </th>
+
+                {/* 7. Live Price Filter */}
+                <th className="p-1.5 w-28 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Min"
+                      value={minLivePrice}
+                      onChange={(e) => setMinLivePrice(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Min Live Price"
+                    />
+                    <span className="text-emerald-400/60">-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Max"
+                      value={maxLivePrice}
+                      onChange={(e) => setMaxLivePrice(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Max Live Price"
+                    />
+                  </div>
+                </th>
+
+                {/* 8. Margin (%) Filter */}
+                <th className="p-1.5 w-24 text-right">
+                  <select
+                    value={marginRangeFilter}
+                    onChange={(e) => setMarginRangeFilter(e.target.value as any)}
+                    className="w-full px-1.5 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
+                    title="Filter by Margin %"
+                  >
+                    <option value="all">All</option>
+                    <option value="high">&gt; 25%</option>
+                    <option value="medium">10-25%</option>
+                    <option value="low">0-10%</option>
+                    <option value="negative">&lt; 0%</option>
+                  </select>
+                </th>
+
+                {/* 9. Stock Value Filter */}
+                <th className="p-1.5 w-28 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Min"
+                      value={minStockValue}
+                      onChange={(e) => setMinStockValue(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Min Stock Value (₹)"
+                    />
+                    <span className="text-emerald-400/60">-</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Max"
+                      value={maxStockValue}
+                      onChange={(e) => setMaxStockValue(e.target.value)}
+                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
+                      title="Max Stock Value (₹)"
+                    />
+                  </div>
+                </th>
+
+                {/* Action Reset Button */}
+                <th className="p-1.5 w-20 text-center">
+                  {hasActiveColumnFilters ? (
+                    <button
+                      type="button"
+                      onClick={handleClearAllFilters}
+                      className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[9px] uppercase tracking-wider transition shadow-2xs cursor-pointer"
+                      title="Reset all filters"
+                    >
+                      Reset
+                    </button>
+                  ) : (
+                    <span className="text-emerald-400/40 text-[9px] uppercase font-bold tracking-wider">
+                      Filters
+                    </span>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="p-12 text-center text-slate-400">
-                    No products match the selected inventory filter.
+                    <p className="text-sm font-semibold text-slate-600">No products match the selected inventory filter.</p>
+                    {hasActiveColumnFilters && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllFilters}
+                        className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                      >
+                        Reset All Filters
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -2165,7 +3177,16 @@ export default function Inventory({
         <div className="md:hidden space-y-3">
           {filteredProducts.length === 0 ? (
             <div className="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
-              No products match the selected inventory filter.
+              <p className="text-sm font-semibold text-slate-600">No products match the selected inventory filter.</p>
+              {hasActiveColumnFilters && (
+                <button
+                  type="button"
+                  onClick={handleClearAllFilters}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              )}
             </div>
           ) : (
             filteredProducts.map((p) => {
