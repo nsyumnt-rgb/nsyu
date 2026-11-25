@@ -23,7 +23,7 @@ import { recordStockMovement } from "../utils/inventory";
 import { generateUniqueReceiptCode, recordCustomerPaymentTransaction, recordLedgerEntry, reverseLedgerEntry } from "../utils/ledger";
 import { nextInvoiceNumber } from "../utils/invoice";
 import { logAudit } from "../utils/audit";
-import { streamBillPdf } from "../utils/pdf";
+import { streamBillPdf, generateBillPdfBuffer } from "../utils/pdf";
 import { sendBillEmail, sendPaymentReceiptEmail } from "../utils/mailer";
 
 function round2(n: number): number {
@@ -527,11 +527,25 @@ export async function createSale(req: Request, res: Response) {
             totalAmount: Number(it.total_amount),
           }));
 
+          let pdfBuffer: Buffer | undefined;
+          try {
+            pdfBuffer = await generateBillPdfBuffer(sale.toJSON());
+          } catch (pdfErr) {
+            console.warn("Could not generate invoice PDF for email attachment:", pdfErr);
+          }
+
+          const targetEmail = req.body?.customerEmail || req.body?.email || saleAny.customer?.email;
+
+          if (targetEmail && saleAny.customer && !saleAny.customer.email) {
+            saleAny.customer.email = targetEmail;
+            await saleAny.customer.save().catch(() => {});
+          }
+
           await sendBillEmail({
             ownerId,
             shopId,
             customerId: sale.customer_id,
-            customerEmail: saleAny.customer?.email,
+            customerEmail: targetEmail,
             customerName: saleAny.customer?.name,
             invoiceNumber: sale.invoice_number,
             totalAmount: Number(sale.total_amount),
@@ -540,6 +554,7 @@ export async function createSale(req: Request, res: Response) {
             paymentStatus: sale.payment_status || sale.status,
             invoiceDate: sale.invoice_date,
             items: itemSummaries,
+            pdfAttachment: pdfBuffer ? { filename: `${sale.invoice_number}.pdf`, content: pdfBuffer } : undefined,
           });
 
           if (Number(sale.paid_amount) > 0) {
@@ -1150,6 +1165,75 @@ export async function downloadBillPdf(req: Request, res: Response) {
   if (!sale) return res.status(404).json({ success: false, message: "Sale not found" });
 
   streamBillPdf(res, sale.toJSON());
+}
+
+/** Sends or re-sends the invoice email (with attached PDF) to the customer. */
+export async function sendSaleEmail(req: Request, res: Response) {
+  const where: any = { id: req.params.saleId, owner_id: req.auth!.ownerId };
+  if (!req.auth!.isOwner) {
+    where.shop_id = req.auth!.shopId;
+  }
+  const sale = await Sale.findOne({
+    where,
+    include: saleIncludes,
+  });
+  if (!sale) return res.status(404).json({ success: false, message: "Sale not found" });
+
+  const saleAny = sale as any;
+  const targetEmail = req.body?.email?.trim() || saleAny.customer?.email?.trim();
+
+  if (!targetEmail || !targetEmail.includes("@")) {
+    return res.status(400).json({
+      success: false,
+      message: "Customer does not have a registered email address. Please provide a valid email.",
+    });
+  }
+
+  // Update customer email if not set
+  if (saleAny.customer && !saleAny.customer.email && targetEmail) {
+    saleAny.customer.email = targetEmail;
+    await saleAny.customer.save().catch(() => {});
+  }
+
+  const itemSummaries = (saleAny.items || []).map((it: any) => ({
+    productName: it.product_name,
+    quantity: Number(it.quantity),
+    rate: Number(it.rate),
+    totalAmount: Number(it.total_amount),
+  }));
+
+  let pdfBuffer: Buffer | undefined;
+  try {
+    pdfBuffer = await generateBillPdfBuffer(sale.toJSON());
+  } catch (pdfErr) {
+    console.warn("Could not generate PDF attachment:", pdfErr);
+  }
+
+  const result = await sendBillEmail({
+    ownerId: req.auth!.ownerId,
+    shopId: sale.shop_id,
+    customerId: sale.customer_id,
+    customerEmail: targetEmail,
+    customerName: saleAny.customer?.name,
+    invoiceNumber: sale.invoice_number,
+    totalAmount: Number(sale.total_amount),
+    paidAmount: Number(sale.paid_amount),
+    dueAmount: Number(sale.due_amount),
+    paymentStatus: sale.payment_status || sale.status,
+    invoiceDate: sale.invoice_date,
+    items: itemSummaries,
+    pdfAttachment: pdfBuffer ? { filename: `${sale.invoice_number}.pdf`, content: pdfBuffer } : undefined,
+  });
+
+  if (!result.success && !result.skipped) {
+    return res.status(500).json({ success: false, message: result.error || "Failed to deliver email" });
+  }
+
+  return res.json({
+    success: true,
+    message: `Invoice #${sale.invoice_number} sent to ${targetEmail}`,
+    emailNotificationId: result.emailNotificationId,
+  });
 }
 
 /** Updates a sale (status, paidAmount, notes) */

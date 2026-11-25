@@ -10,6 +10,7 @@ import {
   cancelSale,
   returnSale,
   downloadBillPdf,
+  sendSaleEmail,
   updateSale,
 } from "../controllers/saleController";
 
@@ -29,5 +30,7 @@ router.post("/:saleId/returns", requirePermission("sales", "edit"), returnSale);
 router.post("/:saleId/return", requirePermission("sales", "edit"), returnSale); // alias
 router.get("/:saleId/bill/pdf", requirePermission("billing", "view"), downloadBillPdf);
 router.get("/:saleId/pdf", requirePermission("billing", "view"), downloadBillPdf); // alias
+router.post("/:saleId/send-email", requirePermission("billing", "view"), sendSaleEmail);
+router.post("/:saleId/email", requirePermission("billing", "view"), sendSaleEmail); // alias
 
 export default router;

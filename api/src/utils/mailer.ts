@@ -230,6 +230,7 @@ export interface TrackedEmailDispatchParams {
   referenceType?: string;
   referenceId?: number;
   payload?: any;
+  attachments?: Array<{ filename: string; content: Buffer | string; contentType?: string }>;
 }
 
 export async function dispatchTrackedEmail(params: TrackedEmailDispatchParams): Promise<{
@@ -329,6 +330,7 @@ export async function dispatchTrackedEmail(params: TrackedEmailDispatchParams): 
       subject,
       text,
       html,
+      attachments: params.attachments,
     });
 
     await emailLog.update({
@@ -482,6 +484,10 @@ export interface SendBillEmailParams {
     rate: number;
     totalAmount: number;
   }>;
+  pdfAttachment?: {
+    filename: string;
+    content: Buffer;
+  };
 }
 
 export async function sendBillEmail(params: SendBillEmailParams): Promise<{ success: boolean; emailNotificationId?: number; error?: string; skipped?: boolean }> {
@@ -498,6 +504,7 @@ export async function sendBillEmail(params: SendBillEmailParams): Promise<{ succ
     paymentStatus,
     invoiceDate = new Date(),
     items = [],
+    pdfAttachment,
   } = params;
 
   // Shop owner can switch this email off (or replace it with a template) in Messaging → Automations
@@ -670,6 +677,7 @@ export async function sendBillEmail(params: SendBillEmailParams): Promise<{ succ
       paymentStatus,
       htmlBody: html,
     },
+    attachments: pdfAttachment ? [{ filename: pdfAttachment.filename, content: pdfAttachment.content, contentType: "application/pdf" }] : undefined,
   });
 }
 

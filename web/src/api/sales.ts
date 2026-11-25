@@ -74,3 +74,7 @@ export function updateSale(saleId: number | string, data: { status?: string; pai
 export function downloadInvoicePdf(saleId: number) {
   return api.get(`/sales/${saleId}/bill/pdf`, { responseType: "blob" });
 }
+
+export function sendSaleEmail(saleId: number, email?: string) {
+  return api.post<ApiEnvelope<any>>(`/sales/${saleId}/send-email`, { email });
+}

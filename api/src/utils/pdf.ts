@@ -5,17 +5,9 @@ import { Sale } from "../models/Sale";
 const INR = (n: number | string) => `Rs. ${Number(n).toFixed(2)}`;
 
 /**
- * Streams a printable/downloadable invoice PDF directly to the HTTP
- * response. `sale` must be loaded with its `items`, `customer`,
- * `shop`, and `payments` associations.
+ * Renders the bill layout to a PDFKit document instance.
  */
-export function streamBillPdf(res: Response, sale: any) {
-  const doc = new PDFDocument({ size: "A4", margin: 40 });
-
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="${sale.invoice_number}.pdf"`);
-  doc.pipe(res);
-
+export function renderBillPdf(doc: InstanceType<typeof PDFDocument>, sale: any) {
   // Header — shop details
   doc.fontSize(18).text(sale.shop?.name || "Shop", { continued: false });
   doc.fontSize(9).fillColor("#555");
@@ -108,8 +100,36 @@ export function streamBillPdf(res: Response, sale: any) {
 
   doc.moveDown(2);
   doc.fontSize(8).fillColor("#777").text("This is a computer generated invoice.", 40, doc.y, { align: "center" });
+}
 
+/**
+ * Streams a printable/downloadable invoice PDF directly to the HTTP
+ * response. `sale` must be loaded with its `items`, `customer`,
+ * `shop`, and `payments` associations.
+ */
+export function streamBillPdf(res: Response, sale: any) {
+  const doc = new PDFDocument({ size: "A4", margin: 40 });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="${sale.invoice_number}.pdf"`);
+  doc.pipe(res);
+  renderBillPdf(doc, sale);
   doc.end();
+}
+
+/**
+ * Generates an invoice PDF as an in-memory Buffer for email attachments.
+ */
+export function generateBillPdfBuffer(sale: any): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 40 });
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+    renderBillPdf(doc, sale);
+    doc.end();
+  });
 }
 
 /** Streams a payment receipt PDF (for a single sale payment or an EMI installment payment). */

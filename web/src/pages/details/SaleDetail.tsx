@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getSale, downloadInvoicePdf, updateSale, recordSalePayment, returnSale } from "../../api/sales";
+import { getSale, downloadInvoicePdf, sendSaleEmail, updateSale, recordSalePayment, returnSale } from "../../api/sales";
 import { apiErrorMessage } from "../../api/client";
 import ReferenceLink from "../../components/ReferenceLink";
 import type { Sale } from "../../types";
@@ -13,6 +13,7 @@ export default function SaleDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
@@ -151,6 +152,26 @@ export default function SaleDetail() {
     }
   }
 
+  async function handleSendEmail() {
+    if (!sale) return;
+    const currentEmail = sale.customer?.email || "";
+    let emailToSend = currentEmail;
+    if (!emailToSend) {
+      const prompted = window.prompt("Enter customer email address:", "");
+      if (!prompted) return;
+      emailToSend = prompted.trim();
+    }
+    setSendingEmail(true);
+    try {
+      const res = await sendSaleEmail(sale.id, emailToSend);
+      setStatusMsg(res.data.message || `Invoice sent to ${emailToSend}`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Failed to send email");
+    } finally {
+      setSendingEmail(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -281,6 +302,18 @@ export default function SaleDetail() {
               <rect x="6" y="14" width="12" height="8" />
             </svg>
             Print
+          </button>
+          <button
+            onClick={handleSendEmail}
+            disabled={sendingEmail}
+            className="px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            title="Send invoice to customer email"
+          >
+            <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            {sendingEmail ? "Sending..." : "Email Bill"}
           </button>
           <button
             onClick={handleDownloadPdf}
