@@ -29,9 +29,16 @@ const check = (name: string, ok: boolean, extra?: any) => {
 async function main() {
   await sequelize.sync({ force: true });
 
-  async function mkShop(code: string, opts: { status?: string; selfReg?: boolean } = {}) {
+  // Stock-limit checks use shops that turned "sell without stock" off; `defaultStock` leaves the setting unset.
+  async function mkShop(code: string, opts: { status?: string; selfReg?: boolean; defaultStock?: boolean } = {}) {
     const owner = await Owner.create({ name: `Owner ${code}`, email: `${code}@test.local`, password: "x" });
-    const shop = await Shop.create({ owner_id: owner.id, name: `Shop ${code}`, code, status: opts.status || "active" });
+    const shop = await Shop.create({
+      owner_id: owner.id,
+      name: `Shop ${code}`,
+      code,
+      status: opts.status || "active",
+      ...(opts.defaultStock ? {} : { settings: { allowNegativeStock: false } }),
+    });
     await ShopPortalSettings.create({ shop_id: shop.id, allow_orders: true, allow_self_registration: opts.selfReg !== false });
     const product = await Product.create({ owner_id: owner.id, name: `Item ${code}`, sku: `SKU-${code}`, selling_price: 100 });
     await ProductStock.create({ owner_id: owner.id, shop_id: shop.id, product_id: product.id, current_stock: 5 });
@@ -42,6 +49,7 @@ async function main() {
   const P = await mkShop("P", { selfReg: false });
   const Q = await mkShop("Q");
   const S = await mkShop("S", { status: "suspended" });
+  const N = await mkShop("N", { defaultStock: true });
 
   async function mkCustomer(shopRec: any, name: string, phone: string, email: string) {
     const c = await Customer.create({ owner_id: shopRec.owner.id, name, phone, email });
@@ -88,6 +96,9 @@ async function main() {
 
     r = await put(C.token, B.shop.id, B.product.id, 9);
     check("over stock → 400 from existing cart rules", r.status === 400, r.json);
+    r = await put(C.token, N.shop.id, N.product.id, 9);
+    check("shop that never set the option sells beyond stock (new default)", r.status === 200 && r.json.data.groups.find((g: any) => g.shop.id === N.shop.id)?.cart.items[0].quantity === 9, r.json);
+    r = await put(C.token, N.shop.id, N.product.id, 0);
 
     console.log("Rules");
     r = await put(C.token, P.shop.id, P.product.id, 1);

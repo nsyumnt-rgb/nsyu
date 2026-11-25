@@ -113,8 +113,16 @@ async function main() {
     ok(cart.json?.data?.items?.[0]?.quantity === 3, "increase quantity to 3");
     cart = await call("PUT", `/customer-portal/cart/items/${prod.id}`, tokC, { quantity: 2 });
     ok(cart.json?.data?.items?.[0]?.quantity === 2, "decrease quantity to 2");
+    // "Sell without stock" is on by default; the stock limit applies once the shop turns it off.
+    const unlimited = await call("PUT", `/customer-portal/cart/items/${prod.id}`, tokC, { quantity: 999 });
+    ok(unlimited.status === 200 && !unlimited.json?.data?.items?.[0]?.isUnavailable, "by default the shop sells beyond stock", unlimited.status);
+    await shopA.update({ settings: { ...(shopA.settings || {}), allowNegativeStock: false } });
+    await call("PUT", `/customer-portal/cart/items/${prod.id}`, tokC, { quantity: 2 });
     const tooMany = await call("PUT", `/customer-portal/cart/items/${prod.id}`, tokC, { quantity: 999 });
     ok(tooMany.status >= 400 || tooMany.json?.data?.items?.[0]?.isUnavailable || tooMany.json?.data?.items?.[0]?.warning, "quantity above stock is refused or flagged", tooMany.status);
+    const { allowNegativeStock: _off, ...restSettings } = (shopA.settings || {}) as any;
+    await shopA.update({ settings: restSettings });
+    await call("PUT", `/customer-portal/cart/items/${prod.id}`, tokC, { quantity: 2 });
     await call("PUT", `/customer-portal/cart/items/${prod.id}`, tokC, { quantity: 2 });
     const persisted = await call("GET", "/customer-portal/cart", tokC);
     ok(persisted.json?.data?.items?.[0]?.quantity === 2, "cart persists server-side (re-read)");
