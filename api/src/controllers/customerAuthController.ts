@@ -428,6 +428,7 @@ export async function verifyOtp(req: Request, res: Response) {
         refreshToken: rawRefreshToken,
         customer: {
           id: customerRecord.id,
+          accountId: account.id,
           name: customerRecord.name,
           phone: customerRecord.phone,
           email: customerRecord.email,
@@ -625,70 +626,113 @@ export async function selfRegisterCustomer(req: Request, res: Response) {
       ? await bcrypt.hash(String(password).trim(), 10)
       : null;
 
+    let targetAccount = existingAccount;
+
     if (existingAccount) {
       if (existingAccount.status === "active") {
-        if (hashedPassword) {
-          existingAccount.password_hash = hashedPassword;
-          if (cleanEmail) existingAccount.email = cleanEmail;
-          await existingAccount.save();
-          return res.status(200).json({
-            success: true,
-            message: "Account updated with new password. You can now log in.",
-            data: { accountId: existingAccount.id, status: "active" },
+        if (!hashedPassword) {
+          return res.status(400).json({
+            success: false,
+            message: "An active portal account already exists for this phone. Please log in directly.",
           });
         }
-        return res.status(400).json({
-          success: false,
-          message: "An active portal account already exists for this phone. Please log in directly.",
-        });
+        existingAccount.password_hash = hashedPassword;
+        if (cleanEmail) existingAccount.email = cleanEmail;
+        await existingAccount.save();
+      } else {
+        existingAccount.status = "active";
+        if (hashedPassword) existingAccount.password_hash = hashedPassword;
+        if (cleanEmail) existingAccount.email = cleanEmail;
+        await existingAccount.save();
       }
-
-      // If pending approval or inactive, activate with password
-      existingAccount.status = "active";
-      if (hashedPassword) existingAccount.password_hash = hashedPassword;
-      if (cleanEmail) existingAccount.email = cleanEmail;
-      await existingAccount.save();
-
-      return res.status(200).json({
-        success: true,
-        message: "Customer account activated successfully! You can now log in.",
-        data: { accountId: existingAccount.id, status: "active" },
+    } else {
+      targetAccount = await CustomerAccount.create({
+        customer_id: customer.id,
+        shop_id: shop.id,
+        owner_id: shop.owner_id,
+        phone,
+        email: cleanEmail,
+        password_hash: hashedPassword,
+        status: "active",
       });
+
+      // Notify shop owner
+      try {
+        await Notification.create({
+          owner_id: shop.owner_id,
+          shop_id: shop.id,
+          recipient_type: "owner",
+          recipient_id: shop.owner_id,
+          type: "customer_registered",
+          title: "New Customer Registration",
+          message: `Customer ${customer.name} (${phone}) registered for ${shop.name}.`,
+          reference_type: "customer_account",
+          reference_id: targetAccount.id,
+        });
+      } catch {}
+      onCustomerRegistered(shop.owner_id, shop.id, customer.id);
     }
 
-    const newAccount = await CustomerAccount.create({
-      customer_id: customer.id,
-      shop_id: shop.id,
-      owner_id: shop.owner_id,
-      phone,
-      email: cleanEmail,
-      password_hash: hashedPassword,
-      status: "active",
-    });
+    // Always issue tokens upon registration when targetAccount is active and password is set!
+    let sessionData: any = {
+      accountId: targetAccount.id,
+      status: targetAccount.status,
+    };
 
-    // Notify shop owner
-    try {
-      await Notification.create({
-        owner_id: shop.owner_id,
-        shop_id: shop.id,
-        recipient_type: "owner",
-        recipient_id: shop.owner_id,
-        type: "customer_registered",
-        title: "New Customer Registration",
-        message: `Customer ${customer.name} (${phone}) registered for ${shop.name}.`,
-        reference_type: "customer_account",
-        reference_id: newAccount.id,
+    if (targetAccount.status === "active" && (hashedPassword || targetAccount.password_hash)) {
+      const accessToken = signAccessToken({
+        ownerId: shop.owner_id,
+        shopId: shop.id,
+        customerId: customer.id,
+        accountId: targetAccount.id,
+        phone,
+        isOwner: false,
+        isCustomer: true,
+        roleCode: "customer",
+        roleName: "Customer",
       });
-    } catch {}
-    onCustomerRegistered(shop.owner_id, shop.id, customer.id);
 
-    return res.status(201).json({
+      const rawRefreshToken = crypto.randomBytes(40).toString("hex");
+      const refreshHash = hashString(rawRefreshToken);
+      const refreshExpiry = refreshExpiryDate();
+
+      await CustomerRefreshToken.create({
+        account_id: targetAccount.id,
+        token_hash: refreshHash,
+        expires_at: refreshExpiry,
+      });
+
+      targetAccount.last_login_at = new Date();
+      await targetAccount.save();
+
+      sessionData = {
+        accessToken,
+        refreshToken: rawRefreshToken,
+        customer: {
+          id: customer.id,
+          accountId: targetAccount.id,
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email,
+          address: customer.address,
+          currentBalance: Number(customer.current_balance || 0),
+          shop: {
+            id: shop.id,
+            name: shop.name,
+            code: shop.code,
+            address: shop.address,
+            phone: shop.phone,
+          },
+        },
+      };
+    }
+
+    return res.status(existingAccount ? 200 : 201).json({
       success: true,
-      message: "Customer account created successfully! You can now log in.",
-      data: {
-        accountId: newAccount.id,
-        status: newAccount.status,
-      },
+      message: existingAccount
+        ? "Account updated and signed in successfully!"
+        : "Customer account created and signed in successfully!",
+      data: sessionData,
     });
   } catch (err: any) {
     console.error("selfRegisterCustomer error:", err);
@@ -819,6 +863,7 @@ export async function loginWithPassword(req: Request, res: Response) {
         refreshToken: rawRefreshToken,
         customer: {
           id: customerRecord.id,
+          accountId: account.id,
           name: customerRecord.name,
           shopName: customerRecord.shop_name,
           phone: customerRecord.phone,

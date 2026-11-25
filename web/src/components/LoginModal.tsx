@@ -45,6 +45,8 @@ export default function LoginModal({
   const [regName, setRegName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regShowPassword, setRegShowPassword] = useState(false);
   const [regAddress, setRegAddress] = useState("");
 
   // Sync initial tab when modal opens
@@ -58,6 +60,11 @@ export default function LoginModal({
       setOtpCode("");
       setOtpStep("request");
       setCustomerMode("password");
+      setRegName("");
+      setRegPhone("");
+      setRegEmail("");
+      setRegPassword("");
+      setRegAddress("");
     }
   }, [isOpen, initialTab]);
 
@@ -133,7 +140,8 @@ export default function LoginModal({
     setLoading(true);
     try {
       const res = await loginCustomerWithPasswordApi(identifier.trim(), password);
-      const { accessToken, refreshToken, customer } = res.data;
+      const data = (res as any)?.data || res;
+      const { accessToken, refreshToken, customer } = data;
       setCustomerSession(accessToken, refreshToken, customer);
       onClose();
       if (onSuccess) onSuccess();
@@ -188,7 +196,8 @@ export default function LoginModal({
     setLoading(true);
     try {
       const res = await verifyOtpApi(identifier.trim(), otpCode.trim());
-      const { accessToken, refreshToken, customer } = res.data;
+      const data = (res as any)?.data || res;
+      const { accessToken, refreshToken, customer } = data;
       setCustomerSession(accessToken, refreshToken, customer);
       onClose();
       if (onSuccess) onSuccess();
@@ -205,26 +214,55 @@ export default function LoginModal({
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!regName.trim() || !regPhone.trim() || !regEmail.trim()) {
-      setError("Full name, mobile number, and email are required.");
+    if (!regName.trim() || !regPhone.trim()) {
+      setError("Full name and mobile number are required.");
+      return;
+    }
+    if (regPassword && regPassword.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
 
     setLoading(true);
     try {
-      await portalApi.post("/customer-portal/auth/register", {
+      const res = await portalApi.post("/customer-portal/auth/register", {
         name: regName.trim(),
         phone: regPhone.trim(),
-        email: regEmail.trim(),
+        email: regEmail.trim() || undefined,
+        password: regPassword || undefined,
         address: regAddress.trim() || undefined,
       });
-      setSuccessMsg("✓ Account created! A 6-digit OTP has been sent to your email.");
-      setIdentifier(regEmail.trim());
-      setCustomerMode("otp");
-      setOtpStep("verify");
-      setOtpCooldown(60);
+
+      const data = res.data?.data || res.data;
+      if (data?.accessToken && data?.customer) {
+        setCustomerSession(data.accessToken, data.refreshToken, data.customer);
+        onClose();
+        if (onSuccess) onSuccess();
+        return;
+      }
+
+      // If registered with email and no password, trigger OTP flow
+      if (regEmail.trim()) {
+        await requestOtpApi(regEmail.trim().toLowerCase());
+        setSuccessMsg("✓ Account created! A 6-digit OTP has been sent to your email.");
+        setIdentifier(regEmail.trim());
+        setCustomerMode("otp");
+        setOtpStep("verify");
+        setOtpCooldown(60);
+      } else {
+        setSuccessMsg("✓ Account created! Please sign in with your mobile number.");
+        setIdentifier(regPhone.trim());
+        setCustomerMode("password");
+      }
     } catch (err: any) {
-      setError(apiErrorMessage(err, "Registration failed."));
+      const msg = apiErrorMessage(err, "Registration failed.");
+      if (msg.toLowerCase().includes("already exists")) {
+        setError(msg);
+        setIdentifier(regPhone.trim());
+        setTimeout(() => setCustomerMode("password"), 1500);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -445,9 +483,10 @@ export default function LoginModal({
                     setCustomerMode("register");
                     setError(null);
                   }}
-                  className="text-emerald-700 hover:underline text-[11px]"
+                  className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-[11.5px] font-bold transition flex items-center gap-1 cursor-pointer"
                 >
-                  + New Account
+                  <span>New Customer? Register</span>
+                  <span>→</span>
                 </button>
               </div>
             )}
@@ -624,15 +663,36 @@ export default function LoginModal({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Email (for OTP verification) *</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Email (optional / for invoices & OTP)</label>
                   <input
                     type="email"
-                    required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     placeholder="you@example.com"
                     className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-0.5">Choose Password (min 6 characters) *</label>
+                  <div className="relative">
+                    <input
+                      type={regShowPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="Create a password for your account"
+                      className="w-full pl-3 pr-10 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setRegShowPassword(!regShowPassword)}
+                      className="absolute right-3 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                    >
+                      {regShowPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -649,9 +709,16 @@ export default function LoginModal({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 bg-[#047857] hover:bg-emerald-700 active:scale-98 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition shadow-sm mt-2"
+                  className="w-full py-2.5 bg-[#047857] hover:bg-emerald-700 active:scale-98 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition shadow-sm mt-2 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {loading ? "Registering…" : "Create Account & Send Code →"}
+                  {loading ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Creating Account…</span>
+                    </>
+                  ) : (
+                    <span>Create Account & Sign In →</span>
+                  )}
                 </button>
               </form>
             )}
