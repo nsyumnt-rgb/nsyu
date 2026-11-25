@@ -109,19 +109,267 @@ export interface MarketCart {
   total: number;
 }
 
+const GUEST_CART_STORAGE_KEY = "nsyu.market.guest_cart";
+
+export interface GuestCartItem {
+  productId: number;
+  name: string;
+  brand?: string | null;
+  sku?: string;
+  category?: string | null;
+  unitPrice: number;
+  mrp?: number;
+  discountPercent?: number;
+  gstPercent?: number;
+  imageUrl?: string | null;
+  availableStock?: number;
+  quantity: number;
+  shop: {
+    id: number;
+    name: string;
+    code: string;
+    address?: string | null;
+  };
+}
+
+export function getGuestCart(): GuestCartItem[] {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveGuestCart(items: GuestCartItem[]): void {
+  try {
+    localStorage.setItem(GUEST_CART_STORAGE_KEY, JSON.stringify(items));
+  } catch (e) {
+    console.error("Failed to save guest cart:", e);
+  }
+}
+
+export function clearGuestCart(): void {
+  try {
+    localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+  } catch {}
+}
+
+export function guestCartToMarketCart(items: GuestCartItem[]): MarketCart {
+  const shopMap = new Map<number, { shop: { id: number; name: string; code: string }; items: GuestCartItem[] }>();
+
+  for (const it of items) {
+    if (!it.shop || !it.shop.id) continue;
+    let group = shopMap.get(it.shop.id);
+    if (!group) {
+      group = {
+        shop: { id: it.shop.id, name: it.shop.name || `Shop #${it.shop.id}`, code: it.shop.code || String(it.shop.id) },
+        items: [],
+      };
+      shopMap.set(it.shop.id, group);
+    }
+    group.items.push(it);
+  }
+
+  const groups: MarketCartGroup[] = [];
+  let totalItemCount = 0;
+  let overallTotal = 0;
+
+  for (const group of shopMap.values()) {
+    let groupSubtotal = 0;
+    let groupItemCount = 0;
+
+    const cartItems = group.items.map((it) => {
+      const lineTotal = Math.round(it.unitPrice * it.quantity * 100) / 100;
+      groupSubtotal += lineTotal;
+      groupItemCount += it.quantity;
+
+      const mrp = it.mrp && it.mrp > it.unitPrice ? it.mrp : it.unitPrice;
+      const discountAmount = Math.max(0, Math.round((mrp - it.unitPrice) * it.quantity * 100) / 100);
+
+      return {
+        id: it.productId,
+        productId: it.productId,
+        name: it.name,
+        sku: it.sku || "",
+        brand: it.brand || null,
+        imageUrl: it.imageUrl || null,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        discountPercent: it.discountPercent || 0,
+        discountAmount,
+        gstPercent: it.gstPercent || 0,
+        taxAmount: 0,
+        lineTotal,
+        availableStock: it.availableStock && it.availableStock > 0 ? it.availableStock : 99,
+      };
+    });
+
+    const roundedSubtotal = Math.round(groupSubtotal * 100) / 100;
+    totalItemCount += groupItemCount;
+    overallTotal += roundedSubtotal;
+
+    groups.push({
+      shop: group.shop,
+      status: "active",
+      cart: {
+        cartId: 0,
+        items: cartItems,
+        subtotal: roundedSubtotal,
+        discountAmount: 0,
+        taxAmount: 0,
+        estimatedTotal: roundedSubtotal,
+        itemCount: groupItemCount,
+      },
+    });
+  }
+
+  return {
+    groups,
+    itemCount: totalItemCount,
+    total: Math.round(overallTotal * 100) / 100,
+  };
+}
+
 export async function getMarketCart(): Promise<MarketCart> {
   const token = usePortalStore.getState().accessToken;
   if (!token) {
-    return { groups: [], itemCount: 0, total: 0 };
+    return guestCartToMarketCart(getGuestCart());
   }
   const res = await portalApi.get("/customer-portal/market/cart");
   return res.data?.data || { groups: [], itemCount: 0, total: 0 };
 }
 
-/** Sets the quantity of one product from one shop (0 removes it). */
-export async function setMarketCartItem(shopId: number, productId: number, quantity: number): Promise<MarketCart> {
+/** Sets the quantity of one product from one shop (0 removes it). Supports both guest and logged-in carts. */
+export async function setMarketCartItem(
+  shopId: number,
+  productId: number,
+  quantity: number,
+  details?: Partial<GuestCartItem>
+): Promise<MarketCart> {
+  const token = usePortalStore.getState().accessToken;
+  if (!token) {
+    let items = getGuestCart();
+    if (quantity <= 0) {
+      items = items.filter((it) => !(it.shop.id === shopId && it.productId === productId));
+    } else {
+      const idx = items.findIndex((it) => it.shop.id === shopId && it.productId === productId);
+      if (idx >= 0) {
+        items[idx].quantity = quantity;
+        if (details) Object.assign(items[idx], details);
+      } else if (details && details.name && details.shop) {
+        items.push({
+          productId,
+          name: details.name,
+          brand: details.brand,
+          sku: details.sku || "",
+          category: details.category,
+          unitPrice: details.unitPrice || 0,
+          mrp: details.mrp,
+          discountPercent: details.discountPercent || 0,
+          gstPercent: details.gstPercent || 0,
+          imageUrl: details.imageUrl,
+          availableStock: details.availableStock ?? 99,
+          quantity,
+          shop: details.shop as any,
+        });
+      }
+    }
+    saveGuestCart(items);
+    return guestCartToMarketCart(items);
+  }
+
   const res = await portalApi.put(`/customer-portal/market/cart/${shopId}/items/${productId}`, { quantity });
   return res.data?.data;
+}
+
+/** Adds a market listing product to cart (guest or logged-in). */
+export async function addListingToMarketCart(listing: MarketListing, qty: number = 1): Promise<MarketCart> {
+  const token = usePortalStore.getState().accessToken;
+  if (!token) {
+    const items = getGuestCart();
+    const existingIndex = items.findIndex(
+      (it) => it.shop.id === listing.shop.id && it.productId === listing.productId
+    );
+    if (existingIndex >= 0) {
+      const cur = items[existingIndex];
+      const maxStock = listing.stock > 0 ? listing.stock : 99;
+      cur.quantity = Math.min(maxStock, cur.quantity + qty);
+      cur.unitPrice = listing.price;
+      cur.mrp = listing.mrp;
+      cur.availableStock = listing.stock > 0 ? listing.stock : (listing.inStock ? 99 : 0);
+    } else {
+      items.push({
+        productId: listing.productId,
+        name: listing.name,
+        brand: listing.brand,
+        sku: listing.sku,
+        category: listing.category,
+        unitPrice: listing.price,
+        mrp: listing.mrp,
+        discountPercent: listing.discountPercent,
+        gstPercent: listing.gstPercent,
+        imageUrl: listing.imageUrl,
+        availableStock: listing.stock > 0 ? listing.stock : (listing.inStock ? 99 : 0),
+        quantity: qty,
+        shop: {
+          id: listing.shop.id,
+          name: listing.shop.name,
+          code: listing.shop.code,
+          address: listing.shop.address,
+        },
+      });
+    }
+    saveGuestCart(items);
+    return guestCartToMarketCart(items);
+  }
+
+  const currentCart = await getMarketCart();
+  const existingGroup = currentCart.groups.find((g) => g.shop.id === listing.shop.id);
+  const existingItem = existingGroup?.cart?.items.find((it) => it.productId === listing.productId);
+  const nextQty = (existingItem?.quantity || 0) + qty;
+  return setMarketCartItem(listing.shop.id, listing.productId, nextQty);
+}
+
+/** Merges all items from guest cart into the customer's server cart after login/registration. */
+export async function syncGuestCartToServer(): Promise<void> {
+  const token = usePortalStore.getState().accessToken;
+  if (!token) return;
+
+  const items = getGuestCart();
+  const pending = sessionStorage.getItem("pending_cart_item");
+  if (pending) {
+    try {
+      const { shopId, productId, qty } = JSON.parse(pending);
+      if (shopId && productId && !items.some((it) => it.shop.id === shopId && it.productId === productId)) {
+        items.push({
+          shop: { id: shopId, name: "", code: "" },
+          productId,
+          quantity: qty || 1,
+          name: "",
+          unitPrice: 0,
+        } as any);
+      }
+    } catch {}
+    sessionStorage.removeItem("pending_cart_item");
+  }
+
+  if (items.length === 0) return;
+
+  for (const it of items) {
+    try {
+      await portalApi.put(`/customer-portal/market/cart/${it.shop.id}/items/${it.productId}`, {
+        quantity: it.quantity,
+      });
+    } catch (err) {
+      console.warn(`Failed to sync guest cart item ${it.productId} to shop ${it.shop.id}:`, err);
+    }
+  }
+
+  clearGuestCart();
+  window.dispatchEvent(new CustomEvent("market-cart-changed"));
 }
 
 /* ── Checkout: one order per shop ── */

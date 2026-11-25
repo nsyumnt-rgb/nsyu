@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../store/portalStore";
 import { useAuthStore } from "../store/authStore";
-import { getMarketCart, setMarketCartItem } from "../api/marketplace";
+import { getMarketCart, syncGuestCartToServer } from "../api/marketplace";
 import BusinessFooter from "./BusinessFooter";
 import MobileBottomNav from "../components/MobileBottomNav";
 import LoginModal from "../components/LoginModal";
@@ -21,10 +21,6 @@ export default function MarketLayout() {
   const [loginModalTab, setLoginModalTab] = useState<"customer" | "staff">("customer");
 
   const refreshCart = () => {
-    if (!customer) {
-      setCartCount(0);
-      return;
-    }
     getMarketCart()
       .then((c) => {
         setCartCount(c?.itemCount || 0);
@@ -44,37 +40,38 @@ export default function MarketLayout() {
 
   const handleLoginSuccess = async () => {
     setLoginModalOpen(false);
+    try {
+      await syncGuestCartToServer();
+    } catch (err) {
+      console.error("Failed to sync guest cart:", err);
+    }
     refreshCart();
-    const pending = sessionStorage.getItem("pending_cart_item");
-    if (pending) {
-      try {
-        const { shopId, productId, qty } = JSON.parse(pending);
-        sessionStorage.removeItem("pending_cart_item");
-        await setMarketCartItem(shopId, productId, qty || 1);
-        window.dispatchEvent(new CustomEvent("market-cart-changed"));
-      } catch (err) {
-        console.error("Failed to add pending cart item:", err);
-      }
+    const redirect = sessionStorage.getItem("post_login_redirect");
+    if (redirect) {
+      sessionStorage.removeItem("post_login_redirect");
+      navigate(redirect);
     }
   };
 
   useEffect(() => {
-    if (!customer) {
-      setCartCount(0);
-      return;
+    if (customer) {
+      syncGuestCartToServer().finally(() => {
+        refreshCart();
+      });
+    } else {
+      refreshCart();
     }
-    refreshCart();
     const interval = setInterval(refreshCart, 15000);
     return () => clearInterval(interval);
   }, [customer?.id]);
 
   useEffect(() => {
     const onCartChanged = () => {
-      if (customer) refreshCart();
+      refreshCart();
     };
     window.addEventListener("market-cart-changed", onCartChanged);
     return () => window.removeEventListener("market-cart-changed", onCartChanged);
-  }, [customer]);
+  }, []);
 
   useEffect(() => {
     setMobileMenuOpen(false);

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../store/portalStore";
 import { usePosStore } from "../store/posStore";
+import { getMarketCart } from "../api/marketplace";
 import { FEATURES } from "../config/features";
 
 interface MobileBottomNavProps {
@@ -24,6 +25,17 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
 
   const posCount = posCartItems.reduce((acc, it) => acc + (it.quantity || 1), 0);
   const portalCount = portalCart?.itemCount || 0;
+  const [marketCartCount, setMarketCartCount] = useState(0);
+
+  useEffect(() => {
+    if (mode !== "market") return;
+    const updateCount = () => {
+      getMarketCart().then((c) => setMarketCartCount(c?.itemCount || 0)).catch(() => {});
+    };
+    updateCount();
+    window.addEventListener("market-cart-changed", updateCount);
+    return () => window.removeEventListener("market-cart-changed", updateCount);
+  }, [mode]);
 
   // 1. Dashboard Navigation Items (for Owner & Staff)
   const dashboardItems = [
@@ -174,6 +186,11 @@ export default function MobileBottomNav({ mode }: MobileBottomNavProps) {
             <circle cx="20" cy="21" r="1" />
             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
           </svg>
+          {marketCartCount > 0 && (
+            <span className="absolute -top-1.5 -right-2 bg-rose-600 text-white text-[10px] font-black min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-xs">
+              {marketCartCount > 9 ? "9+" : marketCartCount}
+            </span>
+          )}
         </div>
       ),
     },

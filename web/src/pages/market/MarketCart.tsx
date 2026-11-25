@@ -15,12 +15,19 @@ export default function MarketCart() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!customer) return setLoading(false);
     getMarketCart()
       .then(setCart)
       .catch((e) => setError(apiErrorMessage(e, "Could not load your cart")))
       .finally(() => setLoading(false));
   }, [customer]);
+
+  useEffect(() => {
+    const handleCartChanged = () => {
+      getMarketCart().then(setCart).catch(() => {});
+    };
+    window.addEventListener("market-cart-changed", handleCartChanged);
+    return () => window.removeEventListener("market-cart-changed", handleCartChanged);
+  }, []);
 
   async function setQty(shopId: number, productId: number, qty: number) {
     setBusy(`${shopId}-${productId}`);
@@ -33,25 +40,6 @@ export default function MarketCart() {
     } finally {
       setBusy(null);
     }
-  }
-
-  if (!customer) {
-    return (
-      <div className="card p-10 text-center max-w-lg mx-auto">
-        <h1 className="text-[20px] font-bold">Your cart</h1>
-        <p className="text-[13.5px] text-slate-500 mt-2">Log in to add products from any shop to one cart.</p>
-        <div className="mt-5 flex justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }))}
-            className="btn-primary"
-          >
-            Log in
-          </button>
-          <Link to="/market/search" className="btn-secondary">Browse products</Link>
-        </div>
-      </div>
-    );
   }
 
   const groups = cart?.groups || [];
@@ -112,13 +100,52 @@ export default function MarketCart() {
                               <span className="text-[14px] font-bold tabular whitespace-nowrap">{rupees(it.lineTotal)}</span>
                             </div>
                             <div className="text-[12px] text-slate-500 mt-0.5">{rupees(it.unitPrice)} each{it.gstPercent ? ` · ${it.gstPercent}% GST` : ""}</div>
-                            {it.warning && <div className="mt-1 text-[12px] text-amber-700">{it.warning}</div>}
-                            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                              <div className="flex items-center rounded-lg ring-1 ring-border h-10">
-                                <button type="button" disabled={busy === key} onClick={() => setQty(g.shop.id, it.productId, it.quantity - 1)} className="w-10 h-full font-bold" aria-label="Decrease quantity">−</button>
-                                <span className="w-9 text-center font-bold tabular">{it.quantity}</span>
-                                <button type="button" disabled={busy === key || it.quantity >= it.availableStock} onClick={() => setQty(g.shop.id, it.productId, it.quantity + 1)} className="w-10 h-full font-bold disabled:opacity-40" aria-label="Increase quantity">+</button>
+                            {it.warning && (
+                              <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[12px] text-amber-800 font-medium">
+                                <span>⚠️</span> <span>{it.warning}</span>
                               </div>
+                            )}
+                            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                              {(() => {
+                                const maxStock = it.availableStock && it.availableStock > 0 ? it.availableStock : 99;
+                                return (
+                                  <div className="flex items-center rounded-lg ring-1 ring-border h-10">
+                                    <button
+                                      type="button"
+                                      disabled={busy === key || it.quantity <= 1}
+                                      onClick={() => setQty(g.shop.id, it.productId, it.quantity - 1)}
+                                      className="w-10 h-full font-bold disabled:opacity-40"
+                                      aria-label="Decrease quantity"
+                                    >
+                                      −
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max={maxStock}
+                                      value={it.quantity}
+                                      disabled={busy === key}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        if (!isNaN(val) && val >= 1) {
+                                          setQty(g.shop.id, it.productId, Math.min(val, maxStock));
+                                        }
+                                      }}
+                                      className="w-11 h-full text-center font-bold tabular bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-brand-500 rounded text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                      aria-label="Quantity"
+                                    />
+                                    <button
+                                      type="button"
+                                      disabled={busy === key || it.quantity >= maxStock}
+                                      onClick={() => setQty(g.shop.id, it.productId, it.quantity + 1)}
+                                      className="w-10 h-full font-bold disabled:opacity-40"
+                                      aria-label="Increase quantity"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                               <button type="button" disabled={busy === key} onClick={() => setQty(g.shop.id, it.productId, 0)} className="text-[12.5px] font-semibold text-slate-500 hover:text-rose-600 min-h-[40px] px-2">Remove</button>
                             </div>
                           </div>
@@ -147,7 +174,24 @@ export default function MarketCart() {
               {ready.length > 1 ? `Checkout creates ${ready.length} orders — one per shop. ` : ""}Delivery or pickup is chosen per shop at checkout.
             </p>
             {ready.length > 0 ? (
-              <Link to="/market/checkout" className="btn-primary btn-lg w-full">Proceed to checkout</Link>
+              customer ? (
+                <Link to="/market/checkout" className="btn-primary btn-lg w-full text-center">
+                  Proceed to checkout
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem("post_login_redirect", "/market/checkout");
+                    window.dispatchEvent(
+                      new CustomEvent("open-login-modal", { detail: { tab: "customer" } })
+                    );
+                  }}
+                  className="btn-primary btn-lg w-full cursor-pointer"
+                >
+                  Proceed to checkout
+                </button>
+              )
             ) : (
               <button type="button" disabled className="btn-primary btn-lg w-full">Nothing to check out yet</button>
             )}

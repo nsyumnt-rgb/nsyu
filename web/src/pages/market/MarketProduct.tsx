@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { getMarketCart, getMarketListing, searchMarket, setMarketCartItem, type MarketCart, type MarketListing, type MarketListingDetail } from "../../api/marketplace";
+import { addListingToMarketCart, getMarketCart, getMarketListing, searchMarket, type MarketCart, type MarketListing, type MarketListingDetail } from "../../api/marketplace";
 import { resolveAssetUrl, apiErrorMessage } from "../../api/client";
 import { usePortalStore } from "../../store/portalStore";
 import MarketCard, { listingHref, rupees } from "../../components/MarketCard";
@@ -40,7 +40,7 @@ export default function MarketProduct() {
         }
       })
       .catch(() => alive && setMissing(true));
-    if (customer) getMarketCart().then((c) => alive && setCart(c)).catch(() => {});
+    getMarketCart().then((c) => alive && setCart(c)).catch(() => {});
     window.scrollTo({ top: 0 });
     return () => {
       alive = false;
@@ -74,18 +74,22 @@ export default function MarketProduct() {
 
   async function add(buyNow: boolean) {
     if (!item) return;
-    if (!signedIn) {
-      sessionStorage.setItem("pending_cart_item", JSON.stringify({ shopId: item.shop.id, productId: item.productId, qty }));
-      window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
-      return;
-    }
     setBusy(true);
     setMsg(null);
     try {
-      setCart(await setMarketCartItem(item.shop.id, item.productId, inCart + qty));
+      const updatedCart = await addListingToMarketCart(item, qty);
+      setCart(updatedCart);
       window.dispatchEvent(new Event("market-cart-changed"));
-      if (buyNow) navigate("/market/cart");
-      else setMsg({ ok: true, text: `Added ${qty} to your cart` });
+      if (buyNow) {
+        if (!signedIn) {
+          sessionStorage.setItem("post_login_redirect", "/market/checkout");
+          window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
+        } else {
+          navigate("/market/cart");
+        }
+      } else {
+        setMsg({ ok: true, text: `Added ${qty} to your cart` });
+      }
     } catch (err) {
       setMsg({ ok: false, text: apiErrorMessage(err, "Could not add to cart") });
     } finally {
@@ -155,14 +159,14 @@ export default function MarketProduct() {
               <span className="w-10 text-center font-bold tabular" aria-live="polite">{qty}</span>
               <button type="button" disabled={qty >= maxQty} onClick={() => setQty((q) => q + 1)} className="w-12 h-full text-[18px] font-bold disabled:opacity-40" aria-label="Increase quantity">+</button>
             </div>
-            <button type="button" disabled={!item.inStock || busy || (signedIn && maxQty <= 0)} onClick={() => add(false)} className="btn-primary h-12 flex-1 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none">
-              {busy ? "Adding…" : signedIn ? "Add to cart" : "Log in to add to cart"}
+            <button type="button" disabled={!item.inStock || busy || maxQty <= 0} onClick={() => add(false)} className="btn-primary h-12 flex-1 disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none">
+              {busy ? "Adding…" : "Add to cart"}
             </button>
-            {signedIn && (
-              <button type="button" disabled={!item.inStock || busy || maxQty <= 0} onClick={() => add(true)} className="btn-secondary h-12 flex-1">Buy now</button>
-            )}
+            <button type="button" disabled={!item.inStock || busy || maxQty <= 0} onClick={() => add(true)} className="btn-secondary h-12 flex-1">
+              Buy now
+            </button>
           </div>
-          {signedIn && inCart > 0 && <p className="mt-2 text-[12px] text-slate-500">{inCart} already in your cart from {item.shop.name}.</p>}
+          {inCart > 0 && <p className="mt-2 text-[12px] text-slate-500">{inCart} already in your cart from {item.shop.name}.</p>}
           {msg && (
             <div className={`mt-3 rounded-lg px-3 py-2 text-[13px] ${msg.ok ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-rose-50 text-rose-700 border border-rose-200"}`}>
               {msg.text} {msg.ok && <Link to="/market/cart" className="font-semibold underline ml-1">View cart</Link>}

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { resolveAssetUrl } from "../api/client";
-import { setMarketCartItem, type MarketListing } from "../api/marketplace";
-import { usePortalStore } from "../store/portalStore";
+import { addListingToMarketCart, type MarketListing } from "../api/marketplace";
 import { useWishlistStore } from "../store/wishlistStore";
 import { ProductPlaceholder } from "./ProductArt";
 
@@ -31,7 +30,6 @@ export default function MarketCard({
   onAddedToCart?: () => void;
 }) {
   const navigate = useNavigate();
-  const customer = usePortalStore((s) => s.customer);
   const { toggleProduct, hasProduct } = useWishlistStore();
 
   const [failed, setFailed] = useState(false);
@@ -58,15 +56,9 @@ export default function MarketCard({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!customer) {
-      sessionStorage.setItem("pending_cart_item", JSON.stringify({ shopId: listing.shop.id, productId: listing.productId, qty: 1 }));
-      window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
-      return;
-    }
-
     setAdding(true);
     try {
-      await setMarketCartItem(listing.shop.id, listing.productId, 1);
+      await addListingToMarketCart(listing, 1);
       window.dispatchEvent(new CustomEvent("market-cart-changed"));
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);

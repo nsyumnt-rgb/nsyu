@@ -82,8 +82,14 @@ export async function getCart(req: Request, res: Response) {
 
       const stockRow = product.stocks?.[0];
       const rawStock = stockRow ? Number(stockRow.current_stock || 0) : 0;
-      const availableStock = allowNegativeStock ? (rawStock > 0 ? rawStock : 999) : rawStock;
-      const exceedsStock = !allowNegativeStock && qty > rawStock;
+      const availableStock = rawStock > 0 ? rawStock : 999;
+
+      let warning: string | undefined = undefined;
+      if (rawStock <= 0) {
+        warning = "Low/out of shop stock — shop will arrange for you";
+      } else if (rawStock < qty) {
+        warning = `Only ${rawStock} in shop — shop will arrange remaining`;
+      }
 
       const primaryImg = product.images?.find((i: any) => i.is_primary) || product.images?.[0];
 
@@ -103,8 +109,8 @@ export async function getCart(req: Request, res: Response) {
         taxAmount: lineTax,
         lineTotal: lineTotal,
         availableStock,
-        warning: exceedsStock ? `Only ${rawStock} units available` : undefined,
-        isUnavailable: !allowNegativeStock && (exceedsStock || rawStock <= 0),
+        warning,
+        isUnavailable: false,
       });
     }
 
@@ -180,13 +186,8 @@ export async function setCartItem(req: Request, res: Response) {
     });
     const currentStock = stock ? Number(stock.current_stock || 0) : 0;
 
-    if (!allowNegativeStock && qty > currentStock) {
-      return res.status(400).json({
-        success: false,
-        message: `Requested quantity exceeds available stock (${currentStock} available)`,
-        availableStock: currentStock,
-      });
-    }
+    // Note: Online orders allow adding to cart even if stock is low or 0,
+    // so the shop can arrange the products from distributors upon order.
 
     // Upsert cart item
     const existingItem = await CustomerCartItem.findOne({

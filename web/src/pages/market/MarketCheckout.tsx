@@ -56,7 +56,7 @@ export default function MarketCheckout() {
   const groups = useMemo(() => (cart?.groups || []).filter((g) => g.status === "active" && g.cart && g.cart.items.length), [cart]);
   const needsAddress = groups.some((g) => choices[g.shop.id]?.deliveryType !== "pickup");
   const total = groups.reduce((a, g) => a + Number(g.cart!.estimatedTotal), 0);
-  const hasStockIssue = groups.some((g) => g.cart!.items.some((i) => i.isUnavailable));
+  const hasStockIssue = groups.some((g) => g.cart!.items.some((i) => Boolean(i.warning)));
 
   const setChoice = (shopId: number, patch: Partial<CheckoutShopChoice>) => setChoices((c) => ({ ...c, [shopId]: { ...c[shopId], ...patch } }));
 
@@ -87,13 +87,17 @@ export default function MarketCheckout() {
   if (!customer) {
     return (
       <div className="card p-10 text-center max-w-lg mx-auto">
-        <h1 className="text-[20px] font-bold">Log in to check out</h1>
+        <h1 className="text-[20px] font-bold">Sign In to Check Out</h1>
+        <p className="text-[13.5px] text-slate-500 mt-2">Please sign in or register to complete your order.</p>
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }))}
+          onClick={() => {
+            sessionStorage.setItem("post_login_redirect", "/market/checkout");
+            window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
+          }}
           className="btn-primary mt-5"
         >
-          Log in
+          Sign In / Register
         </button>
       </div>
     );
@@ -188,7 +192,10 @@ export default function MarketCheckout() {
                   <ul className="text-[13px] text-slate-600 space-y-1">
                     {g.cart!.items.map((i) => (
                       <li key={i.productId} className="flex justify-between gap-3">
-                        <span className="truncate">{i.name} × {i.quantity}{i.isUnavailable && <span className="text-rose-600"> — {i.warning || "unavailable"}</span>}</span>
+                        <span className="truncate">
+                          {i.name} × {i.quantity}
+                          {i.warning && <span className="text-amber-700 text-[11px] block sm:inline sm:ml-2 font-medium">⚠️ {i.warning}</span>}
+                        </span>
                         <span className="tabular">{rupees(i.lineTotal)}</span>
                       </li>
                     ))}
@@ -232,7 +239,12 @@ export default function MarketCheckout() {
             <span className="font-semibold">Total</span>
             <span className="text-[22px] font-bold tabular">{rupees(total)}</span>
           </div>
-          {hasStockIssue && <p className="text-[12px] text-amber-700">Some items exceed the shop's stock — those shops may not accept the order.</p>}
+          {hasStockIssue && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 text-[12px] text-amber-800 flex items-start gap-2">
+              <span className="text-sm shrink-0">ℹ️</span>
+              <span>Kuch items shop ke current stock se zyada hain. Shop inhein arrange karke provide karegi, aapka order successfully place ho jayega.</span>
+            </div>
+          )}
           <button type="submit" disabled={placing} className="btn-primary btn-lg w-full">{placing ? "Placing orders…" : `Place ${groups.length > 1 ? `${groups.length} orders` : "order"}`}</button>
           <p className="text-[11.5px] text-slate-400 text-center">No payment is taken online. Each shop confirms its order.</p>
         </aside>

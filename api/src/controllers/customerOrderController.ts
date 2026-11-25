@@ -135,12 +135,8 @@ export async function placeOrder(req: Request, res: Response) {
         const available = stock ? Number(stock.current_stock || 0) : 0;
         const requested = Number(ci.quantity);
 
-        if (!allowNegativeStock && requested > available) {
-          stockErrors.push(
-            `"${product.name}" has only ${available} units in stock (${requested} requested)`
-          );
-          continue;
-        }
+        // Note: For online orders, we allow placing the order even if requested > available stock,
+        // because the shop can arrange the stock from distributors/suppliers and fulfill it.
 
         const effectivePrice = product.live_price && Number(product.live_price) > 0 ? product.live_price : product.selling_price;
         const rate = round2(Number(effectivePrice || 0));
