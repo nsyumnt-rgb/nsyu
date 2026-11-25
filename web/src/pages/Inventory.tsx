@@ -211,8 +211,8 @@ export default function Inventory({
   >("recency");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Toggle for Advanced Filters bar
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  // Toggle for In-Table Column Filters row
+  const [showFilterRow, setShowFilterRow] = useState(true);
 
   // Modals
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -1747,7 +1747,7 @@ export default function Inventory({
         </div>
 
         {/* Requirement 4: Category Dropdown MOVED RIGHT TO LEFT (placed BEFORE search bar) */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto flex-1 max-w-md">
+        <div className="flex items-center gap-2.5 w-full md:w-auto flex-1 max-w-xl md:max-w-2xl">
           {activeFilter !== "Stock Movement" && (
             <div className="relative shrink-0">
               <select
@@ -1811,13 +1811,13 @@ export default function Inventory({
           {activeFilter !== "Stock Movement" && (
             <button
               type="button"
-              onClick={() => setShowAdvancedFilters((prev) => !prev)}
+              onClick={() => setShowFilterRow((prev) => !prev)}
               className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                showAdvancedFilters || hasActiveColumnFilters
+                showFilterRow || hasActiveColumnFilters
                   ? "bg-[#064E3B] text-white border-emerald-700 shadow-xs"
                   : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
               }`}
-              title="Filter by Category, SKU, Show, Stock, Purchase Price, Selling Price, Live Price, Margin %, Stock Value"
+              title="Toggle filter controls for Category, SKU, Show, Stock, Purchase Price, Selling Price, Live Price, Margin %, Stock Value"
             >
               <svg
                 className="w-3.5 h-3.5"
@@ -2037,14 +2037,14 @@ export default function Inventory({
         </div>
       )}
 
-      {/* Expandable Advanced Filter Panel (Category, SKU, Show, Stock, Purchase, Selling, Live, Margin, Stock Value) */}
-      {showAdvancedFilters && activeFilter !== "Stock Movement" && (
-        <div className="bg-white p-4 rounded-2xl border border-emerald-200/90 shadow-sm space-y-4">
+      {/* Mobile-Only Filter Panel (Category, SKU, Show, Stock, Purchase, Selling, Live, Margin, Stock Value) */}
+      {showFilterRow && activeFilter !== "Stock Movement" && (
+        <div className="md:hidden bg-white p-4 rounded-2xl border border-emerald-200/90 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-600" />
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Filter by All 9 Inventory Dimensions
+                Filter Inventory
               </h4>
             </div>
             <div className="flex items-center gap-3">
@@ -2057,7 +2057,7 @@ export default function Inventory({
               </button>
               <button
                 type="button"
-                onClick={() => setShowAdvancedFilters(false)}
+                onClick={() => setShowFilterRow(false)}
                 className="text-xs text-slate-400 hover:text-slate-700 font-bold cursor-pointer"
               >
                 ✕ Close
@@ -2328,11 +2328,11 @@ export default function Inventory({
         <>
         {/* Main Inventory Table with All 5 Requested Features (Desktop) */}
         <div className="hidden md:block bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-xs">
-          <table className="w-full text-left text-xs min-w-[1000px]">
+          <table className="w-full text-left text-xs min-w-[1260px]">
             <thead className="bg-[#064E3B] text-white font-bold uppercase text-[10px] tracking-wider select-none">
               {/* Row 1: Sortable Column Headers */}
               <tr>
-                <th className="p-3 w-52 max-w-[210px]">
+                <th className="p-3 w-52 min-w-[210px]">
                   <button
                     type="button"
                     onClick={() => handleSort("name")}
@@ -2343,7 +2343,7 @@ export default function Inventory({
                     {renderSortIndicator("name")}
                   </button>
                 </th>
-                <th className="p-2 text-center w-28">
+                <th className="p-2 text-center w-32 min-w-[130px]">
                   <button
                     type="button"
                     onClick={() => handleSort("category")}
@@ -2354,7 +2354,7 @@ export default function Inventory({
                     {renderSortIndicator("category")}
                   </button>
                 </th>
-                <th className="p-2 w-24">
+                <th className="p-2 w-28 min-w-[110px]">
                   <button
                     type="button"
                     onClick={() => handleSort("sku")}
@@ -2365,7 +2365,7 @@ export default function Inventory({
                     {renderSortIndicator("sku")}
                   </button>
                 </th>
-                <th className="p-2 text-center w-20" title="BOTH = Marketplace + POS · MKT = Marketplace only · POS = POS billing only · HIDE = hidden">
+                <th className="p-2 text-center w-24 min-w-[95px]" title="BOTH = Marketplace + POS · MKT = Marketplace only · POS = POS billing only · HIDE = hidden">
                   <button
                     type="button"
                     onClick={() => handleSort("show")}
@@ -2376,7 +2376,7 @@ export default function Inventory({
                     {renderSortIndicator("show")}
                   </button>
                 </th>
-                <th className="p-2 text-center w-24">
+                <th className="p-2 text-center w-28 min-w-[110px]">
                   <button
                     type="button"
                     onClick={() => handleSort("stock")}
@@ -2387,7 +2387,7 @@ export default function Inventory({
                     {renderSortIndicator("stock")}
                   </button>
                 </th>
-                <th className="p-2 text-right w-28">
+                <th className="p-2 text-right w-32 min-w-[130px]">
                   <button
                     type="button"
                     onClick={() => handleSort("purchasePrice")}
@@ -2398,7 +2398,7 @@ export default function Inventory({
                     {renderSortIndicator("purchasePrice")}
                   </button>
                 </th>
-                <th className="p-2 text-right w-28">
+                <th className="p-2 text-right w-32 min-w-[130px]">
                   <button
                     type="button"
                     onClick={() => handleSort("sellingPrice")}
@@ -2410,7 +2410,7 @@ export default function Inventory({
                   </button>
                 </th>
                 {/* Arrow Header: Copy Selling Price to Live Price */}
-                <th className="p-2 text-center w-9">
+                <th className="p-2 text-center w-10 min-w-[40px]">
                   <button
                     type="button"
                     disabled={bulkSyncing}
@@ -2437,7 +2437,7 @@ export default function Inventory({
                     )}
                   </button>
                 </th>
-                <th className="p-2 text-right w-28">
+                <th className="p-2 text-right w-32 min-w-[130px]">
                   <button
                     type="button"
                     onClick={() => handleSort("livePrice")}
@@ -2448,7 +2448,7 @@ export default function Inventory({
                     {renderSortIndicator("livePrice")}
                   </button>
                 </th>
-                <th className="p-2 text-right w-24">
+                <th className="p-2 text-right w-28 min-w-[110px]">
                   <button
                     type="button"
                     onClick={() => handleSort("margin")}
@@ -2459,7 +2459,7 @@ export default function Inventory({
                     {renderSortIndicator("margin")}
                   </button>
                 </th>
-                <th className="p-2 text-right w-28">
+                <th className="p-2 text-right w-32 min-w-[130px]">
                   <button
                     type="button"
                     onClick={() => handleSort("stockValue")}
@@ -2470,231 +2470,242 @@ export default function Inventory({
                     {renderSortIndicator("stockValue")}
                   </button>
                 </th>
-                <th className="p-2 text-center w-20">Actions</th>
+                <th className="p-2 text-center w-24 min-w-[95px]">Actions</th>
               </tr>
 
-              {/* Row 2: In-Table Column Filters for All 9 Requested Columns */}
-              <tr className="bg-[#033b2c] border-t border-emerald-700/60 font-normal lowercase tracking-normal">
-                {/* Product Column Info */}
-                <th className="p-2 w-52 max-w-[210px]">
-                  <div className="flex items-center justify-between text-[10px] text-emerald-200/90 font-bold uppercase tracking-wider">
-                    <span className="flex items-center gap-1">
-                      <svg className="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                      </svg>
-                      Filters:
-                    </span>
-                    {hasActiveColumnFilters && (
+              {/* Row 2: In-Table Column Filters for All 9 Requested Columns (Clean Light Mode High-Contrast) */}
+              {showFilterRow && (
+                <tr className="bg-slate-50 border-t border-b-2 border-slate-200/90 text-slate-700 font-normal lowercase tracking-normal">
+                  {/* Product Column */}
+                  <th className="p-2 w-52 min-w-[210px]">
+                    <div className="flex items-center justify-between text-[11px] text-slate-700 font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5 text-emerald-800">
+                        <svg className="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                        </svg>
+                        Filters:
+                      </span>
+                      {hasActiveColumnFilters ? (
+                        <button
+                          type="button"
+                          onClick={handleClearAllFilters}
+                          className="text-rose-600 hover:text-rose-800 underline lowercase font-bold text-[11px] cursor-pointer"
+                        >
+                          clear
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowFilterRow(false)}
+                          className="text-slate-400 hover:text-slate-600 font-normal lowercase text-[10px] cursor-pointer"
+                          title="Hide filter row"
+                        >
+                          hide
+                        </button>
+                      )}
+                    </div>
+                  </th>
+
+                  {/* 1. Category Filter */}
+                  <th className="p-1.5 w-32 min-w-[130px] text-center">
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="w-full px-2 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs cursor-pointer truncate"
+                      title="Filter by Category"
+                    >
+                      <option value="All">All Categories</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </th>
+
+                  {/* 2. SKU Filter */}
+                  <th className="p-1.5 w-28 min-w-[110px]">
+                    <input
+                      type="text"
+                      value={skuFilter}
+                      onChange={(e) => setSkuFilter(e.target.value)}
+                      placeholder="SKU..."
+                      className="w-full px-2 py-1 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs font-mono"
+                      title="Filter by SKU"
+                    />
+                  </th>
+
+                  {/* 3. Show Filter */}
+                  <th className="p-1.5 w-24 min-w-[95px] text-center">
+                    <select
+                      value={showFilter}
+                      onChange={(e) => setShowFilter(e.target.value as any)}
+                      className="w-full px-1.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs cursor-pointer uppercase"
+                      title="Filter by Show (Visibility)"
+                    >
+                      <option value="all">All Show</option>
+                      <option value="both">BOTH</option>
+                      <option value="marketplace">MKT</option>
+                      <option value="pos">POS</option>
+                      <option value="hidden">HIDE</option>
+                    </select>
+                  </th>
+
+                  {/* 4. Stock Filter */}
+                  <th className="p-1.5 w-28 min-w-[110px] text-center">
+                    <select
+                      value={stockStatusFilter}
+                      onChange={(e) => setStockStatusFilter(e.target.value as any)}
+                      className="w-full px-1.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs cursor-pointer"
+                      title="Filter by Stock level"
+                    >
+                      <option value="all">All Stock</option>
+                      <option value="in_stock">In Stock (&gt;0)</option>
+                      <option value="low_stock">Low Stock (≤min)</option>
+                      <option value="out_of_stock">Out of Stock (0)</option>
+                    </select>
+                  </th>
+
+                  {/* 5. Purchase Price Filter */}
+                  <th className="p-1.5 w-32 min-w-[130px] text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Min"
+                        value={minPurchasePrice}
+                        onChange={(e) => setMinPurchasePrice(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Min Purchase Price (₹)"
+                      />
+                      <span className="text-slate-400 text-xs">-</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Max"
+                        value={maxPurchasePrice}
+                        onChange={(e) => setMaxPurchasePrice(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Max Purchase Price (₹)"
+                      />
+                    </div>
+                  </th>
+
+                  {/* 6. Selling Price Filter */}
+                  <th className="p-1.5 w-32 min-w-[130px] text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Min"
+                        value={minSellingPrice}
+                        onChange={(e) => setMinSellingPrice(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Min Selling Price (₹)"
+                      />
+                      <span className="text-slate-400 text-xs">-</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Max"
+                        value={maxSellingPrice}
+                        onChange={(e) => setMaxSellingPrice(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Max Selling Price (₹)"
+                      />
+                    </div>
+                  </th>
+
+                  {/* Bulk Sync Spacer */}
+                  <th className="p-1 w-10 min-w-[40px] text-center">
+                    <span className="text-slate-300 text-xs">—</span>
+                  </th>
+
+                  {/* 7. Live Price Filter */}
+                  <th className="p-1.5 w-32 min-w-[130px] text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Min"
+                        value={minLivePrice}
+                        onChange={(e) => setMinLivePrice(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Min Live Price (₹)"
+                      />
+                      <span className="text-slate-400 text-xs">-</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Max"
+                        value={maxLivePrice}
+                        onChange={(e) => setMaxLivePrice(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Max Live Price (₹)"
+                      />
+                    </div>
+                  </th>
+
+                  {/* 8. Margin (%) Filter */}
+                  <th className="p-1.5 w-28 min-w-[110px] text-right">
+                    <select
+                      value={marginRangeFilter}
+                      onChange={(e) => setMarginRangeFilter(e.target.value as any)}
+                      className="w-full px-1.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs cursor-pointer"
+                      title="Filter by Margin %"
+                    >
+                      <option value="all">All Margins</option>
+                      <option value="high">&gt; 25% (High)</option>
+                      <option value="medium">10% - 25%</option>
+                      <option value="low">0% - 10%</option>
+                      <option value="negative">&lt; 0% (Loss)</option>
+                    </select>
+                  </th>
+
+                  {/* 9. Stock Value Filter */}
+                  <th className="p-1.5 w-32 min-w-[130px] text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Min ₹"
+                        value={minStockValue}
+                        onChange={(e) => setMinStockValue(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Min Stock Value (₹)"
+                      />
+                      <span className="text-slate-400 text-xs">-</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Max ₹"
+                        value={maxStockValue}
+                        onChange={(e) => setMaxStockValue(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs text-right bg-white border border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-2xs"
+                        title="Max Stock Value (₹)"
+                      />
+                    </div>
+                  </th>
+
+                  {/* Action Reset Button */}
+                  <th className="p-1.5 w-24 min-w-[95px] text-center">
+                    {hasActiveColumnFilters ? (
                       <button
                         type="button"
                         onClick={handleClearAllFilters}
-                        className="text-amber-300 hover:text-white underline lowercase font-bold text-[10px] cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs uppercase tracking-wider transition shadow-2xs cursor-pointer"
+                        title="Reset all filters"
                       >
-                        clear
+                        ✕ Reset
                       </button>
+                    ) : (
+                      <span className="text-slate-400 text-xs font-semibold">
+                        —
+                      </span>
                     )}
-                  </div>
-                </th>
-
-                {/* 1. Category Filter */}
-                <th className="p-1.5 w-28 text-center">
-                  <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="w-full px-1.5 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
-                    title="Filter by Category"
-                  >
-                    <option value="All">All Categories</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </th>
-
-                {/* 2. SKU Filter */}
-                <th className="p-1.5 w-24">
-                  <input
-                    type="text"
-                    value={skuFilter}
-                    onChange={(e) => setSkuFilter(e.target.value)}
-                    placeholder="SKU..."
-                    className="w-full px-1.5 py-1 text-[10px] bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 font-mono"
-                    title="Filter by SKU"
-                  />
-                </th>
-
-                {/* 3. Show Filter */}
-                <th className="p-1.5 w-20 text-center">
-                  <select
-                    value={showFilter}
-                    onChange={(e) => setShowFilter(e.target.value as any)}
-                    className="w-full px-1 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer uppercase"
-                    title="Filter by Show (Visibility)"
-                  >
-                    <option value="all">All</option>
-                    <option value="both">BOTH</option>
-                    <option value="marketplace">MKT</option>
-                    <option value="pos">POS</option>
-                    <option value="hidden">HIDE</option>
-                  </select>
-                </th>
-
-                {/* 4. Stock Filter */}
-                <th className="p-1.5 w-24 text-center">
-                  <select
-                    value={stockStatusFilter}
-                    onChange={(e) => setStockStatusFilter(e.target.value as any)}
-                    className="w-full px-1.5 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
-                    title="Filter by Stock level"
-                  >
-                    <option value="all">All Stock</option>
-                    <option value="in_stock">In Stock (&gt;0)</option>
-                    <option value="low_stock">Low (≤min)</option>
-                    <option value="out_of_stock">Out (0)</option>
-                  </select>
-                </th>
-
-                {/* 5. Purchase Price Filter */}
-                <th className="p-1.5 w-28 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Min"
-                      value={minPurchasePrice}
-                      onChange={(e) => setMinPurchasePrice(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Min Purchase Price"
-                    />
-                    <span className="text-emerald-400/60">-</span>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Max"
-                      value={maxPurchasePrice}
-                      onChange={(e) => setMaxPurchasePrice(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Max Purchase Price"
-                    />
-                  </div>
-                </th>
-
-                {/* 6. Selling Price Filter */}
-                <th className="p-1.5 w-28 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Min"
-                      value={minSellingPrice}
-                      onChange={(e) => setMinSellingPrice(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Min Selling Price"
-                    />
-                    <span className="text-emerald-400/60">-</span>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Max"
-                      value={maxSellingPrice}
-                      onChange={(e) => setMaxSellingPrice(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Max Selling Price"
-                    />
-                  </div>
-                </th>
-
-                {/* Bulk Sync Column Spacer */}
-                <th className="p-1 w-9 text-center">
-                  <span className="text-emerald-400/30 text-[10px]">—</span>
-                </th>
-
-                {/* 7. Live Price Filter */}
-                <th className="p-1.5 w-28 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Min"
-                      value={minLivePrice}
-                      onChange={(e) => setMinLivePrice(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Min Live Price"
-                    />
-                    <span className="text-emerald-400/60">-</span>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Max"
-                      value={maxLivePrice}
-                      onChange={(e) => setMaxLivePrice(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Max Live Price"
-                    />
-                  </div>
-                </th>
-
-                {/* 8. Margin (%) Filter */}
-                <th className="p-1.5 w-24 text-right">
-                  <select
-                    value={marginRangeFilter}
-                    onChange={(e) => setMarginRangeFilter(e.target.value as any)}
-                    className="w-full px-1.5 py-1 text-[10px] font-semibold bg-emerald-950/80 text-emerald-100 border border-emerald-600/70 rounded-lg outline-none focus:ring-1 focus:ring-emerald-400 cursor-pointer"
-                    title="Filter by Margin %"
-                  >
-                    <option value="all">All</option>
-                    <option value="high">&gt; 25%</option>
-                    <option value="medium">10-25%</option>
-                    <option value="low">0-10%</option>
-                    <option value="negative">&lt; 0%</option>
-                  </select>
-                </th>
-
-                {/* 9. Stock Value Filter */}
-                <th className="p-1.5 w-28 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Min"
-                      value={minStockValue}
-                      onChange={(e) => setMinStockValue(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Min Stock Value (₹)"
-                    />
-                    <span className="text-emerald-400/60">-</span>
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Max"
-                      value={maxStockValue}
-                      onChange={(e) => setMaxStockValue(e.target.value)}
-                      className="w-12 px-1 py-1 text-[10px] text-right bg-emerald-950/80 text-emerald-100 placeholder-emerald-400/50 border border-emerald-600/70 rounded outline-none focus:ring-1 focus:ring-emerald-400"
-                      title="Max Stock Value (₹)"
-                    />
-                  </div>
-                </th>
-
-                {/* Action Reset Button */}
-                <th className="p-1.5 w-20 text-center">
-                  {hasActiveColumnFilters ? (
-                    <button
-                      type="button"
-                      onClick={handleClearAllFilters}
-                      className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[9px] uppercase tracking-wider transition shadow-2xs cursor-pointer"
-                      title="Reset all filters"
-                    >
-                      Reset
-                    </button>
-                  ) : (
-                    <span className="text-emerald-400/40 text-[9px] uppercase font-bold tracking-wider">
-                      Filters
-                    </span>
-                  )}
-                </th>
-              </tr>
+                  </th>
+                </tr>
+              )}
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredProducts.length === 0 ? (
