@@ -44,18 +44,16 @@ export async function createCustomer(req: Request, res: Response) {
     return res.status(400).json({ success: false, message: "A valid 10-digit Mobile Number is required" });
   }
 
-  const trimmedAddress = String(address || "").trim();
-  if (!trimmedAddress) {
-    return res.status(400).json({ success: false, message: "Address is required" });
+  const trimmedAddress = String(address || "").trim() || null;
+
+  const rawEmail = email !== undefined && email !== null ? String(email).trim().toLowerCase() : "";
+  const cleanEmail = rawEmail.length > 0 ? rawEmail : null;
+  if (cleanEmail && !isValidEmail(cleanEmail)) {
+    return res.status(400).json({ success: false, message: "Please provide a valid Email address or leave it empty" });
   }
 
-  const cleanEmail = String(email || "").trim().toLowerCase();
-  if (!cleanEmail || !isValidEmail(cleanEmail)) {
-    return res.status(400).json({ success: false, message: "A valid Email address is required" });
-  }
-
-  const rawPassword = String(password || "").trim();
-  if (!rawPassword || rawPassword.length < 6) {
+  const rawPassword = String(password || "").trim() || cleanPhone;
+  if (rawPassword.length < 6) {
     return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
   }
 
@@ -72,14 +70,16 @@ export async function createCustomer(req: Request, res: Response) {
     });
   }
 
-  const existingEmail = await Customer.findOne({
-    where: { owner_id: ownerId, email: cleanEmail },
-  });
-  if (existingEmail) {
-    return res.status(409).json({
-      success: false,
-      message: `A customer with email ${cleanEmail} already exists.`,
+  if (cleanEmail) {
+    const existingEmail = await Customer.findOne({
+      where: { owner_id: ownerId, email: cleanEmail },
     });
+    if (existingEmail) {
+      return res.status(409).json({
+        success: false,
+        message: `A customer with email ${cleanEmail} already exists.`,
+      });
+    }
   }
 
   const effectiveShopName = (shopName || shop_name) ? String(shopName || shop_name).trim() : null;
@@ -96,8 +96,10 @@ export async function createCustomer(req: Request, res: Response) {
   // Hash password using bcrypt
   const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-  // Sync to Supabase Auth (auth.users & auth.identities)
-  const supabaseUid = await syncCustomerToSupabaseAuth(cleanEmail, passwordHash, trimmedName, cleanPhone);
+  // Sync to Supabase Auth (auth.users & auth.identities) if cleanEmail is provided
+  const supabaseUid = cleanEmail
+    ? await syncCustomerToSupabaseAuth(cleanEmail, passwordHash, trimmedName, cleanPhone)
+    : null;
 
   const customer = await Customer.create({
     owner_id: ownerId,
@@ -242,7 +244,8 @@ export async function updateCustomer(req: Request, res: Response) {
 
   let emailUpdated = false;
   if (email !== undefined) {
-    const cleanEmail = String(email).trim().toLowerCase();
+    const rawEmail = String(email || "").trim().toLowerCase();
+    const cleanEmail = rawEmail.length > 0 ? rawEmail : null;
     if (cleanEmail && cleanEmail !== customer.email) {
       if (!isValidEmail(cleanEmail)) {
         return res.status(400).json({ success: false, message: "Invalid email address format" });
@@ -254,6 +257,9 @@ export async function updateCustomer(req: Request, res: Response) {
         return res.status(409).json({ success: false, message: `Email ${cleanEmail} already in use` });
       }
       customer.email = cleanEmail;
+      emailUpdated = true;
+    } else if (!cleanEmail && customer.email) {
+      customer.email = null;
       emailUpdated = true;
     }
   }
@@ -282,7 +288,7 @@ export async function updateCustomer(req: Request, res: Response) {
     });
     if (!created) {
       acc.password_hash = passwordHash;
-      if (customer.email) acc.email = customer.email;
+      acc.email = customer.email || null;
       if (customer.phone) acc.phone = customer.phone;
       await acc.save();
     }
@@ -293,8 +299,8 @@ export async function updateCustomer(req: Request, res: Response) {
 
   if (emailUpdated || phoneUpdated) {
     const accountUpdates: any = {};
-    if (customer.email) accountUpdates.email = customer.email;
-    if (customer.phone) accountUpdates.phone = customer.phone;
+    if (emailUpdated) accountUpdates.email = customer.email;
+    if (phoneUpdated && customer.phone) accountUpdates.phone = customer.phone;
     await CustomerAccount.update(accountUpdates, { where: { customer_id: customer.id } });
   }
 

@@ -103,8 +103,8 @@ function CustomersInner() {
     }
 
     const cleanEmail = form.email.trim();
-    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setError("A valid Email Address is required");
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError("Please enter a valid Email Address or leave it empty");
       return;
     }
 
@@ -128,7 +128,7 @@ function CustomersInner() {
         name,
         shopName: form.shopName.trim() || undefined,
         phone: cleanPhone,
-        email: cleanEmail,
+        email: cleanEmail || undefined,
         address,
         openingBalance: opBal,
         password,
@@ -338,7 +338,7 @@ function CustomersInner() {
         <Modal
           icon="users"
           title="New customer"
-          subtitle="They can sign in to the Customer Portal with this email and password."
+          subtitle="They can sign in to the Customer Portal with their mobile/email and password."
           onClose={() => setShowForm(false)}
           footer={
             <>
@@ -361,8 +361,8 @@ function CustomersInner() {
               <input className="input" maxLength={150} value={form.shopName} onChange={(e) => setForm({ ...form, shopName: e.target.value })} placeholder="e.g. Sharma Mobile Store" />
             </div>
             <div>
-              <label className="label">Email * <span className="font-normal text-slate-400">(portal login)</span></label>
-              <input required type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="customer@example.com" />
+              <label className="label">Email <span className="font-normal text-slate-400">(optional)</span></label>
+              <input type="email" className="input" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="customer@example.com" />
             </div>
             <div className="sm:col-span-2">
               <label className="label">Address *</label>
