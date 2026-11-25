@@ -3,6 +3,13 @@ import { marketplaceVisibleSql } from "../utils/productVisibility";
 import { QueryTypes } from "sequelize";
 import { sequelize, Shop, ShopPortalSettings, ProductImage } from "../models";
 
+/** SQL true when the shop sells without stock (settings.allowNegativeStock), in this database's JSON syntax. */
+function negStockAllowed(alias = "s"): string {
+  if (sequelize.getDialect() === "postgres") return `COALESCE(${alias}.settings::jsonb ->> 'allowNegativeStock', '') = 'true'`;
+  if (sequelize.getDialect() === "sqlite") return `json_extract(${alias}.settings, '$.allowNegativeStock') IN (1, 'true')`;
+  return `JSON_UNQUOTE(JSON_EXTRACT(${alias}.settings, '$.allowNegativeStock')) = 'true'`;
+}
+
 /**
  * PUBLIC MARKETPLACE (MultiShop Phase 1) — read-only, no login.
  *
@@ -112,7 +119,7 @@ export async function searchListings(req: Request, res: Response) {
       where.push("p.selling_price <= :maxPrice");
       rep.maxPrice = max;
     }
-    if (String(req.query.inStock) === "true") where.push("(COALESCE(ps.current_stock, 0) > 0 OR JSON_UNQUOTE(JSON_EXTRACT(s.settings, '$.allowNegativeStock')) = 'true')");
+    if (String(req.query.inStock) === "true") where.push(`(COALESCE(ps.current_stock, 0) > 0 OR ${negStockAllowed()})`);
 
     const sort = String(req.query.sort || "relevance");
     const order =
@@ -123,7 +130,7 @@ export async function searchListings(req: Request, res: Response) {
         : sort === "newest"
         ? "p.created_at DESC, p.id DESC"
         : // relevance: name matches first, then in-stock, then name
-          (q ? "CASE WHEN LOWER(p.name) LIKE :qStart THEN 0 ELSE 1 END, " : "") + "CASE WHEN (COALESCE(ps.current_stock, 0) > 0 OR JSON_UNQUOTE(JSON_EXTRACT(s.settings, '$.allowNegativeStock')) = 'true') THEN 0 ELSE 1 END, p.name ASC";
+          (q ? "CASE WHEN LOWER(p.name) LIKE :qStart THEN 0 ELSE 1 END, " : "") + `CASE WHEN (COALESCE(ps.current_stock, 0) > 0 OR ${negStockAllowed()}) THEN 0 ELSE 1 END, p.name ASC`;
     if (q && sort === "relevance") rep.qStart = `${q}%`;
 
     const whereSql = `WHERE ${where.join(" AND ")}`;
@@ -189,7 +196,7 @@ export async function listMarketShops(req: Request, res: Response) {
               (SELECT COUNT(*) FROM products p WHERE p.owner_id = s.owner_id AND p.status = 'active'${marketplaceVisibleSql("p")}) AS product_count,
               (SELECT COUNT(*) FROM products p JOIN product_stocks ps ON ps.product_id = p.id AND ps.shop_id = s.id
                  WHERE p.owner_id = s.owner_id AND p.status = 'active'${marketplaceVisibleSql("p")}
-                 AND (ps.current_stock > 0 OR JSON_UNQUOTE(JSON_EXTRACT(s.settings, '$.allowNegativeStock')) = 'true')) AS in_stock_count
+                 AND (ps.current_stock > 0 OR ${negStockAllowed()})) AS in_stock_count
        FROM shops s ${where}
        ORDER BY in_stock_count DESC, s.name ASC
        LIMIT :limit OFFSET :offset`,
