@@ -44,16 +44,20 @@ function relayTransport(c: SmtpConfig) {
       mail.message.build(async (buildErr: Error | null, raw: Buffer) => {
         if (buildErr) return callback(buildErr);
         try {
+          const from = (typeof envelope.from === "string" && envelope.from.includes("@")) ? envelope.from : c.user;
+          // For Gmail through the relay, port 587 (STARTTLS) is reliable across Cloudflare Workers
+          const port = (c.host === "smtp.gmail.com" && c.port === 465) ? 587 : c.port;
+          const secure = port === 465;
           const res = await fetch(process.env.EMAIL_RELAY_URL as string, {
             method: "POST",
             headers: { "content-type": "application/json", authorization: `Bearer ${process.env.EMAIL_RELAY_SECRET}` },
             body: JSON.stringify({
               host: c.host,
-              port: c.port,
-              secure: c.secure,
+              port,
+              secure,
               user: c.user,
               pass: c.pass,
-              from: envelope.from,
+              from,
               to: envelope.to,
               raw: raw.toString("base64"),
             }),

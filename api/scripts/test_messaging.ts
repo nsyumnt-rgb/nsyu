@@ -16,6 +16,8 @@ process.env.MESSAGING_WORKER = "off";
 delete process.env.SMTP_HOST;
 delete process.env.SMTP_USER;
 delete process.env.SMTP_PASS;
+delete process.env.EMAIL_RELAY_URL;
+delete process.env.EMAIL_RELAY_SECRET;
 import http from "http";
 import net from "net";
 import crypto from "crypto";
@@ -148,6 +150,11 @@ async function main() {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const models = require("../src/models");
   const app = require("../src/app").default;
+  delete process.env.EMAIL_RELAY_URL;
+  delete process.env.EMAIL_RELAY_SECRET;
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASS;
   const { signAccessToken } = require("../src/utils/jwt");
   const engine = require("../src/utils/messaging/engine");
   const { legacyEmailAllowed } = require("../src/utils/messaging/settings");

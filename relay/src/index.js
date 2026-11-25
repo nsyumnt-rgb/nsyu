@@ -71,8 +71,9 @@ async function sendSmtp({ host, port, mode, user, pass, from, to, raw }) {
   let socket;
   try {
     socket = connect({ hostname: host, port }, { secureTransport: mode === "on" ? "on" : mode === "starttls" ? "starttls" : "off", allowHalfOpen: false });
+    await socket.opened;
   } catch (e) {
-    throw smtpError("ECONNECTION", `Could not connect to ${host}:${port}`);
+    throw smtpError("ECONNECTION", `Could not connect to ${host}:${port}: ${e?.message || e}`);
   }
   let active = socket;
   let conn = wrap(active);
@@ -85,6 +86,7 @@ async function sendSmtp({ host, port, mode, user, pass, from, to, raw }) {
       await conn.cmd("STARTTLS", 220);
       conn.release();
       active = socket.startTls();
+      await active.opened;
       conn = wrap(active);
       caps = await conn.cmd(`EHLO nsyu-relay`, 250);
     }

@@ -191,7 +191,7 @@ export default function CommunicationSetup({ onChanged }: { onChanged?: () => vo
       if (!EMAIL_RE.test(gmail.user.trim())) return "Enter the shop's Gmail address";
       const keepGmail = !!acct?.connected && acct.host === "smtp.gmail.com" && acct.user === gmail.user.trim();
       if (gmailPass.length !== 16 && !(keepGmail && !gmailPass)) return "The App Password from Google has 16 letters";
-      body.account = { host: "smtp.gmail.com", port: 465, secure: true, user: gmail.user.trim(), password: gmailPass || undefined };
+      body.account = { host: "smtp.gmail.com", port: 587, secure: false, user: gmail.user.trim(), password: gmailPass || undefined };
       return body;
     }
     if (!smtp.host.trim()) return "Enter the SMTP server";
