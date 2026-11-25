@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { getMarketShops, type MarketShop } from "../../api/marketplace";
 import MarketCategorySidebar from "../../components/MarketCategorySidebar";
 import ShopCard from "./ShopCard";
 
 export default function MarketShops() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [sortBy, setSortBy] = useState<"relevance" | "stock" | "products" | "name">("relevance");
   const [isListView, setIsListView] = useState(false);
@@ -43,6 +45,21 @@ export default function MarketShops() {
     return list;
   }, [shops, sortBy]);
 
+  function handleExploreShops() {
+    if (sortedShops.length === 1 && sortedShops[0]?.code) {
+      navigate(`/market/shop/${encodeURIComponent(sortedShops[0].code)}`);
+      return;
+    }
+    const target = document.getElementById("shops-grid") || document.getElementById("shops-section");
+    if (target) {
+      const yOffset = -85;
+      const y = target.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    } else if (sortedShops[0]?.code) {
+      navigate(`/market/shop/${encodeURIComponent(sortedShops[0].code)}`);
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-6 items-start">
       
@@ -68,16 +85,20 @@ export default function MarketShops() {
             <p className="text-xs sm:text-sm text-slate-600 font-medium">
               Shop from your favorite stores at the best prices
             </p>
-            <div className="pt-2">
+            <div className="pt-2 flex flex-wrap items-center gap-2.5 justify-center md:justify-start">
               <button
                 type="button"
-                onClick={() => {
-                  document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth" });
-                }}
+                onClick={handleExploreShops}
                 className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#047857] hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition shadow-md hover:scale-105 active:scale-95 cursor-pointer"
               >
-                <span>Explore Shops →</span>
+                <span>{sortedShops.length === 1 && sortedShops[0]?.name ? `Explore ${sortedShops[0].name} →` : "Explore Shops →"}</span>
               </button>
+              <Link
+                to="/market/search"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-xs sm:text-sm transition shadow-xs hover:scale-105 active:scale-95"
+              >
+                <span>Browse Products →</span>
+              </Link>
             </div>
           </div>
 
@@ -242,13 +263,13 @@ export default function MarketShops() {
             No shops match “{q}”.
           </div>
         ) : isListView ? (
-          <div className="space-y-3">
+          <div id="shops-grid" className="space-y-3">
             {sortedShops.map((s) => (
               <ShopCard key={s.id} shop={s} isListView={true} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div id="shops-grid" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {sortedShops.map((s) => (
               <ShopCard key={s.id} shop={s} isListView={false} />
             ))}
