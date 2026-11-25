@@ -69,12 +69,15 @@ export default function MarketShops() {
               Shop from your favorite stores at the best prices
             </p>
             <div className="pt-2">
-              <a
-                href="#shops-section"
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#047857] hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition shadow-md hover:scale-105 active:scale-95"
+              <button
+                type="button"
+                onClick={() => {
+                  document.getElementById("shops-section")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#047857] hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm transition shadow-md hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <span>Explore Shops →</span>
-              </a>
+              </button>
             </div>
           </div>
 

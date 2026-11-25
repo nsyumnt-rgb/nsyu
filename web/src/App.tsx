@@ -85,6 +85,8 @@ export default function App() {
           <Route element={<MarketLayout />}>
             <Route path="/" element={<MarketHome />} />
             <Route path="/categories" element={<Navigate to="/market/search" replace />} />
+            <Route path="/shops-section" element={<Navigate to="/market/shops" replace />} />
+            <Route path="/shops" element={<Navigate to="/market/shops" replace />} />
             <Route path="/market/search" element={<MarketSearch />} />
             <Route path="/market/shops" element={<MarketShops />} />
             <Route path="/market/shop/:code" element={<MarketShop />} />
