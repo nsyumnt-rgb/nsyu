@@ -40,4 +40,4 @@ services:
       - key: EMAIL_RELAY_URL
         value: https://nsyu-email-relay.nsyu-email-relay.workers.dev/send
       - key: EMAIL_RELAY_SECRET
-        sync: false
+        value: 8fedfb27bab2081336f54f98405474fc34c59de74000c2d52c34399ede0fdc5d

@@ -3,6 +3,7 @@ import type { ApiEnvelope, Sale } from "../types";
 
 export interface CreateSaleInput {
   customerId: number;
+  customerEmail?: string;
   items: Array<{
     productId: number;
     quantity: number;

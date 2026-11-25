@@ -49,9 +49,10 @@ export interface SuccessModalProps {
   onClose: () => void;
   onViewBill: () => void;
   onDownloadPdf?: () => void;
+  onEmailBill?: () => void;
 }
 
-export function SuccessModal({ sale, onClose, onViewBill, onDownloadPdf }: SuccessModalProps) {
+export function SuccessModal({ sale, onClose, onViewBill, onDownloadPdf, onEmailBill }: SuccessModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
       <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative space-y-5 animate-scale-up">
@@ -81,7 +82,7 @@ export function SuccessModal({ sale, onClose, onViewBill, onDownloadPdf }: Succe
 
           <h3 className="text-xl font-extrabold text-slate-900 tracking-tight">Bill Saved Successfully!</h3>
           <p className="text-xs text-slate-500 mt-1 max-w-xs">
-            Invoice <span className="font-mono font-bold text-slate-800">#{sale.invoice_number}</span> has been created and verified in Supabase.
+            Invoice <span className="font-mono font-bold text-slate-800">#{sale.invoice_number}</span> has been created.
           </p>
         </div>
 
@@ -91,6 +92,17 @@ export function SuccessModal({ sale, onClose, onViewBill, onDownloadPdf }: Succe
             <span className="text-slate-500">Customer:</span>
             <span className="font-semibold text-slate-800">{sale.customer?.name || "Walk-in Customer"}</span>
           </div>
+          {sale.customer?.email ? (
+            <div className="flex justify-between items-center text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/60 font-medium">
+              <span>📧 Email Notification:</span>
+              <span className="truncate max-w-[200px]" title={sale.customer.email}>{sale.customer.email} (PDF attached)</span>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center text-slate-400 text-[11px]">
+              <span>Email:</span>
+              <span>No email provided</span>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <span className="text-slate-500">Total Amount:</span>
             <span className="font-mono font-bold text-slate-900">₹{sale.total_amount}</span>
@@ -121,7 +133,7 @@ export function SuccessModal({ sale, onClose, onViewBill, onDownloadPdf }: Succe
             <span>View Bill</span>
           </button>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid ${onEmailBill ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
             {onDownloadPdf && (
               <button
                 type="button"
@@ -133,7 +145,17 @@ export function SuccessModal({ sale, onClose, onViewBill, onDownloadPdf }: Succe
                   <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                   <rect x="6" y="14" width="12" height="8" />
                 </svg>
-                <span>Print / PDF</span>
+                <span>Print PDF</span>
+              </button>
+            )}
+
+            {onEmailBill && (
+              <button
+                type="button"
+                onClick={onEmailBill}
+                className="py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer border border-emerald-200/60"
+              >
+                <span>✉️ Email Bill</span>
               </button>
             )}
 
@@ -141,10 +163,10 @@ export function SuccessModal({ sale, onClose, onViewBill, onDownloadPdf }: Succe
               type="button"
               onClick={onClose}
               className={`py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold rounded-xl text-xs flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                !onDownloadPdf ? "col-span-2" : ""
+                !onDownloadPdf && !onEmailBill ? "col-span-2" : ""
               }`}
             >
-              <span>Continue Billing</span>
+              <span>Continue</span>
             </button>
           </div>
         </div>

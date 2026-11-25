@@ -24,9 +24,20 @@ let transporter: Transporter | null = null;
 
 type SmtpConfig = { host: string; port: number; secure: boolean; user: string; pass: string };
 
+const DEFAULT_RELAY_URL = "https://nsyu-email-relay.nsyu-email-relay.workers.dev/send";
+const DEFAULT_RELAY_SECRET = "8fedfb27bab2081336f54f98405474fc34c59de74000c2d52c34399ede0fdc5d";
+
+export function getRelayConfig(): { url: string; secret: string } {
+  return {
+    url: process.env.EMAIL_RELAY_URL || DEFAULT_RELAY_URL,
+    secret: process.env.EMAIL_RELAY_SECRET || DEFAULT_RELAY_SECRET,
+  };
+}
+
 /** True when EMAIL_RELAY_URL/SECRET are set: SMTP goes through the HTTPS relay (Render free blocks SMTP ports). */
 export function relayEnabled(): boolean {
-  return !!(process.env.EMAIL_RELAY_URL && process.env.EMAIL_RELAY_SECRET);
+  const c = getRelayConfig();
+  return !!(c.url && c.secret);
 }
 
 /**
@@ -48,9 +59,10 @@ function relayTransport(c: SmtpConfig) {
           // For Gmail through the relay, port 587 (STARTTLS) is reliable across Cloudflare Workers
           const port = (c.host === "smtp.gmail.com" && c.port === 465) ? 587 : c.port;
           const secure = port === 465;
-          const res = await fetch(process.env.EMAIL_RELAY_URL as string, {
+          const { url, secret } = getRelayConfig();
+          const res = await fetch(url, {
             method: "POST",
-            headers: { "content-type": "application/json", authorization: `Bearer ${process.env.EMAIL_RELAY_SECRET}` },
+            headers: { "content-type": "application/json", authorization: `Bearer ${secret}` },
             body: JSON.stringify({
               host: c.host,
               port,

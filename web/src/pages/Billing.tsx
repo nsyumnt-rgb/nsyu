@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { listProducts } from "../api/products";
 import { isPosVisible } from "../utils/productVisibility";
-import { listSales, downloadInvoicePdf } from "../api/sales";
+import { listSales, downloadInvoicePdf, sendSaleEmail } from "../api/sales";
 import { apiErrorMessage, resolveAssetUrl } from "../api/client";
 import { usePosStore } from "../store/posStore";
 import { EmptyState, Icon, IconButton, SearchInput, Segmented } from "../components/ui";
@@ -164,6 +164,29 @@ function BillingInner() {
       actionLabel: "View Cart & Bill",
       onAction: openCart,
     });
+  }
+
+  async function emailPdf(id: number, customerEmail?: string | null) {
+    let emailToSend = (customerEmail || "").trim();
+    if (!emailToSend) {
+      const prompted = window.prompt("Enter customer email address to send invoice:", "");
+      if (!prompted) return;
+      emailToSend = prompted.trim();
+    }
+    try {
+      const res = await sendSaleEmail(id, emailToSend);
+      setToast({
+        type: "success",
+        title: "Bill Emailed",
+        subtitle: res.data.message || `Invoice with PDF sent to ${emailToSend}`,
+      });
+    } catch (err: any) {
+      setToast({
+        type: "error",
+        title: "Email Failed",
+        subtitle: apiErrorMessage(err, "Could not send email."),
+      });
+    }
   }
 
   async function downloadPdf(id: number, num: string) {
@@ -613,6 +636,11 @@ function BillingInner() {
                             icon="download"
                             onClick={() => downloadPdf(s.id, s.invoice_number)}
                           />
+                          <IconButton
+                            title="Email Bill & PDF"
+                            icon="mail"
+                            onClick={() => emailPdf(s.id, s.customer?.email)}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -683,6 +711,11 @@ function BillingInner() {
                         title="Download PDF"
                         icon="download"
                         onClick={() => downloadPdf(s.id, s.invoice_number)}
+                      />
+                      <IconButton
+                        title="Email Bill & PDF"
+                        icon="mail"
+                        onClick={() => emailPdf(s.id, s.customer?.email)}
                       />
                     </div>
                   </div>

@@ -4,7 +4,7 @@ import { usePosStore } from "../store/posStore";
 import { useAuthStore } from "../store/authStore";
 import { resolveAssetUrl, apiErrorMessage } from "../api/client";
 import { listCustomers, createCustomer } from "../api/customers";
-import { createSale, downloadInvoicePdf } from "../api/sales";
+import { createSale, downloadInvoicePdf, sendSaleEmail } from "../api/sales";
 import { createOrder } from "../api/orders";
 import { Icon } from "../components/ui";
 import ProductItemIcon from "../components/ProductItemIcon";
@@ -322,8 +322,10 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
     setProcessing(true);
     try {
       const rateLabel = priceSource === "live" ? "Live Price" : "Selling Price";
+      const selectedCustomer = customers.find((c) => c.id === Number(selectedCustomerId));
       const res = await createSale({
         customerId: Number(selectedCustomerId),
+        customerEmail: selectedCustomer?.email || undefined,
         items: items.map((c) => ({
           productId: c.product.id,
           quantity: c.quantity,
@@ -1089,6 +1091,29 @@ export default function Cart({ onClose }: { onClose?: () => void } = {}) {
             navigate(`/app/sales/${id}`);
           }}
           onDownloadPdf={() => downloadPdf(savedModalSale.id, savedModalSale.invoice_number)}
+          onEmailBill={async () => {
+            const currentEmail = savedModalSale.customer?.email || "";
+            let emailToSend = currentEmail;
+            if (!emailToSend) {
+              const prompted = window.prompt("Enter customer email address to send invoice:", "");
+              if (!prompted) return;
+              emailToSend = prompted.trim();
+            }
+            try {
+              const res = await sendSaleEmail(savedModalSale.id, emailToSend);
+              setToast({
+                type: "success",
+                title: "Bill Emailed",
+                subtitle: res.data.message || `Invoice with PDF sent to ${emailToSend}`,
+              });
+            } catch (err: any) {
+              setToast({
+                type: "error",
+                title: "Email Failed",
+                subtitle: apiErrorMessage(err, "Could not send email."),
+              });
+            }
+          }}
         />
       )}
       {failureReason && <FailureModal reason={failureReason} onRetry={handleCheckout} onClose={() => setFailureReason(null)} />}

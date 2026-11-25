@@ -534,7 +534,7 @@ export async function createSale(req: Request, res: Response) {
             console.warn("Could not generate invoice PDF for email attachment:", pdfErr);
           }
 
-          const targetEmail = req.body?.customerEmail || req.body?.email || saleAny.customer?.email;
+          const targetEmail = req.body?.customerEmail || req.body?.email || req.body?.customer?.email || saleAny.customer?.email;
 
           if (targetEmail && saleAny.customer && !saleAny.customer.email) {
             saleAny.customer.email = targetEmail;
