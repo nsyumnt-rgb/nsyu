@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getApiBaseUrl } from "./client";
 import { portalApi } from "./portal";
-import type { CartData } from "../store/portalStore";
+import { usePortalStore, type CartData } from "../store/portalStore";
 
 /** Public, no-login marketplace API (MultiShop phase 1). */
 const marketApi = axios.create({ baseURL: getApiBaseUrl() });
@@ -110,8 +110,12 @@ export interface MarketCart {
 }
 
 export async function getMarketCart(): Promise<MarketCart> {
+  const token = usePortalStore.getState().accessToken;
+  if (!token) {
+    return { groups: [], itemCount: 0, total: 0 };
+  }
   const res = await portalApi.get("/customer-portal/market/cart");
-  return res.data?.data;
+  return res.data?.data || { groups: [], itemCount: 0, total: 0 };
 }
 
 /** Sets the quantity of one product from one shop (0 removes it). */

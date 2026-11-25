@@ -18,6 +18,10 @@ export default function MarketLayout() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const refreshCart = () => {
+    if (!customer) {
+      setCartCount(0);
+      return;
+    }
     getMarketCart()
       .then((c) => {
         setCartCount(c?.itemCount || 0);
@@ -26,10 +30,22 @@ export default function MarketLayout() {
   };
 
   useEffect(() => {
+    if (!customer) {
+      setCartCount(0);
+      return;
+    }
     refreshCart();
     const interval = setInterval(refreshCart, 15000);
     return () => clearInterval(interval);
   }, [customer?.id]);
+
+  useEffect(() => {
+    const onCartChanged = () => {
+      if (customer) refreshCart();
+    };
+    window.addEventListener("market-cart-changed", onCartChanged);
+    return () => window.removeEventListener("market-cart-changed", onCartChanged);
+  }, [customer]);
 
   useEffect(() => {
     setMobileMenuOpen(false);

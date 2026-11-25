@@ -1,10 +1,12 @@
 // NSYU PWA Service Worker
-const CACHE_NAME = 'nsyu-pwa-v1';
+const CACHE_NAME = 'nsyu-pwa-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './favicon.png',
+  './icon-192.png',
+  './icon-512.png',
   './logo.png',
   './nsyu_logo.png',
   './offline.html'
