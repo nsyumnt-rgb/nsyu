@@ -69,12 +69,13 @@ export default function MarketProduct() {
   const signedIn = Boolean(customer);
   const inCart =
     cart?.groups.find((g) => g.shop.id === item.shop.id)?.cart?.items.find((c) => c.productId === item.productId)?.quantity ?? 0;
-  const maxQty = Math.max(0, item.stock - inCart);
+  const maxQty = item.stock > 0 ? Math.max(0, item.stock - inCart) : (item.inStock ? 99 : 0);
   const cheapest = [item, ...item.otherOffers].filter((o) => o.inStock).sort((a, b) => a.price - b.price)[0];
 
   async function add(buyNow: boolean) {
     if (!item) return;
     if (!signedIn) {
+      sessionStorage.setItem("pending_cart_item", JSON.stringify({ shopId: item.shop.id, productId: item.productId, qty }));
       window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
       return;
     }
@@ -139,8 +140,8 @@ export default function MarketProduct() {
             )}
           </div>
           <p className="text-[12px] text-slate-500 mt-1">{item.gstPercent > 0 ? `Includes ${item.gstPercent}% GST` : "Inclusive of all taxes"}</p>
-          <p className={`mt-3 text-[13.5px] font-semibold ${item.inStock ? (item.stock <= 5 ? "text-amber-700" : "text-emerald-700") : "text-rose-600"}`}>
-            {item.inStock ? (item.stock <= 5 ? `Only ${item.stock} left` : "In stock") : "Out of stock"}
+          <p className={`mt-3 text-[13.5px] font-semibold ${item.inStock ? (item.stock > 0 && item.stock <= 5 ? "text-amber-700" : "text-emerald-700") : "text-rose-600"}`}>
+            {item.inStock ? (item.stock > 0 && item.stock <= 5 ? `Only ${item.stock} left` : "In stock") : "Out of stock"}
           </p>
           {cheapest && cheapest.shop.id !== item.shop.id && cheapest.price < item.price && (
             <Link to={listingHref(cheapest)} className="mt-3 block rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-[13px] text-emerald-800 hover:bg-emerald-100">

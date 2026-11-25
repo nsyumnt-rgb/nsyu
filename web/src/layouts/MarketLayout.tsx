@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { usePortalStore } from "../store/portalStore";
 import { useAuthStore } from "../store/authStore";
-import { getMarketCart } from "../api/marketplace";
+import { getMarketCart, setMarketCartItem } from "../api/marketplace";
 import BusinessFooter from "./BusinessFooter";
 import MobileBottomNav from "../components/MobileBottomNav";
+import LoginModal from "../components/LoginModal";
 
 export default function MarketLayout() {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ export default function MarketLayout() {
   const [cartCount, setCartCount] = useState<number>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [loginModalTab, setLoginModalTab] = useState<"customer" | "staff">("customer");
 
   const refreshCart = () => {
     if (!customer) {
@@ -27,6 +30,32 @@ export default function MarketLayout() {
         setCartCount(c?.itemCount || 0);
       })
       .catch(() => setCartCount(0));
+  };
+
+  useEffect(() => {
+    const handleOpenLogin = (e: Event) => {
+      const custom = e as CustomEvent<{ tab?: "customer" | "staff" }>;
+      setLoginModalTab(custom.detail?.tab || "customer");
+      setLoginModalOpen(true);
+    };
+    window.addEventListener("open-login-modal", handleOpenLogin);
+    return () => window.removeEventListener("open-login-modal", handleOpenLogin);
+  }, []);
+
+  const handleLoginSuccess = async () => {
+    setLoginModalOpen(false);
+    refreshCart();
+    const pending = sessionStorage.getItem("pending_cart_item");
+    if (pending) {
+      try {
+        const { shopId, productId, qty } = JSON.parse(pending);
+        sessionStorage.removeItem("pending_cart_item");
+        await setMarketCartItem(shopId, productId, qty || 1);
+        window.dispatchEvent(new CustomEvent("market-cart-changed"));
+      } catch (err) {
+        console.error("Failed to add pending cart item:", err);
+      }
+    }
   };
 
   useEffect(() => {
@@ -176,12 +205,16 @@ export default function MarketLayout() {
                 <span>Super Admin</span>
               </Link>
             ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition-all duration-200 text-xs font-bold shadow-brand hover:-translate-y-px active:scale-95"
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginModalTab("customer");
+                  setLoginModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-4 h-10 rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition-all duration-200 text-xs font-bold shadow-brand hover:-translate-y-px active:scale-95 cursor-pointer"
               >
                 <span>Sign In</span>
-              </Link>
+              </button>
             )}
 
             {/* Mobile Menu Toggle Button */}
@@ -253,6 +286,14 @@ export default function MarketLayout() {
 
       {/* Mobile-First App Navigation Bar */}
       <MobileBottomNav mode="market" />
+
+      {/* Customer / Staff Sign In & Registration Modal */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        initialTab={loginModalTab}
+        onSuccess={handleLoginSuccess}
+      />
     </div>
   );
 }

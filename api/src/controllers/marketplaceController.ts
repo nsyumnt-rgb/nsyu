@@ -34,6 +34,7 @@ const LISTING_SELECT = `
   p.selling_price, p.live_price, p.mrp, p.tax_percent, p.created_at,
   c.name AS category_name,
   s.id AS shop_id, s.name AS shop_name, s.code AS shop_code, s.address AS shop_address,
+  s.settings AS shop_settings,
   COALESCE(ps.current_stock, 0) AS stock,
   (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC, pi.id ASC LIMIT 1) AS image_url
 `;
@@ -49,6 +50,13 @@ function toListing(r: any) {
   const mrp = Number(r.mrp) || 0;
   const sellingPrice = Number(r.selling_price) || price;
   const livePrice = r.live_price !== null && r.live_price !== undefined ? Number(r.live_price) : null;
+  let allowNegative = false;
+  try {
+    const s = typeof r.shop_settings === "string" ? JSON.parse(r.shop_settings) : r.shop_settings;
+    allowNegative = Boolean(s?.allowNegativeStock);
+  } catch {}
+  const rawStock = Number(r.stock) || 0;
+  const inStock = allowNegative || rawStock > 0;
   return {
     productId: Number(r.product_id),
     name: r.name,
@@ -62,8 +70,8 @@ function toListing(r: any) {
     mrp,
     discountPercent: mrp > price && price > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0,
     gstPercent: Number(r.tax_percent) || 0,
-    stock: Math.max(0, Number(r.stock) || 0),
-    inStock: Number(r.stock) > 0,
+    stock: rawStock > 0 ? rawStock : (allowNegative ? 99 : 0),
+    inStock,
     imageUrl: r.image_url || null,
     shop: { id: Number(r.shop_id), name: r.shop_name, code: r.shop_code, address: r.shop_address || null },
   };
@@ -104,7 +112,7 @@ export async function searchListings(req: Request, res: Response) {
       where.push("p.selling_price <= :maxPrice");
       rep.maxPrice = max;
     }
-    if (String(req.query.inStock) === "true") where.push("COALESCE(ps.current_stock, 0) > 0");
+    if (String(req.query.inStock) === "true") where.push("(COALESCE(ps.current_stock, 0) > 0 OR JSON_UNQUOTE(JSON_EXTRACT(s.settings, '$.allowNegativeStock')) = 'true')");
 
     const sort = String(req.query.sort || "relevance");
     const order =
@@ -115,7 +123,7 @@ export async function searchListings(req: Request, res: Response) {
         : sort === "newest"
         ? "p.created_at DESC, p.id DESC"
         : // relevance: name matches first, then in-stock, then name
-          (q ? "CASE WHEN LOWER(p.name) LIKE :qStart THEN 0 ELSE 1 END, " : "") + "CASE WHEN COALESCE(ps.current_stock, 0) > 0 THEN 0 ELSE 1 END, p.name ASC";
+          (q ? "CASE WHEN LOWER(p.name) LIKE :qStart THEN 0 ELSE 1 END, " : "") + "CASE WHEN (COALESCE(ps.current_stock, 0) > 0 OR JSON_UNQUOTE(JSON_EXTRACT(s.settings, '$.allowNegativeStock')) = 'true') THEN 0 ELSE 1 END, p.name ASC";
     if (q && sort === "relevance") rep.qStart = `${q}%`;
 
     const whereSql = `WHERE ${where.join(" AND ")}`;
@@ -180,7 +188,8 @@ export async function listMarketShops(req: Request, res: Response) {
       `SELECT s.id, s.name, s.code, s.address, s.phone, s.logo,
               (SELECT COUNT(*) FROM products p WHERE p.owner_id = s.owner_id AND p.status = 'active'${marketplaceVisibleSql("p")}) AS product_count,
               (SELECT COUNT(*) FROM products p JOIN product_stocks ps ON ps.product_id = p.id AND ps.shop_id = s.id
-                 WHERE p.owner_id = s.owner_id AND p.status = 'active'${marketplaceVisibleSql("p")} AND ps.current_stock > 0) AS in_stock_count
+                 WHERE p.owner_id = s.owner_id AND p.status = 'active'${marketplaceVisibleSql("p")}
+                 AND (ps.current_stock > 0 OR JSON_UNQUOTE(JSON_EXTRACT(s.settings, '$.allowNegativeStock')) = 'true')) AS in_stock_count
        FROM shops s ${where}
        ORDER BY in_stock_count DESC, s.name ASC
        LIMIT :limit OFFSET :offset`,

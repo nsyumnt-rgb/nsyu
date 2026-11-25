@@ -83,7 +83,9 @@ export async function getPortalProducts(req: Request, res: Response) {
       Shop.findByPk(shopId),
     ]);
     const showExactStock = Boolean(settings?.show_stock_qty);
-    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
+    const shopSettings = (shopRow?.settings || {}) as any;
+    const allowNegativeStock = shopSettings.allowNegativeStock !== undefined ? Boolean(shopSettings.allowNegativeStock) : true;
+    const shopDefaultGst = Number(shopSettings.defaultGstRate ?? 0);
 
     const where: any = {
       owner_id: ownerId,
@@ -164,9 +166,9 @@ export async function getPortalProducts(req: Request, res: Response) {
       const minStock = stockRow?.min_stock ?? p.min_stock ?? 5;
 
       let availability: "in_stock" | "low_stock" | "out_of_stock" = "in_stock";
-      if (currentStock <= 0) {
+      if (!allowNegativeStock && currentStock <= 0) {
         availability = "out_of_stock";
-      } else if (currentStock <= minStock) {
+      } else if (currentStock > 0 && currentStock <= minStock) {
         availability = "low_stock";
       }
 
@@ -216,9 +218,9 @@ export async function getPortalProducts(req: Request, res: Response) {
           gstPercent: gstVal,
         },
         inventory: {
-          availableStock: showExactStock ? currentStock : null,
-          inStock: currentStock > 0,
-          isAvailable: currentStock > 0,
+          availableStock: showExactStock ? (currentStock > 0 ? currentStock : (allowNegativeStock ? 99 : 0)) : null,
+          inStock: allowNegativeStock || currentStock > 0,
+          isAvailable: allowNegativeStock || currentStock > 0,
           availability,
           // Shop setting "show stock quantity to customers": the storefront shows the
           // number only when this is true, otherwise just in / low / out of stock.
@@ -262,7 +264,9 @@ export async function getPortalProduct(req: Request, res: Response) {
       Shop.findByPk(shopId),
     ]);
     const showExactStock = Boolean(settings?.show_stock_qty);
-    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
+    const shopSettings = (shopRow?.settings || {}) as any;
+    const allowNegativeStock = shopSettings.allowNegativeStock !== undefined ? Boolean(shopSettings.allowNegativeStock) : true;
+    const shopDefaultGst = Number(shopSettings.defaultGstRate ?? 0);
 
     const product = await Product.findOne({
       where: { id: productId, owner_id: ownerId, status: "active", ...marketplaceVisibleWhere() },
@@ -288,9 +292,9 @@ export async function getPortalProduct(req: Request, res: Response) {
     const minStock = stockRow?.min_stock ?? product.min_stock ?? 5;
 
     let availability: "in_stock" | "low_stock" | "out_of_stock" = "in_stock";
-    if (currentStock <= 0) {
+    if (!allowNegativeStock && currentStock <= 0) {
       availability = "out_of_stock";
-    } else if (currentStock <= minStock) {
+    } else if (currentStock > 0 && currentStock <= minStock) {
       availability = "low_stock";
     }
 
@@ -342,9 +346,9 @@ export async function getPortalProduct(req: Request, res: Response) {
           gstPercent: gstVal,
         },
         inventory: {
-          availableStock: showExactStock ? currentStock : null,
-          inStock: currentStock > 0,
-          isAvailable: currentStock > 0,
+          availableStock: showExactStock ? (currentStock > 0 ? currentStock : (allowNegativeStock ? 99 : 0)) : null,
+          inStock: allowNegativeStock || currentStock > 0,
+          isAvailable: allowNegativeStock || currentStock > 0,
           availability,
           // Shop setting "show stock quantity to customers": the storefront shows the
           // number only when this is true, otherwise just in / low / out of stock.

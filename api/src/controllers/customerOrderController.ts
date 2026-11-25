@@ -89,7 +89,9 @@ export async function placeOrder(req: Request, res: Response) {
 
     // 3. Load customer cart & shop GST setting
     const shopRow = await Shop.findByPk(shopId);
-    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
+    const shopSettings = (shopRow?.settings || {}) as any;
+    const allowNegativeStock = shopSettings.allowNegativeStock !== undefined ? Boolean(shopSettings.allowNegativeStock) : true;
+    const shopDefaultGst = Number(shopSettings.defaultGstRate ?? 0);
 
     const cart = await CustomerCart.findOne({
       where: { customer_id: customerId, shop_id: shopId },
@@ -133,7 +135,7 @@ export async function placeOrder(req: Request, res: Response) {
         const available = stock ? Number(stock.current_stock || 0) : 0;
         const requested = Number(ci.quantity);
 
-        if (requested > available) {
+        if (!allowNegativeStock && requested > available) {
           stockErrors.push(
             `"${product.name}" has only ${available} units in stock (${requested} requested)`
           );

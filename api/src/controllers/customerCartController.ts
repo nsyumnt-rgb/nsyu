@@ -40,7 +40,9 @@ export async function getCart(req: Request, res: Response) {
     });
 
     const shopRow = await Shop.findByPk(shopId);
-    const shopDefaultGst = Number((shopRow?.settings as any)?.defaultGstRate ?? 0);
+    const shopSettings = (shopRow?.settings || {}) as any;
+    const allowNegativeStock = shopSettings.allowNegativeStock !== undefined ? Boolean(shopSettings.allowNegativeStock) : true;
+    const shopDefaultGst = Number(shopSettings.defaultGstRate ?? 0);
 
     let subtotal = 0;
     let taxAmount = 0;
@@ -79,8 +81,9 @@ export async function getCart(req: Request, res: Response) {
       totalDiscount = round2(totalDiscount + lineDisc);
 
       const stockRow = product.stocks?.[0];
-      const availableStock = stockRow ? Number(stockRow.current_stock || 0) : 0;
-      const exceedsStock = qty > availableStock;
+      const rawStock = stockRow ? Number(stockRow.current_stock || 0) : 0;
+      const availableStock = allowNegativeStock ? (rawStock > 0 ? rawStock : 999) : rawStock;
+      const exceedsStock = !allowNegativeStock && qty > rawStock;
 
       const primaryImg = product.images?.find((i: any) => i.is_primary) || product.images?.[0];
 
@@ -100,8 +103,8 @@ export async function getCart(req: Request, res: Response) {
         taxAmount: lineTax,
         lineTotal: lineTotal,
         availableStock,
-        warning: exceedsStock ? `Only ${availableStock} units available` : undefined,
-        isUnavailable: exceedsStock || availableStock <= 0,
+        warning: exceedsStock ? `Only ${rawStock} units available` : undefined,
+        isUnavailable: !allowNegativeStock && (exceedsStock || rawStock <= 0),
       });
     }
 
@@ -168,12 +171,16 @@ export async function setCartItem(req: Request, res: Response) {
     }
 
     // Verify stock availability
+    const shop = await Shop.findByPk(shopId);
+    const shopSettings = (shop?.settings || {}) as any;
+    const allowNegativeStock = shopSettings.allowNegativeStock !== undefined ? Boolean(shopSettings.allowNegativeStock) : true;
+
     const stock = await ProductStock.findOne({
       where: { product_id: productId, shop_id: shopId },
     });
     const currentStock = stock ? Number(stock.current_stock || 0) : 0;
 
-    if (qty > currentStock) {
+    if (!allowNegativeStock && qty > currentStock) {
       return res.status(400).json({
         success: false,
         message: `Requested quantity exceeds available stock (${currentStock} available)`,

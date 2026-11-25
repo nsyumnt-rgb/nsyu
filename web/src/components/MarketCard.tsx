@@ -59,6 +59,7 @@ export default function MarketCard({
     e.stopPropagation();
 
     if (!customer) {
+      sessionStorage.setItem("pending_cart_item", JSON.stringify({ shopId: listing.shop.id, productId: listing.productId, qty: 1 }));
       window.dispatchEvent(new CustomEvent("open-login-modal", { detail: { tab: "customer" } }));
       return;
     }
@@ -70,8 +71,8 @@ export default function MarketCard({
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
       if (onAddedToCart) onAddedToCart();
-    } catch {
-      // Fallback redirect to product page if error occurs (e.g. stock limitation)
+    } catch (err: any) {
+      console.error("Failed to add to cart:", err);
       navigate(href);
     } finally {
       setAdding(false);
